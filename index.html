@@ -234,31 +234,31 @@
         }
 
         // 4. Affichage progressif (Pagination)
+// Remplacez l'ancienne fonction showMore par celle-ci
         function showMore() {
             const grid = document.getElementById('cards-grid');
             const btn = document.getElementById('btn-load-more');
 
-            // Calcul de la tranche à afficher
             const nextBatch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
 
-            // Cas : Aucun résultat trouvé
             if(nextBatch.length === 0 && displayedCount === 0) {
-                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Aucun résultat ne correspond à votre recherche.</p>";
+                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center;'>Aucun résultat.</p>";
                 btn.style.display = 'none';
                 return;
             }
 
-            // Génération du HTML pour chaque carte
+            // OPTIMISATION PERFORMANCE : On construit une seule grosse chaîne de caractères
+            let htmlBuffer = "";
+
             nextBatch.forEach(item => {
-                // Image ou placeholder
                 const imgContent = item.Image 
                     ? `<img src="${item.Image}" loading="lazy" alt="${item.NomBillet}">` 
                     : `<span class="no-img">Pas d'image</span>`;
 
-                // Couleur personnalisée ou gris par défaut
                 const color = item.Couleur ? item.Couleur : "#ccc";
 
-                const html = `
+                // On ajoute à la mémoire tampon (buffer) au lieu du DOM
+                htmlBuffer += `
                 <div class="card" style="border-top-color: ${color}">
                     <div class="card-img-container">
                         ${imgContent}
@@ -281,17 +281,15 @@
                     </div>
                     ${item.InfoPaiement ? `<div class="card-footer">${item.InfoPaiement}</div>` : ''}
                 </div>`;
-                
-                // Insertion optimisée
-                grid.insertAdjacentHTML('beforeend', html);
             });
 
-            // Mise à jour du curseur
+            // UNE SEULE interaction avec la page pour les 50 cartes
+            grid.insertAdjacentHTML('beforeend', htmlBuffer);
+
             displayedCount += nextBatch.length;
 
-            // Gestion de la visibilité du bouton "Voir la suite"
             if (displayedCount >= currentData.length) {
-                btn.style.display = 'none'; // Tout est affiché
+                btn.style.display = 'none';
             } else {
                 btn.style.display = 'inline-block';
                 btn.innerText = `Voir la suite (${currentData.length - displayedCount} restants)`;
