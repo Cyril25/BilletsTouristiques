@@ -134,44 +134,74 @@
         </div>
     </div>
 
-    <script>
-        // ============================================================
-        // ⚠️ CONFIGURATION A MODIFIER ⚠️
-        // ============================================================
-        
-        // Remplacez les ..... par votre URL Google Apps Script qui finit par /exec
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbza_KSUHt4hZvOo10YqAGMVUhgnPboLkxn0f5zfAGpib_r3WssHWXzzQ0UEN4rkHaVV/exec"; 
+<script>
+        // ================= CONFIGURATION =================
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbzUUiZLdxPSxD_GxUDv2ZVQpUQK_U7bpmtKFMkd_MdPmSOF035nSkm692SftuDHlGqT/exec"; 
+        // =================================================
 
-        // ============================================================
-        
-        let allData = [];       // Toutes les données (5000 lignes)
-        let currentData = [];   // Les données filtrées
-        let displayedCount = 0; // Compteur d'affichage
-        const BATCH_SIZE = 50;  // Nombre de billets affichés par clic
+        let allData = [];
+        let currentData = [];
+        let displayedCount = 0;
+        const BATCH_SIZE = 50;
+        let isFullLoaded = false; // Pour savoir si on a tout ou juste l'aperçu
 
-        // Démarrage
         document.addEventListener('DOMContentLoaded', () => {
-            fetchData();
+            fetchFastThenSlow();
         });
 
-        // 1. Récupération des données Google Sheet
-        function fetchData() {
+        // --- LA NOUVELLE LOGIQUE "TURBO" ---
+        function fetchFastThenSlow() {
             const grid = document.getElementById('cards-grid');
+            const counter = document.getElementById('counter');
 
-            fetch(scriptUrl)
+            // 1. REQUETE RAPIDE (Juste les 50 premiers)
+            // Ça devrait prendre moins de 2 secondes
+            fetch(scriptUrl + "?limit=50")
                 .then(res => res.json())
                 .then(data => {
-                    allData = data;
-                    populateFilters(); // Remplir les listes déroulantes
-                    applyFilters();    // Lancer l'affichage initial
+                    // Si on a pas encore reçu le "gros" paquet, on affiche ça tout de suite
+                    if (!isFullLoaded) {
+                        allData = data;
+                        populateFilters(); 
+                        applyFilters(); // Affiche les données
+                        
+                        // Petit message visuel
+                        counter.innerText = "Chargement du reste...";
+                        counter.style.backgroundColor = "#fff3cd"; // Jaune (en cours)
+                    }
+                })
+                .then(() => {
+                    // 2. REQUETE COMPLETE (Tout le fichier)
+                    // On lance ça dans la foulée
+                    return fetch(scriptUrl);
+                })
+                .then(res => res.json())
+                .then(fullData => {
+                    // 3. FUSION
+                    // Le gros paquet est arrivé (après 12s), on remplace tout
+                    allData = fullData;
+                    isFullLoaded = true;
+                    
+                    // On met à jour les filtres (pour avoir tous les pays, pas juste ceux des 50 premiers)
+                    populateFilters();
+                    
+                    // On met à jour le compteur
+                    counter.innerText = allData.length + " billets (Complet)";
+                    counter.style.backgroundColor = "#d4edda"; // Vert (fini)
+                    
+                    // Optionnel : On ne force pas le rafraichissement de la grille 
+                    // pour ne pas faire "sauter" l'écran de l'utilisateur s'il scrollait déjà,
+                    // mais la prochaine recherche se fera sur 5000 lignes.
+                    console.log("Base de données complète chargée !");
                 })
                 .catch(err => {
                     console.error(err);
-                    grid.innerHTML = '<div style="text-align:center; padding:20px; color:#d9534f; background:#fdf7f7; border:1px solid #d9534f; border-radius:5px;"><strong>Erreur de chargement.</strong><br>Vérifiez que l\'URL du script est correcte et que le déploiement est en accès "Tout le monde".</div>';
+                    grid.innerHTML = '<p style="color:red; text-align:center;">Erreur de connexion.</p>';
                 });
         }
 
-        // 2. Remplissage automatique des filtres (Categories, Pays...)
+        // --- LE RESTE EST PRESQUE IDENTIQUE (FILTRES & AFFICHAGE) ---
+
         function populateFilters() {
             const maps = [
                 { id: 'sel-cat', key: 'Categorie' },
@@ -183,21 +213,25 @@
 
             maps.forEach(m => {
                 const select = document.getElementById(m.id);
-                // On récupère les valeurs uniques, on enlève les vides, on trie
-                const values = [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort();
+                // Sauvegarde de la sélection actuelle pour ne pas la perdre lors du re-chargement
+                const currentVal = select.value;
                 
+                select.innerHTML = '<option value="">Tout</option>'; // Reset
+                
+                const values = [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort();
                 values.forEach(val => {
                     const opt = document.createElement('option');
                     opt.value = val;
                     opt.innerText = val;
                     select.appendChild(opt);
                 });
+
+                // On remet la valeur si elle existe toujours
+                if(currentVal) select.value = currentVal;
             });
         }
 
-        // 3. Moteur de Recherche et Filtres
         function applyFilters() {
-            // Récupération des choix utilisateur
             const search = document.getElementById('search-input').value.toLowerCase();
             const fCat = document.getElementById('sel-cat').value;
             const fPays = document.getElementById('sel-pays').value;
@@ -205,36 +239,31 @@
             const fTheme = document.getElementById('sel-theme').value;
             const fColl = document.getElementById('sel-coll').value;
 
-            // Filtrage rapide sur toute la base
             currentData = allData.filter(item => {
-                // Recherche textuelle (Nom, Ville, et Mots clés cachés)
                 const textMatch = !search || 
                                   (item.NomBillet && item.NomBillet.toLowerCase().includes(search)) ||
                                   (item.Ville && item.Ville.toLowerCase().includes(search)) ||
                                   (item.Recherche && item.Recherche.toLowerCase().includes(search));
 
-                // Combinaison des filtres (ET)
                 return textMatch &&
                        (!fCat || item.Categorie === fCat) &&
                        (!fPays || item.Pays === fPays) &&
-                       (!fYear || item.Millesime == fYear) && // == pour gérer texte/nombre
+                       (!fYear || item.Millesime == fYear) &&
                        (!fTheme || item.Theme === fTheme) &&
                        (!fColl || item.Collecteur === fColl);
             });
 
-            // Réinitialisation de l'affichage
             document.getElementById('cards-grid').innerHTML = ""; 
             displayedCount = 0; 
             
-            // Mise à jour du compteur global
-            document.getElementById('counter').innerText = currentData.length + " billets";
+            // Si le chargement total n'est pas fini, on affiche un compteur provisoire
+            if(isFullLoaded) {
+                 document.getElementById('counter').innerText = currentData.length + " billets";
+            }
             
-            // Lancer l'affichage du premier paquet
             showMore(); 
         }
 
-        // 4. Affichage progressif (Pagination)
-// Remplacez l'ancienne fonction showMore par celle-ci
         function showMore() {
             const grid = document.getElementById('cards-grid');
             const btn = document.getElementById('btn-load-more');
@@ -247,45 +276,34 @@
                 return;
             }
 
-            // OPTIMISATION PERFORMANCE : On construit une seule grosse chaîne de caractères
             let htmlBuffer = "";
 
             nextBatch.forEach(item => {
                 const imgContent = item.Image 
                     ? `<img src="${item.Image}" loading="lazy" alt="${item.NomBillet}">` 
                     : `<span class="no-img">Pas d'image</span>`;
-
                 const color = item.Couleur ? item.Couleur : "#ccc";
 
-                // On ajoute à la mémoire tampon (buffer) au lieu du DOM
                 htmlBuffer += `
                 <div class="card" style="border-top-color: ${color}">
-                    <div class="card-img-container">
-                        ${imgContent}
-                    </div>
+                    <div class="card-img-container">${imgContent}</div>
                     <div class="card-body">
                         <div class="tags">
                             ${item.Pays ? `<span class="tag">${item.Pays}</span>` : ''}
                             ${item.Millesime ? `<span class="tag">${item.Millesime}</span>` : ''}
                         </div>
                         <h3 class="card-title">${item.NomBillet || 'Sans titre'}</h3>
-                        
                         <div class="card-meta">
                             ${item.Ville ? item.Ville + '<br>' : ''}
                             ${item.Dep ? '(' + item.Dep + ')' : ''}
                         </div>
-                        
-                        <div class="card-desc">
-                            ${item.Commentaire ? item.Commentaire : ''}
-                        </div>
+                        <div class="card-desc">${item.Commentaire ? item.Commentaire : ''}</div>
                     </div>
                     ${item.InfoPaiement ? `<div class="card-footer">${item.InfoPaiement}</div>` : ''}
                 </div>`;
             });
 
-            // UNE SEULE interaction avec la page pour les 50 cartes
             grid.insertAdjacentHTML('beforeend', htmlBuffer);
-
             displayedCount += nextBatch.length;
 
             if (displayedCount >= currentData.length) {
