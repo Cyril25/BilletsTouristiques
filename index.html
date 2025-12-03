@@ -233,7 +233,7 @@
             let html = "";
             batch.forEach(item => {
                 // Construction des liens dynamiques (ou vide si pas de lien)
-                const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}` : '';
+                const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}&sz=w800` : '';
                 const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
                 const couleur = item.Couleur || '#ccc';
 
