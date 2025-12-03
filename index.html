@@ -135,73 +135,71 @@
     </div>
 
 <script>
-        // ================= CONFIGURATION =================
+        // ============================================================
+        // ⚠️ CONFIGURATION ⚠️
+        // ============================================================
+        
+        // Votre URL Apps Script
         const scriptUrl = "https://script.google.com/macros/s/AKfycbxPf3mHI7wEV4ymuMuovDO1CuQpkGtsIILp6AtEQlqURi-2ckTS9h0vbz_GZCNMi6ZK/exec"; 
-        // =================================================
 
+        // ============================================================
+        
         let allData = [];
         let currentData = [];
         let displayedCount = 0;
         const BATCH_SIZE = 50;
-        let isFullLoaded = false; // Pour savoir si on a tout ou juste l'aperçu
+        let isFullLoaded = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchFastThenSlow();
         });
 
-        // --- LA NOUVELLE LOGIQUE "TURBO" ---
+        // --- LOGIQUE DE CHARGEMENT DOUBLE ---
         function fetchFastThenSlow() {
             const grid = document.getElementById('cards-grid');
             const counter = document.getElementById('counter');
 
-            // 1. REQUETE RAPIDE (Juste les 50 premiers)
-            // Ça devrait prendre moins de 2 secondes
+            // 1. CHARGEMENT RAPIDE (50 lignes) ~4s
             fetch(scriptUrl + "?limit=50")
                 .then(res => res.json())
                 .then(data => {
-                    // Si on a pas encore reçu le "gros" paquet, on affiche ça tout de suite
-                    if (!isFullLoaded) {
+                    if (!isFullLoaded) { // Si le gros paquet n'est pas déjà arrivé entre temps
                         allData = data;
                         populateFilters(); 
-                        applyFilters(); // Affiche les données
+                        applyFilters(false); // false = Affichage normal (reset de la grille)
                         
-                        // Petit message visuel
-                        counter.innerText = "Chargement du reste...";
-                        counter.style.backgroundColor = "#fff3cd"; // Jaune (en cours)
+                        // Indicateur visuel
+                        counter.innerText = "Chargement suite...";
+                        counter.style.backgroundColor = "#fff3cd"; 
                     }
                 })
                 .then(() => {
-                    // 2. REQUETE COMPLETE (Tout le fichier)
-                    // On lance ça dans la foulée
+                    // 2. CHARGEMENT COMPLET (Arrière-plan) ~12s
                     return fetch(scriptUrl);
                 })
                 .then(res => res.json())
                 .then(fullData => {
-                    // 3. FUSION
-                    // Le gros paquet est arrivé (après 12s), on remplace tout
+                    // 3. FUSION ET MISE A JOUR SILENCIEUSE
+                    console.log("Données complètes reçues :", fullData.length);
                     allData = fullData;
                     isFullLoaded = true;
                     
-                    // On met à jour les filtres (pour avoir tous les pays, pas juste ceux des 50 premiers)
-                    populateFilters();
+                    populateFilters(); // Met à jour les filtres avec tous les pays/années
                     
-                    // On met à jour le compteur
-                    counter.innerText = allData.length + " billets (Complet)";
-                    counter.style.backgroundColor = "#d4edda"; // Vert (fini)
+                    // C'est ICI la correction : On relance le calcul des filtres
+                    // mais en mode "true" (Silencieux) pour ne pas effacer ce que l'utilisateur regarde
+                    applyFilters(true); 
                     
-                    // Optionnel : On ne force pas le rafraichissement de la grille 
-                    // pour ne pas faire "sauter" l'écran de l'utilisateur s'il scrollait déjà,
-                    // mais la prochaine recherche se fera sur 5000 lignes.
-                    console.log("Base de données complète chargée !");
+                    // Indicateur visuel final
+                    counter.style.backgroundColor = "#d4edda";
                 })
                 .catch(err => {
                     console.error(err);
-                    grid.innerHTML = '<p style="color:red; text-align:center;">Erreur de connexion.</p>';
+                    // On ne met pas d'erreur rouge si le premier chargement a marché, juste un log
                 });
         }
 
-        // --- LE RESTE EST PRESQUE IDENTIQUE (FILTRES & AFFICHAGE) ---
-
+        // --- FILTRES ---
         function populateFilters() {
             const maps = [
                 { id: 'sel-cat', key: 'Categorie' },
@@ -213,25 +211,23 @@
 
             maps.forEach(m => {
                 const select = document.getElementById(m.id);
-                // Sauvegarde de la sélection actuelle pour ne pas la perdre lors du re-chargement
-                const currentVal = select.value;
+                const currentVal = select.value; // On garde la sélection active
                 
-                select.innerHTML = '<option value="">Tout</option>'; // Reset
+                // On garde l'option "Tout" et on ajoute les nouvelles options
+                let optionsHtml = '<option value="">Tout</option>';
                 
                 const values = [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort();
                 values.forEach(val => {
-                    const opt = document.createElement('option');
-                    opt.value = val;
-                    opt.innerText = val;
-                    select.appendChild(opt);
+                    // Petite astuce pour garder sélectionné l'élément
+                    const isSelected = (val === currentVal) ? 'selected' : '';
+                    optionsHtml += `<option value="${val}" ${isSelected}>${val}</option>`;
                 });
-
-                // On remet la valeur si elle existe toujours
-                if(currentVal) select.value = currentVal;
+                select.innerHTML = optionsHtml;
             });
         }
 
-        function applyFilters() {
+        // --- MOTEUR DE RECHERCHE (Modifié pour gérer le mode silencieux) ---
+        function applyFilters(silentMode = false) {
             const search = document.getElementById('search-input').value.toLowerCase();
             const fCat = document.getElementById('sel-cat').value;
             const fPays = document.getElementById('sel-pays').value;
@@ -239,6 +235,7 @@
             const fTheme = document.getElementById('sel-theme').value;
             const fColl = document.getElementById('sel-coll').value;
 
+            // On recalcule la liste "currentData" basée sur TOUTES les données (allData)
             currentData = allData.filter(item => {
                 const textMatch = !search || 
                                   (item.NomBillet && item.NomBillet.toLowerCase().includes(search)) ||
@@ -253,26 +250,30 @@
                        (!fColl || item.Collecteur === fColl);
             });
 
-            document.getElementById('cards-grid').innerHTML = ""; 
-            displayedCount = 0; 
-            
-            // Si le chargement total n'est pas fini, on affiche un compteur provisoire
-            if(isFullLoaded) {
-                 document.getElementById('counter').innerText = currentData.length + " billets";
+            // Mise à jour du compteur texte
+            const countText = isFullLoaded ? currentData.length + " billets" : currentData.length + " (Chargement...)";
+            document.getElementById('counter').innerText = countText;
+
+            // --- CAS 1 : Mode Normal (Recherche utilisateur ou 1er chargement) ---
+            if (!silentMode) {
+                document.getElementById('cards-grid').innerHTML = ""; 
+                displayedCount = 0; 
+                showMore(); // Affiche les premiers résultats
+            } 
+            // --- CAS 2 : Mode Silencieux (Arrivée des données d'arrière-plan) ---
+            else {
+                // On NE vide PAS la grille. On met juste à jour le bouton "Voir la suite"
+                updateLoadMoreButton();
             }
-            
-            showMore(); 
         }
 
         function showMore() {
             const grid = document.getElementById('cards-grid');
-            const btn = document.getElementById('btn-load-more');
-
             const nextBatch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
 
             if(nextBatch.length === 0 && displayedCount === 0) {
-                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center;'>Aucun résultat.</p>";
-                btn.style.display = 'none';
+                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Aucun résultat.</p>";
+                updateLoadMoreButton();
                 return;
             }
 
@@ -305,12 +306,22 @@
 
             grid.insertAdjacentHTML('beforeend', htmlBuffer);
             displayedCount += nextBatch.length;
+            
+            updateLoadMoreButton();
+        }
 
-            if (displayedCount >= currentData.length) {
-                btn.style.display = 'none';
-            } else {
+        // Petite fonction dédiée pour gérer le bouton proprement
+        function updateLoadMoreButton() {
+            const btn = document.getElementById('btn-load-more');
+            
+            // S'il reste des éléments à afficher
+            if (displayedCount < currentData.length) {
                 btn.style.display = 'inline-block';
-                btn.innerText = `Voir la suite (${currentData.length - displayedCount} restants)`;
+                const restant = currentData.length - displayedCount;
+                btn.innerText = `Voir la suite (${restant})`;
+            } else {
+                // Tout est affiché
+                btn.style.display = 'none';
             }
         }
     </script>
