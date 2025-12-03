@@ -232,19 +232,26 @@
 
             let html = "";
             batch.forEach(item => {
-                // Construction des liens dynamiques (ou vide si pas de lien)
                 const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}&sz=w800` : '';
                 const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
-                const couleur = item.Couleur || '#ccc';
+                
+                // Si pas de couleur définie, on met un gris par défaut
+                const couleur = item.Couleur || '#666'; 
 
-                // Reconstitution exacte de votre vignette
                 html += `
-                <div class="global-container">
-                    <div class="header-container" style="color:${couleur};">
-                         <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%), url(${imgUrl}) no-repeat; "></div>
-                         <div class="category" style="border:1px solid ${couleur};">${item.Categorie}</div>
+                <div class="global-container" style="border-top: 8px solid ${couleur};">
+                    
+                    <div class="header-container">
+                         <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
+                         
+                         <div class="category" style="background-color: ${couleur}; color: white; border:none; box-shadow: 0 2px 5px rgba(0,0,0,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                            ${item.Categorie}
+                         </div>
+                         
                          <div class="header-info">
-                             <h1>${item.Ville || ''}</h1>
+                             <h1 style="border-bottom: 3px solid ${couleur}; display:inline-block; padding-bottom:5px;">
+                                ${item.Ville || ''}
+                             </h1>
                          </div>
                     </div>
                     
