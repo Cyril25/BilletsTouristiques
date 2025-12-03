@@ -9,7 +9,6 @@
     <style>
         /* --- STYLE GENERAL --- */
         body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        
         #app-content { max-width: 1400px; margin: 0 auto; }
         
         /* En-tête */
@@ -17,189 +16,165 @@
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; 
             background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        h1 { margin: 0; font-size: 1.5rem; color: #2c3e50; }
         
-        /* Badges compteurs */
-        .count-badge { background: #e0e0e0; padding: 5px 12px; border-radius: 20px; font-size: 0.9em; margin-left: 10px; color: #555; font-weight: bold; }
-
-        /* --- BARRE DE FILTRES --- */
+        /* --- FILTRES (inchangé) --- */
         .filters-container {
             background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; align-items: flex-end;
         }
         .filter-group { display: flex; flex-direction: column; flex-grow: 1; min-width: 140px; }
-        .filter-group label { font-size: 0.8em; color: #666; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        select, input {
-            padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;
-        }
-        select:focus, input:focus { border-color: #4285F4; outline: none; }
+        .filter-group label { font-size: 0.8em; color: #666; margin-bottom: 5px; font-weight: bold; }
+        select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
         #search-input { min-width: 250px; flex-grow: 2; }
 
-        /* --- GRILLE DES VIGNETTES --- */
+        /* --- LE STYLE DE VOS VIGNETTES (DESIGN RETROUVÉ) --- */
         #cards-grid {
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive auto */
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
             gap: 25px;
         }
-        
-        /* Carte individuelle */
-        .card {
-            background: white; border-radius: 8px; overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s;
-            display: flex; flex-direction: column;
-            border-top: 5px solid #ccc; /* Couleur par défaut */
+
+        .global-container {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e0e0e0;
+        }
+
+        .header-container {
             position: relative;
+            height: 200px; /* Ajustez la hauteur de l'image ici */
+            color: white; /* Par défaut blanc si pas surchargé */
         }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
 
-        /* Image */
-        .card-img-container { height: 160px; overflow: hidden; background: #f9f9f9; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; }
-        .card-img-container img { width: 100%; height: 100%; object-fit: contain; }
-        .no-img { color: #bbb; font-style: italic; font-size: 0.9em; }
-
-        /* Contenu Carte */
-        .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
-        
-        .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-        .tag { font-size: 0.75em; padding: 3px 8px; border-radius: 4px; background: #eff2f5; color: #556; font-weight: 500; }
-        
-        .card-title { margin: 0 0 5px 0; font-size: 1.1em; color: #222; font-weight: bold; line-height: 1.3; }
-        
-        .card-meta { font-size: 0.9em; color: #666; margin-bottom: 10px; }
-        .card-desc { font-size: 0.85em; color: #555; margin-top: auto; line-height: 1.4; white-space: pre-wrap; }
-        
-        /* Footer (Paiement) */
-        .card-footer { 
-            padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; font-size: 0.85em; text-align: center;
+        .image-bg {
+            width: 100%; height: 100%;
+            background-size: cover !important;
+            background-position: center !important;
         }
-        .card-footer img { height: 25px; vertical-align: middle; width: auto; margin-right: 5px;} 
-        .card-footer a { text-decoration: none; color: #007bff; font-weight: bold; }
 
-        /* Bouton "Voir plus" */
-        .load-more-container { text-align: center; margin: 40px 0; }
+        .category {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 10px;
+            font-weight: bold;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            color: white; /* Force le texte blanc */
+        }
+
+        .header-info {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+        .header-info h1 {
+            margin: 0; font-size: 1.4em; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); color: white;
+        }
+
+        .content { padding: 15px; flex-grow: 1; font-size: 0.9em; line-height: 1.5; }
+        
+        .description { margin-bottom: 15px; font-weight: 500; color: #444; }
+        
+        /* Les classes pour cacher les éléments si le CSV dit "hidden" */
+        .hidden { display: none !important; }
+
+        .more {
+            border-top: 1px solid #eee;
+            padding: 8px;
+            background: #f9f9f9;
+            font-size: 0.85em;
+        }
+
+        table.dates { width: 100%; font-size: 0.9em; }
+        table.dates td { padding: 2px; }
+        
+        .action-icons img {
+            transition: transform 0.2s;
+            vertical-align: middle;
+        }
+        .action-icons img:hover { transform: scale(1.2); }
+
         #btn-load-more {
-            background-color: #4285F4; color: white; border: none; padding: 12px 30px; 
-            font-size: 16px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: background 0.2s;
+             background-color: #4285F4; color: white; border: none; padding: 12px 30px; 
+             font-size: 16px; border-radius: 50px; cursor: pointer; display: none;
         }
-        #btn-load-more:hover { background-color: #3367d6; }
-
     </style>
 </head>
 <body>
 
     <div id="app-content">
         <header>
-            <div style="display:flex; align-items:center;">
-                <h1>Annuaire Billets</h1>
-                <span id="counter" class="count-badge">Chargement...</span>
+            <div>
+                <span style="font-weight:bold; font-size:1.2em;">Annuaire Billets</span>
+                <span id="counter" style="background:#eee; padding:5px 10px; border-radius:15px; font-size:0.8em; margin-left:10px;">Chargement...</span>
             </div>
         </header>
 
         <div class="filters-container">
-            <div class="filter-group">
+            <div class="filter-group" style="flex-grow: 2;">
                 <label>Recherche</label>
-                <input type="text" id="search-input" placeholder="Nom, Ville, Réf..." onkeyup="applyFilters()">
+                <input type="text" id="search-input" placeholder="Ville, Nom..." onkeyup="applyFilters()">
             </div>
-            
-            <div class="filter-group">
-                <label>Catégorie</label>
-                <select id="sel-cat" onchange="applyFilters()"><option value="">Tout</option></select>
-            </div>
-            <div class="filter-group">
-                <label>Pays</label>
-                <select id="sel-pays" onchange="applyFilters()"><option value="">Tout</option></select>
-            </div>
-            <div class="filter-group">
-                <label>Millésime</label>
-                <select id="sel-year" onchange="applyFilters()"><option value="">Tout</option></select>
-            </div>
-            <div class="filter-group">
-                <label>Thème</label>
-                <select id="sel-theme" onchange="applyFilters()"><option value="">Tout</option></select>
-            </div>
-             <div class="filter-group">
-                <label>Collecteur</label>
-                <select id="sel-coll" onchange="applyFilters()"><option value="">Tout</option></select>
-            </div>
+            <div class="filter-group"><label>Catégorie</label><select id="sel-cat" onchange="applyFilters()"><option value="">Tout</option></select></div>
+            <div class="filter-group"><label>Pays</label><select id="sel-pays" onchange="applyFilters()"><option value="">Tout</option></select></div>
+            <div class="filter-group"><label>Millésime</label><select id="sel-year" onchange="applyFilters()"><option value="">Tout</option></select></div>
+            <div class="filter-group"><label>Thème</label><select id="sel-theme" onchange="applyFilters()"><option value="">Tout</option></select></div>
+            <div class="filter-group"><label>Collecteur</label><select id="sel-coll" onchange="applyFilters()"><option value="">Tout</option></select></div>
         </div>
 
         <div id="cards-grid">
-            <p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement de la collection en cours...</p>
+            <p style="text-align:center; padding:40px;">Chargement...</p>
         </div>
 
-        <div class="load-more-container">
-            <button id="btn-load-more" onclick="showMore()" style="display:none;">Voir la suite</button>
+        <div style="text-align:center; margin: 40px 0;">
+            <button id="btn-load-more" onclick="showMore()">Voir la suite</button>
         </div>
     </div>
 
-<script>
+    <script>
         // ============================================================
-        // ⚠️ CONFIGURATION ⚠️
+        // ⚠️ REMETTRE VOTRE URL APPS SCRIPT ICI ⚠️
         // ============================================================
-        
-        // Votre URL Apps Script
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbxPf3mHI7wEV4ymuMuovDO1CuQpkGtsIILp6AtEQlqURi-2ckTS9h0vbz_GZCNMi6ZK/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/...................../exec"; 
 
-        // ============================================================
-        
         let allData = [];
         let currentData = [];
         let displayedCount = 0;
         const BATCH_SIZE = 50;
         let isFullLoaded = false;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchFastThenSlow();
-        });
+        document.addEventListener('DOMContentLoaded', () => { fetchFastThenSlow(); });
 
-        // --- LOGIQUE DE CHARGEMENT DOUBLE ---
         function fetchFastThenSlow() {
-            const grid = document.getElementById('cards-grid');
             const counter = document.getElementById('counter');
-
-            // 1. CHARGEMENT RAPIDE (50 lignes) ~4s
             fetch(scriptUrl + "?limit=50")
                 .then(res => res.json())
                 .then(data => {
-                    if (!isFullLoaded) { // Si le gros paquet n'est pas déjà arrivé entre temps
+                    if (!isFullLoaded) {
                         allData = data;
-                        populateFilters(); 
-                        applyFilters(false); // false = Affichage normal (reset de la grille)
-                        
-                        // Indicateur visuel
+                        populateFilters(); applyFilters(false);
                         counter.innerText = "Chargement suite...";
-                        counter.style.backgroundColor = "#fff3cd"; 
+                        counter.style.backgroundColor = "#fff3cd";
                     }
                 })
-                .then(() => {
-                    // 2. CHARGEMENT COMPLET (Arrière-plan) ~12s
-                    return fetch(scriptUrl);
-                })
+                .then(() => { return fetch(scriptUrl); })
                 .then(res => res.json())
                 .then(fullData => {
-                    // 3. FUSION ET MISE A JOUR SILENCIEUSE
-                    console.log("Données complètes reçues :", fullData.length);
                     allData = fullData;
                     isFullLoaded = true;
-                    
-                    populateFilters(); // Met à jour les filtres avec tous les pays/années
-                    
-                    // C'est ICI la correction : On relance le calcul des filtres
-                    // mais en mode "true" (Silencieux) pour ne pas effacer ce que l'utilisateur regarde
-                    applyFilters(true); 
-                    
-                    // Indicateur visuel final
+                    populateFilters(); applyFilters(true);
+                    counter.innerText = allData.length + " billets";
                     counter.style.backgroundColor = "#d4edda";
-                })
-                .catch(err => {
-                    console.error(err);
-                    // On ne met pas d'erreur rouge si le premier chargement a marché, juste un log
                 });
         }
 
-        // --- FILTRES ---
         function populateFilters() {
             const maps = [
                 { id: 'sel-cat', key: 'Categorie' },
@@ -208,119 +183,126 @@
                 { id: 'sel-theme', key: 'Theme' },
                 { id: 'sel-coll', key: 'Collecteur' }
             ];
-
             maps.forEach(m => {
                 const select = document.getElementById(m.id);
-                const currentVal = select.value; // On garde la sélection active
-                
-                // On garde l'option "Tout" et on ajoute les nouvelles options
-                let optionsHtml = '<option value="">Tout</option>';
-                
-                const values = [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort();
-                values.forEach(val => {
-                    // Petite astuce pour garder sélectionné l'élément
-                    const isSelected = (val === currentVal) ? 'selected' : '';
-                    optionsHtml += `<option value="${val}" ${isSelected}>${val}</option>`;
+                const currentVal = select.value;
+                let h = '<option value="">Tout</option>';
+                [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort().forEach(val => {
+                    h += `<option value="${val}" ${val===currentVal?'selected':''}>${val}</option>`;
                 });
-                select.innerHTML = optionsHtml;
+                select.innerHTML = h;
             });
         }
 
-        // --- MOTEUR DE RECHERCHE (Modifié pour gérer le mode silencieux) ---
-        function applyFilters(silentMode = false) {
-            const search = document.getElementById('search-input').value.toLowerCase();
+        function applyFilters(silent = false) {
+            const s = document.getElementById('search-input').value.toLowerCase();
             const fCat = document.getElementById('sel-cat').value;
             const fPays = document.getElementById('sel-pays').value;
             const fYear = document.getElementById('sel-year').value;
             const fTheme = document.getElementById('sel-theme').value;
             const fColl = document.getElementById('sel-coll').value;
 
-            // On recalcule la liste "currentData" basée sur TOUTES les données (allData)
             currentData = allData.filter(item => {
-                const textMatch = !search || 
-                                  (item.NomBillet && item.NomBillet.toLowerCase().includes(search)) ||
-                                  (item.Ville && item.Ville.toLowerCase().includes(search)) ||
-                                  (item.Recherche && item.Recherche.toLowerCase().includes(search));
-
-                return textMatch &&
-                       (!fCat || item.Categorie === fCat) &&
-                       (!fPays || item.Pays === fPays) &&
-                       (!fYear || item.Millesime == fYear) &&
-                       (!fTheme || item.Theme === fTheme) &&
-                       (!fColl || item.Collecteur === fColl);
+                const txt = !s || (item.NomBillet && item.NomBillet.toLowerCase().includes(s)) ||
+                                  (item.Ville && item.Ville.toLowerCase().includes(s)) ||
+                                  (item.Recherche && item.Recherche.toLowerCase().includes(s));
+                return txt && (!fCat || item.Categorie === fCat) &&
+                       (!fPays || item.Pays === fPays) && (!fYear || item.Millesime == fYear) &&
+                       (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl);
             });
 
-            // Mise à jour du compteur texte
-            const countText = isFullLoaded ? currentData.length + " billets" : currentData.length + " (Chargement...)";
-            document.getElementById('counter').innerText = countText;
-
-            // --- CAS 1 : Mode Normal (Recherche utilisateur ou 1er chargement) ---
-            if (!silentMode) {
+            if (!silent) {
                 document.getElementById('cards-grid').innerHTML = ""; 
                 displayedCount = 0; 
-                showMore(); // Affiche les premiers résultats
-            } 
-            // --- CAS 2 : Mode Silencieux (Arrivée des données d'arrière-plan) ---
-            else {
-                // On NE vide PAS la grille. On met juste à jour le bouton "Voir la suite"
+                showMore();
+            } else {
                 updateLoadMoreButton();
             }
+            if(isFullLoaded) document.getElementById('counter').innerText = currentData.length + " billets";
         }
 
         function showMore() {
             const grid = document.getElementById('cards-grid');
-            const nextBatch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
-
-            if(nextBatch.length === 0 && displayedCount === 0) {
-                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Aucun résultat.</p>";
-                updateLoadMoreButton();
-                return;
+            const batch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
+            
+            if(batch.length === 0 && displayedCount === 0) {
+                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center;'>Aucun résultat.</p>";
+                updateLoadMoreButton(); return;
             }
 
-            let htmlBuffer = "";
+            let html = "";
+            batch.forEach(item => {
+                // Construction des liens dynamiques (ou vide si pas de lien)
+                const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}` : '';
+                const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
+                const couleur = item.Couleur || '#ccc';
 
-            nextBatch.forEach(item => {
-                const imgContent = item.Image 
-                    ? `<img src="${item.Image}" loading="lazy" alt="${item.NomBillet}">` 
-                    : `<span class="no-img">Pas d'image</span>`;
-                const color = item.Couleur ? item.Couleur : "#ccc";
-
-                htmlBuffer += `
-                <div class="card" style="border-top-color: ${color}">
-                    <div class="card-img-container">${imgContent}</div>
-                    <div class="card-body">
-                        <div class="tags">
-                            ${item.Pays ? `<span class="tag">${item.Pays}</span>` : ''}
-                            ${item.Millesime ? `<span class="tag">${item.Millesime}</span>` : ''}
-                        </div>
-                        <h3 class="card-title">${item.NomBillet || 'Sans titre'}</h3>
-                        <div class="card-meta">
-                            ${item.Ville ? item.Ville + '<br>' : ''}
-                            ${item.Dep ? '(' + item.Dep + ')' : ''}
-                        </div>
-                        <div class="card-desc">${item.Commentaire ? item.Commentaire : ''}</div>
+                // Reconstitution exacte de votre vignette
+                html += `
+                <div class="global-container">
+                    <div class="header-container" style="color:${couleur};">
+                         <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%), url(${imgUrl}) no-repeat; "></div>
+                         <div class="category" style="border:1px solid ${couleur};">${item.Categorie}</div>
+                         <div class="header-info">
+                             <h1>${item.Ville || ''}</h1>
+                         </div>
                     </div>
-                    ${item.InfoPaiement ? `<div class="card-footer">${item.InfoPaiement}</div>` : ''}
+                    
+                    <div class="content">
+                        <div class="description">
+                            ${item.Dep || ''} ${item.Reference || ''} ${item.Millesime || ''}-${item.Version || ''}<br />
+                            ${item.Cp || ''} ${item.Ville || ''}<br />
+                            ${item.NomBillet || ''}
+                        </div>
+                        
+                        <div class="${item.CollecteCache || ''}">
+                            Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
+                            <br><br>
+                            <i>${item.InfoPaiement || ''}</i>
+                        </div>
+                        
+                        <div class="${item.ComCache || ''}">
+                            Commentaire : ${item.Commentaire || ''}
+                        </div>
+                    </div>
+
+                    <div class="more">
+                        <center>
+                            <table class="dates">
+                                <tr><td>Pré Collecte :</td><td><b>${item.DatePre || ''}</b></td></tr>
+                                <tr><td>Collecte :</td><td><b>${item.DateColl || ''}</b></td></tr>
+                                <tr><td>Terminé :</td><td><b>${item.DateFin || ''}</b></td></tr>
+                            </table>
+                        </center>
+                    </div>
+
+                    <div class="more">
+                        <center>${item.CompteurBT || ''}</center>
+                    </div>
+
+                    <div class="more action-icons">
+                        <center>
+                            ${item.Sondage ? `<a href="${item.Sondage}" target="_blank"><img style="margin-left: 10px" height="20px;" src="https://drive.google.com/thumbnail?id=1tho3wrh3YJMcZqryJrAHbury01qt-5sY" title="Sondage" /></a>` : ''}
+                            ${item.LinkSheet ? `<a href="${item.LinkSheet}" target="_blank"><img style="margin-left: 10px" height="20px;" src="https://drive.google.com/thumbnail?id=1SX9hhBp2Y8eQTJYFaKMMpGQfzZKRToOt" title="Sheet" /></a>` : ''}
+                            ${item.LinkFB ? `<a href="${item.LinkFB}" target="_blank"><img style="margin-left: 10px" height="20px;" src="https://drive.google.com/thumbnail?id=1qheBfrQFEnoCUg1YqMAS2wjbxi9KBqb6" title="Facebook" /></a>` : ''}
+                            ${item.ImageId ? `<a href="${downloadLink}" target="_blank"><img style="margin-left: 10px" height="20px;" src="https://drive.google.com/thumbnail?id=12S9iSApngkIR_gfDiOJczJiMbwE4-zbZ" title="Télécharger Image" /></a>` : ''}
+                            &nbsp;&nbsp;&nbsp;<span style='font-size:10px; color:#999;'>(n°${item.Timestamp || ''})</span>
+                        </center>
+                    </div>
                 </div>`;
             });
 
-            grid.insertAdjacentHTML('beforeend', htmlBuffer);
-            displayedCount += nextBatch.length;
-            
+            grid.insertAdjacentHTML('beforeend', html);
+            displayedCount += batch.length;
             updateLoadMoreButton();
         }
 
-        // Petite fonction dédiée pour gérer le bouton proprement
         function updateLoadMoreButton() {
             const btn = document.getElementById('btn-load-more');
-            
-            // S'il reste des éléments à afficher
             if (displayedCount < currentData.length) {
                 btn.style.display = 'inline-block';
-                const restant = currentData.length - displayedCount;
-                btn.innerText = `Voir la suite (${restant})`;
+                btn.innerText = `Voir la suite (${currentData.length - displayedCount})`;
             } else {
-                // Tout est affiché
                 btn.style.display = 'none';
             }
         }
