@@ -34,32 +34,48 @@ document.addEventListener("DOMContentLoaded", function() {
     auth.onAuthStateChanged(user => {
         const path = window.location.pathname;
         const page = path.split("/").pop();
-        // Gère le cas où l'url est vide (racine) ou index.html
-        const isLoginPage = (page === "login.html");
+        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
 
         if (user) {
-            // --- CONNECTÉ ---
-            console.log("Connecté : " + user.email);
+            console.log("Utilisateur détecté : " + user.email);
+
+            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore(); // On initialise la DB
             
-            if (isLoginPage) {
-                window.location.href = "index.html";
-            } else {
-                loadMenu(); // Charge le menu
-                
-                // LEVE LE RIDEAU (Affiche le contenu)
-                const appContent = document.getElementById('app-content');
-                if (appContent) appContent.style.display = 'block';
-            }
+            // On cherche le document qui a pour ID l'email de l'utilisateur
+            db.collection("whitelist").doc(user.email).get()
+            .then((doc) => {
+                if (doc.exists) {
+                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
+                    console.log("Accès autorisé pour : " + user.email);
+                    
+                    if (isLoginPage) {
+                        window.location.href = "index.html";
+                    } else {
+                        loadMenu(); 
+                        const appContent = document.getElementById('app-content');
+                        if (appContent) appContent.style.display = 'block';
+                    }
+                } else {
+                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
+                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
+                    alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
+                    
+                    // On le déconnecte
+                    auth.signOut().then(() => {
+                        window.location.href = "login.html";
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Erreur lors de la vérification Firestore :", error);
+            });
 
         } else {
             // --- NON CONNECTÉ ---
             console.log("Non connecté -> Redirection");
-            
             if (!isLoginPage) {
                 window.location.href = "login.html";
-            } else {
-                // Si on est sur le login, on s'assure qu'il est visible (au cas où)
-                // Note : login.html n'utilise pas #app-content mais .login-card, donc c'est bon.
             }
         }
     });
