@@ -2,12 +2,12 @@
 // 1. CONFIGURATION FIREBASE (A REMPLIR)
 // ============================================================
 const firebaseConfig = {
-    apiKey: "AIzaSy...........................",
-    authDomain: "votre-projet.firebaseapp.com",
-    projectId: "votre-projet",
-    storageBucket: "votre-projet.appspot.com",
-    messagingSenderId: "................",
-    appId: "................................"
+    apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
+    authDomain: "asso-billet-site.firebaseapp.com",
+    projectId: "asso-billet-site",
+    storageBucket: "asso-billet-site.appspot.com",
+    messagingSenderId: "644448143950",
+    appId: "1:644448143950:web:f64ccc8f62883507ea111f"
 };
 
 // Initialisation de Firebase (une seule fois)
