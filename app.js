@@ -174,3 +174,75 @@ function updateLoadMoreButton() {
         btn.style.display = 'none';
     }
 }
+
+// ============================================================
+// GESTION DU SLIDER DE DATE (Hybrid)
+// ============================================================
+
+let dateSlider = document.getElementById('date-slider');
+
+// Fonction pour initialiser le slider une fois les données reçues
+function initSlider() {
+    // 1. On trouve la date min et max dans vos données pour caler le slider
+    // On extrait toutes les dates valides
+    const dates = allData
+        .map(d => normalizeDate(d.Date))
+        .filter(d => d.length > 0)
+        .map(d => new Date(d).getTime()); // On convertit en "Temps machine"
+
+    if (dates.length === 0) return; // Pas de dates, pas de slider
+
+    // On prend la plus petite et la plus grande (avec une marge de sécurité)
+    const minTimestamp = Math.min(...dates);
+    const maxTimestamp = Math.max(...dates);
+
+    // 2. Si le slider existe déjà (rechargement), on le détruit pour le recréer
+    if (dateSlider.noUiSlider) {
+        dateSlider.noUiSlider.destroy();
+    }
+
+    // 3. Création du slider
+    noUiSlider.create(dateSlider, {
+        start: [minTimestamp, maxTimestamp], // Position initiale des poignées
+        connect: true, // Colorier la zone entre les deux
+        range: {
+            'min': minTimestamp,
+            'max': maxTimestamp
+        },
+        step: 24 * 60 * 60 * 1000, // Pas de 1 jour (en millisecondes)
+        tooltips: false // On n'affiche pas de bulle car on a les inputs en dessous
+    });
+
+    // 4. Événement : Quand on bouge le slider -> On met à jour les inputs
+    dateSlider.noUiSlider.on('update', function (values, handle) {
+        // values[0] = début, values[1] = fin
+        const dateStr = new Date(parseInt(values[handle])).toISOString().split('T')[0];
+        
+        if (handle === 0) {
+            document.getElementById('date-start').value = dateStr;
+        } else {
+            document.getElementById('date-end').value = dateStr;
+        }
+    });
+
+    // 5. Événement : Quand on lâche la poignée -> On lance le filtre (pour pas filtrer à chaque pixel bougé)
+    dateSlider.noUiSlider.on('change', function () {
+        applyFilters();
+    });
+}
+
+// Fonction appelée quand l'utilisateur change manuellement l'input date
+function manualDateChange() {
+    const startVal = document.getElementById('date-start').value;
+    const endVal = document.getElementById('date-end').value;
+
+    if(startVal && endVal && dateSlider.noUiSlider) {
+        // On met à jour les poignées du slider pour matcher les inputs
+        dateSlider.noUiSlider.set([
+            new Date(startVal).getTime(), 
+            new Date(endVal).getTime()
+        ]);
+    }
+    // On applique le filtre
+    applyFilters();
+}
