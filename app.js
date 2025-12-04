@@ -139,7 +139,7 @@ function showMore() {
                 <div class="${item.CollecteCache || ''}">
                     Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
                     <br><br>
-                    <div style="text-align:center; font-size:1.1em;">
+                    <div style="text-align:left; font-size:1.1em;">
                         ${item.InfoPaiement || ''}
                     </div>
                 </div>
