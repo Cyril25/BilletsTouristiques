@@ -1,92 +1,94 @@
 // ============================================================
-// 1. CONFIGURATION FIREBASE (A REMPLIR)
+// 1. INITIALISATION FIREBASE (VIGILANCE ACCRUE)
 // ============================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
-    authDomain: "asso-billet-site.firebaseapp.com",
-    projectId: "asso-billet-site",
-    storageBucket: "asso-billet-site.appspot.com",
-    messagingSenderId: "644448143950",
-    appId: "1:644448143950:web:f64ccc8f62883507ea111f"
-};
 
-// Initialisation de Firebase (une seule fois)
-if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+// On vérifie d'abord si la librairie Firebase est bien chargée dans le HTML
+if (typeof firebase === 'undefined') {
+    console.error("ERREUR CRITIQUE : Les scripts Firebase (app.js et auth.js) ne sont pas chargés dans le HTML avant global.js !");
+} else {
+    // On ne lance l'initialisation QUE si aucune app n'existe déjà
+    if (!firebase.apps.length) {
+        // REMPLACEZ LES ... PAR VOS CLES CI-DESSOUS
+        firebase.initializeApp({
+            apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
+            authDomain: "asso-billet-site.firebaseapp.com",
+            projectId: "asso-billet-site",
+            storageBucket: "asso-billet-site.appspot.com",
+            messagingSenderId: "644448143950",
+            appId: "1:644448143950:web:f64ccc8f62883507ea111f"
+        });
+        console.log("Firebase initialisé avec succès.");
+    }
 }
 
 // ============================================================
-// 2. LE VIGILE (SÉCURITÉ)
+// 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
     
-    // Si Firebase n'est pas chargé (erreur script), on arrête
-    if (typeof firebase === 'undefined') {
-        console.error("Erreur : Les scripts Firebase manquent dans le fichier HTML.");
-        return;
-    }
+    // Sécurité supplémentaire
+    if (typeof firebase === 'undefined') return;
 
     const auth = firebase.auth();
 
-    // Cette fonction surveille en permanence si on est connecté ou pas
     auth.onAuthStateChanged(user => {
-        // On regarde sur quelle page on est
         const path = window.location.pathname;
         const page = path.split("/").pop();
+        // Gère le cas où l'url est vide (racine) ou index.html
         const isLoginPage = (page === "login.html");
 
         if (user) {
-            // --- CAS 1 : L'UTILISATEUR EST CONNECTÉ ---
-            console.log("Utilisateur identifié : " + user.email);
+            // --- CONNECTÉ ---
+            console.log("Connecté : " + user.email);
             
             if (isLoginPage) {
-                // S'il est sur la page de connexion, ça ne sert à rien -> Hop, Accueil !
                 window.location.href = "index.html";
             } else {
-                // S'il est sur une page normale, on charge le menu
-                loadMenu(user);
+                loadMenu(); // Charge le menu
                 
-                // ET SURTOUT : On lève le rideau (on affiche le contenu caché)
+                // LEVE LE RIDEAU (Affiche le contenu)
                 const appContent = document.getElementById('app-content');
                 if (appContent) appContent.style.display = 'block';
             }
 
         } else {
-            // --- CAS 2 : PAS CONNECTÉ (INTRUS OU NOUVEAU) ---
-            console.log("Non connecté -> Redirection vers Login");
+            // --- NON CONNECTÉ ---
+            console.log("Non connecté -> Redirection");
             
             if (!isLoginPage) {
-                // Si ce n'est pas la page de login, on le vire dessus !
                 window.location.href = "login.html";
+            } else {
+                // Si on est sur le login, on s'assure qu'il est visible (au cas où)
+                // Note : login.html n'utilise pas #app-content mais .login-card, donc c'est bon.
             }
         }
     });
 });
 
 // ============================================================
-// 3. FONCTIONS DE CONNEXION / DECONNEXION
+// 3. FONCTIONS AUTH
 // ============================================================
 function loginWithGoogle() {
+    if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    // Ouvre la fenêtre pop-up Google
     firebase.auth().signInWithPopup(provider)
         .catch(error => {
-            console.error("Erreur login:", error);
-            alert("Erreur de connexion : " + error.message);
+            console.error(error);
+            alert("Erreur connexion : " + error.message);
         });
 }
 
 function logout() {
+    if (typeof firebase === 'undefined') return;
     firebase.auth().signOut().then(() => {
-        console.log("Déconnecté");
         window.location.href = "login.html";
     });
 }
 
 // ============================================================
-// 4. LE MENU AUTOMATIQUE
+// 4. MENU
 // ============================================================
-function loadMenu(user) {
+function loadMenu() {
     const placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
@@ -96,15 +98,13 @@ function loadMenu(user) {
             placeholder.innerHTML = html;
             highlightActiveLink();
         })
-        .catch(err => console.error("Impossible de charger le menu :", err));
+        .catch(err => console.error("Menu introuvable :", err));
 }
 
-// Petite fonction pour mettre en gras le lien de la page actuelle
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = "index.html"; // Si on est à la racine
+    if(page === "") page = "index.html";
     
-    // On attend un peu que le menu soit inséré dans le DOM
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
         links.forEach(link => {
@@ -113,8 +113,26 @@ function highlightActiveLink() {
     }, 100);
 }
 
-// Pour le menu mobile
 function toggleMenu() {
     const nav = document.getElementById('nav-links');
     if(nav) nav.classList.toggle('active');
 }
+```
+
+### Vérification Importante dans vos HTML
+
+L'erreur peut aussi venir de vos fichiers HTML (`index.html`, `billets.html`, etc.).
+Assurez-vous de ne pas avoir inclus `global.js` **deux fois** par erreur.
+
+Votre fin de fichier HTML doit ressembler **exactement** à ça :
+
+```html
+    <!-- 1. D'abord les outils Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
+    <!-- 2. Ensuite votre script global (UNE SEULE FOIS) -->
+    <script src="global.js"></script>
+    
+    <!-- 3. Enfin app.js (SEULEMENT SUR LA PAGE BILLETS) -->
+</body>
