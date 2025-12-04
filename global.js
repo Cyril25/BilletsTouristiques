@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function() {
             console.log("Connecté : " + user.email);
             
             if (isLoginPage) {
-                window.location.href = "index.html";
+                window.location.href = index.html;
             } else {
                 loadMenu(); // Charge le menu
                 
