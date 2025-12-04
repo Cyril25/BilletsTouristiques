@@ -111,19 +111,23 @@ function loadMenu() {
     fetch("menu.html")
         .then(response => response.text())
         .then(html => {
-            // 1. On injecte le HTML du menu
+            // 1. On injecte le HTML
             placeholder.innerHTML = html;
             
-            // 2. On surligne la page active
+            // 2. On gère le lien actif
             highlightActiveLink();
 
-            // 3. NOUVEAU : On affiche l'email de l'utilisateur
+            // 3. ON AFFICHE L'EMAIL
             const user = firebase.auth().currentUser;
             const emailSpan = document.getElementById("user-email-display");
             
+            // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
-                // On met l'email dans le span qu'on a créé dans menu.html
-                emailSpan.textContent = user.email; 
+                emailSpan.textContent = user.email;
+                
+                // Petit bonus : Si la navbar a un fond blanc, change la couleur du texte en noir
+                // Sinon, laisse en blanc comme défini dans le HTML
+                // emailSpan.style.color = "#333"; 
             }
         })
         .catch(err => console.error("Menu introuvable :", err));
