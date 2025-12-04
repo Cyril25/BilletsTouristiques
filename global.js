@@ -103,7 +103,7 @@ function loadMenu() {
 
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = "index.html";
+    if(page === "") page = index.html;
     
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
