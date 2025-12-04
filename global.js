@@ -102,7 +102,7 @@ function logout() {
 }
 
 // ============================================================
-// 4. MENU
+// 4. MENU (Mise à jour)
 // ============================================================
 function loadMenu() {
     const placeholder = document.getElementById("menu-placeholder");
@@ -111,8 +111,20 @@ function loadMenu() {
     fetch("menu.html")
         .then(response => response.text())
         .then(html => {
+            // 1. On injecte le HTML du menu
             placeholder.innerHTML = html;
+            
+            // 2. On surligne la page active
             highlightActiveLink();
+
+            // 3. NOUVEAU : On affiche l'email de l'utilisateur
+            const user = firebase.auth().currentUser;
+            const emailSpan = document.getElementById("user-email-display");
+            
+            if (user && emailSpan) {
+                // On met l'email dans le span qu'on a créé dans menu.html
+                emailSpan.textContent = user.email; 
+            }
         })
         .catch(err => console.error("Menu introuvable :", err));
 }
