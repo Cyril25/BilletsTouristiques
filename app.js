@@ -1,6 +1,3 @@
-// ============================================================
-// CONFIGURATION
-// ============================================================
 const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
 
 let allData = [];
@@ -11,10 +8,17 @@ let isFullLoaded = false;
 
 document.addEventListener('DOMContentLoaded', () => { fetchFastThenSlow(); });
 
-// --- CHARGEMENT INTELLIGENT ---
+// --- FONCTION CHANGEMENT DE VUE ---
+function changeView(mode) {
+    const container = document.getElementById('app-content');
+    container.classList.remove('view-liste', 'view-galerie');
+    if (mode === 'liste') container.classList.add('view-liste');
+    else if (mode === 'galerie') container.classList.add('view-galerie');
+}
+
+// --- CHARGEMENT DONNEES ---
 function fetchFastThenSlow() {
     const counter = document.getElementById('counter');
-    // 1. Appel rapide (50 derniers)
     fetch(scriptUrl + "?limit=50")
         .then(res => res.json())
         .then(data => {
@@ -25,22 +29,27 @@ function fetchFastThenSlow() {
                 counter.style.backgroundColor = "#fff3cd";
             }
         })
-        .then(() => { 
-            // 2. Appel complet (Arrière-plan)
-            return fetch(scriptUrl); 
-        })
+        .then(() => { return fetch(scriptUrl); })
         .then(res => res.json())
         .then(fullData => {
             allData = fullData;
             isFullLoaded = true;
-            populateFilters(); applyFilters(true); // Mode silencieux
+            populateFilters(); applyFilters(true);
             counter.innerText = allData.length + " billets";
             counter.style.backgroundColor = "#d4edda";
-        })
-        .catch(err => console.error(err));
+        });
 }
 
-// --- GESTION DES FILTRES ---
+function normalizeDate(str) {
+    if (!str) return "";
+    let clean = str.substring(0, 10);
+    if (clean.includes('/')) {
+        const parts = clean.split('/');
+        if(parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return clean;
+}
+
 function populateFilters() {
     const maps = [
         { id: 'sel-cat', key: 'Categorie' },
@@ -60,7 +69,6 @@ function populateFilters() {
     });
 }
 
-// --- MOTEUR DE RECHERCHE ---
 function applyFilters(silent = false) {
     const s = document.getElementById('search-input').value.toLowerCase();
     const fCat = document.getElementById('sel-cat').value;
@@ -69,7 +77,6 @@ function applyFilters(silent = false) {
     const fTheme = document.getElementById('sel-theme').value;
     const fColl = document.getElementById('sel-coll').value;
     
-    // Dates sélectionnées (déjà en format AAAA-MM-JJ par le navigateur)
     const fStart = document.getElementById('date-start').value; 
     const fEnd = document.getElementById('date-end').value;
 
@@ -78,13 +85,7 @@ function applyFilters(silent = false) {
                           (item.Ville && item.Ville.toLowerCase().includes(s)) ||
                           (item.Recherche && item.Recherche.toLowerCase().includes(s));
         
-        // --- CORRECTION DATE ---
-        // On normalise la date du billet pour être sûr de comparer des choses comparables
         const itemDate = normalizeDate(item.Date);
-
-        // La logique :
-        // 1. Si j'ai une date de début, la date du billet doit être >=
-        // 2. Si j'ai une date de fin, la date du billet doit être <=
         const matchDate = (!fStart || (itemDate && itemDate >= fStart)) &&
                           (!fEnd || (itemDate && itemDate <= fEnd));
 
@@ -104,7 +105,6 @@ function applyFilters(silent = false) {
     if(isFullLoaded) document.getElementById('counter').innerText = currentData.length + " billets";
 }
 
-// --- AFFICHAGE (RENDU HTML) ---
 function showMore() {
     const grid = document.getElementById('cards-grid');
     const batch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
@@ -122,19 +122,10 @@ function showMore() {
 
         html += `
         <div class="global-container" style="border-top: 8px solid ${couleur};">
-            
             <div class="header-container">
                  <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
-                 
-                 <div class="category" style="background-color: ${couleur}; color: white;">
-                    ${item.Categorie}
-                 </div>
-                 
-                 <div class="header-info">
-                     <h1 style="border-bottom: 3px solid ${couleur};">
-                        ${item.Ville || ''}
-                     </h1>
-                 </div>
+                 <div class="category" style="background-color: ${couleur}; color: white;">${item.Categorie}</div>
+                 <div class="header-info"><h1 style="border-bottom: 3px solid ${couleur};">${item.Ville || ''}</h1></div>
             </div>
             
             <div class="content">
@@ -143,60 +134,32 @@ function showMore() {
                     ${item.Cp || ''} ${item.Ville || ''}<br />
                     ${item.NomBillet || ''}
                 </div>
-                
                 <div class="${item.CollecteCache || ''}">
                     Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
-                    <br><br>
-                    <div style="text-align:left; font-size:1.1em;">
-                        ${item.InfoPaiement || ''}
-                    </div>
+                    <br><br><div style="text-align:left; font-size:1.1em;">${item.InfoPaiement || ''}</div>
                 </div>
-                
-                <div class="${item.ComCache || ''}" style="margin-top:15px;">
-                    Commentaire : ${item.Commentaire || ''}
-                </div>
+                <div class="${item.ComCache || ''}" style="margin-top:15px;">Commentaire : ${item.Commentaire || ''}</div>
             </div>
 
             <div class="more">
-                <center>
-                    <table class="dates">
-                        <tr><td>Pré Collecte :</td><td><b>${item.DatePre || ''}</b></td></tr>
-                        <tr><td>Collecte :</td><td><b>${item.DateColl || ''}</b></td></tr>
-                        <tr><td>Terminé :</td><td><b>${item.DateFin || ''}</b></td></tr>
-                    </table>
-                </center>
+                <center><table class="dates">
+                    <tr><td>Pré Collecte :</td><td><b>${item.DatePre || ''}</b></td></tr>
+                    <tr><td>Collecte :</td><td><b>${item.DateColl || ''}</b></td></tr>
+                    <tr><td>Terminé :</td><td><b>${item.DateFin || ''}</b></td></tr>
+                </table></center>
             </div>
 
-            <div class="more">
-                <center>${item.CompteurBT || ''}</center>
-            </div>
+            <div class="more"><center>${item.CompteurBT || ''}</center></div>
 
             <div class="more action-icons">
-                ${item.Sondage ? `
-                    <a href="${item.Sondage}" target="_blank" class="icon-btn ico-form" title="Répondre au sondage">
-                        <i class="fa-solid fa-clipboard-question"></i>
-                    </a>` : ''}
-
-                ${item.LinkSheet ? `
-                    <a href="${item.LinkSheet}" target="_blank" class="icon-btn ico-sheet" title="Voir le fichier Excel">
-                        <i class="fa-solid fa-file-csv"></i>
-                    </a>` : ''}
-
-                ${item.LinkFB ? `
-                    <a href="${item.LinkFB}" target="_blank" class="icon-btn ico-fb" title="Voir sur Facebook">
-                        <i class="fa-brands fa-facebook"></i>
-                    </a>` : ''}
-
-                ${item.ImageId ? `
-                    <a href="${downloadLink}" target="_blank" class="icon-btn ico-dl" title="Télécharger l'image HD">
-                        <i class="fa-solid fa-download"></i>
-                    </a>` : ''}
-                    
+                ${item.Sondage ? `<a href="${item.Sondage}" target="_blank" class="icon-btn ico-form"><i class="fa-solid fa-clipboard-question"></i></a>` : ''}
+                ${item.LinkSheet ? `<a href="${item.LinkSheet}" target="_blank" class="icon-btn ico-sheet"><i class="fa-solid fa-file-csv"></i></a>` : ''}
+                ${item.LinkFB ? `<a href="${item.LinkFB}" target="_blank" class="icon-btn ico-fb"><i class="fa-brands fa-facebook"></i></a>` : ''}
+                ${item.ImageId ? `<a href="${downloadLink}" target="_blank" class="icon-btn ico-dl"><i class="fa-solid fa-download"></i></a>` : ''}
                  <span style='font-size:10px; color:#ccc; align-self:center;'>(n°${item.Timestamp || ''})</span>
             </div>
         </div>`;
     });
-
     grid.insertAdjacentHTML('beforeend', html);
     displayedCount += batch.length;
     updateLoadMoreButton();
@@ -210,21 +173,4 @@ function updateLoadMoreButton() {
     } else {
         btn.style.display = 'none';
     }
-}
-
-// --- UTILITAIRE : Convertit n'importe quelle date en format AAAA-MM-JJ ---
-function normalizeDate(str) {
-    if (!str) return "";
-    // 1. On garde juste les 10 premiers caractères (pour enlever l'heure si elle traîne)
-    let clean = str.substring(0, 10);
-    
-    // 2. Si c'est du format français JJ/MM/AAAA (avec des slashs)
-    if (clean.includes('/')) {
-        const parts = clean.split('/');
-        // On retourne AAAA-MM-JJ
-        if(parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    
-    // Sinon on suppose que c'est déjà bon (AAAA-MM-JJ)
-    return clean;
 }
