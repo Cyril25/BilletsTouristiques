@@ -124,10 +124,6 @@ function loadMenu() {
             // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
                 emailSpan.textContent = user.email;
-                
-                // Petit bonus : Si la navbar a un fond blanc, change la couleur du texte en noir
-                // Sinon, laisse en blanc comme défini dans le HTML
-                // emailSpan.style.color = "#333"; 
             }
         })
         .catch(err => console.error("Menu introuvable :", err));
