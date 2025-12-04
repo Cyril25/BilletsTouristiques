@@ -36,11 +36,17 @@
                 <input type="text" id="search-input" placeholder="Ville, Nom, Réf..." onkeyup="applyFilters()">
             </div>
             
-            <div class="filter-group" style="min-width: 200px;">
+            <div class="filter-group" style="min-width: 300px; flex-grow: 1.5;">
                 <label>Période (Date)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="date" id="date-start" onchange="applyFilters()">
-                    <input type="date" id="date-end" onchange="applyFilters()">
+                
+                <!-- Le Slider va s'afficher ici -->
+                <div id="date-slider" style="margin: 10px 10px 20px 10px;"></div>
+
+                <!-- Les Inputs (synchronisés avec le slider) -->
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="date" id="date-start" onchange="manualDateChange()">
+                    <span style="color:#999;">à</span>
+                    <input type="date" id="date-end" onchange="manualDateChange()">
                 </div>
             </div>
 
