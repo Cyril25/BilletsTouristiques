@@ -1,5 +1,5 @@
 /* =========================================
-   1. STYLE GLOBAL
+   1. SECURITE & GLOBAL
    ========================================= */
 body {
     font-family: 'Roboto', sans-serif;
@@ -9,13 +9,17 @@ body {
     color: #333;
 }
 
+/* --- LE RIDEAU DE FER --- */
+/* IMPORTANT : On cache le site par défaut. */
+/* Seul global.js l'affichera une fois connecté. */
 #app-content {
+    display: none; 
     max-width: 1400px;
     margin: 0 auto;
 }
 
 /* =========================================
-   2. MENU DE NAVIGATION (RESPONSIVE)
+   2. MENU DE NAVIGATION
    ========================================= */
 .navbar {
     background-color: #2c3e50;
@@ -24,348 +28,124 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 60px; /* Hauteur fixe pour la barre */
+    height: 60px;
     border-radius: 8px;
     margin-bottom: 20px;
     position: relative;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.nav-brand {
-    font-weight: bold;
-    font-size: 1.2em;
-    white-space: nowrap;
-}
+.nav-brand { font-weight: bold; font-size: 1.2em; white-space: nowrap; }
 
-/* Conteneur des liens : Prend toute la hauteur pour éviter le "gap" */
-.nav-links {
-    display: flex;
-    gap: 0; /* L'espace est géré par le padding interne des liens */
-    height: 100%; 
-    align-items: center;
-}
+.nav-links { display: flex; gap: 0; height: 100%; align-items: center; }
 
-/* Les liens et les dossiers parents */
 .nav-links a, .dropdown {
-    height: 100%;
-    display: flex;
-    align-items: center; /* Centre le texte verticalement */
-    padding: 0 15px;     /* Espace horizontal */
-    text-decoration: none;
-    color: white;
-    font-size: 0.95em;
-    transition: background-color 0.3s, color 0.3s;
-    cursor: pointer;
+    height: 100%; display: flex; align-items: center; padding: 0 15px;
+    text-decoration: none; color: white; font-size: 0.95em;
+    transition: background-color 0.3s, color 0.3s; cursor: pointer;
 }
 
-/* Effet de survol */
-.nav-links a:hover, .dropdown:hover {
-    background-color: #34495e; /* Fond légèrement plus clair */
-    color: #4285F4;
-}
-.nav-links a.active {
-    color: #4285F4;
-    font-weight: 500;
-}
+.nav-links a:hover, .dropdown:hover { background-color: #34495e; color: #4285F4; }
+.nav-links a.active { color: #4285F4; font-weight: 500; }
 
-/* --- SOUS-MENU (DROPDOWN) --- */
-.dropdown {
-    position: relative;
-}
-
-/* Le bouton du dropdown hérite du style du parent */
+/* Dropdown */
+.dropdown { position: relative; }
 .dropbtn {
-    background: none;
-    border: none;
-    color: inherit;
-    font-size: 1em;
-    cursor: pointer;
-    font-family: inherit;
-    padding: 0; /* Pas de padding, c'est le .dropdown qui gère */
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    background: none; border: none; color: inherit; font-size: 1em;
+    cursor: pointer; font-family: inherit; padding: 0; display: flex; align-items: center; gap: 5px;
 }
-
-/* Le contenu caché du sous-menu */
 .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: #fff;
-    min-width: 180px;
-    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
-    z-index: 100;
-    border-radius: 0 0 4px 4px;
-    
-    /* C'est ici que se joue la correction du "fossé" */
-    top: 100%; /* Commence exactement sous la barre noire */
-    left: 0;
+    display: none; position: absolute; background-color: #fff; min-width: 180px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 0 0 4px 4px;
+    top: 100%; left: 0;
 }
-
 .dropdown-content a {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    height: auto; /* Reset de la hauteur pour les sous-liens */
-    font-size: 0.9em;
+    color: #333; padding: 12px 16px; text-decoration: none; display: block;
+    height: auto; font-size: 0.9em;
 }
+.dropdown-content a:hover { background-color: #f1f1f1; color: #4285F4; }
+.dropdown:hover .dropdown-content { display: block; }
 
-.dropdown-content a:hover {
-    background-color: #f1f1f1;
-    color: #4285F4;
-}
+/* Mobile */
+.nav-toggle { display: none; background: none; border: none; color: white; font-size: 1.5em; cursor: pointer; }
 
-/* Afficher le sous-menu au survol */
-.dropdown:hover .dropdown-content {
-    display: block;
-}
-
-/* --- BOUTON BURGER (MOBILE) --- */
-.nav-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5em;
-    cursor: pointer;
-}
-
-/* --- VERSION MOBILE --- */
 @media (max-width: 768px) {
     .nav-toggle { display: block; }
-    
     .nav-links {
-        display: none; /* Caché par défaut */
-        flex-direction: column;
-        width: 100%;
-        height: auto; /* Hauteur auto sur mobile */
-        position: absolute;
-        top: 60px; left: 0;
-        background-color: #2c3e50;
-        padding: 10px 0;
-        z-index: 999;
-        border-radius: 0 0 8px 8px;
-        align-items: stretch; /* Prend toute la largeur */
+        display: none; flex-direction: column; width: 100%; height: auto;
+        position: absolute; top: 60px; left: 0; background-color: #2c3e50;
+        padding: 10px 0; z-index: 999; border-radius: 0 0 8px 8px; align-items: stretch;
     }
-    
-    .nav-links.active { display: flex; } /* JS ajoute cette classe */
-    
-    .nav-links a, .dropdown {
-        display: block;
-        width: 100%;
-        text-align: center;
-        padding: 15px 0;
-        height: auto;
-    }
-    
-    .dropdown-content {
-        position: static; /* Plus de position absolue */
-        display: block;   /* Toujours affiché sur mobile pour simplifier */
-        background: #34495e;
-        box-shadow: none;
-        width: 100%;
-    }
-    
-    .dropdown-content a {
-        color: #ddd;
-        padding-left: 0;
-        text-align: center;
-    }
-    
-    .dropbtn { 
-        display: none; /* On cache le titre du dossier sur mobile */
-    }
-    
-    /* On force l'affichage du titre pour le mobile d'une autre façon si besoin, 
-       mais ici on simplifie en affichant directement les sous-liens */
+    .nav-links.active { display: flex; }
+    .nav-links a, .dropdown { display: block; width: 100%; text-align: center; padding: 15px 0; height: auto; }
+    .dropdown-content { position: static; display: block; background: #34495e; box-shadow: none; width: 100%; }
+    .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
+    .dropbtn { display: none; }
 }
-
 
 /* =========================================
-   3. ENTETE & OUTILS
+   3. PAGES DE TEXTE (Accueil, Construction...)
    ========================================= */
-header { 
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; 
-    background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
+.text-page { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.text-page.center { text-align: center; }
+.construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
+.text-page h1 { color: #2c3e50; border-bottom: 2px solid #4285F4; padding-bottom: 10px; margin-top: 0; }
+.text-page h2 { color: #4285F4; margin-top: 30px; font-size: 1.4em; }
+.text-page ul, .text-page ol { padding-left: 20px; }
+.text-page li { margin-bottom: 10px; }
+.alert-box { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+.team-list { font-style: italic; color: #666; margin-top: 20px; }
 
-/* Boutons Modes (Liste/Galerie) */
-.btn-mode { 
-    background: white; border: 1px solid #ddd; padding: 8px 12px; 
-    cursor: pointer; border-radius: 4px; margin-left: 5px; 
-    color: #555; transition: background 0.2s;
-}
+/* =========================================
+   4. APPLI BILLETS (Grille, Filtres...)
+   ========================================= */
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.btn-mode { background: white; border: 1px solid #ddd; padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-left: 5px; color: #555; transition: background 0.2s; }
 .btn-mode:hover { background: #eee; color: #000; }
 
-
-/* =========================================
-   4. FILTRES
-   ========================================= */
-.filters-container {
-    background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; align-items: flex-end;
-}
+.filters-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; align-items: flex-end; }
 .filter-group { display: flex; flex-direction: column; flex-grow: 1; min-width: 140px; }
 .filter-group label { font-size: 0.8em; color: #666; margin-bottom: 5px; font-weight: bold; }
 select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
 #search-input { min-width: 250px; flex-grow: 2; }
 
+#cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
 
-/* =========================================
-   5. GRILLE PRINCIPALE
-   ========================================= */
-#cards-grid {
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
-    gap: 25px;
-}
-
-
-/* =========================================
-   6. CARTE / VIGNETTE (MODE DEFAUT)
-   ========================================= */
-.global-container {
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #e0e0e0; /* Sera surchargé par border-top coloré */
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.global-container:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
-}
-
-/* Header image */
-.header-container {
-    position: relative;
-    height: 200px;
-    color: white;
-}
-.image-bg {
-    width: 100%; height: 100%;
-    background-size: cover !important;
-    background-position: center !important;
-}
-
-/* Badge Catégorie */
-.category {
-    position: absolute; top: 10px; right: 10px; padding: 5px 12px;
-    font-weight: bold; border-radius: 4px; text-transform: uppercase;
-    font-size: 0.75em; letter-spacing: 0.5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* Titre sur fond dégradé */
-.header-info {
-    position: absolute; bottom: 0; left: 0; right: 0; padding: 15px;
-    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-}
-.header-info h1 {
-    margin: 0; font-size: 1.4em; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); 
-    display: inline-block; padding-bottom: 3px; color: white;
-}
-
-/* Corps de la carte */
+/* Vignettes */
+.global-container { background: white; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e0e0e0; transition: transform 0.2s, box-shadow 0.2s; }
+.global-container:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+.header-container { position: relative; height: 200px; color: white; }
+.image-bg { width: 100%; height: 100%; background-size: cover !important; background-position: center !important; }
+.category { position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-weight: bold; border-radius: 4px; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.header-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+.header-info h1 { margin: 0; font-size: 1.4em; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); display: inline-block; padding-bottom: 3px; color: white; }
 .content { padding: 15px; flex-grow: 1; font-size: 0.9em; line-height: 1.5; }
-.description { margin-bottom: 15px; font-weight: 500; color: #444; }
-
-/* Helpers */
 .hidden { display: none !important; }
-
-/* Pieds de page (Gris) */
-.more {
-    border-top: 1px solid #eee;
-    padding: 8px;
-    background: #fafafa;
-    font-size: 0.85em;
-}
-
-/* Tableau dates */
+.more { border-top: 1px solid #eee; padding: 8px; background: #fafafa; font-size: 0.85em; }
 table.dates { width: 100%; font-size: 0.9em; color: #555; }
-table.dates td { padding: 2px; }
-
-/* Icones Actions */
 .action-icons { display: flex; justify-content: center; gap: 20px; padding: 10px 0; }
 .icon-btn { text-decoration: none; font-size: 22px; transition: transform 0.2s, opacity 0.2s; opacity: 0.8; }
 .icon-btn:hover { transform: scale(1.2); opacity: 1; }
+.ico-form { color: #7248B9; } .ico-sheet { color: #21A366; } .ico-fb { color: #1877F2; } .ico-dl { color: #5f6368; }
+.fa-paypal { transition: transform 0.2s; display: inline-block; } a:hover .fa-paypal { transform: scale(1.2); }
 
-/* Couleurs Icones */
-.ico-form { color: #7248B9; }
-.ico-sheet { color: #21A366; }
-.ico-fb    { color: #1877F2; }
-.ico-dl    { color: #5f6368; }
-
-/* Animation PayPal */
-.fa-paypal { transition: transform 0.2s; display: inline-block; }
-a:hover .fa-paypal { transform: scale(1.2); }
-
-
-/* =========================================
-   7. MODES D'AFFICHAGE (OVERRIDES)
-   ========================================= */
-
-/* --- MODE LISTE --- */
+/* Modes Liste/Galerie */
 .view-liste #cards-grid { grid-template-columns: 1fr; }
-.view-liste .global-container { 
-    flex-direction: row; height: auto; align-items: center; border-top-width: 0 !important; border-left-width: 5px; 
-}
+.view-liste .global-container { flex-direction: row; height: auto; align-items: center; border-top-width: 0 !important; border-left-width: 5px; }
 .view-liste .header-container { width: 150px; height: 120px; flex-shrink: 0; }
-.view-liste .header-info h1 { font-size: 1em; } 
-.view-liste .category { top: 5px; right: 5px; padding: 2px 6px; font-size: 0.6em; }
+.view-liste .header-info h1 { font-size: 1em; } .view-liste .category { top: 5px; right: 5px; padding: 2px 6px; font-size: 0.6em; }
 .view-liste .content { padding: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%; }
-.view-liste .more { display: none; } /* Cache les détails */
-.view-liste .action-icons { display: flex; } /* Garde les actions */
-
-/* --- MODE GALERIE --- */
+.view-liste .more { display: none; } .view-liste .action-icons { display: flex; }
 .view-galerie .global-container { border: none; box-shadow: none; border-top: none !important; }
 .view-galerie .header-container { height: 250px; border-radius: 8px; overflow: hidden; }
 .view-galerie .content, .view-galerie .more { display: none; }
 
+/* Slider Date */
+#date-slider { height: 10px; box-shadow: none; border: none; background: #e0e0e0; margin: 10px 10px 20px 10px; }
+.noUi-connect { background: #4285F4; }
+.noUi-handle { height: 18px !important; width: 18px !important; top: -5px !important; right: -9px !important; border-radius: 50%; background: #2c3e50; box-shadow: none; border: 2px solid white; cursor: grab; }
+.noUi-handle:before, .noUi-handle:after { display: none; }
 
-/* =========================================
-   8. BOUTON CHARGEMENT
-   ========================================= */
-#btn-load-more {
-     background-color: #4285F4; color: white; border: none; padding: 12px 30px; 
-     font-size: 16px; border-radius: 50px; cursor: pointer; display: none; 
-     box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;
-}
+/* Bouton Load More */
+#btn-load-more { background-color: #4285F4; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 50px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
 #btn-load-more:hover { background-color: #3367d6; }
-
-/* --- STYLE DU SLIDER --- */
-#date-slider {
-    height: 10px;
-    box-shadow: none;
-    border: none;
-    background: #e0e0e0;
-}
-
-/* La barre colorée entre les poignées */
-.noUi-connect {
-    background: #4285F4;
-}
-
-/* Les poignées (ronds) */
-.noUi-handle {
-    height: 18px !important;
-    width: 18px !important;
-    top: -5px !important;
-    right: -9px !important; /* Pour centrer */
-    border-radius: 50%;
-    background: #2c3e50;
-    box-shadow: none;
-    border: 2px solid white;
-    cursor: grab;
-}
-
-/* On enlève les petits traits moches dans les poignées par défaut */
-.noUi-handle:before, .noUi-handle:after {
-    display: none;
-}
