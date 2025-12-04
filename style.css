@@ -338,3 +338,34 @@ a:hover .fa-paypal { transform: scale(1.2); }
      box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;
 }
 #btn-load-more:hover { background-color: #3367d6; }
+
+/* --- STYLE DU SLIDER --- */
+#date-slider {
+    height: 10px;
+    box-shadow: none;
+    border: none;
+    background: #e0e0e0;
+}
+
+/* La barre colorée entre les poignées */
+.noUi-connect {
+    background: #4285F4;
+}
+
+/* Les poignées (ronds) */
+.noUi-handle {
+    height: 18px !important;
+    width: 18px !important;
+    top: -5px !important;
+    right: -9px !important; /* Pour centrer */
+    border-radius: 50%;
+    background: #2c3e50;
+    box-shadow: none;
+    border: 2px solid white;
+    cursor: grab;
+}
+
+/* On enlève les petits traits moches dans les poignées par défaut */
+.noUi-handle:before, .noUi-handle:after {
+    display: none;
+}
