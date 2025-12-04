@@ -203,3 +203,20 @@ function updateLoadMoreButton() {
         btn.style.display = 'none';
     }
 }
+
+// --- UTILITAIRE : Convertit n'importe quelle date en format AAAA-MM-JJ ---
+function normalizeDate(str) {
+    if (!str) return "";
+    // 1. On garde juste les 10 premiers caractères (pour enlever l'heure si elle traîne)
+    let clean = str.substring(0, 10);
+    
+    // 2. Si c'est du format français JJ/MM/AAAA (avec des slashs)
+    if (clean.includes('/')) {
+        const parts = clean.split('/');
+        // On retourne AAAA-MM-JJ
+        if(parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    
+    // Sinon on suppose que c'est déjà bon (AAAA-MM-JJ)
+    return clean;
+}
