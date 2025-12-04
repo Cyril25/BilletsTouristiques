@@ -119,3 +119,69 @@ a:hover .fa-paypal { transform: scale(1.2); }
      box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;
 }
 #btn-load-more:hover { background-color: #3367d6; }
+
+/* --- STYLE DU MENU RESPONSIVE --- */
+.navbar {
+    background-color: #2c3e50;
+    color: white;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.nav-brand { font-weight: bold; font-size: 1.2em; }
+
+.nav-links { display: flex; gap: 20px; align-items: center; }
+
+.nav-links a { color: white; text-decoration: none; font-size: 0.95em; transition: color 0.3s; }
+.nav-links a:hover { color: #4285F4; }
+
+/* Dropdown (Menu déroulant) */
+.dropdown { position: relative; display: inline-block; }
+.dropbtn { background: none; border: none; color: white; font-size: 0.95em; cursor: pointer; font-family: inherit; }
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+    z-index: 100;
+    border-radius: 4px;
+    top: 30px; /* Ajustement position */
+}
+.dropdown-content a { color: black; padding: 12px 16px; text-decoration: none; display: block; }
+.dropdown-content a:hover { background-color: #f1f1f1; color: #4285F4; }
+.dropdown:hover .dropdown-content { display: block; }
+
+/* Hamburger (Caché sur PC) */
+.nav-toggle { display: none; background: none; border: none; color: white; font-size: 1.5em; cursor: pointer; }
+
+/* --- VERSION MOBILE --- */
+@media (max-width: 768px) {
+    .nav-toggle { display: block; } /* On affiche le burger */
+    
+    .nav-links {
+        display: none; /* On cache les liens par défaut */
+        flex-direction: column;
+        width: 100%;
+        position: absolute;
+        top: 60px; left: 0;
+        background-color: #34495e;
+        padding: 20px 0;
+        z-index: 999;
+        border-radius: 0 0 8px 8px;
+    }
+    .nav-links.active { display: flex; } /* JS ajoutera cette classe pour ouvrir */
+    
+    .nav-links a, .dropbtn { display: block; width: 100%; text-align: center; padding: 10px 0; }
+    
+    /* Sur mobile, on affiche les sous-menus tout le temps ou au clic (ici simplifié : tout le temps) */
+    .dropdown-content { position: static; display: block; background: #2c3e50; box-shadow: none; }
+    .dropdown-content a { color: #ccc; padding-left: 0; font-size: 0.9em; }
+    .dropbtn { display: none; } /* On cache le titre du dropdown sur mobile pour simplifier, ou on le garde */
+}
