@@ -69,6 +69,7 @@ function applyFilters(silent = false) {
     const fTheme = document.getElementById('sel-theme').value;
     const fColl = document.getElementById('sel-coll').value;
     
+    // Dates sélectionnées (déjà en format AAAA-MM-JJ par le navigateur)
     const fStart = document.getElementById('date-start').value; 
     const fEnd = document.getElementById('date-end').value;
 
@@ -77,8 +78,15 @@ function applyFilters(silent = false) {
                           (item.Ville && item.Ville.toLowerCase().includes(s)) ||
                           (item.Recherche && item.Recherche.toLowerCase().includes(s));
         
-        const matchDate = (!fStart || (item.Date && item.Date >= fStart)) &&
-                          (!fEnd || (item.Date && item.Date <= fEnd));
+        // --- CORRECTION DATE ---
+        // On normalise la date du billet pour être sûr de comparer des choses comparables
+        const itemDate = normalizeDate(item.Date);
+
+        // La logique :
+        // 1. Si j'ai une date de début, la date du billet doit être >=
+        // 2. Si j'ai une date de fin, la date du billet doit être <=
+        const matchDate = (!fStart || (itemDate && itemDate >= fStart)) &&
+                          (!fEnd || (itemDate && itemDate <= fEnd));
 
         return txt && matchDate &&
                (!fCat || item.Categorie === fCat) &&
