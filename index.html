@@ -3,62 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Les Billets - Collection Billet Touristique</title>
+    <title>Accueil - Association Billet Touristique</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Style spécifique pour les pages de texte (Accueil, etc.) */
+        .text-page { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); line-height: 1.6; }
+        .text-page h1 { color: #2c3e50; border-bottom: 2px solid #4285F4; padding-bottom: 10px; margin-top: 0; }
+        .text-page h2 { color: #4285F4; margin-top: 30px; font-size: 1.4em; }
+        .text-page ul, .text-page ol { padding-left: 20px; }
+        .text-page li { margin-bottom: 10px; }
+        .alert-box { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .team-list { font-style: italic; color: #666; margin-top: 20px; }
+    </style>
 </head>
 <body>
 
     <div id="app-content">
         <div id="menu-placeholder"></div>
 
-        <header>
-            <div>
-                <span style="font-weight:bold; font-size:1.2em;">Annuaire Billets</span>
-                <span id="counter" style="background:#eee; padding:5px 10px; border-radius:15px; font-size:0.8em; margin-left:10px;">Chargement...</span>
-            </div>
-        </header>
-
-        <div style="display:flex; justify-content:flex-end; margin-bottom:10px; gap:10px;">
-            <button onclick="changeView('collecte')" class="btn-mode" title="Mode Collecte"><i class="fa-solid fa-address-card"></i> Collecte</button>
-            <button onclick="changeView('liste')" class="btn-mode" title="Mode Liste"><i class="fa-solid fa-list"></i> Liste</button>
-            <button onclick="changeView('galerie')" class="btn-mode" title="Mode Galerie"><i class="fa-solid fa-images"></i> Galerie</button>
-        </div>
-
-        <div class="filters-container">
-            <div class="filter-group" style="flex-grow: 2;">
-                <label>Recherche</label>
-                <input type="text" id="search-input" placeholder="Ville, Nom, Réf..." onkeyup="applyFilters()">
-            </div>
+        <div class="text-page">
             
-            <div class="filter-group" style="min-width: 200px;">
-                <label>Période (Date)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="date" id="date-start" onchange="applyFilters()">
-                    <input type="date" id="date-end" onchange="applyFilters()">
-                </div>
+            <h1>Bienvenue</h1>
+            <p>Bonjour à tous,</p>
+            <p>Ce site a été créé pour pouvoir simplifier la gestion des collectes de Billets Touristiques en toute Amitié et toute confiance.<br>
+            Il est lié au groupe Facebook <strong><a href="https://www.facebook.com/groups/billetstouristiques/" target="_blank" style="color:#1877F2; text-decoration:none;"><i class="fa-brands fa-facebook"></i> BILLETS ET JETONS TOURISTIQUES</a></strong> (en toute convivialité et toute confiance).</p>
+            
+            <p>Dans le groupe, les échanges de Billets et jetons doivent être réalisés <strong>2€ contre 2€</strong> (si vous avez fait un achat et que le billet ou le jeton vous a coûté plus cher que 2€).</p>
+            
+            <p>Merci de lire le <a href="reglement.html" style="font-weight:bold; color:#4285F4;">règlement</a> qui se trouve dans le menu.</p>
+            
+            <p>Nous vous souhaitons à tous de bons échanges et entraides.</p>
+            
+            <div class="team-list">
+                Geneviève, Damien, Jean-Philippe, Didier, Laura, Cyril.
             </div>
 
-            <div class="filter-group"><label>Catégorie</label><select id="sel-cat" onchange="applyFilters()"><option value="">Tout</option></select></div>
-            <div class="filter-group"><label>Pays</label><select id="sel-pays" onchange="applyFilters()"><option value="">Tout</option></select></div>
-            <div class="filter-group"><label>Millésime</label><select id="sel-year" onchange="applyFilters()"><option value="">Tout</option></select></div>
-            <div class="filter-group"><label>Thème</label><select id="sel-theme" onchange="applyFilters()"><option value="">Tout</option></select></div>
-            <div class="filter-group"><label>Collecteur</label><select id="sel-coll" onchange="applyFilters()"><option value="">Tout</option></select></div>
-        </div>
+            <div class="alert-box">
+                <h3 style="margin-top:0; color:#856404;"><i class="fa-solid fa-triangle-exclamation"></i> Important</h3>
+                <p>Si vous détectez une erreur :</p>
+                <ul>
+                    <li>Un billet manquant</li>
+                    <li>Une image manquante ou de mauvaise qualité</li>
+                    <li>Un problème de pays, de code de billet, de millésime, de version, de nom de billet...</li>
+                </ul>
+                <p>N'hésitez pas à <strong><a href="contact.html">contacter un administrateur</a></strong> pour qu'il effectue les modifications nécessaires afin que notre site soit toujours au top !</p>
+            </div>
 
-        <div id="cards-grid">
-            <p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement de la collection...</p>
-        </div>
+            <hr style="border:0; border-top:1px solid #eee; margin:30px 0;">
 
-        <div style="text-align:center; margin: 40px 0;">
-            <button id="btn-load-more" onclick="showMore()">Voir la suite</button>
+            <h2><i class="fa-solid fa-list-check"></i> Explication du fonctionnement d'une collecte</h2>
+            <p>La collecte d'un billet se déroule en 4 étapes :</p>
+
+            <ol>
+                <li>
+                    <strong>Pré-inscription :</strong> Quand un billet est annoncé, le formulaire de pré-inscription est publié. Cela permet au futur collecteur de savoir à peu près le nombre à commander au site.
+                </li>
+                <li>
+                    <strong>Collecte ouverte :</strong> Quand le billet sort sur le site, la pré-inscription passe en "Collecte". Le prix du billet est affiché (avec ou sans frais de port, car les gros collecteurs groupent les envois pour réduire les coûts). Le nom du collecteur et ses coordonnées pour l'envoi du paiement sont affichés.<br>
+                    Si le prix du billet vous convient (certains billets sont faits par des pros qui fixent leurs prix), vous payez les billets réservés et c'est fini.<br>
+                    <em>Note : Si nous pouvons avoir encore des billets, vous pouvez vous inscrire, mais la priorité sera donnée aux pré-inscrits !</em>
+                </li>
+                <li>
+                    <strong>Collecte close :</strong> La collecte devient close. Nous ne prenons plus aucune réservation de billet et il n'est plus possible de s'inscrire sur le formulaire. <strong>N'envoyez pas de paiement</strong>, il vous serait retourné par le collecteur.<br>
+                    Le collecteur paye la facture dans les jours qui suivent. Il n'y a plus qu'à attendre que le site envoie les billets au collecteur pour que la répartition soit faite et que vous receviez vos billets.
+                </li>
+                <li>
+                    <strong>Terminé :</strong> La collecte passe de "Close" à "Terminé" lorsque les billets sont envoyés par le collecteur (ou s'il n'y a pas de collecte/VPC).
+                </li>
+            </ol>
+
         </div>
     </div>
 
     <script src="global.js"></script>
-    <script src="app.js"></script>
-
-</body>
+    </body>
 </html>
