@@ -1,0 +1,121 @@
+/* --- STYLE GLOBAL --- */
+body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+#app-content { max-width: 1400px; margin: 0 auto; }
+
+/* En-tête */
+header { 
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; 
+    background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* --- FILTRES --- */
+.filters-container {
+    background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; align-items: flex-end;
+}
+.filter-group { display: flex; flex-direction: column; flex-grow: 1; min-width: 140px; }
+.filter-group label { font-size: 0.8em; color: #666; margin-bottom: 5px; font-weight: bold; }
+select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
+#search-input { min-width: 250px; flex-grow: 2; }
+
+/* --- GRILLE --- */
+#cards-grid {
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+    gap: 25px;
+}
+
+/* --- CARTE (VIGNETTE) --- */
+.global-container {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+    transition: transform 0.2s;
+}
+.global-container:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+
+.header-container {
+    position: relative;
+    height: 200px;
+    color: white;
+}
+
+.image-bg {
+    width: 100%; height: 100%;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* Badge Catégorie (Plein) */
+.category {
+    position: absolute;
+    top: 10px; right: 10px;
+    padding: 5px 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-size: 0.75em;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.header-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 15px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+
+.header-info h1 {
+    margin: 0; font-size: 1.4em; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); color: white;
+    display: inline-block;
+    padding-bottom: 3px; /* Espace pour le soulignement */
+}
+
+.content { padding: 15px; flex-grow: 1; font-size: 0.9em; line-height: 1.5; }
+.description { margin-bottom: 15px; font-weight: 500; color: #444; }
+
+/* Classe pour cacher les éléments (via CSV hidden) */
+.hidden { display: none !important; }
+
+.more {
+    border-top: 1px solid #eee;
+    padding: 8px;
+    background: #fafafa;
+    font-size: 0.85em;
+}
+
+table.dates { width: 100%; font-size: 0.9em; color: #555; }
+table.dates td { padding: 2px; }
+
+/* --- ICONES MODERNES --- */
+.action-icons {
+    display: flex; justify-content: center; gap: 20px; padding: 10px 0;
+}
+.icon-btn {
+    text-decoration: none; font-size: 22px; transition: transform 0.2s, opacity 0.2s; opacity: 0.8;
+}
+.icon-btn:hover { transform: scale(1.2); opacity: 1; }
+
+/* Couleurs Officielles */
+.ico-form { color: #7248B9; }   /* Violet Google Forms */
+.ico-sheet { color: #21A366; }  /* Vert Google Sheets */
+.ico-fb    { color: #1877F2; }  /* Bleu Facebook */
+.ico-dl    { color: #5f6368; }  /* Gris Download */
+
+/* Animation PayPal */
+.fa-paypal { transition: transform 0.2s; display: inline-block; }
+a:hover .fa-paypal { transform: scale(1.2); }
+
+/* Bouton Voir Plus */
+#btn-load-more {
+     background-color: #4285F4; color: white; border: none; padding: 12px 30px; 
+     font-size: 16px; border-radius: 50px; cursor: pointer; display: none;
+     box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;
+}
+#btn-load-more:hover { background-color: #3367d6; }
