@@ -117,22 +117,3 @@ function toggleMenu() {
     const nav = document.getElementById('nav-links');
     if(nav) nav.classList.toggle('active');
 }
-```
-
-### Vérification Importante dans vos HTML
-
-L'erreur peut aussi venir de vos fichiers HTML (`index.html`, `billets.html`, etc.).
-Assurez-vous de ne pas avoir inclus `global.js` **deux fois** par erreur.
-
-Votre fin de fichier HTML doit ressembler **exactement** à ça :
-
-```html
-    <!-- 1. D'abord les outils Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    
-    <!-- 2. Ensuite votre script global (UNE SEULE FOIS) -->
-    <script src="global.js"></script>
-    
-    <!-- 3. Enfin app.js (SEULEMENT SUR LA PAGE BILLETS) -->
-</body>
