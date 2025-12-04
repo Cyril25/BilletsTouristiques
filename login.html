@@ -1,1 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Association Billet Touristique</title>
+    
+    <!-- Police d'écriture (La même que le site) -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Style spécifique pour centrer la boîte de connexion au milieu de l'écran */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Prend toute la hauteur de la fenêtre */
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); /* Fond dégradé bleuté */
+            color: #333;
+        }
+        
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); /* Ombre portée douce */
+            text-align: center;
+            max-width: 400px;
+            width: 90%; /* Responsive sur mobile */
+        }
+        
+        .logo-icon {
+            font-size: 4em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+        
+        p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+        
+        .btn-google {
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: background 0.3s, transform 0.2s;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+        }
+        
+        .btn-google:hover {
+            background-color: #357ae8;
+            transform: translateY(-2px);
+        }
+        
+        /* Petit message d'erreur caché par défaut */
+        #error-msg {
+            color: #e74c3c;
+            font-size: 0.85em;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
 
+    <div class="login-card">
+        <!-- Icône Logo -->
+        <i class="fa-solid fa-users-viewfinder logo-icon"></i>
+        
+        <h1>Espace Membres</h1>
+        <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes de l'association.</p>
+        
+        <!-- Le bouton qui appelle la fonction dans global.js -->
+        <button class="btn-google" onclick="loginWithGoogle()">
+            <i class="fa-brands fa-google"></i> Se connecter avec Google
+        </button>
+        
+        <div id="error-msg"></div>
+    </div>
+
+    <!-- 1. OUTILS FIREBASE (Obligatoires pour l'auth) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
+    <!-- 2. NOTRE SCRIPT GLOBAL (Contient les clés et la logique de connexion) -->
+    <script src="global.js"></script>
+
+</body>
+</html>
