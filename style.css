@@ -172,7 +172,13 @@ body {
 }
 .text-page ul, .text-page ol { padding-left: 20px; }
 .text-page li { margin-bottom: 10px; }
-.alert-box { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+.alert-box { 
+    background-color: #EFE9F7; /* NOUVEAU: Mauve très clair, presque blanc */
+    border-left: 5px solid #7F58A0; /* NOUVEAU: Violet moyen pour la barre d'accentuation */
+    padding: 15px; 
+    margin: 20px 0; 
+    border-radius: 4px; 
+}
 .team-list { font-style: italic; color: #666; margin-top: 20px; }
 
 /* =========================================
