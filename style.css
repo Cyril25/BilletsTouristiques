@@ -61,19 +61,32 @@ body {
 
 /* Dropdown */
 .dropdown { position: relative; cursor: pointer; }
+.dropbtn {
+    background: none; border: none; color: inherit; font-size: 1em;
+    cursor: pointer; font-family: inherit; padding: 0; display: flex; align-items: center; gap: 5px;
+}
 .dropdown-content {
     display: none; position: absolute; background-color: #fff; min-width: 180px;
     box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 0 0 4px 4px;
     top: 100%; left: 0;
 }
 .dropdown:hover .dropdown-content { display: block; }
+
 .dropdown-content a {
-    color: #333; padding: 12px 16px; text-decoration: none; display: block;
-    height: auto; font-size: 0.9em;
+    /* Styles corrigés pour les liens dans le dropdown */
+    color: #333; /* Texte sombre */
+    padding: 12px 16px; 
+    text-decoration: none; 
+    display: block;
+    height: auto; 
+    font-size: 0.9em;
+    background-color: transparent !important; /* Important pour ne pas hériter du fond violet du survol parent */
+    transition: background-color 0.3s, color 0.3s;
 }
+
 .dropdown-content a:hover { 
     background-color: #f1f1f1; 
-    color: #7F58A0; /* NOUVEAU: Violet pour le lien du sous-menu */
+    color: #7F58A0; /* NOUVEAU: Violet au survol du sous-menu */
 }
 
 /* --- NOUVEAU : PROFIL & BOUTON DÉCONNEXION --- */
@@ -137,7 +150,12 @@ body {
         background: #7F58A0; /* NOUVEAU: Nuance Violet plus claire */ 
         box-shadow: none; width: 100%; 
     }
-    .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
+    .dropdown-content a { 
+        color: #ddd; /* Rétablit le texte clair sur fond foncé pour le mobile */
+        padding-left: 0; 
+        text-align: center; 
+        background-color: transparent !important;
+    }
     .dropbtn { display: none; }
 
     /* Ajustement Profil sur Mobile */
@@ -255,6 +273,9 @@ body {
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    position: sticky; 
+    top: 0;
+    z-index: 2;
 }
 
 .rates-table tbody tr:nth-child(even) {
@@ -421,7 +442,7 @@ select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width:
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     transition: transform 0.2s;
-    display: flex; 
+    display: flex; /* Assure que le mode Collecte s'affiche */
     flex-direction: column;
     border-top-width: 8px;
     border-top-style: solid;
