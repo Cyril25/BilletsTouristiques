@@ -23,7 +23,7 @@ body {
 }
 
 /* =========================================
-   2. MENU DE NAVIGATION
+   2. MENU DE NAVIGATION (BLOC CORRIGÉ)
    ========================================= */
 .navbar {
     background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
@@ -44,48 +44,123 @@ body {
 .nav-links { display: flex; gap: 0; height: 100%; align-items: center; }
 
 .nav-links a, .dropdown {
-    height: 100%; display: flex; align-items: center; padding: 0 15px; text-decoration: none; color: white;
-    transition: background-color 0.3s;
+    height: 100%; display: flex; align-items: center; padding: 0 15px;
+    text-decoration: none; color: white; font-size: 0.95em;
+    transition: background-color 0.3s, color 0.3s; cursor: pointer;
 }
 
-.nav-links a:hover, .dropdown:hover { background-color: #7F58A0; }
+.nav-links a:hover, .dropdown:hover { 
+    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire pour le survol */
+    color: white; 
+}
+.nav-links a.active { 
+    background-color: #7F58A0; /* Fond violet au survol/actif */
+    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le lien actif */
+    font-weight: 500; 
+}
 
-.nav-links a.active { background-color: #7F58A0; }
-
-.dropdown { position: relative; cursor: pointer; }
+/* Dropdown */
+.dropdown { position: relative; }
+.dropbtn {
+    background: none; border: none; color: inherit; font-size: 1em;
+    cursor: pointer; font-family: inherit; padding: 0; display: flex; align-items: center; gap: 5px;
+}
 .dropdown-content {
-    display: none; position: absolute; top: 100%; left: 0; background-color: #5D3A7E; min-width: 200px; z-index: 100; border-radius: 0 0 8px 8px; overflow: hidden;
+    display: none; position: absolute; background-color: #fff; min-width: 180px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 0 0 4px 4px;
+    top: 100%; left: 0;
+}
+.dropdown-content a {
+    color: #333; padding: 12px 16px; text-decoration: none; display: block;
+    height: auto; font-size: 0.9em;
+}
+.dropdown-content a:hover { 
+    background-color: #f1f1f1; 
+    color: #7F58A0; /* NOUVEAU: Violet pour le lien du sous-menu */
 }
 .dropdown:hover .dropdown-content { display: block; }
-.dropdown-content a { 
-    display: block; height: auto; padding: 12px 15px; 
-}
-.dropdown-content a:hover { background-color: #9C7BB4; }
 
-.menu-icon-btn { display: none; cursor: pointer; padding: 10px; }
-
-/* Styles de l'icône utilisateur */
+/* --- NOUVEAU : PROFIL & BOUTON DÉCONNEXION --- */
 .user-info {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+    margin-left: 20px;
+    padding-left: 20px;
+    border-left: 1px solid rgba(255,255,255,0.15); /* Fine ligne de séparation */
+    height: 30px; /* Centrage vertical */
+}
+
+.user-email {
     font-size: 0.85em;
-    color: #ccc;
-    white-space: nowrap;
+    font-weight: 500;
+    color: #bdc3c7; /* Gris argenté doux */
+    letter-spacing: 0.5px;
 }
-.user-info i { color: #fff; }
-.logout-btn {
-    background: none;
-    border: 1px solid white;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-left: 15px;
+
+.btn-logout {
+    /* Style Ghost Button moderne */
+    background-color: transparent;
+    border: 1px solid #CC4444; /* NOUVEAU: Rouge bordeaux/tomate pour contraste */
+    color: #CC4444;
+    padding: 6px 15px;
+    border-radius: 50px; /* Forme pilule */
     font-size: 0.8em;
-    transition: background 0.3s;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Roboto', sans-serif;
+    text-transform: uppercase;
 }
-.logout-btn:hover { background: white; color: #5D3A7E; }
+
+.btn-logout:hover {
+    background-color: #CC4444;
+    color: white;
+    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4); /* Effet néon au survol */
+    transform: translateY(-1px);
+}
+
+/* Mobile */
+.nav-toggle { display: none; background: none; border: none; color: white; font-size: 1.5em; cursor: pointer; }
+
+@media (max-width: 768px) {
+    .nav-toggle { display: block; }
+    .nav-links {
+        display: none; flex-direction: column; width: 100%; height: auto;
+        position: absolute; top: 60px; left: 0; 
+        background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
+        padding: 10px 0; z-index: 999; border-radius: 0 0 8px 8px; align-items: stretch;
+    }
+    .nav-links.active { display: flex; }
+    .nav-links a, .dropdown { display: block; width: 100%; text-align: center; padding: 15px 0; height: auto; }
+    .dropdown-content { 
+        position: static; display: block; 
+        background: #7F58A0; /* NOUVEAU: Nuance Violet plus claire */ 
+        box-shadow: none; width: 100%; 
+    }
+    .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
+    .dropbtn { display: none; }
+
+    /* Ajustement Profil sur Mobile */
+    .user-info {
+        flex-direction: column;
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding: 20px 0;
+        margin: 0;
+        height: auto;
+        width: 100%;
+        gap: 15px;
+    }
+    .btn-logout {
+        width: 80%; /* Bouton large sur mobile */
+        justify-content: center;
+        padding: 10px;
+    }
+}
 
 /* =========================================
    3. PAGES DE TEXTE (Accueil, Construction...)
@@ -410,6 +485,52 @@ select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width:
 #btn-load-more:hover { 
     background-color: #7F58A0; 
 }
+
+/* --- NOUVEAU : STYLES MODE LISTE (TABLEAU) --- */
+
+#list-table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-x: auto; /* Permet le scroll horizontal sur mobile */
+}
+
+#billets-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px; /* Largeur minimale pour éviter l'écrasement */
+    font-size: 0.9em;
+}
+
+#billets-table th, #billets-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#billets-table thead th {
+    background-color: #5D3A7E; /* Violet Principal */
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky; 
+    top: 0;
+    z-index: 2;
+}
+
+#billets-table tbody tr:nth-child(even) {
+    background-color: #F7F7F9; 
+}
+
+#billets-table tbody tr:hover {
+    background-color: #EFE9F7; 
+}
+
+#billets-table .col-ref { font-weight: 500; color: #5D3A7E; }
+#billets-table .col-comment { font-style: italic; color: #666; font-size: 0.85em; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 
 /* =========================================
    5. PAGE DE CONNEXION (login.html)
