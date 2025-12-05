@@ -164,6 +164,11 @@ body {
 }
 .text-page.center { text-align: center; }
 .construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
+.collector-icon { 
+    font-size: 4em; 
+    color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    margin-bottom: 20px; 
+}
 .text-page h1 { 
     color: #5D3A7E;
     border-bottom: 2px solid #B19CD9;
