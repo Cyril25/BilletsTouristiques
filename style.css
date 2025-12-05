@@ -181,6 +181,69 @@ body {
 }
 .team-list { font-style: italic; color: #666; margin-top: 20px; }
 
+/* --- NOUVEAUX STYLES TARIFS --- */
+.text-page.rates { text-align: left; max-width: 900px; margin: 20px auto; }
+.text-page.rates h2 { color: #5D3A7E; font-size: 1.6em; border-bottom: 2px solid #B19CD9; padding-bottom: 5px; margin-top: 40px; }
+
+.rates-table-container { margin-bottom: 40px; overflow-x: auto; }
+
+.rates-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.9em;
+    min-width: 600px; /* Pour éviter l'écrasement sur mobile */
+}
+
+.rates-table th, .rates-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.rates-table thead th {
+    background-color: #5D3A7E; /* Violet Principal */
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rates-table tbody tr:nth-child(even) {
+    background-color: #F7F7F9; /* Gris très clair du body */
+}
+
+.rates-table tbody tr:hover {
+    background-color: #EFE9F7; /* Mauve très clair de l'alert box */
+}
+
+.rates-info-box {
+    margin: 25px 0;
+    padding: 20px;
+    background-color: #EFE9F7; /* Mauve clair (comme l'alert box) */
+    border-left: 5px solid #7F58A0; /* Violet moyen */
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.rates-info-box h3 {
+    color: #5D3A7E;
+    margin-top: 0;
+    font-size: 1.1em;
+}
+
+.rates-info-box ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.rates-info-box li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+.rates-info-box strong { color: #7F58A0; }
+.rates-disclaimer { margin-top: 20px; font-size: 0.85em; color: #666; font-style: italic; }
+
 /* =========================================
    4. APPLI BILLETS (Grille, Filtres...)
    ========================================= */
