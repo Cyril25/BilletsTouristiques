@@ -227,11 +227,11 @@ function applyFilters(silent = false) {
         grid.innerHTML = ""; 
         displayedCount = 0; 
         
-        // Si le mode Liste est actif, on affiche le tableau, sinon la grille.
+        // Si le mode Liste est actif, on affiche le tableau, sinon la grille/galerie.
         if (document.body.classList.contains('view-liste')) {
             renderListTable();
         } else {
-            // S'assure que le conteneur du tableau est vide si on passe en grille
+            // S'assure que le conteneur du tableau est vide si on passe en grille/galerie
             const listTableContainer = document.getElementById('list-table-container');
             if (listTableContainer) listTableContainer.innerHTML = "";
             showMore();
@@ -320,7 +320,6 @@ function showMore() {
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE
-            // Le onclick est essentiel pour ouvrir la modale
             html += `
             <div class="galerie-item" onclick="openModal('${imgUrl}')">
                 ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
@@ -419,7 +418,7 @@ function updateLoadMoreButton() {
     const btn = document.getElementById('btn-load-more');
     if (!btn) return;
     
-    // Le bouton n'est affiché qu'en mode Collecte et Galerie
+    // Le bouton doit être masqué UNIQUEMENT en mode Liste (qui affiche tout d'un coup)
     const isListMode = document.body.classList.contains('view-liste');
     
     if (isListMode) {
@@ -427,8 +426,11 @@ function updateLoadMoreButton() {
         return;
     }
 
+    // Le bouton doit être visible si le nombre de billets affichés est inférieur au total filtré
     if (displayedCount < currentData.length) {
         btn.style.display = 'inline-block';
+        
+        // Mettre à jour le texte du bouton (plus esthétique que juste 'Voir la suite')
         btn.innerText = `Voir la suite (${currentData.length - displayedCount})`;
     } else {
         btn.style.display = 'none';
@@ -442,14 +444,12 @@ function openModal(imgUrl) {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-image');
     
-    // L'ajout de !important dans le CSS garantit que 'hidden' masque bien,
-    // et ici on retire 'hidden' pour forcer l'affichage.
-    modal.classList.remove('hidden'); 
+    modal.classList.remove('hidden');
     
     // Utiliser une taille d'image plus grande pour le zoom
     modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600'); 
     
-    // Empêche le scroll de la page derrière (fonctionnalité demandée)
+    // Empêche le scroll de la page derrière
     document.body.style.overflow = 'hidden'; 
 }
 
