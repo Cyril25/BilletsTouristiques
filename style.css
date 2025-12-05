@@ -3,7 +3,7 @@
    ========================================= */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #f0f2f5;
+    background-color: #F7F7F9; /* NOUVEAU: Gris très clair et propre */
     margin: 0;
     padding: 20px;
     color: #333;
@@ -22,7 +22,7 @@ body {
    2. MENU DE NAVIGATION
    ========================================= */
 .navbar {
-    background-color: #2c3e50;
+    background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
     color: white;
     padding: 0 20px;
     display: flex;
@@ -45,8 +45,14 @@ body {
     transition: background-color 0.3s, color 0.3s; cursor: pointer;
 }
 
-.nav-links a:hover, .dropdown:hover { background-color: #34495e; color: #4285F4; }
-.nav-links a.active { color: #4285F4; font-weight: 500; }
+.nav-links a:hover, .dropdown:hover { 
+    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire pour le survol */
+    color: white; 
+}
+.nav-links a.active { 
+    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le lien actif */
+    font-weight: 500; 
+}
 
 /* Dropdown */
 .dropdown { position: relative; }
@@ -63,7 +69,10 @@ body {
     color: #333; padding: 12px 16px; text-decoration: none; display: block;
     height: auto; font-size: 0.9em;
 }
-.dropdown-content a:hover { background-color: #f1f1f1; color: #4285F4; }
+.dropdown-content a:hover { 
+    background-color: #f1f1f1; 
+    color: #7F58A0; /* NOUVEAU: Violet pour le lien du sous-menu */
+}
 .dropdown:hover .dropdown-content { display: block; }
 
 /* --- NOUVEAU : PROFIL & BOUTON DÉCONNEXION --- */
@@ -87,8 +96,8 @@ body {
 .btn-logout {
     /* Style Ghost Button moderne */
     background-color: transparent;
-    border: 1px solid #e74c3c; /* Rouge moderne */
-    color: #e74c3c;
+    border: 1px solid #CC4444; /* NOUVEAU: Rouge bordeaux/tomate pour contraste */
+    color: #CC4444;
     padding: 6px 15px;
     border-radius: 50px; /* Forme pilule */
     font-size: 0.8em;
@@ -103,9 +112,9 @@ body {
 }
 
 .btn-logout:hover {
-    background-color: #e74c3c;
+    background-color: #CC4444;
     color: white;
-    box-shadow: 0 0 10px rgba(231, 76, 60, 0.4); /* Effet néon au survol */
+    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4); /* NOUVEAU: Effet néon au survol */
     transform: translateY(-1px);
 }
 
@@ -116,12 +125,13 @@ body {
     .nav-toggle { display: block; }
     .nav-links {
         display: none; flex-direction: column; width: 100%; height: auto;
-        position: absolute; top: 60px; left: 0; background-color: #2c3e50;
+        background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
+        position: absolute; top: 60px; left: 0;
         padding: 10px 0; z-index: 999; border-radius: 0 0 8px 8px; align-items: stretch;
     }
     .nav-links.active { display: flex; }
     .nav-links a, .dropdown { display: block; width: 100%; text-align: center; padding: 15px 0; height: auto; }
-    .dropdown-content { position: static; display: block; background: #34495e; box-shadow: none; width: 100%; }
+    .dropdown-content { position: static; display: block; background: #7F58A0; /* NOUVEAU: Nuance Violet plus claire */ box-shadow: none; width: 100%; }
     .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
     .dropbtn { display: none; }
 
@@ -149,8 +159,17 @@ body {
 .text-page { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .text-page.center { text-align: center; }
 .construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
-.text-page h1 { color: #2c3e50; border-bottom: 2px solid #4285F4; padding-bottom: 10px; margin-top: 0; }
-.text-page h2 { color: #4285F4; margin-top: 30px; font-size: 1.4em; }
+.text-page h1 { 
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour le titre */
+    border-bottom: 2px solid #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le soulignement */
+    padding-bottom: 10px; 
+    margin-top: 0; 
+}
+.text-page h2 { 
+    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour les sous-titres */
+    margin-top: 30px; 
+    font-size: 1.4em; 
+}
 .text-page ul, .text-page ol { padding-left: 20px; }
 .text-page li { margin-bottom: 10px; }
 .alert-box { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
@@ -186,7 +205,11 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 .action-icons { display: flex; justify-content: center; gap: 20px; padding: 10px 0; }
 .icon-btn { text-decoration: none; font-size: 22px; transition: transform 0.2s, opacity 0.2s; opacity: 0.8; }
 .icon-btn:hover { transform: scale(1.2); opacity: 1; }
-.ico-form { color: #7248B9; } .ico-sheet { color: #21A366; } .ico-fb { color: #1877F2; } .ico-dl { color: #5f6368; }
+/* NOUVEAU: Violet principal pour les icônes importantes */
+.ico-form { color: #5D3A7E; } 
+.ico-sheet { color: #21A366; } 
+.ico-fb { color: #1877F2; } 
+.ico-dl { color: #5f6368; }
 .fa-paypal { transition: transform 0.2s; display: inline-block; } a:hover .fa-paypal { transform: scale(1.2); }
 
 /* Modes Liste/Galerie */
@@ -202,10 +225,30 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 
 /* Slider Date */
 #date-slider { height: 10px; box-shadow: none; border: none; background: #e0e0e0; margin: 10px 10px 20px 10px; }
-.noUi-connect { background: #4285F4; }
-.noUi-handle { height: 18px !important; width: 18px !important; top: -5px !important; right: -9px !important; border-radius: 50%; background: #2c3e50; box-shadow: none; border: 2px solid white; cursor: grab; }
+.noUi-connect { background: #B19CD9; /* NOUVEAU: Mauve/Lilas clair */ }
+.noUi-handle { 
+    height: 18px !important; width: 18px !important; top: -5px !important; right: -9px !important; 
+    border-radius: 50%; 
+    background: #5D3A7E; /* NOUVEAU: Violet Principal */
+    box-shadow: none; 
+    border: 2px solid white; 
+    cursor: grab; 
+}
 .noUi-handle:before, .noUi-handle:after { display: none; }
 
 /* Bouton Load More */
-#btn-load-more { background-color: #4285F4; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 50px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
-#btn-load-more:hover { background-color: #3367d6; }
+#btn-load-more { 
+    background-color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    color: white; 
+    border: none; 
+    padding: 12px 30px; 
+    font-size: 16px; 
+    border-radius: 50px; 
+    cursor: pointer; 
+    display: none; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    margin-top: 20px; 
+}
+#btn-load-more:hover { 
+    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire au survol */
+}
