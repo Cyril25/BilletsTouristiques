@@ -102,17 +102,17 @@ body {
 /* Icônes spécifiques aux pages */
 .collector-icon { 
     font-size: 4em; 
-    color: #5D3A7E; /* Violet Principal pour Infos Collecteurs */
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Infos Collecteurs */
     margin-bottom: 20px; 
 }
 .contact-icon { 
     font-size: 4em; 
-    color: #5D3A7E; /* Violet Principal pour Contact */
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Contact */
     margin-bottom: 20px; 
 }
 .link-icon { 
     font-size: 4em; 
-    color: #5D3A7E; /* Violet Principal pour Liens Utiles */
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Liens Utiles */
     margin-bottom: 20px; 
 }
 
@@ -375,159 +375,11 @@ select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width:
 .ico-dl { color: #5f6368; }
 .fa-paypal { transition: transform 0.2s; display: inline-block; } a:hover .fa-paypal { transform: scale(1.2); }
 
-/* --- GESTION DU DISPLAY PAR MODE --- */
-/* Mode Liste: Masque la grille et affiche le tableau */
-body.view-liste #cards-grid, body.view-liste .global-container, body.view-liste #btn-load-more { 
-    display: none !important; 
-}
-body.view-liste #list-table-container { 
-    display: block !important; 
-    margin-top: 20px;
-}
+/* Modes Liste/Galerie (styles d'origine, à étendre par JS/body class) */
+.view-liste #cards-grid, .view-liste .global-container, .view-liste #btn-load-more { display: none; }
+.view-liste #list-table-container { display: block; }
+.view-galerie #cards-grid, .view-galerie .global-container, .view-galerie #btn-load-more { display: none; }
 
-/* Mode Galerie: Masque le mode collecte/liste et affiche la grille optimisée */
-body.view-galerie #list-table-container, body.view-galerie .global-container, body.view-galerie #btn-load-more { 
-    display: none !important; 
-}
-body.view-galerie #cards-grid { 
-    display: grid !important; 
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; 
-    gap: 15px !important; 
-}
-body.view-galerie #cards-grid .galerie-item { 
-    display: flex !important; /* Affiche les items de la galerie */
-}
-
-/* --- STYLES SPÉCIFIQUES MODE LISTE (TABLEAU) --- */
-
-#list-table-container {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    padding: 20px;
-    overflow-x: auto; /* Permet le scroll horizontal sur mobile */
-}
-
-#billets-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 1000px; /* Largeur minimale pour éviter l'écrasement */
-    font-size: 0.9em;
-}
-
-#billets-table th, #billets-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-#billets-table thead th {
-    background-color: #5D3A7E; /* Violet Principal */
-    color: white;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky; 
-    top: 0;
-    z-index: 2;
-}
-
-#billets-table tbody tr:nth-child(even) {
-    background-color: #F7F7F9; 
-}
-
-#billets-table tbody tr:hover {
-    background-color: #EFE9F7; 
-}
-
-#billets-table .col-ref { font-weight: 500; color: #5D3A7E; }
-#billets-table .col-comment { font-style: italic; color: #666; font-size: 0.85em; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-
-/* --- STYLES SPÉCIFIQUES MODE GALERIE --- */
-
-.galerie-item {
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    height: 140px; 
-    position: relative;
-    align-items: center;
-    justify-content: center;
-}
-
-.galerie-item:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.galerie-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Assure que le billet entier est visible sans rognage */
-    padding: 5px; 
-}
-
-.galerie-title {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-    color: white;
-    padding: 5px;
-    font-size: 0.75em;
-    text-align: center;
-    max-height: 50px;
-    overflow: hidden;
-}
-
-/* Modal pour le Zoom de l'Image */
-.image-modal {
-    display: none; 
-    position: fixed; 
-    z-index: 10000; 
-    padding-top: 60px; 
-    left: 0;
-    top: 0;
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.9); 
-}
-.image-modal:not(.hidden) {
-    display: block; /* S'affiche lorsque la classe 'hidden' est retirée par JS */
-}
-
-
-.modal-content {
-    margin: auto;
-    display: block;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90%;
-    object-fit: contain;
-}
-
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 35px;
-    color: #f1f1f1;
-    font-size: 40px;
-    font-weight: bold;
-    transition: 0.3s;
-    cursor: pointer;
-}
-
-.close-btn:hover, .close-btn:focus {
-    color: #bbb;
-    text-decoration: none;
-    cursor: pointer;
-}
 
 /* Slider Date */
 #date-slider { height: 10px; box-shadow: none; border: none; background: #e0e0e0; margin: 10px 10px 20px 10px; }
