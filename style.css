@@ -3,7 +3,7 @@
    ========================================= */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #F7F7F9; /* NOUVEAU: Gris très clair et propre */
+    background-color: #F7F7F9; /* Gris très clair et propre */
     margin: 0;
     padding: 20px;
     color: #333;
@@ -22,7 +22,7 @@ body {
    2. MENU DE NAVIGATION
    ========================================= */
 .navbar {
-    background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
+    background-color: #5D3A7E; /* Violet/Mauve Principal */
     color: white;
     padding: 0 20px;
     display: flex;
@@ -46,11 +46,11 @@ body {
 }
 
 .nav-links a:hover, .dropdown:hover { 
-    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire pour le survol */
+    background-color: #7F58A0; /* Nuance Violet plus claire pour le survol */
     color: white; 
 }
 .nav-links a.active { 
-    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le lien actif */
+    color: #B19CD9; /* Mauve/Lilas clair pour le lien actif */
     font-weight: 500; 
 }
 
@@ -71,7 +71,7 @@ body {
 }
 .dropdown-content a:hover { 
     background-color: #f1f1f1; 
-    color: #7F58A0; /* NOUVEAU: Violet pour le lien du sous-menu */
+    color: #7F58A0; /* Violet pour le lien du sous-menu */
 }
 .dropdown:hover .dropdown-content { display: block; }
 
@@ -96,7 +96,7 @@ body {
 .btn-logout {
     /* Style Ghost Button moderne */
     background-color: transparent;
-    border: 1px solid #CC4444; /* NOUVEAU: Rouge bordeaux/tomate pour contraste */
+    border: 1px solid #CC4444; /* Rouge bordeaux/tomate pour contraste */
     color: #CC4444;
     padding: 6px 15px;
     border-radius: 50px; /* Forme pilule */
@@ -114,7 +114,7 @@ body {
 .btn-logout:hover {
     background-color: #CC4444;
     color: white;
-    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4); /* NOUVEAU: Effet néon au survol */
+    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4); /* Effet néon au survol */
     transform: translateY(-1px);
 }
 
@@ -125,13 +125,13 @@ body {
     .nav-toggle { display: block; }
     .nav-links {
         display: none; flex-direction: column; width: 100%; height: auto;
-        background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
+        background-color: #5D3A7E; /* Violet/Mauve Principal */
         position: absolute; top: 60px; left: 0;
         padding: 10px 0; z-index: 999; border-radius: 0 0 8px 8px; align-items: stretch;
     }
     .nav-links.active { display: flex; }
     .nav-links a, .dropdown { display: block; width: 100%; text-align: center; padding: 15px 0; height: auto; }
-    .dropdown-content { position: static; display: block; background: #7F58A0; /* NOUVEAU: Nuance Violet plus claire */ box-shadow: none; width: 100%; }
+    .dropdown-content { position: static; display: block; background: #7F58A0; /* Nuance Violet plus claire */ box-shadow: none; width: 100%; }
     .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
     .dropbtn { display: none; }
 
@@ -160,21 +160,21 @@ body {
 .text-page.center { text-align: center; }
 .construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
 .text-page h1 { 
-    color: #5D3A7E; /* NOUVEAU: Violet Principal pour le titre */
-    border-bottom: 2px solid #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le soulignement */
+    color: #5D3A7E; /* Violet Principal pour le titre */
+    border-bottom: 2px solid #B19CD9; /* Mauve/Lilas clair pour le soulignement */
     padding-bottom: 10px; 
     margin-top: 0; 
 }
 .text-page h2 { 
-    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour les sous-titres */
+    color: #B19CD9; /* Mauve/Lilas clair pour les sous-titres */
     margin-top: 30px; 
     font-size: 1.4em; 
 }
 .text-page ul, .text-page ol { padding-left: 20px; }
 .text-page li { margin-bottom: 10px; }
 .alert-box { 
-    background-color: #EFE9F7; /* NOUVEAU: Mauve très clair, presque blanc */
-    border-left: 5px solid #7F58A0; /* NOUVEAU: Violet moyen pour la barre d'accentuation */
+    background-color: #EFE9F7; /* Mauve très clair, presque blanc */
+    border-left: 5px solid #7F58A0; /* Violet moyen pour la barre d'accentuation */
     padding: 15px; 
     margin: 20px 0; 
     border-radius: 4px; 
@@ -211,7 +211,7 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 .action-icons { display: flex; justify-content: center; gap: 20px; padding: 10px 0; }
 .icon-btn { text-decoration: none; font-size: 22px; transition: transform 0.2s, opacity 0.2s; opacity: 0.8; }
 .icon-btn:hover { transform: scale(1.2); opacity: 1; }
-/* NOUVEAU: Violet principal pour les icônes importantes */
+/* Violet principal pour les icônes importantes */
 .ico-form { color: #5D3A7E; } 
 .ico-sheet { color: #21A366; } 
 .ico-fb { color: #1877F2; } 
@@ -231,11 +231,11 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 
 /* Slider Date */
 #date-slider { height: 10px; box-shadow: none; border: none; background: #e0e0e0; margin: 10px 10px 20px 10px; }
-.noUi-connect { background: #B19CD9; /* NOUVEAU: Mauve/Lilas clair */ }
+.noUi-connect { background: #B19CD9; /* Mauve/Lilas clair */ }
 .noUi-handle { 
     height: 18px !important; width: 18px !important; top: -5px !important; right: -9px !important; 
     border-radius: 50%; 
-    background: #5D3A7E; /* NOUVEAU: Violet Principal */
+    background: #5D3A7E; /* Violet Principal */
     box-shadow: none; 
     border: 2px solid white; 
     cursor: grab; 
@@ -244,7 +244,7 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 
 /* Bouton Load More */
 #btn-load-more { 
-    background-color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    background-color: #5D3A7E; /* Violet Principal */
     color: white; 
     border: none; 
     padding: 12px 30px; 
@@ -256,5 +256,82 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
     margin-top: 20px; 
 }
 #btn-load-more:hover { 
-    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire au survol */
+    background-color: #7F58A0; /* Nuance Violet plus claire au survol */
+}
+
+/* =========================================
+   5. PAGE DE CONNEXION (login.html)
+   ========================================= */
+/* Réinitialisation body pour la page de connexion */
+body.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Prend toute la hauteur de la fenêtre */
+    margin: 0;
+    /* On garde la police de base de style.css, mais on change le fond */
+    background: linear-gradient(135deg, #5D3A7E 0%, #7F58A0 100%); /* NOUVEAU: Dégradé Violet/Mauve */
+    color: #333;
+    /* IMPORTANT : Overrides le padding de 20px du body de la section 1 */
+    padding: 0; 
+}
+
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2); /* Ombre portée douce */
+    text-align: center;
+    max-width: 400px;
+    width: 90%; /* Responsive sur mobile */
+}
+
+.logo-icon {
+    font-size: 4em;
+    color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    margin-bottom: 20px;
+}
+
+.login-card h1 { 
+    margin: 0 0 10px 0;
+    font-size: 1.5em;
+    color: #5D3A7E; /* NOUVEAU: Violet Principal */
+}
+
+.login-card p {
+    color: #666;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin-bottom: 30px;
+}
+
+.btn-google {
+    background-color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    transition: background 0.3s, transform 0.2s;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+}
+
+.btn-google:hover {
+    background-color: #7F58A0; /* NOUVEAU: Violet Moyen au survol */
+    transform: translateY(-2px);
+}
+
+/* Petit message d'erreur caché par défaut */
+#error-msg {
+    color: #CC4444; /* NOUVEAU: Rouge de contraste (comme bouton déconnexion) */
+    font-size: 0.85em;
+    margin-top: 15px;
+    display: none;
 }
