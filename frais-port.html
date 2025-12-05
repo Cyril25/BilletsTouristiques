@@ -8,24 +8,156 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
-    <style>
-        .text-page { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
-        .construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
-    </style>
-</head>
+    </head>
 <body>
 
     <div id="app-content">
-        <!-- LE MENU S'INJECTE ICI -->
         <div id="menu-placeholder"></div>
 
-        <div class="text-page">
-            <i class="fa-solid fa-truck-fast construction-icon"></i>
-            <h1>Frais de port</h1>
-            <p>Cette page est actuellement en cours de construction.</p>
-            <p>Les informations sur les tarifs d'expédition seront bientôt disponibles ici.</p>
-            <br>
-            <a href="index.html" style="color:#4285F4; text-decoration:none;">&larr; Retour à l'accueil</a>
+        <div class="text-page rates">
+            
+            <h1><i class="fa-solid fa-truck-fast"></i> Frais de port - Tarif 2025</h1>
+            
+            <p>Ces tarifs sont basés sur les grilles tarifaires de La Poste pour les envois de type Lettre Verte/Prioritaire et Lettre Suivie/Recommandée, et sont donnés à titre indicatif pour vos collectes.</p>
+
+            <h2><i class="fa-solid fa-location-dot"></i> Envois en France Métropolitaine</h2>
+
+            <div class="rates-table-container">
+                <table class="rates-table">
+                    <thead>
+                        <tr>
+                            <th>Poids / Quantité</th>
+                            <th>Normal</th>
+                            <th>Suivi</th>
+                            <th>Recommandé R1</th>
+                            <th>Recommandé R2</th>
+                            <th>Recommandé R3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1 à 10 billets (20 grammes)</td>
+                            <td>1,60€</td>
+                            <td>2,10€</td>
+                            <td>5,90€</td>
+                            <td>7,00€</td>
+                            <td>8,60€</td>
+                        </tr>
+                        <tr>
+                            <td>11 à 25 billets (50 grammes)</td>
+                            <td>2,80€</td>
+                            <td>3,30€</td>
+                            <td>6,70€</td>
+                            <td>7,80€</td>
+                            <td>9,25€</td>
+                        </tr>
+                        <tr>
+                            <td>26 à 50 billets (100 grammes)</td>
+                            <td>2,80€</td>
+                            <td>3,30€</td>
+                            <td>7,60€</td>
+                            <td>8,60€</td>
+                            <td>9,25€</td>
+                        </tr>
+                        <tr>
+                            <td>51 à 100 billets (250 grammes)</td>
+                            <td>4,90€</td>
+                            <td>5,40€</td>
+                            <td>9,25€</td>
+                            <td>10,25€</td>
+                            <td>11,85€</td>
+                        </tr>
+                        <tr>
+                            <td>101 à 200 billets (500 grammes)</td>
+                            <td>8,60€</td>
+                            <td>9,10€</td>
+                            <td>10,80€</td>
+                            <td>11,80€</td>
+                            <td>13,25€</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="rates-info-box">
+                <h3><i class="fa-solid fa-circle-info"></i> Information sur les garanties (France)</h3>
+                <ul>
+                    <li>**Lettre Verte (normal)** : Envoi **à vos risques** en cas de perte.</li>
+                    <li>**Lettre Suivie** : Remboursement de **3 fois le tarif d'affranchissement** en cas de perte.</li>
+                    <li>**Recommandé R1** : Remboursement forfaitaire de **15€** en cas de perte.</li>
+                    <li>**Recommandé R2** : Remboursement forfaitaire de **153€** en cas de perte.</li>
+                    <li>**Recommandé R3** : Remboursement forfaitaire de **458€** en cas de perte.</li>
+                </ul>
+                <p class="rates-disclaimer">Toute demande de remboursement doit passer par le service réclamation de la poste, en aucun cas le remboursement ne viendra directement du collecteur.</p>
+            </div>
+
+            <hr style="border:0; border-top:1px solid #eee; margin:40px 0;">
+            
+            <h2><i class="fa-solid fa-earth-europe"></i> Envois à l'Étranger (International)</h2>
+
+            <div class="rates-table-container">
+                <table class="rates-table">
+                    <thead>
+                        <tr>
+                            <th>Poids / Quantité</th>
+                            <th>Normal</th>
+                            <th>Suivi</th>
+                            <th>Recommandé R1</th>
+                            <th>Recommandé R2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1 à 10 billets (20 grammes)</td>
+                            <td>2,20€</td>
+                            <td>5,00€</td>
+                            <td>7,25€</td>
+                            <td>8,25€</td>
+                        </tr>
+                        <tr>
+                            <td>11 à 25 billets (50 grammes)</td>
+                            <td>4,60€</td>
+                            <td>7,40€</td>
+                            <td>9,70€</td>
+                            <td>10,70€</td>
+                        </tr>
+                        <tr>
+                            <td>26 à 50 billets (100 grammes)</td>
+                            <td>4,60€</td>
+                            <td>7,40€</td>
+                            <td>9,70€</td>
+                            <td>10,70€</td>
+                        </tr>
+                        <tr>
+                            <td>51 à 100 billets (250 grammes)</td>
+                            <td>XX,XX€</td>
+                            <td>XX,XX€</td>
+                            <td>16,00€</td>
+                            <td>17,00€</td>
+                        </tr>
+                        <tr>
+                            <td>101 à 200 billets (500 grammes)</td>
+                            <td>XX,XX€</td>
+                            <td>XX,XX€</td>
+                            <td>20,60€</td>
+                            <td>21,60€</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="rates-info-box">
+                <h3><i class="fa-solid fa-circle-info"></i> Information sur les garanties (International)</h3>
+                <ul>
+                    <li>**Lettre Prioritaire (normal)** : Envoi **à vos risques** en cas de perte.</li>
+                    <li>**Lettre Suivie** : Veuillez noter que les conditions de remboursement peuvent varier selon le pays de destination (information à vérifier).</li>
+                    <li>**Recommandé R1** : Remboursement forfaitaire de **45€** en cas de perte.</li>
+                    <li>**Recommandé R2** : Remboursement forfaitaire de **150€** en cas de perte.</li>
+                </ul>
+                <p class="rates-disclaimer">Toute demande de remboursement doit passer par le service réclamation de la poste, en aucun cas le remboursement ne viendra directement du collecteur.</p>
+            </div>
+
+            <a href="index.html" style="color:#7F58A0; text-decoration:none; margin-top:20px; display:inline-block; font-weight:500;">&larr; Retour à l'accueil</a>
         </div>
     </div>
 
