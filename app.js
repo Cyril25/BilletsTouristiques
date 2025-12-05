@@ -36,7 +36,6 @@ function fetchFastThenSlow() {
                 
                 if(counter) {
                     counter.innerText = "Chargement suite...";
-                    // NOUVEAU: Utilisation des couleurs thématiques
                     counter.style.backgroundColor = "#EFE9F7"; 
                     counter.style.color = "#5D3A7E";
                 }
@@ -64,7 +63,6 @@ function fetchFastThenSlow() {
             
             if(counter) {
                 counter.innerText = allData.length + " billets";
-                // NOUVEAU: Utilisation des couleurs thématiques
                 counter.style.backgroundColor = "#B19CD9"; 
                 counter.style.color = "white";
             }
@@ -153,16 +151,8 @@ function changeView(mode) {
     body.classList.remove('view-collecte', 'view-liste', 'view-galerie');
     body.classList.add('view-' + mode);
     
-    // Pour que le "Load More" fonctionne et que le tableau s'affiche/masque correctement
-    if (mode === 'liste') {
-        renderListTable();
-    } else {
-        // Si on passe en mode Galerie ou Collecte, on revient à la grille
-        // et on s'assure que le tableau n'est pas là.
-        document.getElementById('cards-grid').innerHTML = ""; 
-        displayedCount = 0;
-        showMore(); 
-    }
+    // Le filtre est relancé pour re-générer la vue correcte
+    applyFilters(false);
 }
 
 // Convertit 25/12/2025 ou 2025-12-25T10:00 en 2025-12-25
@@ -233,10 +223,7 @@ function applyFilters(silent = false) {
     });
 
     if (!silent) {
-        // S'assurer que le tableau est masqué si on filtre
-        const listTableContainer = document.getElementById('list-table-container');
-        if (listTableContainer) listTableContainer.innerHTML = "";
-        
+        // Vider l'affichage
         grid.innerHTML = ""; 
         displayedCount = 0; 
         
@@ -244,6 +231,9 @@ function applyFilters(silent = false) {
         if (document.body.classList.contains('view-liste')) {
             renderListTable();
         } else {
+            // S'assure que le conteneur du tableau est vide si on passe en grille
+            const listTableContainer = document.getElementById('list-table-container');
+            if (listTableContainer) listTableContainer.innerHTML = "";
             showMore();
         }
     } else {
@@ -330,7 +320,7 @@ function showMore() {
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE
-            // On veut seulement l'image et le titre pour le survol
+            // Le onclick est essentiel pour ouvrir la modale
             html += `
             <div class="galerie-item" onclick="openModal('${imgUrl}')">
                 ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
@@ -452,14 +442,22 @@ function openModal(imgUrl) {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-image');
     
-    modal.classList.remove('hidden');
+    // L'ajout de !important dans le CSS garantit que 'hidden' masque bien,
+    // et ici on retire 'hidden' pour forcer l'affichage.
+    modal.classList.remove('hidden'); 
+    
     // Utiliser une taille d'image plus grande pour le zoom
     modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600'); 
-    document.body.style.overflow = 'hidden'; // Empêche le scroll de la page derrière
+    
+    // Empêche le scroll de la page derrière (fonctionnalité demandée)
+    document.body.style.overflow = 'hidden'; 
 }
 
 function closeModal() {
     const modal = document.getElementById('image-modal');
+    
     modal.classList.add('hidden');
+    
+    // Rétablit le scroll de la page
     document.body.style.overflow = 'auto';
 }
