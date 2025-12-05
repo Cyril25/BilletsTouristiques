@@ -3,13 +3,15 @@
    ========================================= */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #F7F7F9; /* Gris très clair et propre */
+    background-color: #F7F7F9; /* NOUVEAU: Gris très clair et propre */
     margin: 0;
     padding: 20px;
     color: #333;
 }
 
 /* --- LE RIDEAU DE FER --- */
+/* IMPORTANT : On cache le site par défaut. */
+/* Seul global.js l'affichera une fois connecté. */
 #app-content {
     display: none; 
     max-width: 1400px;
@@ -20,7 +22,7 @@ body {
    2. MENU DE NAVIGATION
    ========================================= */
 .navbar {
-    background-color: #5D3A7E; /* Violet/Mauve Principal */
+    background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
     color: white;
     padding: 0 20px;
     display: flex;
@@ -44,11 +46,11 @@ body {
 }
 
 .nav-links a:hover, .dropdown:hover { 
-    background-color: #7F58A0; /* Nuance Violet plus claire pour le survol */
+    background-color: #7F58A0; /* NOUVEAU: Nuance Violet plus claire pour le survol */
     color: white; 
 }
 .nav-links a.active { 
-    color: #B19CD9; /* Mauve/Lilas clair pour le lien actif */
+    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le lien actif */
     font-weight: 500; 
 }
 
@@ -69,34 +71,35 @@ body {
 }
 .dropdown-content a:hover { 
     background-color: #f1f1f1; 
-    color: #7F58A0; /* Violet pour le lien du sous-menu */
+    color: #7F58A0; /* NOUVEAU: Violet pour le lien du sous-menu */
 }
 .dropdown:hover .dropdown-content { display: block; }
 
-/* --- PROFIL & BOUTON DÉCONNEXION --- */
+/* --- NOUVEAU : PROFIL & BOUTON DÉCONNEXION --- */
 .user-info {
     display: flex;
     align-items: center;
     gap: 15px;
     margin-left: 20px;
     padding-left: 20px;
-    border-left: 1px solid rgba(255,255,255,0.15);
-    height: 30px;
+    border-left: 1px solid rgba(255,255,255,0.15); /* Fine ligne de séparation */
+    height: 30px; /* Centrage vertical */
 }
 
 .user-email {
     font-size: 0.85em;
     font-weight: 500;
-    color: #bdc3c7;
+    color: #bdc3c7; /* Gris argenté doux */
     letter-spacing: 0.5px;
 }
 
 .btn-logout {
+    /* Style Ghost Button moderne */
     background-color: transparent;
-    border: 1px solid #CC4444; 
+    border: 1px solid #CC4444; /* NOUVEAU: Rouge bordeaux/tomate pour contraste */
     color: #CC4444;
     padding: 6px 15px;
-    border-radius: 50px;
+    border-radius: 50px; /* Forme pilule */
     font-size: 0.8em;
     font-weight: bold;
     cursor: pointer;
@@ -111,7 +114,7 @@ body {
 .btn-logout:hover {
     background-color: #CC4444;
     color: white;
-    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4);
+    box-shadow: 0 0 10px rgba(204, 68, 68, 0.4); /* Effet néon au survol */
     transform: translateY(-1px);
 }
 
@@ -123,19 +126,20 @@ body {
     .nav-links {
         display: none; flex-direction: column; width: 100%; height: auto;
         position: absolute; top: 60px; left: 0; 
-        background-color: #5D3A7E; 
+        background-color: #5D3A7E; /* NOUVEAU: Violet/Mauve Principal */
         padding: 10px 0; z-index: 999; border-radius: 0 0 8px 8px; align-items: stretch;
     }
     .nav-links.active { display: flex; }
     .nav-links a, .dropdown { display: block; width: 100%; text-align: center; padding: 15px 0; height: auto; }
     .dropdown-content { 
         position: static; display: block; 
-        background: #7F58A0; 
+        background: #7F58A0; /* NOUVEAU: Nuance Violet plus claire */ 
         box-shadow: none; width: 100%; 
     }
     .dropdown-content a { color: #ddd; padding-left: 0; text-align: center; }
     .dropbtn { display: none; }
 
+    /* Ajustement Profil sur Mobile */
     .user-info {
         flex-direction: column;
         border-left: none;
@@ -147,7 +151,7 @@ body {
         gap: 15px;
     }
     .btn-logout {
-        width: 80%;
+        width: 80%; /* Bouton large sur mobile */
         justify-content: center;
         padding: 10px;
     }
@@ -163,28 +167,42 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
 }
 .text-page.center { text-align: center; }
-.construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; }
+.construction-icon { font-size: 4em; color: #f39c12; margin-bottom: 20px; } /* Laisse la couleur orange pour les alertes/construction */
+
+/* Icônes spécifiques aux pages */
 .collector-icon { 
     font-size: 4em; 
-    color: #5D3A7E; /* NOUVEAU: Violet Principal */
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Infos Collecteurs */
     margin-bottom: 20px; 
 }
+.contact-icon { 
+    font-size: 4em; 
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Contact */
+    margin-bottom: 20px; 
+}
+.link-icon { 
+    font-size: 4em; 
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour Liens Utiles */
+    margin-bottom: 20px; 
+}
+
+
 .text-page h1 { 
-    color: #5D3A7E;
-    border-bottom: 2px solid #B19CD9;
+    color: #5D3A7E; /* NOUVEAU: Violet Principal pour le titre */
+    border-bottom: 2px solid #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour le soulignement */
     padding-bottom: 10px; 
     margin-top: 0; 
 }
 .text-page h2 { 
-    color: #B19CD9;
+    color: #B19CD9; /* NOUVEAU: Mauve/Lilas clair pour les sous-titres */
     margin-top: 30px; 
     font-size: 1.4em; 
 }
 .text-page ul, .text-page ol { padding-left: 20px; }
 .text-page li { margin-bottom: 10px; }
 .alert-box { 
-    background-color: #EFE9F7;
-    border-left: 5px solid #7F58A0;
+    background-color: #EFE9F7; /* NOUVEAU: Mauve très clair */
+    border-left: 5px solid #7F58A0; /* NOUVEAU: Violet moyen pour la barre d'accentuation */
     padding: 15px; 
     margin: 20px 0; 
     border-radius: 4px; 
@@ -192,17 +210,17 @@ body {
 .team-list { font-style: italic; color: #666; margin-top: 20px; }
 
 
-/* --- NOUVEAUX STYLES TARIFS (Page Frais de Port) --- */
+/* --- STYLES TARIFS (Page Frais de Port) --- */
 .text-page.rates { 
     text-align: left; 
     margin: 20px auto; 
-    padding: 0; /* SUPPRIMÉ : Laisse le fond blanc prendre toute la largeur */
+    padding: 0; /* Permet au fond blanc de prendre toute la largeur */
 }
 
-/* NOUVEAU WRAPPER : Limite la largeur du contenu interne */
+/* WRAPPER : Limite la largeur du contenu interne pour la lisibilité (900px) */
 .rates-content-wrapper {
-    max-width: 900px; /* Largeur de contenu souhaitée */
-    margin: 0 auto; /* Centre le contenu */
+    max-width: 900px; 
+    margin: 0 auto;
     padding: 40px; /* Ajoute le padding (espace intérieur) pour le contenu */
 }
 
@@ -221,7 +239,7 @@ body {
     border-collapse: collapse;
     margin: 20px 0;
     font-size: 0.9em;
-    min-width: 600px;
+    min-width: 600px; 
 }
 
 .rates-table th, .rates-table td {
@@ -231,7 +249,7 @@ body {
 }
 
 .rates-table thead th {
-    background-color: #5D3A7E;
+    background-color: #5D3A7E; 
     color: white;
     font-weight: bold;
     text-transform: uppercase;
@@ -239,11 +257,11 @@ body {
 }
 
 .rates-table tbody tr:nth-child(even) {
-    background-color: #F7F7F9;
+    background-color: #F7F7F9; 
 }
 
 .rates-table tbody tr:hover {
-    background-color: #EFE9F7;
+    background-color: #EFE9F7; 
 }
 
 .rates-info-box {
@@ -273,7 +291,7 @@ body {
 .rates-info-box strong { color: #7F58A0; }
 .rates-disclaimer { margin-top: 20px; font-size: 0.85em; color: #666; font-style: italic; }
 
-.rates-return-link { /* NOUVEAU STYLE POUR LE LIEN RETOUR */
+.rates-return-link {
     color:#7F58A0; 
     text-decoration:none; 
     margin-top:20px; 
@@ -283,6 +301,101 @@ body {
 .rates-return-link:hover {
     text-decoration: underline;
 }
+
+/* --- STYLES CONTACT / COLLECTEURS --- */
+.admin-info {
+    text-align: left;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.hours-box {
+    background-color: #EFE9F7; /* Mauve très clair */
+    border: 1px solid #B19CD9; /* Mauve clair */
+    padding: 20px;
+    border-radius: 8px;
+    margin: 30px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.hours-box strong { color: #5D3A7E; font-weight: 700; }
+.hours-box p { margin: 5px 0; }
+.closed-warning { color: #CC4444; font-weight: 500; margin-top: 15px; }
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.team-member {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border-top: 5px solid #7F58A0; /* Violet Moyen */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.team-member h3 {
+    color: #5D3A7E;
+    margin-top: 0;
+    font-size: 1.2em;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.team-member ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: 0.9em;
+    color: #555;
+}
+.team-member li { margin-bottom: 5px; }
+
+/* --- STYLES LIENS UTILES --- */
+.facebook-link-box {
+    text-align: center;
+    max-width: 600px;
+    margin: 40px auto 20px auto;
+    padding: 30px 20px;
+    background: #EFE9F7; /* Mauve très clair */
+    border: 2px solid #B19CD9; /* Mauve clair */
+    border-radius: 10px;
+    transition: transform 0.3s ease;
+}
+
+.facebook-link-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.facebook-link-box h2 {
+    color: #5D3A7E;
+    font-size: 1.8em;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: none;
+}
+
+.facebook-link-box a {
+    display: inline-block;
+    background-color: #1877F2; /* Bleu Facebook */
+    color: white;
+    padding: 10px 25px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1em;
+    transition: background-color 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.facebook-link-box a:hover {
+    background-color: #145dbb;
+}
+
 
 /* =========================================
    4. APPLI BILLETS (Grille, Filtres...)
@@ -363,7 +476,7 @@ table.dates { width: 100%; font-size: 0.9em; color: #555; }
 /* =========================================
    5. PAGE DE CONNEXION (login.html)
    ========================================= */
-/* Styles de la page de connexion */
+/* Réinitialisation body pour la page de connexion */
 body.login-page {
     display: flex;
     justify-content: center;
@@ -427,6 +540,7 @@ body.login-page {
     transform: translateY(-2px);
 }
 
+/* Petit message d'erreur caché par défaut */
 #error-msg {
     color: #CC4444;
     font-size: 0.85em;
