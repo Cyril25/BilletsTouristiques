@@ -12,9 +12,7 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-
-    <div id="app-content">
+<body class="view-collecte"> <div id="app-content">
         <div id="menu-placeholder"></div>
 
         <header>
@@ -39,10 +37,8 @@
             <div class="filter-group" style="min-width: 300px; flex-grow: 1.5;">
                 <label>Période (Date)</label>
                 
-                <!-- Le Slider va s'afficher ici -->
                 <div id="date-slider" style="margin: 10px 10px 20px 10px;"></div>
 
-                <!-- Les Inputs (synchronisés avec le slider) -->
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="date" id="date-start" onchange="manualDateChange()">
                     <span style="color:#999;">à</span>
@@ -60,11 +56,20 @@
         <div id="cards-grid">
             <p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement de la collection...</p>
         </div>
+        
+        <div id="list-table-container" class="hidden">
+            </div>
 
         <div style="text-align:center; margin: 40px 0;">
             <button id="btn-load-more" onclick="showMore()">Voir la suite</button>
         </div>
     </div>
+    
+    <div id="image-modal" class="image-modal hidden" onclick="closeModal()">
+        <span class="close-btn">&times;</span>
+        <img class="modal-content" id="modal-image">
+    </div>
+
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
