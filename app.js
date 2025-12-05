@@ -14,6 +14,8 @@ let dateSlider = document.getElementById('date-slider');
 
 document.addEventListener('DOMContentLoaded', () => { 
     fetchFastThenSlow(); 
+    // S'assure que le mode par défaut (Collecte) est activé au chargement
+    document.body.classList.add('view-collecte'); 
 });
 
 // ============================================================
@@ -34,7 +36,9 @@ function fetchFastThenSlow() {
                 
                 if(counter) {
                     counter.innerText = "Chargement suite...";
-                    counter.style.backgroundColor = "#fff3cd"; // Jaune
+                    // NOUVEAU: Utilisation des couleurs thématiques
+                    counter.style.backgroundColor = "#EFE9F7"; 
+                    counter.style.color = "#5D3A7E";
                 }
             }
         })
@@ -60,7 +64,9 @@ function fetchFastThenSlow() {
             
             if(counter) {
                 counter.innerText = allData.length + " billets";
-                counter.style.backgroundColor = "#d4edda"; // Vert
+                // NOUVEAU: Utilisation des couleurs thématiques
+                counter.style.backgroundColor = "#B19CD9"; 
+                counter.style.color = "white";
             }
         })
         .catch(err => console.error("Erreur chargement :", err));
@@ -143,10 +149,20 @@ function manualDateChange() {
 
 // Change l'affichage (Collecte / Liste / Galerie)
 function changeView(mode) {
-    const container = document.getElementById('app-content');
-    container.classList.remove('view-liste', 'view-galerie');
-    if (mode === 'liste') container.classList.add('view-liste');
-    else if (mode === 'galerie') container.classList.add('view-galerie');
+    const body = document.body;
+    body.classList.remove('view-collecte', 'view-liste', 'view-galerie');
+    body.classList.add('view-' + mode);
+    
+    // Pour que le "Load More" fonctionne et que le tableau s'affiche/masque correctement
+    if (mode === 'liste') {
+        renderListTable();
+    } else {
+        // Si on passe en mode Galerie ou Collecte, on revient à la grille
+        // et on s'assure que le tableau n'est pas là.
+        document.getElementById('cards-grid').innerHTML = ""; 
+        displayedCount = 0;
+        showMore(); 
+    }
 }
 
 // Convertit 25/12/2025 ou 2025-12-25T10:00 en 2025-12-25
@@ -185,7 +201,8 @@ function populateFilters() {
 
 function applyFilters(silent = false) {
     // Si on est sur une page sans grille (ex: Accueil), on arrête
-    if(!document.getElementById('cards-grid')) return;
+    const grid = document.getElementById('cards-grid');
+    if(!grid) return;
 
     const s = document.getElementById('search-input').value.toLowerCase();
     const fCat = document.getElementById('sel-cat').value;
@@ -201,6 +218,7 @@ function applyFilters(silent = false) {
     currentData = allData.filter(item => {
         const txt = !s || (item.NomBillet && item.NomBillet.toLowerCase().includes(s)) ||
                           (item.Ville && item.Ville.toLowerCase().includes(s)) ||
+                          (item.Reference && item.Reference.toLowerCase().includes(s)) ||
                           (item.Recherche && item.Recherche.toLowerCase().includes(s));
         
         // Comparaison de dates normalisées
@@ -215,9 +233,19 @@ function applyFilters(silent = false) {
     });
 
     if (!silent) {
-        document.getElementById('cards-grid').innerHTML = ""; 
+        // S'assurer que le tableau est masqué si on filtre
+        const listTableContainer = document.getElementById('list-table-container');
+        if (listTableContainer) listTableContainer.innerHTML = "";
+        
+        grid.innerHTML = ""; 
         displayedCount = 0; 
-        showMore();
+        
+        // Si le mode Liste est actif, on affiche le tableau, sinon la grille.
+        if (document.body.classList.contains('view-liste')) {
+            renderListTable();
+        } else {
+            showMore();
+        }
     } else {
         updateLoadMoreButton();
     }
@@ -228,11 +256,65 @@ function applyFilters(silent = false) {
 }
 
 // ============================================================
-// 4. RENDU HTML (TEMPLATE)
+// 4. RENDU HTML (TEMPLATES POUR 3 MODES)
 // ============================================================
+
+// --- Rendu Mode Liste (Tableau) ---
+function renderListTable() {
+    const tableContainer = document.getElementById('list-table-container');
+    if (!tableContainer) return;
+    
+    if(currentData.length === 0) {
+        tableContainer.innerHTML = "<p style='text-align:center;'>Aucun résultat.</p>";
+        updateLoadMoreButton();
+        return;
+    }
+
+    let html = `
+    <table id="billets-table">
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Année-Version</th>
+                <th>Dép.</th>
+                <th>Réf.</th>
+                <th>Ville</th>
+                <th>Nom Billet</th>
+                <th>Collecteur</th>
+                <th>Commentaire</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    currentData.forEach(item => {
+        html += `
+        <tr>
+            <td>${item.Timestamp || ''}</td>
+            <td>${item.Millesime || 'XXXX'}-${item.Version || 'X'}</td>
+            <td>${item.Dep || ''}</td>
+            <td class="col-ref">${item.Reference || ''}</td>
+            <td>${item.Ville || ''}</td>
+            <td>${item.NomBillet || ''}</td>
+            <td>${item.Collecteur || ''}</td>
+            <td class="col-comment">${item.Commentaire || ''}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    tableContainer.innerHTML = html;
+    
+    // On masque le bouton Load More car le tableau affiche tout
+    document.getElementById('btn-load-more').style.display = 'none';
+}
+
+
+// --- Rendu Mode Collecte & Galerie ---
 function showMore() {
+    const body = document.body;
     const grid = document.getElementById('cards-grid');
     const batch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
+    
+    const isGalleryMode = body.classList.contains('view-galerie');
     
     if(batch.length === 0 && displayedCount === 0) {
         grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center;'>Aucun résultat.</p>";
@@ -246,82 +328,95 @@ function showMore() {
         const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
         const couleur = item.Couleur || '#666'; 
 
-        html += `
-        <div class="global-container" style="border-top: 8px solid ${couleur};">
-            
-            <div class="header-container">
-                 <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
-                 
-                 <div class="category" style="background-color: ${couleur}; color: white;">
-                    ${item.Categorie}
-                 </div>
-                 
-                 <div class="header-info">
-                     <h1 style="border-bottom: 3px solid ${couleur};">
-                        ${item.Ville || ''}
-                     </h1>
-                 </div>
-            </div>
-            
-            <div class="content">
-                <div class="description">
-                    ${item.Dep || ''} ${item.Reference || ''} ${item.Millesime || ''}-${item.Version || ''}<br />
-                    ${item.Cp || ''} ${item.Ville || ''}<br />
-                    ${item.NomBillet || ''}
-                </div>
+        if (isGalleryMode) {
+            // RENDU MODE GALERIE
+            // On veut seulement l'image et le titre pour le survol
+            html += `
+            <div class="galerie-item" onclick="openModal('${imgUrl}')">
+                ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
+                    <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${item.Reference}</div>
+                `}
+                <div class="galerie-title">${item.NomBillet || item.Reference || 'Sans nom'}</div>
+            </div>`;
+
+        } else {
+            // RENDU MODE COLLECTE (par défaut)
+            html += `
+            <div class="global-container" style="border-top: 8px solid ${couleur};">
                 
-                <div class="${item.CollecteCache || ''}">
-                    Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
-                    <br><br>
-                    <!-- CORRECTION : Alignement Gauche -->
-                    <div style="text-align:left; font-size:1.1em;">
-                        ${item.InfoPaiement || ''}
+                <div class="header-container">
+                    <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
+                    
+                    <div class="category" style="background-color: ${couleur}; color: white;">
+                        ${item.Categorie}
+                    </div>
+                    
+                    <div class="header-info">
+                        <h1 style="border-bottom: 3px solid ${couleur};">
+                            ${item.Ville || ''}
+                        </h1>
                     </div>
                 </div>
                 
-                <div class="${item.ComCache || ''}" style="margin-top:15px;">
-                    Commentaire : ${item.Commentaire || ''}
-                </div>
-            </div>
-
-            <div class="more">
-                <center>
-                    <table class="dates">
-                        <tr><td>Pré Collecte :</td><td><b>${item.DatePre || ''}</b></td></tr>
-                        <tr><td>Collecte :</td><td><b>${item.DateColl || ''}</b></td></tr>
-                        <tr><td>Terminé :</td><td><b>${item.DateFin || ''}</b></td></tr>
-                    </table>
-                </center>
-            </div>
-
-            <div class="more">
-                <center>${item.CompteurBT || ''}</center>
-            </div>
-
-            <div class="more action-icons">
-                ${item.Sondage ? `
-                    <a href="${item.Sondage}" target="_blank" class="icon-btn ico-form" title="Répondre au sondage">
-                        <i class="fa-solid fa-clipboard-question"></i>
-                    </a>` : ''}
-
-                ${item.LinkSheet ? `
-                    <a href="${item.LinkSheet}" target="_blank" class="icon-btn ico-sheet" title="Voir le fichier Excel">
-                        <i class="fa-solid fa-file-csv"></i>
-                    </a>` : ''}
-
-                ${item.LinkFB ? `
-                    <a href="${item.LinkFB}" target="_blank" class="icon-btn ico-fb" title="Voir sur Facebook">
-                        <i class="fa-brands fa-facebook"></i>
-                    </a>` : ''}
-
-                ${item.ImageId ? `
-                    <a href="${downloadLink}" target="_blank" class="icon-btn ico-dl" title="Télécharger l'image HD">
-                        <i class="fa-solid fa-download"></i>
-                    </a>` : ''}
+                <div class="content">
+                    <div class="description">
+                        ${item.Dep || ''} ${item.Reference || ''} ${item.Millesime || ''}-${item.Version || ''}<br />
+                        ${item.Cp || ''} ${item.Ville || ''}<br />
+                        ${item.NomBillet || ''}
+                    </div>
                     
-                 <span style='font-size:10px; color:#ccc; align-self:center;'>(n°${item.Timestamp || ''})</span>
-            </div>
-        </div>`;
+                    <div class="${item.CollecteCache || ''}">
+                        Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
+                        <br><br>
+                        <div style="text-align:left; font-size:1.1em;">
+                            ${item.InfoPaiement.replace(/style='color:#00457C; font-size:24px;'/, `style='color:#5D3A7E; font-size:24px;'`) || ''}
+                        </div>
+                    </div>
+                    
+                    <div class="${item.ComCache || ''}" style="margin-top:15px;">
+                        Commentaire : ${item.Commentaire || ''}
+                    </div>
+                </div>
+
+                <div class="more">
+                    <center>
+                        <table class="dates">
+                            <tr><td>Pré Collecte :</td><td><b>${item.DatePre || ''}</b></td></tr>
+                            <tr><td>Collecte :</td><td><b>${item.DateColl || ''}</b></td></tr>
+                            <tr><td>Terminé :</td><td><b>${item.DateFin || ''}</b></td></tr>
+                        </table>
+                    </center>
+                </div>
+
+                <div class="more">
+                    <center>${item.CompteurBT || ''}</center>
+                </div>
+
+                <div class="more action-icons">
+                    ${item.Sondage ? `
+                        <a href="${item.Sondage}" target="_blank" class="icon-btn ico-form" title="Répondre au sondage">
+                            <i class="fa-solid fa-clipboard-question"></i>
+                        </a>` : ''}
+
+                    ${item.LinkSheet ? `
+                        <a href="${item.LinkSheet}" target="_blank" class="icon-btn ico-sheet" title="Voir le fichier Excel">
+                            <i class="fa-solid fa-file-csv"></i>
+                        </a>` : ''}
+
+                    ${item.LinkFB ? `
+                        <a href="${item.LinkFB}" target="_blank" class="icon-btn ico-fb" title="Voir sur Facebook">
+                            <i class="fa-brands fa-facebook"></i>
+                        </a>` : ''}
+
+                    ${item.ImageId ? `
+                        <a href="${downloadLink}" target="_blank" class="icon-btn ico-dl" title="Télécharger l'image HD">
+                            <i class="fa-solid fa-download"></i>
+                        </a>` : ''}
+                        
+                    <span style='font-size:10px; color:#ccc; align-self:center;'>(n°${item.Timestamp || ''})</span>
+                </div>
+            </div>`;
+        }
     });
 
     grid.insertAdjacentHTML('beforeend', html);
@@ -329,14 +424,42 @@ function showMore() {
     updateLoadMoreButton();
 }
 
+
 function updateLoadMoreButton() {
     const btn = document.getElementById('btn-load-more');
     if (!btn) return;
     
+    // Le bouton n'est affiché qu'en mode Collecte et Galerie
+    const isListMode = document.body.classList.contains('view-liste');
+    
+    if (isListMode) {
+        btn.style.display = 'none';
+        return;
+    }
+
     if (displayedCount < currentData.length) {
         btn.style.display = 'inline-block';
         btn.innerText = `Voir la suite (${currentData.length - displayedCount})`;
     } else {
         btn.style.display = 'none';
     }
+}
+
+// ============================================================
+// 5. GESTION DU MODAL (ZOOM GALERIE)
+// ============================================================
+function openModal(imgUrl) {
+    const modal = document.getElementById('image-modal');
+    const modalImg = document.getElementById('modal-image');
+    
+    modal.classList.remove('hidden');
+    // Utiliser une taille d'image plus grande pour le zoom
+    modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600'); 
+    document.body.style.overflow = 'hidden'; // Empêche le scroll de la page derrière
+}
+
+function closeModal() {
+    const modal = document.getElementById('image-modal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
 }
