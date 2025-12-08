@@ -1,12 +1,24 @@
 // ============================================================
 // 1. IMPORTS DES FONCTIONS FIREBASE (MODULAIRE V10)
 // ============================================================
-// Note: Puisque le chargement se fait par CDN dans le HTML, nous utilisons le global 'firebase'
-// pour importer les fonctions spécifiques au lieu des URLs de modules.
+// Les imports directs par URL sont la méthode requise en v10 sans outil de build.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    onAuthStateChanged, 
+    signInWithRedirect, 
+    signOut, 
+    getRedirectResult, 
+    setPersistence, 
+    inMemoryPersistence 
+} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc 
+} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
-const { initializeApp } = firebase;
-const { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithRedirect, signOut, getRedirectResult, setPersistence, inMemoryPersistence } = firebase.auth;
-const { getFirestore, doc, getDoc } = firebase.firestore;
 
 // ============================================================
 // 1b. CONFIGURATION & INITIALISATION
@@ -20,7 +32,7 @@ const firebaseConfig = {
     appId: "1:644448143950:web:f64ccc8f62883507ea111f"
 };
 
-// INITIALISATION (MODULAIRE)
+// INITIALISATION
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
