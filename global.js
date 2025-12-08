@@ -30,73 +30,67 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof firebase === 'undefined') return;
 
     const auth = firebase.auth();
+    const currentPath = window.location.pathname.split("/").pop() || "index.html";
+    const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
+    const isProtectedPage = protectedPages.includes(currentPath);
+    const isLoginPage = currentPath === "login.html";
 
     auth.onAuthStateChanged(user => {
-        const path = window.location.pathname;
-        const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
-
+        const appContent = document.getElementById('app-content');
+        
         if (user) {
-            console.log("Utilisateur détecté : " + user.email);
-
-            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
-            const db = firebase.firestore(); // On initialise la DB
-            
-            // On cherche le document qui a pour ID l'email de l'utilisateur
-            db.collection("whitelist").doc(user.email).get()
-            .then((doc) => {
-                if (doc.exists) {
-                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
-                    console.log("Accès autorisé pour : " + user.email);
-                    
-                    if (isLoginPage) {
-                        window.location.href = "index.html";
-                    } else {
-                        loadMenu(); 
-                        const appContent = document.getElementById('app-content');
-                        if (appContent) appContent.style.display = 'block';
-                    }
-                } else {
-                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
-                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
-                    alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
-                    
-                    // On le déconnecte
-                    auth.signOut().then(() => {
-                        window.location.href = "login.html";
-                    });
-                }
-            })
-            .catch((error) => {
-                console.error("Erreur lors de la vérification Firestore :", error);
-            });
-
+            // Utilisateur connecté
+            if (isLoginPage) {
+                // S'il est connecté et sur la page de login, on le redirige vers l'accueil
+                window.location.href = "index.html";
+            } else {
+                // S'il est connecté et sur une page protégée, on affiche le contenu et le menu
+                if (appContent) appContent.style.display = 'block';
+                loadMenu();
+            }
         } else {
-            // --- NON CONNECTÉ ---
-            console.log("Non connecté -> Redirection");
-            if (!isLoginPage) {
+            // Utilisateur déconnecté
+            if (isProtectedPage) {
+                // S'il est déconnecté et sur une page protégée, on le redirige vers le login
                 window.location.href = "login.html";
+            } else if (isLoginPage) {
+                 // S'il est déconnecté et sur la page de login, on affiche le contenu du login
+                // Cela est important pour que le bouton de connexion apparaisse.
+                if (appContent) appContent.style.display = 'block';
+                
+                // Gérer le résultat de la redirection (utile pour capter les erreurs après redirection)
+                firebase.auth().getRedirectResult().catch(error => {
+                    console.error("Erreur de connexion après redirection :", error);
+                    const errorDiv = document.getElementById('error-msg');
+                    if(errorDiv) {
+                        // On affiche le message d'erreur à l'utilisateur
+                        errorDiv.textContent = `Erreur de connexion: ${error.message}`;
+                        errorDiv.style.display = 'block';
+                    }
+                });
             }
         }
     });
 });
 
 // ============================================================
-// 3. FONCTIONS AUTH
+// 3. AUTHENTIFICATION (Login & Logout)
 // ============================================================
+// Fonction appelée par le bouton "Se connecter" sur login.html
 function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-        .catch(error => {
-            console.error(error);
-            alert("Erreur connexion : " + error.message);
-        });
+    
+    // FIX pour l'erreur "missing initial state": 
+    // Passage à signInWithRedirect pour une meilleure compatibilité des navigateurs.
+    firebase.auth().signInWithRedirect(provider);
 }
 
+
+// Fonction de déconnexion
 function logout() {
-    if (typeof firebase === 'undefined') return;
     firebase.auth().signOut().then(() => {
+        // Rediriger vers la page de connexion après déconnexion réussie
         window.location.href = "login.html";
     });
 }
@@ -131,7 +125,7 @@ function loadMenu() {
 
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = index.html;
+    if(page === "") page = "index.html";
     
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
