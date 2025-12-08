@@ -1,165 +1,112 @@
-// ============================================================
-// 1. INITIALISATION FIREBASE (VIGILANCE ACCRUE)
-// ============================================================
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Association Billet Touristique</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 
-// On vérifie d'abord si la librairie Firebase est bien chargée dans le HTML
-if (typeof firebase === 'undefined') {
-    console.error("ERREUR CRITIQUE : Les scripts Firebase (app.js et auth.js) ne sont pas chargés dans le HTML avant global.js !");
-} else {
-    // FIX CRITIQUE: Forcer l'initialisation avec les clés explicites.
-    // L'erreur 404 se produit lorsque l'hébergement est différent du domaine Firebase.
-    if (!firebase.apps.length) {
-        firebase.initializeApp({
-            apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
-            authDomain: "asso-billet-site.firebaseapp.com",
-            projectId: "asso-billet-site",
-            storageBucket: "asso-billet-site.appspot.com",
-            messagingSenderId: "644448143950",
-            appId: "1:644448143950:web:f64ccc8f62883507ea111f"
-        });
-        console.log("Firebase initialisé avec succès (mode explicite).");
-    }
-}
 
-// ============================================================
-// 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
-// ============================================================
-document.addEventListener("DOMContentLoaded", function() {
-    
-    // Sécurité supplémentaire
-    if (typeof firebase === 'undefined') return;
 
-    const auth = firebase.auth();
 
-    auth.onAuthStateChanged(user => {
-        const path = window.location.pathname;
-        const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login");
 
-        if (user) {
-            console.log("Utilisateur détecté : " + user.email);
 
-            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
-            const db = firebase.firestore();
-            
-            // On cherche le document qui a pour ID l'email de l'utilisateur
-            db.collection("whitelist").doc(user.email).get()
-            .then((doc) => {
-                if (doc.exists) {
-                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
-                    console.log("Accès autorisé pour : " + user.email);
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </head>
+<body>
+
+
+
+    <div id="app-content">
+        <div id="menu-placeholder"></div>
+
+
+
+        <div class="text-page">
+            <i class="fa-solid fa-envelope-open-text contact-icon"></i> <h1>Le Bureau des Administrateurs</h1>
+
+
+
+
+            <div class="admin-info">
+                
+                <div class="hours-box">
+                    <h2 style="margin-top:0; font-size: 1.4em; color: #5D3A7E;">Horaires d'ouverture</h2>
+                    <p>Le Bureau des Administrateurs est ouvert pour répondre à vos demandes :</p>
+                    <p><strong><i class="fa-regular fa-calendar-check"></i> Du Lundi au Vendredi</strong> : 8h00 à 20h00</p>
+                    <p><strong><i class="fa-regular fa-calendar-alt"></i> Le Samedi matin</strong> : 8h30 à 12h30</p>
+                    <p><strong><i class="fa-solid fa-house-chimney-crack"></i> Fermé le Dimanche</strong></p>
+                    <p class="closed-warning">Merci de votre gentillesse : veuillez ne pas envoyer de Message Privé (MP) pendant les heures de fermeture.</p>
+                </div>
+                
+                <h2 style="color: #B19CD9; border-bottom: none; margin-top: 40px;"><i class="fa-solid fa-handshake"></i> L'Équipe et ses Rôles</h2>
+                
+                <div class="team-grid">
                     
-                    if (isLoginPage) {
-                        window.location.href = "index.html";
-                    } else {
-                        loadMenu(); 
-                        const appContent = document.getElementById('app-content');
-                        if (appContent) appContent.style.display = 'block';
-                    }
-                } else {
-                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
-                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
-                    alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
-                    
-                    // On le déconnecte
-                    auth.signOut().then(() => {
-                        window.location.href = "login.html";
-                    });
-                }
-            })
-            .catch((error) => {
-                console.error("Erreur lors de la vérification Firestore :", error);
-            });
+                    <div class="team-member">
+                        <h3>Geneviève WAUQUIER</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-user-check"></i> Gestion des entrées / sorties sur le groupe Facebook</li>                            
+                            <li><i class="fa-solid fa-headset"></i> Service réclamation :)</li>
+                        </ul>
+                    </div>
 
-            // Si c'est la page de login, on gère les erreurs de redirection après la vérification Firestore
-            if (isLoginPage) {
-                firebase.auth().getRedirectResult().catch(error => {
-                    console.error("Erreur de connexion après redirection :", error);
-                    // On peut afficher une erreur ici si la connexion a échoué pendant la redirection
-                });
-            }
+                    <div class="team-member">
+                        <h3>Laura NCY (Sébastien)</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-file-circle-plus"></i> Création des formulaires Google</li>
+                            <li><i class="fa-solid fa-list-check"></i> Gestion de la liste des billets</li>
+                            <li><i class="fa-solid fa-sack-dollar"></i> Collecte des billets</li>
+                        </ul>
+                    </div>
 
+                    <div class="team-member">
+                        <h3>Jean-Philippe ZIZEK</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-file-circle-plus"></i> Création des formulaires Google</li>
+                            <li><i class="fa-solid fa-list-check"></i> Gestion de la liste des billets</li>
+                            <li><i class="fa-solid fa-sack-dollar"></i> Collecte des billets</li>
+                        </ul>
+                    </div>
 
-        } else {
-            // --- NON CONNECTÉ ---
-            console.log("Non connecté -> Redirection");
-            if (!isLoginPage) {
-                window.location.href = "login.html";
-            } else {
-                // Si déconnecté et sur login.html, on tente de gérer les erreurs de redirection
-                firebase.auth().getRedirectResult().catch(error => {
-                    console.error("Erreur de connexion après redirection :", error);
-                    const errorDiv = document.getElementById('error-msg');
-                    if(errorDiv) {
-                        errorDiv.textContent = `Erreur: ${error.message}. Veuillez réessayer.`;
-                        errorDiv.style.display = 'block';
-                    }
-                });
-            }
-        }
-    });
-});
+                    <div class="team-member">
+                        <h3>Cyril SAMSON</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-door-open"></i> Gestion des demandes d'accès au site</li>
+                            <li><i class="fa-solid fa-code"></i> Amélioration et gestion des bugs sur le site</li>
+                            <li><i class="fa-solid fa-sack-dollar"></i> Collecte des billets</li>
+                        </ul>
+                    </div>
 
-// ============================================================
-// 3. FONCTIONS AUTH
-// ============================================================
-function loginWithGoogle() {
-    if (typeof firebase === 'undefined') return;
-    const provider = new firebase.auth.GoogleAuthProvider();
-    
-    // FIX MAJEUR: Utilisation de signInWithRedirect pour éviter l'erreur "missing initial state"
-    // et les problèmes liés au session storage bloqué par les navigateurs.
-    firebase.auth().signInWithRedirect(provider);
-}
+                    <div class="team-member">
+                        <h3>Damien PAVE</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-sack-dollar"></i> Collecte des billets</li>
+                        </ul>
+                    </div>
 
-function logout() {
-    if (typeof firebase === 'undefined') return;
-    firebase.auth().signOut().then(() => {
-        window.location.href = "login.html";
-    });
-}
+                    <div class="team-member">
+                        <h3>Vanessa Rosati</h3>
+                        <ul>
+                            <li><i class="fa-solid fa-file-circle-plus"></i> Création de Google Form</li>
+                            <li><i class="fa-solid fa-list-check"></i> Gestion de la liste des billets</li>
+                        </ul>
+                    </div>
 
-// ============================================================
-// 4. MENU (Mise à jour)
-// ============================================================
-function loadMenu() {
-    const placeholder = document.getElementById("menu-placeholder");
-    if (!placeholder) return;
-
-    fetch("menu.html")
-        .then(response => response.text())
-        .then(html => {
-            // 1. On injecte le HTML
-            placeholder.innerHTML = html;
-            
-            // 2. On gère le lien actif
-            highlightActiveLink();
-
-            // 3. ON AFFICHE L'EMAIL
-            const user = firebase.auth().currentUser;
-            const emailSpan = document.getElementById("user-email-display");
-            
-            // On vérifie si l'utilisateur est là et si le span existe
-            if (user && emailSpan) {
-                emailSpan.textContent = user.email;
-            }
-        })
-        .catch(err => console.error("Menu introuvable :", err));
-}
-
-function highlightActiveLink() {
-    let page = window.location.pathname.split("/").pop();
-    if(page === "") page = "index.html"; // Correction: page = index.html au lieu de page = index.html
-    
-    setTimeout(() => {
-        const links = document.querySelectorAll(".nav-links a");
-        links.forEach(link => {
-            if(link.getAttribute("href") === page) link.classList.add("active");
-        });
-    }, 100);
-}
-
-function toggleMenu() {
-    const nav = document.getElementById('nav-links');
-    if(nav) nav.classList.toggle('active');
-}
+                </div>
+                
+            </div>
