@@ -30,17 +30,32 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof firebase === 'undefined') return;
 
     const auth = firebase.auth();
-
+    
+    // NOUVEAU FIX V8 FINAL : Régler la persistance sur NONE dès le chargement (hors fonction de clic)
+    auth.setPersistence(firebase.auth.Auth.Persistence.NONE)
+    .then(() => {
+        console.log("Persistance Firebase réglée sur NONE (compatible mode privé).");
+    })
+    .catch(error => {
+        console.warn("Avertissement : Erreur lors du réglage de la persistance. La session sera courte. Code:", error.code);
+    });
+    // FIN FIX DE PERSISTANCE
+    
     auth.onAuthStateChanged(user => {
         const path = window.location.pathname;
         const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
+        const isLoginPage = (page === "login.html" || page === "login");
+        
+        // Définition des pages protégées 
+        const currentPath = window.location.pathname.split("/").pop() || "index.html";
+        const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
+        const isProtectedPage = protectedPages.includes(currentPath);
 
         if (user) {
             console.log("Utilisateur détecté : " + user.email);
 
-            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
-            const db = firebase.firestore(); // On initialise la DB
+            // --- VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore();
 
             // On cherche le document qui a pour ID l'email de l'utilisateur
             db.collection("whitelist").doc(user.email).get()
@@ -87,21 +102,16 @@ document.addEventListener("DOMContentLoaded", function() {
 function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-        .catch(error => {
-            console.error(error);
-            alert("Erreur connexion : " + error.message);
-
-
-        });
-
-
-
-
-
-
-
-
+    
+    // FIX COMPATIBILITÉ V8 : La persistance est déjà réglée. On lance la redirection directement.
+    provider.setCustomParameters({
+        'prompt': 'select_account' 
+    });
+    
+    // On passe à signInWithRedirect (plus robuste que signInWithPopup)
+    firebase.auth().signInWithRedirect(provider);
+    
+    // Note: L'erreur est gérée par getRedirectResult dans onAuthStateChanged.
 }
 
 function logout() {
@@ -134,10 +144,6 @@ function loadMenu() {
             // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
                 emailSpan.textContent = user.email;
-
-
-
-
             }
         })
         .catch(err => console.error("Menu introuvable :", err));
@@ -145,7 +151,7 @@ function loadMenu() {
 
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = index.html;
+    if(page === "") page = "index.html";
 
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
