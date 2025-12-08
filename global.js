@@ -6,9 +6,8 @@
 if (typeof firebase === 'undefined') {
     console.error("ERREUR CRITIQUE : Les scripts Firebase (app.js et auth.js) ne sont pas chargés dans le HTML avant global.js !");
 } else {
-    // On ne lance l'initialisation QUE si aucune app n'existe déjà
+    // FIX CRITIQUE: Forcer l'initialisation avec les clés explicites.
     if (!firebase.apps.length) {
-        // REMPLACEZ LES ... PAR VOS CLES CI-DESSOUS
         firebase.initializeApp({
             apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
             authDomain: "asso-billet-site.firebaseapp.com",
@@ -17,7 +16,7 @@ if (typeof firebase === 'undefined') {
             messagingSenderId: "644448143950",
             appId: "1:644448143950:web:f64ccc8f62883507ea111f"
         });
-        console.log("Firebase initialisé avec succès.");
+        console.log("Firebase initialisé avec succès (mode explicite).");
     }
 }
 
@@ -30,41 +29,66 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof firebase === 'undefined') return;
 
     const auth = firebase.auth();
-    const currentPath = window.location.pathname.split("/").pop() || "index.html";
-    const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
-    const isProtectedPage = protectedPages.includes(currentPath);
-    const isLoginPage = currentPath === "login.html";
 
     auth.onAuthStateChanged(user => {
-        const appContent = document.getElementById('app-content');
+        const path = window.location.pathname;
+        const page = path.split("/").pop();
+        const isLoginPage = (page === "login.html" || page === "login");
         
+        // Définition des pages protégées pour une meilleure lisibilité
+        const currentPath = window.location.pathname.split("/").pop() || "index.html";
+        const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
+        const isProtectedPage = protectedPages.includes(currentPath);
+
         if (user) {
-            // Utilisateur connecté
-            if (isLoginPage) {
-                // S'il est connecté et sur la page de login, on le redirige vers l'accueil
-                window.location.href = "index.html";
-            } else {
-                // S'il est connecté et sur une page protégée, on affiche le contenu et le menu
-                if (appContent) appContent.style.display = 'block';
-                loadMenu();
-            }
+            console.log("Utilisateur détecté : " + user.email);
+
+            // --- VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore();
+            
+            db.collection("whitelist").doc(user.email).get()
+            .then((doc) => {
+                if (doc.exists) {
+                    // Accès autorisé
+                    console.log("Accès autorisé pour : " + user.email);
+                    
+                    if (isLoginPage) {
+                        window.location.href = "index.html";
+                    } else {
+                        loadMenu(); 
+                        const appContent = document.getElementById('app-content');
+                        if (appContent) appContent.style.display = 'block';
+                    }
+                } else {
+                    // Accès REFUSÉ (Pas dans la whitelist)
+                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
+                    alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
+                    
+                    auth.signOut().then(() => {
+                        window.location.href = "login.html";
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Erreur lors de la vérification Firestore :", error);
+            });
+        
         } else {
-            // Utilisateur déconnecté
+            // --- NON CONNECTÉ ---
+            console.log("Non connecté -> Redirection");
             if (isProtectedPage) {
-                // S'il est déconnecté et sur une page protégée, on le redirige vers le login
                 window.location.href = "login.html";
             } else if (isLoginPage) {
-                 // S'il est déconnecté et sur la page de login, on affiche le contenu du login
-                // Cela est important pour que le bouton de connexion apparaisse.
+                // Affiche le contenu de login.html
+                const appContent = document.getElementById('app-content');
                 if (appContent) appContent.style.display = 'block';
                 
-                // Gérer le résultat de la redirection (utile pour capter les erreurs après redirection)
+                // Gérer les erreurs de la redirection (si l'utilisateur revient du serveur Google sans succès)
                 firebase.auth().getRedirectResult().catch(error => {
                     console.error("Erreur de connexion après redirection :", error);
                     const errorDiv = document.getElementById('error-msg');
                     if(errorDiv) {
-                        // On affiche le message d'erreur à l'utilisateur
-                        errorDiv.textContent = `Erreur de connexion: ${error.message}`;
+                        errorDiv.textContent = `Erreur de connexion: ${error.message}. Veuillez réessayer.`;
                         errorDiv.style.display = 'block';
                     }
                 });
@@ -74,23 +98,26 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ============================================================
-// 3. AUTHENTIFICATION (Login & Logout)
+// 3. FONCTIONS AUTH
 // ============================================================
-// Fonction appelée par le bouton "Se connecter" sur login.html
 function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
     
-    // FIX pour l'erreur "missing initial state": 
-    // Passage à signInWithRedirect pour une meilleure compatibilité des navigateurs.
+    // NOUVEAU FIX POUR MODE PRIVÉ / iOS / Stockage bloqué :
+    // Utilise setCustomParameters pour forcer une session de connexion propre 
+    // et éviter l'erreur "missing initial state".
+    provider.setCustomParameters({
+        'prompt': 'select_account' 
+    });
+
+    // Passage à signInWithRedirect (méthode la plus compatible)
     firebase.auth().signInWithRedirect(provider);
 }
 
-
-// Fonction de déconnexion
 function logout() {
+    if (typeof firebase === 'undefined') return;
     firebase.auth().signOut().then(() => {
-        // Rediriger vers la page de connexion après déconnexion réussie
         window.location.href = "login.html";
     });
 }
