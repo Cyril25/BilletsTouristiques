@@ -41,16 +41,18 @@ document.addEventListener("DOMContentLoaded", function() {
         const isProtectedPage = protectedPages.includes(currentPath);
 
         if (user) {
-            console.log("Utilisateur détecté : " + user.email);
+            console.log("LOG 1: AUTHENTIFICATION RÉUSSIE. Utilisateur détecté : " + user.email);
 
-            // --- VÉRIFICATION DANS FIRESTORE ---
+            // --- VÉRIFICATION DANS FIRESTORE (WHITELIST) ---
+            console.log("LOG 2: Lancement de la vérification Whitelist Firestore...");
+            
             const db = firebase.firestore();
             
             db.collection("whitelist").doc(user.email).get()
             .then((doc) => {
                 if (doc.exists) {
                     // Accès autorisé
-                    console.log("Accès autorisé pour : " + user.email);
+                    console.log("LOG 3: WHITELIST OK. Accès autorisé.");
                     
                     if (isLoginPage) {
                         window.location.href = "index.html";
@@ -61,7 +63,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 } else {
                     // Accès REFUSÉ (Pas dans la whitelist)
-                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
+                    console.warn("LOG 3: WHITELIST ÉCHEC. Email non trouvé dans la liste.");
                     alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
                     
                     auth.signOut().then(() => {
@@ -70,13 +72,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             })
             .catch((error) => {
-                console.error("Erreur lors de la vérification Firestore :", error);
+                console.error("LOG 4: Erreur critique Firestore lors de la vérification :", error);
             });
         
         } else {
             // --- NON CONNECTÉ ---
-            console.log("Non connecté -> Redirection");
+            console.log("LOG 0: Détecté non connecté. Vérification si page protégée...");
             if (isProtectedPage) {
+                console.log("LOG 0b: Page protégée. Redirection vers login.html");
                 window.location.href = "login.html";
             } else if (isLoginPage) {
                 // Affiche le contenu de login.html
@@ -85,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 
                 // Gérer les erreurs de la redirection 
                 firebase.auth().getRedirectResult().catch(error => {
-                    console.error("Erreur de connexion après redirection :", error);
+                    console.error("LOG 5: Erreur de connexion après redirection :", error);
                     const errorDiv = document.getElementById('error-msg');
                     if(errorDiv) {
                         errorDiv.textContent = `Erreur de connexion: ${error.message}. Veuillez réessayer.`;
