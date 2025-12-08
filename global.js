@@ -6,8 +6,9 @@
 if (typeof firebase === 'undefined') {
     console.error("ERREUR CRITIQUE : Les scripts Firebase (app.js et auth.js) ne sont pas chargés dans le HTML avant global.js !");
 } else {
-    // Le FIX init.json n'est pas nécessaire en V8 si on garde cette structure
+    // On ne lance l'initialisation QUE si aucune app n'existe déjà
     if (!firebase.apps.length) {
+        // REMPLACEZ LES ... PAR VOS CLES CI-DESSOUS
         firebase.initializeApp({
             apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
             authDomain: "asso-billet-site.firebaseapp.com",
@@ -33,13 +34,13 @@ document.addEventListener("DOMContentLoaded", function() {
     auth.onAuthStateChanged(user => {
         const path = window.location.pathname;
         const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login");
+        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
 
         if (user) {
             console.log("Utilisateur détecté : " + user.email);
 
-            // --- VÉRIFICATION DANS FIRESTORE ---
-            const db = firebase.firestore();
+            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore(); // On initialise la DB
 
             // On cherche le document qui a pour ID l'email de l'utilisateur
             db.collection("whitelist").doc(user.email).get()
@@ -86,21 +87,21 @@ document.addEventListener("DOMContentLoaded", function() {
 function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    
-    // FIX COMPATIBILITÉ V8 : Utilisation de la méthode de redirection la plus robuste
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
-    .then(() => {
-        provider.setCustomParameters({
-            'prompt': 'select_account' 
+    firebase.auth().signInWithPopup(provider)
+        .catch(error => {
+            console.error(error);
+            alert("Erreur connexion : " + error.message);
+
+
         });
-        
-        // On passe à signInWithRedirect (plus robuste que signInWithPopup)
-        return firebase.auth().signInWithRedirect(provider);
-    })
-    .catch(error => {
-        console.error(error);
-        alert("Erreur connexion : " + error.message);
-    });
+
+
+
+
+
+
+
+
 }
 
 function logout() {
@@ -144,7 +145,7 @@ function loadMenu() {
 
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = "index.html";
+    if(page === "") page = index.html;
 
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
