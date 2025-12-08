@@ -1,74 +1,54 @@
 // ============================================================
-// 1. IMPORTS DES FONCTIONS FIREBASE (MODULAIRE V10)
+// 1. INITIALISATION FIREBASE (VIGILANCE ACCRUE)
 // ============================================================
-// Les imports directs par URL sont la méthode requise en v10 sans outil de build.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-import { 
-    getAuth, 
-    GoogleAuthProvider, 
-    onAuthStateChanged, 
-    signInWithRedirect, 
-    signOut, 
-    getRedirectResult, 
-    setPersistence, 
-    inMemoryPersistence 
-} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, 
-    getDoc 
-} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
-
-// ============================================================
-// 1b. CONFIGURATION & INITIALISATION
-// ============================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
-    authDomain: "asso-billet-site.firebaseapp.com",
-    projectId: "asso-billet-site",
-    storageBucket: "asso-billet-site.appspot.com",
-    messagingSenderId: "644448143950",
-    appId: "1:644448143950:web:f64ccc8f62883507ea111f"
-};
-
-// INITIALISATION
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-console.log("Firebase initialisé avec succès (MODULAIRE v10).");
-
+// On vérifie d'abord si la librairie Firebase est bien chargée dans le HTML
+if (typeof firebase === 'undefined') {
+    console.error("ERREUR CRITIQUE : Les scripts Firebase (app.js et auth.js) ne sont pas chargés dans le HTML avant global.js !");
+} else {
+    // On ne lance l'initialisation QUE si aucune app n'existe déjà
+    if (!firebase.apps.length) {
+        // REMPLACEZ LES ... PAR VOS CLES CI-DESSOUS
+        firebase.initializeApp({
+            apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
+            authDomain: "asso-billet-site.firebaseapp.com",
+            projectId: "asso-billet-site",
+            storageBucket: "asso-billet-site.appspot.com",
+            messagingSenderId: "644448143950",
+            appId: "1:644448143950:web:f64ccc8f62883507ea111f"
+        });
+        console.log("Firebase initialisé avec succès.");
+    }
+}
 
 // ============================================================
 // 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
-    
-    // onAuthStateChanged (MODULAIRE)
-    onAuthStateChanged(auth, user => {
+
+    // Sécurité supplémentaire
+    if (typeof firebase === 'undefined') return;
+
+    const auth = firebase.auth();
+
+    auth.onAuthStateChanged(user => {
         const path = window.location.pathname;
         const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login");
-        
-        // Définition des pages protégées 
-        const currentPath = window.location.pathname.split("/").pop() || "index.html";
-        const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
-        const isProtectedPage = protectedPages.includes(currentPath);
+        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
 
         if (user) {
-            console.log("LOG 1: AUTHENTIFICATION RÉUSSIE. Utilisateur détecté : " + user.email);
+            console.log("Utilisateur détecté : " + user.email);
 
-            // --- VÉRIFICATION DANS FIRESTORE (WHITELIST) ---
-            console.log("LOG 2: Lancement de la vérification Whitelist Firestore...");
-            
-            // getDoc(doc(db, collectionName, docId)) (MODULAIRE)
-            getDoc(doc(db, "whitelist", user.email))
-            .then((docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    // Accès autorisé
-                    console.log("LOG 3: WHITELIST OK. Accès autorisé.");
-                    
+            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore(); // On initialise la DB
+
+            // On cherche le document qui a pour ID l'email de l'utilisateur
+            db.collection("whitelist").doc(user.email).get()
+            .then((doc) => {
+                if (doc.exists) {
+                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
+                    console.log("Accès autorisé pour : " + user.email);
+
                     if (isLoginPage) {
                         window.location.href = "index.html";
                     } else {
@@ -77,81 +57,49 @@ document.addEventListener("DOMContentLoaded", function() {
                         if (appContent) appContent.style.display = 'block';
                     }
                 } else {
-                    // Accès REFUSÉ (Pas dans la whitelist)
-                    console.warn("LOG 3: WHITELIST ÉCHEC. Email non trouvé dans la liste.");
+                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
+                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
                     alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
-                    
-                    // signOut (MODULAIRE)
-                    signOut(auth).then(() => {
+
+                    // On le déconnecte
+                    auth.signOut().then(() => {
                         window.location.href = "login.html";
                     });
                 }
             })
             .catch((error) => {
-                console.error("LOG 4: Erreur critique Firestore lors de la vérification :", error);
+                console.error("Erreur lors de la vérification Firestore :", error);
             });
-        
+
         } else {
             // --- NON CONNECTÉ ---
-            console.log("LOG 0: Détecté non connecté. Vérification si page protégée...");
-            if (isProtectedPage) {
-                console.log("LOG 0b: Page protégée. Redirection vers login.html");
+            console.log("Non connecté -> Redirection");
+            if (!isLoginPage) {
                 window.location.href = "login.html";
-            } else if (isLoginPage) {
-                // Affiche le contenu de login.html
-                const appContent = document.getElementById('app-content');
-                if (appContent) appContent.style.display = 'block';
-                
-                // Gérer les erreurs de la redirection (MODULAIRE)
-                getRedirectResult(auth).catch(error => {
-                    console.error("LOG 5: Erreur de connexion après redirection :", error);
-                    const errorDiv = document.getElementById('error-msg');
-                    if(errorDiv) {
-                        errorDiv.textContent = `Erreur de connexion: ${error.message}. Veuillez réessayer.`;
-                        errorDiv.style.display = 'block';
-                    }
-                });
             }
         }
     });
 });
 
 // ============================================================
-// 3. FONCTIONS AUTH (MODULAIRE)
+// 3. FONCTIONS AUTH
 // ============================================================
 function loginWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    
-    // FIX RADICAL POUR MODE PRIVÉ / iOS : Changer la persistance (MODULAIRE)
-    // inMemoryPersistence est l'équivalent moderne de Auth.Persistence.NONE
-    setPersistence(auth, inMemoryPersistence)
-    .then(() => {
-        // Paramètres pour éviter les problèmes de session
-        provider.setCustomParameters({
-            'prompt': 'select_account' 
+    if (typeof firebase === 'undefined') return;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+        .catch(error => {
+            console.error(error);
+            alert("Erreur connexion : " + error.message);
         });
-
-        // Lancer la connexion par redirection (MODULAIRE)
-        return signInWithRedirect(auth, provider);
-    })
-    .catch((error) => {
-        console.error("Erreur setPersistence ou Redirection :", error);
-        alert("Erreur critique de connexion. Code: " + error.code + ". Veuillez vider votre cache et réessayer.");
-    });
 }
 
 function logout() {
-    // signOut (MODULAIRE)
-    signOut(auth).then(() => {
+    if (typeof firebase === 'undefined') return;
+    firebase.auth().signOut().then(() => {
         window.location.href = "login.html";
     });
 }
-
-// Rendre les fonctions globales pour qu'elles puissent être appelées depuis le HTML (onclick)
-window.loginWithGoogle = loginWithGoogle;
-window.logout = logout;
-// -------------------------------------------------------------
-
 
 // ============================================================
 // 4. MENU (Mise à jour)
@@ -165,17 +113,21 @@ function loadMenu() {
         .then(html => {
             // 1. On injecte le HTML
             placeholder.innerHTML = html;
-            
+
             // 2. On gère le lien actif
             highlightActiveLink();
 
-            // 3. ON AFFICHE L'EMAIL (MODULAIRE)
-            const user = auth.currentUser;
+            // 3. ON AFFICHE L'EMAIL
+            const user = firebase.auth().currentUser;
             const emailSpan = document.getElementById("user-email-display");
-            
+
             // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
                 emailSpan.textContent = user.email;
+
+
+
+
             }
         })
         .catch(err => console.error("Menu introuvable :", err));
@@ -183,8 +135,8 @@ function loadMenu() {
 
 function highlightActiveLink() {
     let page = window.location.pathname.split("/").pop();
-    if(page === "") page = "index.html";
-    
+    if(page === "") page = index.html;
+
     setTimeout(() => {
         const links = document.querySelectorAll(".nav-links a");
         links.forEach(link => {
@@ -197,8 +149,3 @@ function toggleMenu() {
     const nav = document.getElementById('nav-links');
     if(nav) nav.classList.toggle('active');
 }
-
-// Rendre les fonctions globales pour qu'elles puissent être appelées depuis le HTML (onclick)
-window.loadMenu = loadMenu;
-window.highlightActiveLink = highlightActiveLink;
-window.toggleMenu = toggleMenu;
