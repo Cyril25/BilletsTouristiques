@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const page = path.split("/").pop();
         const isLoginPage = (page === "login.html" || page === "login");
         
-        // Définition des pages protégées pour une meilleure lisibilité
+        // Définition des pages protégées 
         const currentPath = window.location.pathname.split("/").pop() || "index.html";
         const protectedPages = ["index.html", "billets.html", "annuaire.html", "infos-collecteurs.html", "frais-port.html", "contact.html"];
         const isProtectedPage = protectedPages.includes(currentPath);
@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const appContent = document.getElementById('app-content');
                 if (appContent) appContent.style.display = 'block';
                 
-                // Gérer les erreurs de la redirection (si l'utilisateur revient du serveur Google sans succès)
+                // Gérer les erreurs de la redirection 
                 firebase.auth().getRedirectResult().catch(error => {
                     console.error("Erreur de connexion après redirection :", error);
                     const errorDiv = document.getElementById('error-msg');
@@ -104,15 +104,21 @@ function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
     
-    // NOUVEAU FIX POUR MODE PRIVÉ / iOS / Stockage bloqué :
-    // Utilise setCustomParameters pour forcer une session de connexion propre 
-    // et éviter l'erreur "missing initial state".
-    provider.setCustomParameters({
-        'prompt': 'select_account' 
-    });
+    // FIX RADICAL POUR MODE PRIVÉ / iOS : Changer la persistance
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+    .then(() => {
+        // Paramètres pour éviter les problèmes de session
+        provider.setCustomParameters({
+            'prompt': 'select_account' 
+        });
 
-    // Passage à signInWithRedirect (méthode la plus compatible)
-    firebase.auth().signInWithRedirect(provider);
+        // Lancer la connexion par redirection
+        return firebase.auth().signInWithRedirect(provider);
+    })
+    .catch((error) => {
+        console.error("Erreur setPersistence ou Redirection :", error);
+        alert("Erreur critique de connexion. Code: " + error.code + ". Veuillez vider votre cache et réessayer.");
+    });
 }
 
 function logout() {
