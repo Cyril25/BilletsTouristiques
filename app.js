@@ -1,83 +1,64 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-// Ancienne URL (bloquée par CORS) :
-// const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
-
-// NOUVELLE SOURCE DE DONNÉES (Google Sheets Export, contourne CORS)
-const SHEET_ID = "1seS_2TSc624vxI9JAAtWt_0v4oFt2Esov-_XoU6MXEA"; 
-const JSON_DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=select%20*`; 
-
+const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
 
 let allData = [];
 let currentData = [];
 let displayedCount = 0;
 const BATCH_SIZE = 50;
-let isFullLoaded = false; 
+let isFullLoaded = false;
 
 // Référence au slider (div vide dans le HTML)
 let dateSlider = document.getElementById('date-slider');
 
 document.addEventListener('DOMContentLoaded', () => { 
-    fetchDataComplete(); 
+    fetchFastThenSlow(); 
     // S'assure que le mode par défaut (Collecte) est activé au chargement
     document.body.classList.add('view-collecte'); 
 });
 
 // ============================================================
-// 1. CHARGEMENT DES DONNÉES (COMPLET ET UNIQUE)
+// 1. CHARGEMENT DES DONNÉES (RAPIDE PUIS COMPLET)
 // ============================================================
-function fetchDataComplete() {
+function fetchFastThenSlow() {
     const counter = document.getElementById('counter');
-    if(counter) {
-        counter.innerText = "Chargement des données...";
-        counter.style.backgroundColor = "#EFE9F7"; 
-        counter.style.color = "#5D3A7E";
-    }
     
-    // ÉTAPE UNIQUE : Appel complet du fichier (maintenant via l'API de visualisation)
-    fetch(JSON_DATA_URL)
-        .then(res => {
-            if (!res.ok) {
-                throw new Error(`Erreur HTTP: ${res.status} lors de la récupération du JSON.`);
+    // ÉTAPE 1 : Appel rapide (50 derniers billets)
+    fetch(scriptUrl + "?limit=50")
+        .then(res => res.json())
+        .then(data => {
+            // Si le chargement complet n'est pas déjà fini
+            if (!isFullLoaded) {
+                allData = data;
+                populateFilters(); 
+                applyFilters(false); // false = Reset de l'affichage
+                
+                if(counter) {
+                    counter.innerText = "Chargement suite...";
+                    counter.style.backgroundColor = "#EFE9F7"; 
+                    counter.style.color = "#5D3A7E";
+                }
             }
-            // On récupère la réponse sous forme de texte brut
-            return res.text();
         })
-        .then(text => {
-            // --- NETTOYAGE DU TEXTE ET EXTRACTION DU JSON ---
-            // L'API Google Visualization renvoie : /*O_o*/ google.visualization.Query.setResponse({...});
-            // On retire le préfixe et le suffixe pour obtenir un JSON standard
-            // Le JSON commence après "/*O_o*/" suivi de la parenthèse et se termine avant ')});'
-            const jsonText = text.replace(/.*?\(\{/, '{').slice(0, -2);
-            const dataObject = JSON.parse(jsonText);
-            
-            // --- CONVERSION DU FORMAT API GOOGLE VIZ EN TABLEAU JS ---
-            const cols = dataObject.table.cols.map(c => c.label);
-            const rows = dataObject.table.rows;
-            
-            const cleanData = rows.map(row => {
-                const obj = {};
-                row.c.forEach((cell, index) => {
-                    // Si la cellule a une valeur (v) ou une valeur formatée (f)
-                    if (cell && (cell.v !== undefined || cell.f !== undefined)) {
-                        obj[cols[index]] = cell.v !== undefined ? cell.v : cell.f;
-                    }
-                });
-                return obj;
-            });
-            
-            // La variable cleanData contient maintenant le tableau de vos données
-            allData = cleanData;
+        .then(() => { 
+            // ÉTAPE 2 : Appel complet (Arrière-plan)
+            return fetch(scriptUrl); 
+        })
+        .then(res => res.json())
+        .then(fullData => {
+            console.log("Données complètes reçues :", fullData.length);
+            allData = fullData;
             isFullLoaded = true;
             
             // On met à jour les listes déroulantes avec toutes les données
             populateFilters(); 
             
+            // --- C'EST ICI QU'ON LANCE LE SLIDER ---
             // Maintenant qu'on a toutes les dates, on peut caler le min et le max
             initSlider(); 
             
-            // On applique les filtres en mode silencieux
+            // On applique les filtres en mode silencieux (pour ne pas faire sauter l'écran)
             applyFilters(true); 
             
             if(counter) {
@@ -86,14 +67,7 @@ function fetchDataComplete() {
                 counter.style.color = "white";
             }
         })
-        .catch(err => {
-            console.error("Erreur chargement :", err);
-            if(counter) {
-                counter.innerText = "Erreur de chargement des données (CORS/Format)";
-                counter.style.backgroundColor = "red"; 
-                counter.style.color = "white";
-            }
-        });
+        .catch(err => console.error("Erreur chargement :", err));
 }
 
 // ============================================================
