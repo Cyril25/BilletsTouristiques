@@ -6,7 +6,7 @@
 
 // NOUVELLE SOURCE DE DONNÉES (Google Sheets Export, contourne CORS)
 const SHEET_ID = "1BTGJyOAOj8kFgrpDcBSol6g3v24qkSWr"; 
-const JSON_DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=`; 
+const JSON_DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=select%20*`; 
 
 
 let allData = [];
