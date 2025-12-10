@@ -22,41 +22,6 @@ if (typeof firebase === 'undefined') {
 }
 
 // ============================================================
-// 1b. CHARGEMENT STATIQUE DES BILLETS (NOUVELLE FONCTION)
-// ============================================================
-
-// 🚨 URL STATIQUE DU FICHIER JSON (Google Drive)
-const URL_JSON_STATIQUE = "https://drive.google.com/uc?export=download&id=1BTGJyOAOj8kFgrpDcBSol6g3v24qkSWr"; 
-
-/**
- * Charge les données des billets instantanément depuis le fichier JSON statique de Google Drive.
- * Cette fonction remplace l'ancien appel au Google Apps Script.
- */
-function chargerBillets() {
-    // Appel direct et instantané (plus de cold start de GAS)
-    fetch(URL_JSON_STATIQUE)
-        .then(response => {
-            if (!response.ok) {
-                // Si le statut est 404 ou 403, le lien Drive est incorrect ou non public
-                throw new Error(`Erreur HTTP: ${response.status}. Vérifiez le lien Drive.`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Billets chargés instantanément ! Nombre d'éléments :", data.length);
-            
-            // 🚨 LOGIQUE DE TRAITEMENT : Vous devez appeler votre fonction qui traite les données (affichage, filtres, etc.)
-            // Exemple : traiterDonneesBillets(data); 
-            
-        })
-        .catch(error => {
-            console.error("Échec du chargement du JSON statique :", error);
-            // Afficher un message d'erreur d'interface si nécessaire
-        });
-}
-
-
-// ============================================================
 // 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
@@ -65,104 +30,86 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof firebase === 'undefined') return;
 
     const auth = firebase.auth();
-    const db = firebase.firestore();
 
-    // On s'assure que la persistance est NONE (NONE est le mode inMemory de la V8)
-    // Cela corrige les problèmes de session dans les navigateurs stricts
-    auth.setPersistence(firebase.auth.Auth.Persistence.NONE)
-    .then(function() {
-        console.log("Persistance réglée sur NONE.");
-    })
-    .catch(function(error) {
-        console.warn("Erreur lors du réglage de la persistance:", error.code);
-    });
-
-    
-    auth.onAuthStateChanged(function(user) {
-        const currentPath = window.location.pathname.split("/").pop() || "index.html";
-        const isLoginPage = (currentPath === "login.html" || currentPath === "");
+    auth.onAuthStateChanged(user => {
+        const path = window.location.pathname;
+        const page = path.split("/").pop();
+        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
 
         if (user) {
-            console.log("LOG 1: Utilisateur connecté : " + user.email);
-            
-            // --- VÉRIFICATION FIRESTORE (WHITELIST) ---
+            console.log("Utilisateur détecté : " + user.email);
+
+            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
+            const db = firebase.firestore(); // On initialise la DB
+
+            // On cherche le document qui a pour ID l'email de l'utilisateur
             db.collection("whitelist").doc(user.email).get()
             .then((doc) => {
                 if (doc.exists) {
-                    console.log("LOG 3: WHITELIST OK. Accès autorisé.");
+                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
+                    console.log("Accès autorisé pour : " + user.email);
+
                     if (isLoginPage) {
                         window.location.href = "index.html";
                     } else {
-                        // Affiche la page protégée
+                        loadMenu(); 
                         const appContent = document.getElementById('app-content');
                         if (appContent) appContent.style.display = 'block';
-                        
-                        // 🚀 NOUVEL APPEL : CHARGEMENT INSTANTANÉ DES BILLETS
-                        chargerBillets();
-                        
                     }
                 } else {
-                    // Accès REFUSÉ
-                    console.warn("LOG 3: WHITELIST ÉCHEC.");
-                    alert("Accès refusé. Votre email n'est pas autorisé.");
+                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
+                    console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
+                    alert("Désolé, votre email (" + user.email + ") n'est pas autorisé.");
+
+                    // On le déconnecte
                     auth.signOut().then(() => {
                         window.location.href = "login.html";
                     });
                 }
             })
             .catch((error) => {
-                console.error("LOG 4: Erreur critique Firestore lors de la vérification :", error);
+                console.error("Erreur lors de la vérification Firestore :", error);
             });
-        
+
         } else {
             // --- NON CONNECTÉ ---
+            console.log("Non connecté -> Redirection");
             if (!isLoginPage) {
-                console.log("LOG 0: Détecté non connecté. Redirection vers login.");
                 window.location.href = "login.html";
-            } else {
-                // LOG 5: Capture l'erreur de redirection (si le jeton est rejeté)
-                auth.getRedirectResult().catch(function(error) {
-                    console.error("LOG 5: Erreur de connexion après redirection :", error);
-                    const errorDiv = document.getElementById('error-msg');
-                    if (errorDiv) { 
-                        errorDiv.innerText = "Erreur de connexion : " + error.message;
-                        errorDiv.style.display = 'block';
-                    }
-                });
             }
         }
     });
-
-    // Chargement du menu
-    loadMenu();
 });
-
 
 // ============================================================
 // 3. FONCTIONS AUTH
 // ============================================================
 function loginWithGoogle() {
+    if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    
-    provider.setCustomParameters({
-        'prompt': 'select_account' 
-    });
+    firebase.auth().signInWithPopup(provider)
+        .catch(error => {
+            console.error(error);
+            alert("Erreur connexion : " + error.message);
 
-    firebase.auth().signInWithRedirect(provider).catch((error) => {
-        console.error("Erreur avant la redirection :", error);
-    });
+
+        });
+
+
+
+
+
+
+
+
 }
 
 function logout() {
+    if (typeof firebase === 'undefined') return;
     firebase.auth().signOut().then(() => {
         window.location.href = "login.html";
     });
 }
-
-// Rendre les fonctions globales pour qu'elles puissent être appelées depuis le HTML (onclick)
-window.loginWithGoogle = loginWithGoogle;
-window.logout = logout;
-
 
 // ============================================================
 // 4. MENU (Mise à jour)
@@ -187,6 +134,8 @@ function loadMenu() {
             // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
                 emailSpan.textContent = user.email;
+
+
 
 
             }
