@@ -1,26 +1,25 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-// Ancienne URL du Google Script :
+// Ancienne URL (bloquée par CORS) :
 // const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
 
-// NOUVELLE SOURCE DE DONNÉES (JSON complet)
-const JSON_DATA_URL = "https://drive.google.com/uc?export=download&id=1BTGJyOAOj8kFgrpDcBSol6g3v24qkSWr"; 
+// NOUVELLE SOURCE DE DONNÉES (Google Sheets Export, contourne CORS)
+const SHEET_ID = "1BTGJyOAOj8kFgrpDcBSol6g3v24qkSWr"; 
+const JSON_DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=`; 
 
 
 let allData = [];
 let currentData = [];
 let displayedCount = 0;
 const BATCH_SIZE = 50;
-let isFullLoaded = false; // Sera vrai après le premier chargement
+let isFullLoaded = false; 
 
 // Référence au slider (div vide dans le HTML)
 let dateSlider = document.getElementById('date-slider');
 
 document.addEventListener('DOMContentLoaded', () => { 
-    // Changement : On appelle directement la nouvelle fonction de chargement
     fetchDataComplete(); 
-    
     // S'assure que le mode par défaut (Collecte) est activé au chargement
     document.body.classList.add('view-collecte'); 
 });
@@ -36,27 +35,49 @@ function fetchDataComplete() {
         counter.style.color = "#5D3A7E";
     }
     
-    // ÉTAPE UNIQUE : Appel complet du fichier JSON
+    // ÉTAPE UNIQUE : Appel complet du fichier (maintenant via l'API de visualisation)
     fetch(JSON_DATA_URL)
         .then(res => {
             if (!res.ok) {
                 throw new Error(`Erreur HTTP: ${res.status} lors de la récupération du JSON.`);
             }
-            return res.json();
+            // On récupère la réponse sous forme de texte brut
+            return res.text();
         })
-        .then(fullData => {
-            console.log("Données complètes reçues :", fullData.length);
-            allData = fullData;
+        .then(text => {
+            // --- NETTOYAGE DU TEXTE ET EXTRACTION DU JSON ---
+            // L'API Google Visualization renvoie : /*O_o*/ google.visualization.Query.setResponse({...});
+            // On retire le préfixe et le suffixe pour obtenir un JSON standard
+            // Le JSON commence après "/*O_o*/" suivi de la parenthèse et se termine avant ')});'
+            const jsonText = text.replace(/.*?\(\{/, '{').slice(0, -2);
+            const dataObject = JSON.parse(jsonText);
+            
+            // --- CONVERSION DU FORMAT API GOOGLE VIZ EN TABLEAU JS ---
+            const cols = dataObject.table.cols.map(c => c.label);
+            const rows = dataObject.table.rows;
+            
+            const cleanData = rows.map(row => {
+                const obj = {};
+                row.c.forEach((cell, index) => {
+                    // Si la cellule a une valeur (v) ou une valeur formatée (f)
+                    if (cell && (cell.v !== undefined || cell.f !== undefined)) {
+                        obj[cols[index]] = cell.v !== undefined ? cell.v : cell.f;
+                    }
+                });
+                return obj;
+            });
+            
+            // La variable cleanData contient maintenant le tableau de vos données
+            allData = cleanData;
             isFullLoaded = true;
             
             // On met à jour les listes déroulantes avec toutes les données
             populateFilters(); 
             
-            // --- C'EST ICI QU'ON LANCE LE SLIDER ---
             // Maintenant qu'on a toutes les dates, on peut caler le min et le max
             initSlider(); 
             
-            // On applique les filtres en mode silencieux (pour ne pas faire sauter l'écran)
+            // On applique les filtres en mode silencieux
             applyFilters(true); 
             
             if(counter) {
@@ -68,17 +89,15 @@ function fetchDataComplete() {
         .catch(err => {
             console.error("Erreur chargement :", err);
             if(counter) {
-                counter.innerText = "Erreur de chargement";
+                counter.innerText = "Erreur de chargement des données (CORS/Format)";
                 counter.style.backgroundColor = "red"; 
                 counter.style.color = "white";
             }
         });
 }
 
-
 // ============================================================
 // 2. GESTION DU SLIDER DATE (NOUISLIDER)
-// ... Reste inchangé
 // ============================================================
 function initSlider() {
     // Si le div n'existe pas (ex: sur une autre page que billets.html), on arrête
@@ -150,7 +169,6 @@ function manualDateChange() {
 
 // ============================================================
 // 3. FONCTIONS UTILITAIRES & FILTRES
-// ... Reste inchangé
 // ============================================================
 
 // Change l'affichage (Collecte / Liste / Galerie)
@@ -255,7 +273,6 @@ function applyFilters(silent = false) {
 
 // ============================================================
 // 4. RENDU HTML (TEMPLATES POUR 3 MODES)
-// ... Reste inchangé
 // ============================================================
 
 // --- Rendu Mode Liste (Tableau) ---
@@ -448,7 +465,6 @@ function updateLoadMoreButton() {
 
 // ============================================================
 // 5. GESTION DU MODAL (ZOOM GALERIE)
-// ... Reste inchangé
 // ============================================================
 function openModal(imgUrl) {
     const modal = document.getElementById('image-modal');
