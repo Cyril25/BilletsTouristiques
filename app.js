@@ -1,51 +1,49 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
+// Ancienne URL du Google Script :
+// const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
+
+// NOUVELLE SOURCE DE DONNÉES (JSON complet)
+const JSON_DATA_URL = "https://drive.google.com/uc?export=download&id=1BTGJyOAOj8kFgrpDcBSol6g3v24qkSWr"; 
+
 
 let allData = [];
 let currentData = [];
 let displayedCount = 0;
 const BATCH_SIZE = 50;
-let isFullLoaded = false;
+let isFullLoaded = false; // Sera vrai après le premier chargement
 
 // Référence au slider (div vide dans le HTML)
 let dateSlider = document.getElementById('date-slider');
 
 document.addEventListener('DOMContentLoaded', () => { 
-    fetchFastThenSlow(); 
+    // Changement : On appelle directement la nouvelle fonction de chargement
+    fetchDataComplete(); 
+    
     // S'assure que le mode par défaut (Collecte) est activé au chargement
     document.body.classList.add('view-collecte'); 
 });
 
 // ============================================================
-// 1. CHARGEMENT DES DONNÉES (RAPIDE PUIS COMPLET)
+// 1. CHARGEMENT DES DONNÉES (COMPLET ET UNIQUE)
 // ============================================================
-function fetchFastThenSlow() {
+function fetchDataComplete() {
     const counter = document.getElementById('counter');
+    if(counter) {
+        counter.innerText = "Chargement des données...";
+        counter.style.backgroundColor = "#EFE9F7"; 
+        counter.style.color = "#5D3A7E";
+    }
     
-    // ÉTAPE 1 : Appel rapide (50 derniers billets)
-    fetch(scriptUrl + "?limit=50")
-        .then(res => res.json())
-        .then(data => {
-            // Si le chargement complet n'est pas déjà fini
-            if (!isFullLoaded) {
-                allData = data;
-                populateFilters(); 
-                applyFilters(false); // false = Reset de l'affichage
-                
-                if(counter) {
-                    counter.innerText = "Chargement suite...";
-                    counter.style.backgroundColor = "#EFE9F7"; 
-                    counter.style.color = "#5D3A7E";
-                }
+    // ÉTAPE UNIQUE : Appel complet du fichier JSON
+    fetch(JSON_DATA_URL)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`Erreur HTTP: ${res.status} lors de la récupération du JSON.`);
             }
+            return res.json();
         })
-        .then(() => { 
-            // ÉTAPE 2 : Appel complet (Arrière-plan)
-            return fetch(scriptUrl); 
-        })
-        .then(res => res.json())
         .then(fullData => {
             console.log("Données complètes reçues :", fullData.length);
             allData = fullData;
@@ -67,11 +65,20 @@ function fetchFastThenSlow() {
                 counter.style.color = "white";
             }
         })
-        .catch(err => console.error("Erreur chargement :", err));
+        .catch(err => {
+            console.error("Erreur chargement :", err);
+            if(counter) {
+                counter.innerText = "Erreur de chargement";
+                counter.style.backgroundColor = "red"; 
+                counter.style.color = "white";
+            }
+        });
 }
+
 
 // ============================================================
 // 2. GESTION DU SLIDER DATE (NOUISLIDER)
+// ... Reste inchangé
 // ============================================================
 function initSlider() {
     // Si le div n'existe pas (ex: sur une autre page que billets.html), on arrête
@@ -143,6 +150,7 @@ function manualDateChange() {
 
 // ============================================================
 // 3. FONCTIONS UTILITAIRES & FILTRES
+// ... Reste inchangé
 // ============================================================
 
 // Change l'affichage (Collecte / Liste / Galerie)
@@ -247,6 +255,7 @@ function applyFilters(silent = false) {
 
 // ============================================================
 // 4. RENDU HTML (TEMPLATES POUR 3 MODES)
+// ... Reste inchangé
 // ============================================================
 
 // --- Rendu Mode Liste (Tableau) ---
@@ -439,6 +448,7 @@ function updateLoadMoreButton() {
 
 // ============================================================
 // 5. GESTION DU MODAL (ZOOM GALERIE)
+// ... Reste inchangé
 // ============================================================
 function openModal(imgUrl) {
     const modal = document.getElementById('image-modal');
