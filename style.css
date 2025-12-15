@@ -947,20 +947,28 @@ body.view-galerie #cards-grid .galerie-item {
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
     height: auto;
-    aspect-ratio: 135 / 74;
-    /* Format Billet Standard */
-    /* Hauteur fixe pour un affichage uniforme */
+    /* Hauteur auto pour s'adapter à l'image + footer */
     position: relative;
     display: none;
     /* Caché par défaut */
-    align-items: flex-start;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
 }
 
 .galerie-item:hover {
     transform: scale(1.05);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Wrapper qui force le ratio image */
+.galerie-image-wrapper {
+    width: 100%;
+    aspect-ratio: 135 / 74;
+    overflow: hidden;
+    flex-grow: 1;
 }
 
 .galerie-image {
@@ -969,6 +977,22 @@ body.view-galerie #cards-grid .galerie-item {
     object-fit: contain;
     /* Remplir le cadre */
     padding: 0;
+}
+
+.galerie-footer {
+    background-color: #eee;
+    padding: 4px;
+    text-align: center;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 25px;
+    /* Hauteur fixe pour la bande */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 
