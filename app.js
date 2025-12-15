@@ -324,12 +324,12 @@ function showMore() {
                 <div class="header-container">
                     <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
                     
-                    <div class="category" style="background-color: ${couleur}; color: ${item.Categorie === 'Pré collecte' ? '#333' : 'white'};">
+                    <div class="category" style="background-color: ${couleur}; color: ${item.Categorie === 'Pré collecte' ? '#9e9e9eff' : 'white'};">
                         ${item.Categorie}
                     </div>
                 </div>
 
-                <div class="city-strip" style="color: ${item.Categorie === 'Pré collecte' ? '#333' : couleur}; background-color: color-mix(in srgb, ${couleur}, #e0e0e0 85%);">
+                <div class="city-strip" style="color: ${couleur}; background-color: color-mix(in srgb, ${couleur}, #e0e0e0 70%);">
                     ${item.Ville || ''}
                 </div>
                 
