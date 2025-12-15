@@ -684,6 +684,7 @@ input {
     position: relative;
     /* height: 150px; REMOVED fixed height */
     width: 100%;
+    box-sizing: border-box;
     aspect-ratio: 135 / 74;
     display: flex;
     align-items: flex-end;
