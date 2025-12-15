@@ -1,73 +1,62 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-const scriptUrl = "https://script.google.com/macros/s/AKfycbzlv-bgfLieBK29R07VN8R2a6Qv1UQmznzSZ_sIYcvgsKkSGz2d-kOXoLCS8zqlrjWp/exec"; 
+const scriptUrl = "https://airbnb-ical-proxy.cyril-samson41.workers.dev/billets-touristiques";
 
 let allData = [];
 let currentData = [];
 let displayedCount = 0;
 const BATCH_SIZE = 50;
-let isFullLoaded = false;
+// isFullLoaded supprimé car on charge tout d'un coup
 
 // Référence au slider (div vide dans le HTML)
 let dateSlider = document.getElementById('date-slider');
 
-document.addEventListener('DOMContentLoaded', () => { 
-    fetchFastThenSlow(); 
+document.addEventListener('DOMContentLoaded', () => {
+    fetchData();
     // S'assure que le mode par défaut (Collecte) est activé au chargement
-    document.body.classList.add('view-collecte'); 
+    document.body.classList.add('view-collecte');
 });
 
 // ============================================================
-// 1. CHARGEMENT DES DONNÉES (RAPIDE PUIS COMPLET)
+// 1. CHARGEMENT DES DONNÉES (COMPLET UNIQUE)
 // ============================================================
-function fetchFastThenSlow() {
+function fetchData() {
     const counter = document.getElementById('counter');
-    
-    // ÉTAPE 1 : Appel rapide (50 derniers billets)
-    fetch(scriptUrl + "?limit=50")
+
+    // Feedback visuel de chargement
+    if (counter) {
+        counter.innerText = "Chargement...";
+        counter.style.backgroundColor = "#EFE9F7";
+        counter.style.color = "#5D3A7E";
+    }
+
+    fetch(scriptUrl)
         .then(res => res.json())
         .then(data => {
-            // Si le chargement complet n'est pas déjà fini
-            if (!isFullLoaded) {
-                allData = data;
-                populateFilters(); 
-                applyFilters(false); // false = Reset de l'affichage
-                
-                if(counter) {
-                    counter.innerText = "Chargement suite...";
-                    counter.style.backgroundColor = "#EFE9F7"; 
-                    counter.style.color = "#5D3A7E";
-                }
-            }
-        })
-        .then(() => { 
-            // ÉTAPE 2 : Appel complet (Arrière-plan)
-            return fetch(scriptUrl); 
-        })
-        .then(res => res.json())
-        .then(fullData => {
-            console.log("Données complètes reçues :", fullData.length);
-            allData = fullData;
-            isFullLoaded = true;
-            
-            // On met à jour les listes déroulantes avec toutes les données
-            populateFilters(); 
-            
-            // --- C'EST ICI QU'ON LANCE LE SLIDER ---
-            // Maintenant qu'on a toutes les dates, on peut caler le min et le max
-            initSlider(); 
-            
-            // On applique les filtres en mode silencieux (pour ne pas faire sauter l'écran)
-            applyFilters(true); 
-            
-            if(counter) {
-                counter.innerText = allData.length + " billets";
-                counter.style.backgroundColor = "#B19CD9"; 
+            console.log("Données reçues :", data.length);
+            allData = data;
+
+            // On met à jour les listes déroulantes
+            populateFilters();
+
+            // Initialisation du slider
+            initSlider();
+
+            // Application des filtres et affichage
+            applyFilters(true);
+
+            if (counter) {
+                counter.style.backgroundColor = "#B19CD9";
                 counter.style.color = "white";
+                // Le texte sera mis à jour par applyFilters ou ici directement
+                counter.innerText = allData.length + " billets";
             }
         })
-        .catch(err => console.error("Erreur chargement :", err));
+        .catch(err => {
+            console.error("Erreur chargement :", err);
+            if (counter) counter.innerText = "Erreur !";
+        });
 }
 
 // ============================================================
@@ -113,7 +102,7 @@ function initSlider() {
         const dateObj = new Date(parseInt(values[handle]));
         // On formatte en YYYY-MM-DD pour l'input HTML
         const dateStr = dateObj.toISOString().split('T')[0];
-        
+
         if (handle === 0) {
             document.getElementById('date-start').value = dateStr;
         } else {
@@ -133,7 +122,7 @@ function manualDateChange() {
     const endVal = document.getElementById('date-end').value;
 
     // Si le slider est actif, on met à jour ses poignées
-    if(dateSlider && dateSlider.noUiSlider && startVal && endVal) {
+    if (dateSlider && dateSlider.noUiSlider && startVal && endVal) {
         const startTs = new Date(startVal).getTime();
         const endTs = new Date(endVal).getTime();
         dateSlider.noUiSlider.set([startTs, endTs]);
@@ -150,7 +139,7 @@ function changeView(mode) {
     const body = document.body;
     body.classList.remove('view-collecte', 'view-liste', 'view-galerie');
     body.classList.add('view-' + mode);
-    
+
     // Le filtre est relancé pour re-générer la vue correcte
     applyFilters(false);
 }
@@ -162,7 +151,7 @@ function normalizeDate(str) {
     // Si format français JJ/MM/AAAA
     if (clean.includes('/')) {
         const parts = clean.split('/');
-        if(parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     return clean;
 }
@@ -177,13 +166,13 @@ function populateFilters() {
     ];
     maps.forEach(m => {
         const select = document.getElementById(m.id);
-        if(!select) return; // Sécurité si on est sur une autre page
-        
+        if (!select) return; // Sécurité si on est sur une autre page
+
         const currentVal = select.value;
         let h = '<option value="">Tout</option>';
         // Récupère valeurs uniques triées
         [...new Set(allData.map(item => item[m.key]).filter(v => v))].sort().forEach(val => {
-            h += `<option value="${val}" ${val===currentVal?'selected':''}>${val}</option>`;
+            h += `<option value="${val}" ${val === currentVal ? 'selected' : ''}>${val}</option>`;
         });
         select.innerHTML = h;
     });
@@ -192,7 +181,7 @@ function populateFilters() {
 function applyFilters(silent = false) {
     // Si on est sur une page sans grille (ex: Accueil), on arrête
     const grid = document.getElementById('cards-grid');
-    if(!grid) return;
+    if (!grid) return;
 
     const s = document.getElementById('search-input').value.toLowerCase();
     const fCat = document.getElementById('sel-cat').value;
@@ -200,33 +189,33 @@ function applyFilters(silent = false) {
     const fYear = document.getElementById('sel-year').value;
     const fTheme = document.getElementById('sel-theme').value;
     const fColl = document.getElementById('sel-coll').value;
-    
+
     // Dates (Input text YYYY-MM-DD)
-    const fStart = document.getElementById('date-start').value; 
+    const fStart = document.getElementById('date-start').value;
     const fEnd = document.getElementById('date-end').value;
 
     currentData = allData.filter(item => {
         const txt = !s || (item.NomBillet && item.NomBillet.toLowerCase().includes(s)) ||
-                          (item.Ville && item.Ville.toLowerCase().includes(s)) ||
-                          (item.Reference && item.Reference.toLowerCase().includes(s)) ||
-                          (item.Recherche && item.Recherche.toLowerCase().includes(s));
-        
+            (item.Ville && item.Ville.toLowerCase().includes(s)) ||
+            (item.Reference && item.Reference.toLowerCase().includes(s)) ||
+            (item.Recherche && item.Recherche.toLowerCase().includes(s));
+
         // Comparaison de dates normalisées
         const itemDate = normalizeDate(item.Date);
         const matchDate = (!fStart || (itemDate && itemDate >= fStart)) &&
-                          (!fEnd || (itemDate && itemDate <= fEnd));
+            (!fEnd || (itemDate && itemDate <= fEnd));
 
         return txt && matchDate &&
-               (!fCat || item.Categorie === fCat) &&
-               (!fPays || item.Pays === fPays) && (!fYear || item.Millesime == fYear) &&
-               (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl);
+            (!fCat || item.Categorie === fCat) &&
+            (!fPays || item.Pays === fPays) && (!fYear || item.Millesime == fYear) &&
+            (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl);
     });
 
     if (!silent) {
         // Vider l'affichage
-        grid.innerHTML = ""; 
-        displayedCount = 0; 
-        
+        grid.innerHTML = "";
+        displayedCount = 0;
+
         // Si le mode Liste est actif, on affiche le tableau, sinon la grille/galerie.
         if (document.body.classList.contains('view-liste')) {
             renderListTable();
@@ -239,10 +228,10 @@ function applyFilters(silent = false) {
     } else {
         updateLoadMoreButton();
     }
-    
+
     // Mise à jour compteur global
     const counterBtn = document.getElementById('counter');
-    if(isFullLoaded && counterBtn) counterBtn.innerText = currentData.length + " billets";
+    if (counterBtn) counterBtn.innerText = currentData.length + " billets";
 }
 
 // ============================================================
@@ -253,8 +242,8 @@ function applyFilters(silent = false) {
 function renderListTable() {
     const tableContainer = document.getElementById('list-table-container');
     if (!tableContainer) return;
-    
-    if(currentData.length === 0) {
+
+    if (currentData.length === 0) {
         tableContainer.innerHTML = "<p style='text-align:center;'>Aucun résultat.</p>";
         updateLoadMoreButton();
         return;
@@ -292,7 +281,7 @@ function renderListTable() {
 
     html += `</tbody></table>`;
     tableContainer.innerHTML = html;
-    
+
     // On masque le bouton Load More car le tableau affiche tout
     document.getElementById('btn-load-more').style.display = 'none';
 }
@@ -303,10 +292,10 @@ function showMore() {
     const body = document.body;
     const grid = document.getElementById('cards-grid');
     const batch = currentData.slice(displayedCount, displayedCount + BATCH_SIZE);
-    
+
     const isGalleryMode = body.classList.contains('view-galerie');
-    
-    if(batch.length === 0 && displayedCount === 0) {
+
+    if (batch.length === 0 && displayedCount === 0) {
         grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center;'>Aucun résultat.</p>";
         updateLoadMoreButton(); return;
     }
@@ -316,7 +305,7 @@ function showMore() {
         // Image HD
         const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}&sz=w800` : '';
         const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
-        const couleur = item.Couleur || '#666'; 
+        const couleur = item.Couleur || '#666';
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE
@@ -417,10 +406,10 @@ function showMore() {
 function updateLoadMoreButton() {
     const btn = document.getElementById('btn-load-more');
     if (!btn) return;
-    
+
     // Le bouton doit être masqué UNIQUEMENT en mode Liste (qui affiche tout d'un coup)
     const isListMode = document.body.classList.contains('view-liste');
-    
+
     if (isListMode) {
         btn.style.display = 'none';
         return;
@@ -429,7 +418,7 @@ function updateLoadMoreButton() {
     // Le bouton doit être visible si le nombre de billets affichés est inférieur au total filtré
     if (displayedCount < currentData.length) {
         btn.style.display = 'inline-block';
-        
+
         // Mettre à jour le texte du bouton (plus esthétique que juste 'Voir la suite')
         btn.innerText = `Voir la suite (${currentData.length - displayedCount})`;
     } else {
@@ -443,21 +432,21 @@ function updateLoadMoreButton() {
 function openModal(imgUrl) {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-image');
-    
+
     modal.classList.remove('hidden');
-    
+
     // Utiliser une taille d'image plus grande pour le zoom
-    modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600'); 
-    
+    modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600');
+
     // Empêche le scroll de la page derrière
-    document.body.style.overflow = 'hidden'; 
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
     const modal = document.getElementById('image-modal');
-    
+
     modal.classList.add('hidden');
-    
+
     // Rétablit le scroll de la page
     document.body.style.overflow = 'auto';
 }
