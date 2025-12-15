@@ -703,10 +703,10 @@ input {
 
 .image-bg {
     position: absolute;
-    top: 0;
+    top: -1px;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: -1px;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
