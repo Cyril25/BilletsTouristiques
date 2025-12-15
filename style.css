@@ -948,6 +948,8 @@ body.view-galerie #cards-grid .galerie-item {
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     height: auto;
+    aspect-ratio: 135 / 74;
+    /* Format Billet Standard */
     /* Hauteur fixe pour un affichage uniforme */
     position: relative;
     display: none;
