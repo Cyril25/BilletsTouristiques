@@ -314,7 +314,6 @@ function showMore() {
                 ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
                     <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${item.Reference}</div>
                 `}
-                <div class="galerie-title">${item.NomBillet || item.Reference || 'Sans nom'}</div>
             </div>`;
 
         } else {

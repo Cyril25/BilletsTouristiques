@@ -942,7 +942,7 @@ body.view-galerie #cards-grid .galerie-item {
 
 .galerie-item {
     background: white;
-    border-radius: 6px;
+    border-radius: 0;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     cursor: pointer;
@@ -969,19 +969,6 @@ body.view-galerie #cards-grid .galerie-item {
     padding: 5px;
 }
 
-.galerie-title {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-    color: white;
-    padding: 5px;
-    font-size: 0.75em;
-    text-align: center;
-    max-height: 50px;
-    overflow: hidden;
-}
 
 /* Modal pour le Zoom de l'Image */
 .image-modal {
