@@ -44,7 +44,7 @@ function fetchData() {
             initSlider();
 
             // Application des filtres et affichage
-            applyFilters(true);
+            applyFilters(false);
 
             if (counter) {
                 counter.style.backgroundColor = "#B19CD9";
