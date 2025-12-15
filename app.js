@@ -311,14 +311,9 @@ function showMore() {
             // RENDU MODE GALERIE
             html += `
             <div class="galerie-item" onclick="openModal('${imgUrl}')">
-                <div class="galerie-image-wrapper">
-                    ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
-                        <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${item.Reference}</div>
-                    `}
-                </div>
-                <div class="galerie-footer" style="color:${item.Categorie === 'Pré collecte' ? '#333' : couleur};">
-                    ${item.Ville || '&nbsp;'}
-                </div>
+                ${item.ImageId ? `<img src="${imgUrl}" class="galerie-image" alt="${item.NomBillet || 'Billet'}">` : `
+                    <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${item.Reference}</div>
+                `}
             </div>`;
 
         } else {
@@ -332,12 +327,10 @@ function showMore() {
                     <div class="category" style="background-color: ${couleur}; color: ${item.Categorie === 'Pré collecte' ? '#333' : 'white'};">
                         ${item.Categorie}
                     </div>
-                    
-                    <div class="header-info">
-                        <h1 style="border-bottom: 3px solid ${couleur};">
-                            ${item.Ville || ''}
-                        </h1>
-                    </div>
+                </div>
+
+                <div class="city-strip" style="color: ${item.Categorie === 'Pré collecte' ? '#333' : couleur};">
+                    ${item.Ville || ''}
                 </div>
                 
                 <div class="content">
