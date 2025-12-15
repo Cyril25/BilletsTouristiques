@@ -329,7 +329,7 @@ function showMore() {
                     </div>
                 </div>
 
-                <div class="city-strip" style="color: ${item.Categorie === 'Pré collecte' ? '#333' : couleur};">
+                <div class="city-strip" style="color: ${item.Categorie === 'Pré collecte' ? '#333' : couleur}; background-color: color-mix(in srgb, ${couleur}, #e0e0e0 85%);">
                     ${item.Ville || ''}
                 </div>
                 
