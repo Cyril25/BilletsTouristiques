@@ -6,7 +6,7 @@
 //                    Les données changent plusieurs fois par jour.
 // ============================================================
 
-const CACHE_NAME = 'billets-v1';
+const CACHE_NAME = 'billets-v2';
 
 const STATIC_ASSETS = [
     '/',
@@ -31,6 +31,9 @@ const NETWORK_ONLY_ORIGINS = [
     'identitytoolkit.googleapis.com',
     'firestore.googleapis.com',
     'securetoken.googleapis.com',
+    'firebaseapp.com',
+    'googleapis.com',
+    'accounts.google.com',
 ];
 
 // ---------------------------------------------------------------
