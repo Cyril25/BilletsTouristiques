@@ -147,7 +147,7 @@ function loadMenu() {
             // STORY 1.2 — Menu conditionnel : afficher les liens admin uniquement pour les admins
             if (window.userRole === 'admin') {
                 var adminLinks = document.querySelectorAll('.admin-only');
-                adminLinks.forEach(function(el) { el.style.display = ''; });
+                adminLinks.forEach(function(el) { el.classList.remove('admin-only'); });
             }
         })
         .catch(err => console.error("Menu introuvable :", err));
