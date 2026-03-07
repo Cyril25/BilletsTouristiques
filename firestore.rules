@@ -1,0 +1,52 @@
+// ============================================================
+// RÈGLES DE SÉCURITÉ FIRESTORE — BilletsTouristiques
+// ============================================================
+//
+// Déploiement :
+//   Option 1 (Console Firebase — recommandée) :
+//     1. Aller sur https://console.firebase.google.com/project/asso-billet-site/firestore/rules
+//     2. Copier-coller le contenu de ce fichier
+//     3. Cliquer "Publier"
+//
+//   Option 2 (Firebase CLI) :
+//     1. npm install -g firebase-tools
+//     2. firebase login
+//     3. firebase deploy --only firestore:rules
+//
+// Dernière mise à jour : 2026-03-07 (Story 1.3)
+// ============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper : l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper : l'utilisateur est dans la whitelist avec le rôle admin
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/whitelist/$(request.auth.token.email)).data.role == 'admin';
+    }
+
+    // Helper : l'utilisateur est dans la whitelist
+    function isWhitelisted() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/whitelist/$(request.auth.token.email));
+    }
+
+    // Collection billets : lecture pour les whitelistés, écriture pour les admins
+    match /billets/{billetId} {
+      allow read: if isWhitelisted();
+      allow write: if isAdmin();
+    }
+
+    // Collection whitelist : lecture pour les authentifiés, écriture pour les admins
+    match /whitelist/{email} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
