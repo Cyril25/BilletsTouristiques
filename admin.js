@@ -95,7 +95,7 @@ function loadAdminBillets() {
     if (!grid) return;
     currentPage = 1;
 
-    supabaseFetch('/rest/v1/billets?select=*&order=Timestamp.desc&limit=10000', { method: 'GET' })
+    supabaseFetch('/rest/v1/billets?select=*&order=id.desc&limit=10000', { method: 'GET' })
         .then(function(rows) {
             adminBillets = rows.map(function(row) {
                 row._id = row.id;
@@ -785,9 +785,6 @@ function saveBillet(billetData) {
         saveBtn.textContent = 'Enregistrement...';
     }
 
-    // Timestamp est gere par Supabase (DEFAULT now())
-    delete billetData.Timestamp;
-
     supabaseFetch('/rest/v1/billets', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
@@ -818,9 +815,6 @@ function updateBillet(docId, billetData) {
         saveBtn.disabled = true;
         saveBtn.textContent = 'Enregistrement...';
     }
-
-    // NE PAS inclure Timestamp dans la mise a jour
-    delete billetData.Timestamp;
 
     supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
         method: 'PATCH',
