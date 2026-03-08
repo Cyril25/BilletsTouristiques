@@ -1380,6 +1380,135 @@ body.login-page {
         display: inline-flex;
         align-items: center;
     }
+
+    .user-role-toggle-btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .user-modal {
+        padding: var(--spacing-lg) var(--spacing-md);
+        max-width: 100%;
+    }
+
+    .user-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .user-modal-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* --- Story 3.2 : Role toggle button --- */
+.user-card-actions {
+    margin-top: var(--spacing-xs);
+}
+
+.user-role-toggle-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px;
+    transition: opacity var(--transition-fast), background-color var(--transition-fast);
+    font-family: 'Roboto', sans-serif;
+}
+
+.user-role-toggle-btn.promote {
+    background-color: #2E7D32;
+    color: #fff;
+}
+
+.user-role-toggle-btn.promote:hover {
+    background-color: #1B5E20;
+}
+
+.user-role-toggle-btn.demote {
+    background-color: var(--color-danger);
+    color: #fff;
+}
+
+.user-role-toggle-btn.demote:hover {
+    background-color: #B33636;
+}
+
+/* --- Story 3.2 : Self-demotion modal --- */
+.user-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+}
+
+.user-modal {
+    background: #fff;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xl);
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn var(--transition-normal) ease-out;
+}
+
+.user-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-danger);
+    margin: 0 0 var(--spacing-sm) 0;
+}
+
+.user-modal-desc {
+    font-size: 0.9375rem;
+    color: #555;
+    margin: 0 0 var(--spacing-lg) 0;
+    line-height: 1.5;
+}
+
+.user-modal-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+}
+
+.user-modal-btn {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px;
+    transition: opacity var(--transition-fast), background-color var(--transition-fast);
+    font-family: 'Roboto', sans-serif;
+}
+
+.user-modal-btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.user-modal-btn-primary:hover {
+    background: var(--color-secondary);
+}
+
+.user-modal-btn-danger {
+    background: var(--color-danger);
+    color: #fff;
+}
+
+.user-modal-btn-danger:hover {
+    opacity: 0.9;
 }
 
 /* =========================================

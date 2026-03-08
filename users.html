@@ -26,6 +26,20 @@
 
     </div>
 
+    <!-- Story 3.2 — Modale de confirmation auto-retrogradation -->
+    <div id="self-demote-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div id="self-demote-modal" class="user-modal" role="alertdialog" aria-modal="true" aria-labelledby="self-demote-modal-title" aria-describedby="self-demote-modal-desc">
+            <h2 id="self-demote-modal-title" class="user-modal-title">Attention — Rétrogradation personnelle</h2>
+            <p id="self-demote-modal-desc" class="user-modal-desc">
+                Vous êtes sur le point de retirer votre propre rôle admin. Vous perdrez l'accès à cette page immédiatement. Confirmez-vous ?
+            </p>
+            <div class="user-modal-actions">
+                <button type="button" id="self-demote-cancel-btn" class="user-modal-btn user-modal-btn-primary" onclick="closeSelfDemoteModal()">Annuler</button>
+                <button type="button" id="self-demote-confirm-btn" class="user-modal-btn user-modal-btn-danger" onclick="confirmSelfDemotion()">Confirmer la rétrogradation</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" integrity="sha384-3LctmFHtNDZwkVOSZ0fvJZJD9XR5Og5ol/MVEfNt36gUUnSYBRJN0iFjIMbFecOg" crossorigin="anonymous"></script>
