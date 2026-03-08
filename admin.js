@@ -64,6 +64,11 @@ var deleteTargetName = '';
 var PAGE_SIZE = 50;
 var currentPage = 1;
 
+// Story 2.1b — Variables de filtrage admin
+var adminActiveStatusFilter = 'tous';
+var adminFilterEnCours = false;
+var adminFilteredBillets = [];
+
 // ============================================================
 // 3. INITIALISATION
 // ============================================================
@@ -93,7 +98,9 @@ function loadAdminBillets() {
                 data._id = doc.id;
                 adminBillets.push(data);
             });
-            renderAdminCards();
+            // Story 2.1b — Initialiser compteurs et filtres
+            renderStatusCounters();
+            adminApplyFilters();
         })
         .catch(function(error) {
             showToast('Erreur chargement : ' + error.message, 'error');
@@ -121,12 +128,23 @@ function renderAdminCards() {
     var source = getDisplayedBillets();
 
     if (source.length === 0) {
-        grid.innerHTML = '<div class="admin-empty-state">' +
-            '<i class="fa-solid fa-box-open"></i>' +
-            '<p>Aucun billet dans le catalogue</p>' +
-            '<button class="btn-admin-primary" onclick="openBilletPanel()">' +
-            '<i class="fa-solid fa-plus"></i> Ajouter un premier billet</button>' +
-            '</div>';
+        var hasFilters = adminActiveStatusFilter !== 'tous' || adminFilterEnCours || getSearchText();
+        if (hasFilters) {
+            // Story 2.1b — Etat vide avec filtres actifs
+            grid.innerHTML = '<div class="admin-empty-state">' +
+                '<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>' +
+                '<p>Aucun billet ne correspond a votre recherche</p>' +
+                '<button class="admin-empty-state__reset" onclick="adminResetFilters()">' +
+                'Reinitialiser les filtres</button>' +
+                '</div>';
+        } else {
+            grid.innerHTML = '<div class="admin-empty-state">' +
+                '<i class="fa-solid fa-box-open"></i>' +
+                '<p>Aucun billet dans le catalogue</p>' +
+                '<button class="btn-admin-primary" onclick="openBilletPanel()">' +
+                '<i class="fa-solid fa-plus"></i> Ajouter un premier billet</button>' +
+                '</div>';
+        }
         var paginationContainer = document.getElementById('admin-pagination');
         if (paginationContainer) paginationContainer.style.display = 'none';
         return;
@@ -224,7 +242,14 @@ function escapeAttr(text) {
 // 5b. PAGINATION — SOURCE DE DONNEES
 // ============================================================
 function getDisplayedBillets() {
-    return adminBillets;
+    return adminFilteredBillets.length > 0 || adminActiveStatusFilter !== 'tous' || adminFilterEnCours || getSearchText()
+        ? adminFilteredBillets
+        : adminBillets;
+}
+
+function getSearchText() {
+    var input = document.getElementById('admin-search-input');
+    return input ? input.value.trim() : '';
 }
 
 // ============================================================
@@ -896,6 +921,9 @@ function updateCardInList(docId, billetData) {
             break;
         }
     }
+
+    // Story 2.1b — Recalculer les compteurs
+    renderStatusCounters();
 }
 
 // ============================================================
@@ -1004,14 +1032,9 @@ function confirmDelete() {
             adminBillets = adminBillets.filter(function(b) {
                 return b._id !== docId;
             });
-            // Garde de page : si la page courante depasse le total, reculer
-            var source = getDisplayedBillets();
-            var totalPages = Math.ceil(source.length / PAGE_SIZE);
-            if (currentPage > totalPages && totalPages > 0) {
-                currentPage = totalPages;
-            }
-            // Re-render complet (re-pagine les cartes)
-            renderAdminCards();
+            // Story 2.1b — Recalculer compteurs et filtres
+            renderStatusCounters();
+            adminApplyFilters();
         })
         .catch(function(error) {
             console.error('Erreur suppression billet:', error);
@@ -1100,6 +1123,9 @@ function handleQuickStatusChange(chip) {
                 }
             }
 
+            // Story 2.1b — Recalculer les compteurs
+            renderStatusCounters();
+
             showToast('Statut mis a jour : ' + newStatus, 'success');
         })
         .catch(function(error) {
@@ -1128,7 +1154,163 @@ function updateInMemoryStatus(docId, newStatus) {
 }
 
 // ============================================================
-// 15. COMPATIBILITE — Ancien handler
+// 15. STORY 2.1b — COMPTEURS DE STATUT
+// ============================================================
+
+function renderStatusCounters() {
+    var container = document.getElementById('admin-status-counters');
+    if (!container) return;
+
+    // Compter par statut depuis le tableau complet (pas les filtres)
+    var counts = {};
+    var total = adminBillets.length;
+    adminBillets.forEach(function(billet) {
+        var statut = billet.Statut || 'Non defini';
+        counts[statut] = (counts[statut] || 0) + 1;
+    });
+
+    // Ordre des statuts
+    var statutOrder = ['Projet', 'Pre-collecte', 'Collecte', 'Pas de collecte', 'Termine'];
+    // Ajouter les statuts non prevus
+    Object.keys(counts).forEach(function(s) {
+        if (statutOrder.indexOf(s) === -1) statutOrder.push(s);
+    });
+
+    var html = '<button class="admin-status-counter' +
+        (adminActiveStatusFilter === 'tous' ? ' admin-status-counter--active' : '') +
+        '" data-status="tous" onclick="adminFilterByStatus(\'tous\')" aria-pressed="' +
+        (adminActiveStatusFilter === 'tous' ? 'true' : 'false') + '">' +
+        '<span class="admin-status-counter__count">' + total + '</span>' +
+        '<span class="admin-status-counter__label">Tous</span></button>';
+
+    statutOrder.forEach(function(statut) {
+        if (!counts[statut]) return;
+        var isActive = adminActiveStatusFilter === statut;
+        var color = getStatusColor(statut);
+        html += '<button class="admin-status-counter' +
+            (isActive ? ' admin-status-counter--active' : '') +
+            '" data-status="' + escapeAttr(statut) + '" onclick="adminFilterByStatus(\'' +
+            statut.replace(/'/g, "\\'") + '\')" aria-pressed="' +
+            (isActive ? 'true' : 'false') +
+            '" style="border-left-color: ' + color + ';">' +
+            '<span class="admin-status-counter__count">' + counts[statut] + '</span>' +
+            '<span class="admin-status-counter__label">' + escapeHtml(statut) + '</span></button>';
+    });
+
+    container.innerHTML = html;
+}
+
+// ============================================================
+// 16. STORY 2.1b — FILTRAGE PAR STATUT
+// ============================================================
+
+function adminFilterByStatus(statut) {
+    adminActiveStatusFilter = statut;
+    currentPage = 1;
+    renderStatusCounters();
+    adminApplyFilters();
+}
+
+// ============================================================
+// 17. STORY 2.1b — FILTRAGE COMBINE (recherche + statut + en cours)
+// ============================================================
+
+function adminApplyFilters() {
+    var searchInput = document.getElementById('admin-search-input');
+    var clearBtn = document.getElementById('admin-search-clear');
+    if (!searchInput) return;
+
+    var searchText = searchInput.value.toLowerCase().trim();
+
+    // Afficher/masquer le bouton clear
+    if (clearBtn) {
+        if (searchText.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+
+    adminFilteredBillets = adminBillets.filter(function(billet) {
+        // Filtre statut
+        if (adminActiveStatusFilter !== 'tous' && billet.Statut !== adminActiveStatusFilter) {
+            return false;
+        }
+
+        // Filtre "En cours" (masquer les termines)
+        if (adminFilterEnCours && billet.Statut === 'Termine') {
+            return false;
+        }
+
+        // Recherche textuelle
+        if (searchText) {
+            var fields = [
+                billet.NomBillet, billet.Ville, billet.Reference,
+                billet.Millesime, billet.Collecteur, billet.Dep,
+                billet.Cp, billet.Pays, billet.Categorie,
+                billet.Theme, billet.Commentaire
+            ];
+            var match = fields.some(function(val) {
+                return val && String(val).toLowerCase().indexOf(searchText) !== -1;
+            });
+            if (!match) return false;
+        }
+
+        return true;
+    });
+
+    renderAdminCards();
+}
+
+// ============================================================
+// 18. STORY 2.1b — FONCTIONS UTILITAIRES DE RECHERCHE
+// ============================================================
+
+function adminClearSearch() {
+    var input = document.getElementById('admin-search-input');
+    if (input) input.value = '';
+    currentPage = 1;
+    adminApplyFilters();
+}
+
+function adminToggleEnCours() {
+    adminFilterEnCours = !adminFilterEnCours;
+    var btn = document.getElementById('admin-filter-en-cours');
+    if (btn) {
+        btn.setAttribute('aria-pressed', adminFilterEnCours ? 'true' : 'false');
+        if (adminFilterEnCours) {
+            btn.classList.add('admin-filter-toggle--active');
+        } else {
+            btn.classList.remove('admin-filter-toggle--active');
+        }
+    }
+    currentPage = 1;
+    adminApplyFilters();
+}
+
+function adminResetFilters() {
+    // Reset recherche
+    var input = document.getElementById('admin-search-input');
+    if (input) input.value = '';
+
+    // Reset statut
+    adminActiveStatusFilter = 'tous';
+
+    // Reset "En cours"
+    adminFilterEnCours = false;
+    var btn = document.getElementById('admin-filter-en-cours');
+    if (btn) {
+        btn.setAttribute('aria-pressed', 'false');
+        btn.classList.remove('admin-filter-toggle--active');
+    }
+
+    currentPage = 1;
+    renderStatusCounters();
+    adminApplyFilters();
+}
+
+// ============================================================
+// 19. COMPATIBILITE — Ancien handler
 // ============================================================
 // Garde pour compatibilite si le onclick="handleAddBillet()" existe encore dans le HTML
 function handleAddBillet() {

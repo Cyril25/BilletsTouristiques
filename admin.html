@@ -20,6 +20,28 @@
             </button>
         </div>
 
+        <!-- Story 2.1b — Compteurs de statut (mini-cards filtrantes) -->
+        <div id="admin-status-counters" class="admin-status-counters"></div>
+
+        <!-- Story 2.1b — Barre de recherche + toggle "En cours" -->
+        <div class="admin-filters-bar">
+            <div class="admin-search">
+                <i class="fa-solid fa-magnifying-glass admin-search__icon" aria-hidden="true"></i>
+                <input type="text" id="admin-search-input" class="admin-search__input"
+                       placeholder="Rechercher par nom, ville, reference, millesime, collecteur..."
+                       aria-label="Rechercher un billet"
+                       onkeyup="adminApplyFilters()">
+                <button id="admin-search-clear" class="admin-search__clear hidden"
+                        onclick="adminClearSearch()" aria-label="Effacer la recherche">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <button id="admin-filter-en-cours" class="admin-filter-toggle"
+                    onclick="adminToggleEnCours()" aria-pressed="false">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i> En cours
+            </button>
+        </div>
+
         <div class="admin-cards-grid" id="admin-cards-grid">
             <p style="text-align:center; padding:40px; color:#666; font-style:italic; grid-column: 1 / -1;">
                 Chargement du catalogue...
