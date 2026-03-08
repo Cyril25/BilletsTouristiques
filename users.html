@@ -15,6 +15,16 @@
 
         <div class="admin-page-header">
             <h1><i class="fa-solid fa-users"></i> Gestion des membres</h1>
+            <button type="button" id="add-user-btn" class="admin-fab" title="Ajouter un membre">
+                <i class="fa-solid fa-user-plus"></i>
+            </button>
+        </div>
+
+        <!-- Formulaire d'ajout de membre -->
+        <div id="add-user-form" class="user-add-form" style="display:none">
+            <input type="email" id="new-user-email" placeholder="email@exemple.com" autocomplete="off">
+            <button type="button" id="confirm-add-user-btn" class="user-modal-btn user-modal-btn-primary">Ajouter</button>
+            <button type="button" id="cancel-add-user-btn" class="user-modal-btn">Annuler</button>
         </div>
 
         <div class="user-cards-grid" id="user-cards-grid"></div>
@@ -24,6 +34,20 @@
             <p>Aucun membre inscrit</p>
         </div>
 
+    </div>
+
+    <!-- Modale de confirmation de suppression de membre -->
+    <div id="delete-user-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal" role="alertdialog" aria-modal="true">
+            <h2 class="user-modal-title">Supprimer ce membre ?</h2>
+            <p class="user-modal-desc">
+                Vous êtes sur le point de retirer <strong id="delete-user-email-display"></strong> de la whitelist. Cette personne ne pourra plus accéder au site.
+            </p>
+            <div class="user-modal-actions">
+                <button type="button" id="delete-user-cancel-btn" class="user-modal-btn user-modal-btn-primary" onclick="closeDeleteUserModal()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmDeleteUser()">Confirmer la suppression</button>
+            </div>
+        </div>
     </div>
 
     <!-- Story 3.2 — Modale de confirmation auto-retrogradation -->

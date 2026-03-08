@@ -1203,8 +1203,11 @@ function adminApplyFilters() {
 
     adminFilteredBillets = adminBillets.filter(function(billet) {
         // Filtre statut
-        if (adminActiveStatusFilter !== 'tous' && billet.Categorie !== adminActiveStatusFilter) {
-            return false;
+        if (adminActiveStatusFilter !== 'tous') {
+            var billetStatut = billet.Categorie || 'Non defini';
+            if (billetStatut !== adminActiveStatusFilter) {
+                return false;
+            }
         }
 
         // Filtre "En cours" (masquer les termines)

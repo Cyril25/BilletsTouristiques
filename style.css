@@ -1595,7 +1595,9 @@ body.login-page {
 
 /* --- Role badge pill --- */
 .user-badge-role {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: 12px;
     font-size: 0.75rem;
@@ -1603,7 +1605,9 @@ body.login-page {
     white-space: nowrap;
     line-height: 1;
     min-height: 22px;
+    min-width: 60px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .user-badge-admin {
@@ -1657,9 +1661,22 @@ body.login-page {
         align-items: center;
     }
 
-    .user-role-toggle-btn {
+    .user-role-toggle-btn,
+    .user-delete-btn {
         width: 100%;
         min-height: 44px;
+    }
+
+    .user-card-actions {
+        flex-direction: column;
+    }
+
+    .user-add-form {
+        flex-direction: column;
+    }
+
+    .user-add-form input[type="email"] {
+        width: 100%;
     }
 
     .user-modal {
@@ -1678,8 +1695,58 @@ body.login-page {
 }
 
 /* --- Story 3.2 : Role toggle button --- */
+/* --- Add user form --- */
+.user-add-form {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.user-add-form input[type="email"] {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid #ccc;
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    font-family: 'Roboto', sans-serif;
+    min-height: 40px;
+}
+
+.user-add-form input[type="email"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(93, 58, 126, 0.2);
+}
+
 .user-card-actions {
+    display: flex;
+    gap: var(--spacing-sm);
     margin-top: var(--spacing-xs);
+}
+
+/* --- Delete user button --- */
+.user-delete-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px;
+    background: transparent;
+    color: var(--color-danger);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    font-family: 'Roboto', sans-serif;
+}
+
+.user-delete-btn:hover {
+    background: var(--color-danger);
+    color: #fff;
 }
 
 .user-role-toggle-btn {
@@ -2244,21 +2311,21 @@ body.login-page {
 
 .quick-status-popup {
     position: absolute;
-    z-index: 100;
+    z-index: 1000;
     background: #fff;
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    padding: var(--spacing-sm);
-    min-width: 200px;
-    top: 100%;
-    left: 0;
-    margin-top: var(--spacing-xs);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    padding: var(--spacing-md);
+    min-width: 240px;
+    top: calc(100% + 4px);
+    right: 0;
+    left: auto;
 }
 
 .quick-status-chips {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--spacing-xs);
 }
 
@@ -2299,6 +2366,11 @@ body.login-page {
 .card-badge-wrapper {
     position: relative;
     display: inline-block;
+    z-index: 1;
+}
+
+.card-badge-wrapper:has(.quick-status-popup) {
+    z-index: 999;
 }
 
 .admin-badge-status.clickable {

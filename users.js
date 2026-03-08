@@ -106,6 +106,7 @@ function renderUserCards() {
         var role = user.role || '';
         var isAdmin = role === 'admin';
         var badgeClass = isAdmin ? 'user-badge-role user-badge-admin' : 'user-badge-role user-badge-member';
+        var badgeLabel = isAdmin ? 'Admin' : 'Membre';
         var btnClass = isAdmin ? 'user-role-toggle-btn demote' : 'user-role-toggle-btn promote';
         var btnIcon = isAdmin ? 'fa-solid fa-user-minus' : 'fa-solid fa-user-plus';
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
@@ -113,7 +114,7 @@ function renderUserCards() {
         html += '<div class="user-card" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
                 '<span class="user-card-email">' + escapeHtml(email) + '</span>' +
-                '<span class="' + badgeClass + '">' + escapeHtml(role) + '</span>' +
+                '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +
             '<div class="user-card-actions">' +
                 '<button class="' + btnClass + '" ' +
@@ -121,6 +122,11 @@ function renderUserCards() {
                     'data-current-role="' + escapeAttr(role) + '" ' +
                     'title="' + escapeAttr(btnText) + '">' +
                     '<i class="' + btnIcon + '"></i> ' + escapeHtml(btnText) +
+                '</button>' +
+                '<button class="user-delete-btn" ' +
+                    'data-doc-id="' + escapeAttr(email) + '" ' +
+                    'title="Supprimer ce membre">' +
+                    '<i class="fa-solid fa-trash"></i> Supprimer' +
                 '</button>' +
             '</div>' +
             '</div>';
@@ -130,7 +136,7 @@ function renderUserCards() {
 }
 
 // ============================================================
-// 7. STORY 3.2 — EVENT DELEGATION & INITIALISATION
+// 7. EVENT DELEGATION & INITIALISATION
 // ============================================================
 function initUserEvents() {
     var cardsGrid = document.getElementById('user-cards-grid');
@@ -149,9 +155,153 @@ function initUserEvents() {
                     return;
                 }
                 changeUserRole(email, newRole);
+                return;
+            }
+
+            var deleteBtn = event.target.closest('.user-delete-btn');
+            if (deleteBtn) {
+                event.stopPropagation();
+                var email = deleteBtn.getAttribute('data-doc-id');
+                if (firebase.auth().currentUser && email === firebase.auth().currentUser.email) {
+                    showToast('Vous ne pouvez pas supprimer votre propre compte.', 'error');
+                    return;
+                }
+                openDeleteUserModal(email);
             }
         });
     }
+
+    // Add user form toggle
+    var addBtn = document.getElementById('add-user-btn');
+    var addForm = document.getElementById('add-user-form');
+    var cancelBtn = document.getElementById('cancel-add-user-btn');
+    var confirmBtn = document.getElementById('confirm-add-user-btn');
+    var emailInput = document.getElementById('new-user-email');
+
+    if (addBtn && addForm) {
+        addBtn.addEventListener('click', function() {
+            addForm.style.display = addForm.style.display === 'none' ? 'flex' : 'none';
+            if (addForm.style.display === 'flex' && emailInput) {
+                emailInput.value = '';
+                emailInput.focus();
+            }
+        });
+    }
+
+    if (cancelBtn && addForm) {
+        cancelBtn.addEventListener('click', function() {
+            addForm.style.display = 'none';
+        });
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            addUser();
+        });
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') addUser();
+        });
+    }
+}
+
+// ============================================================
+// 7b. AJOUT D'UN MEMBRE
+// ============================================================
+function addUser() {
+    var emailInput = document.getElementById('new-user-email');
+    var addForm = document.getElementById('add-user-form');
+    if (!emailInput) return;
+
+    var email = emailInput.value.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showToast('Veuillez saisir une adresse email valide.', 'error');
+        return;
+    }
+
+    // Verifier si l'email existe deja
+    for (var i = 0; i < usersList.length; i++) {
+        if (usersList[i]._id === email) {
+            showToast('Ce membre existe déjà.', 'error');
+            return;
+        }
+    }
+
+    supabaseFetch('/rest/v1/whitelist', {
+        method: 'POST',
+        body: JSON.stringify({ email: email, role: 'member' })
+    })
+        .then(function() {
+            showToast('Membre ajouté avec succès', 'success');
+            emailInput.value = '';
+            if (addForm) addForm.style.display = 'none';
+            loadUsers();
+        })
+        .catch(function(error) {
+            showToast('Erreur lors de l\'ajout : ' + error.message, 'error');
+            console.error('Erreur ajout membre:', error);
+        });
+}
+
+// ============================================================
+// 7c. SUPPRESSION D'UN MEMBRE
+// ============================================================
+var deleteUserTargetEmail = null;
+
+function openDeleteUserModal(email) {
+    deleteUserTargetEmail = email;
+    var overlay = document.getElementById('delete-user-modal-overlay');
+    if (!overlay) return;
+
+    var nameEl = document.getElementById('delete-user-email-display');
+    if (nameEl) nameEl.textContent = email;
+
+    overlay.style.display = 'flex';
+    var cancelBtn = document.getElementById('delete-user-cancel-btn');
+    if (cancelBtn) setTimeout(function() { cancelBtn.focus(); }, 100);
+
+    document.addEventListener('keydown', onDeleteUserKeydown);
+    overlay.addEventListener('click', onDeleteUserOverlayClick);
+}
+
+function closeDeleteUserModal() {
+    var overlay = document.getElementById('delete-user-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+    deleteUserTargetEmail = null;
+    document.removeEventListener('keydown', onDeleteUserKeydown);
+}
+
+function confirmDeleteUser() {
+    if (!deleteUserTargetEmail) return;
+    var email = deleteUserTargetEmail;
+    closeDeleteUserModal();
+
+    supabaseFetch('/rest/v1/whitelist?email=eq.' + encodeURIComponent(email), {
+        method: 'DELETE'
+    })
+        .then(function() {
+            showToast('Membre supprimé', 'success');
+            usersList = usersList.filter(function(u) { return u._id !== email; });
+            renderUserCards();
+            if (usersList.length === 0) {
+                var emptyState = document.getElementById('user-empty-state');
+                if (emptyState) emptyState.style.display = 'block';
+            }
+        })
+        .catch(function(error) {
+            showToast('Erreur lors de la suppression : ' + error.message, 'error');
+            console.error('Erreur suppression membre:', error);
+        });
+}
+
+function onDeleteUserKeydown(e) {
+    if (e.key === 'Escape') closeDeleteUserModal();
+}
+
+function onDeleteUserOverlayClick(e) {
+    if (e.target.id === 'delete-user-modal-overlay') closeDeleteUserModal();
 }
 
 // ============================================================
@@ -196,7 +346,7 @@ function updateRoleInDOM(email, newRole) {
 
     var badge = card.querySelector('.user-badge-role');
     if (badge) {
-        badge.textContent = newRole;
+        badge.textContent = (newRole === 'admin') ? 'Admin' : 'Membre';
         badge.className = 'user-badge-role user-badge-' + newRole;
     }
 
