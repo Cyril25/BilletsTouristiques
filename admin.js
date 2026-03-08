@@ -95,10 +95,7 @@ function loadAdminBillets() {
     if (!grid) return;
     currentPage = 1;
 
-    supabaseFetch('/rest/v1/billets?select=*&order=Timestamp.desc', {
-        method: 'GET',
-        headers: { 'Range': '0-9999' }
-    })
+    supabaseFetch('/rest/v1/billets?select=*&order=Timestamp.desc&limit=10000', { method: 'GET' })
         .then(function(rows) {
             adminBillets = rows.map(function(row) {
                 row._id = row.id;
