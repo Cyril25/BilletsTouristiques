@@ -8,7 +8,6 @@ if (typeof firebase === 'undefined') {
 } else {
     // On ne lance l'initialisation QUE si aucune app n'existe déjà
     if (!firebase.apps.length) {
-        // REMPLACEZ LES ... PAR VOS CLES CI-DESSOUS
         firebase.initializeApp({
             apiKey: "AIzaSyCZ_uO-eolAZJs6As82aicoSuZYmT-DeaY",
             authDomain: "asso-billet-site.firebaseapp.com",
@@ -19,6 +18,52 @@ if (typeof firebase === 'undefined') {
         });
         console.log("Firebase initialisé avec succès.");
     }
+}
+
+// ============================================================
+// 1b. CONFIGURATION SUPABASE
+// ============================================================
+var SUPABASE_URL = 'https://lhwcoybugdsggcclhtgb.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
+
+/**
+ * Helper : fetch authentifié vers Supabase.
+ * Récupère le Firebase ID token et l'envoie en Bearer.
+ * @param {string} path - Chemin REST (ex: '/rest/v1/billets?select=*')
+ * @param {object} options - Options fetch (method, body, headers supplémentaires)
+ * @returns {Promise} - Promise avec les données JSON ou null (204)
+ */
+function supabaseFetch(path, options) {
+    if (!options) options = {};
+    return firebase.auth().currentUser.getIdToken(false)
+        .then(function(token) {
+            var headers = {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+            // Fusionner les headers supplémentaires (ex: Prefer)
+            if (options.headers) {
+                var extra = options.headers;
+                for (var key in extra) {
+                    if (extra.hasOwnProperty(key)) {
+                        headers[key] = extra[key];
+                    }
+                }
+            }
+            var fetchOptions = { method: options.method || 'GET', headers: headers };
+            if (options.body) fetchOptions.body = options.body;
+            return fetch(SUPABASE_URL + path, fetchOptions);
+        })
+        .then(function(response) {
+            if (response.status === 204) return null;
+            if (!response.ok) {
+                return response.json().then(function(err) {
+                    throw new Error(err.message || ('Erreur Supabase ' + response.status));
+                });
+            }
+            return response.json();
+        });
 }
 
 // ============================================================
@@ -39,44 +84,52 @@ document.addEventListener("DOMContentLoaded", function() {
         if (user) {
             console.log("Utilisateur détecté : " + user.email);
 
-            // --- NOUVEAU : VÉRIFICATION DANS FIRESTORE ---
-            const db = firebase.firestore(); // On initialise la DB
-
-            // On cherche le document qui a pour ID l'email de l'utilisateur
-            db.collection("whitelist").doc(user.email).get()
-            .then((doc) => {
-                if (doc.exists) {
-                    // --- C'EST GAGNÉ : IL EST DANS LA LISTE ---
+            // --- VÉRIFICATION WHITELIST VIA SUPABASE ---
+            firebase.auth().currentUser.getIdToken(false)
+            .then(function(token) {
+                return fetch(
+                    SUPABASE_URL + '/rest/v1/whitelist?email=eq.' + encodeURIComponent(user.email) + '&select=role',
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': 'Bearer ' + token
+                        }
+                    }
+                );
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Erreur Supabase ' + response.status);
+                return response.json();
+            })
+            .then(function(rows) {
+                if (rows && rows.length > 0) {
+                    // --- AUTORISÉ : l'email est dans la whitelist ---
                     console.log("Accès autorisé pour : " + user.email);
-
-                    // STORY 1.2 — Lecture du rôle
-                    window.userRole = doc.data().role || 'member';
+                    window.userRole = rows[0].role || 'member';
 
                     if (isLoginPage) {
                         window.location.href = "index.html";
                     } else {
-                        // STORY 1.2 — Guard admin : vérifier si la page requiert le rôle admin
+                        // Guard admin : vérifier si la page requiert le rôle admin
                         if (document.body.getAttribute('data-require-admin') === 'true' && window.userRole !== 'admin') {
                             window.location.href = 'index.html';
                             return;
                         }
 
                         loadMenu();
-                        const appContent = document.getElementById('app-content');
+                        var appContent = document.getElementById('app-content');
                         if (appContent) appContent.style.display = 'block';
                     }
                 } else {
-                    // --- PERDU : IL N'EST PAS DANS LA LISTE ---
+                    // --- REFUSÉ : email inconnu ---
                     console.warn("Accès REFUSÉ. Email inconnu dans la whitelist.");
-
-                    // STORY 1.2 — Déconnexion + redirection avec paramètre d'erreur
                     auth.signOut().then(function() {
                         window.location.href = 'login.html?error=unauthorized';
                     });
                 }
             })
-            .catch((error) => {
-                console.error("Erreur lors de la vérification Firestore :", error);
+            .catch(function(error) {
+                console.error("Erreur lors de la vérification whitelist :", error);
             });
 
         } else {

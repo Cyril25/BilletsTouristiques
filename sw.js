@@ -6,7 +6,7 @@
 //                    Les données changent plusieurs fois par jour.
 // ============================================================
 
-const CACHE_NAME = 'billets-v4';
+const CACHE_NAME = 'billets-v5';
 
 const STATIC_ASSETS = [
     '/',
@@ -36,6 +36,7 @@ const NETWORK_ONLY_ORIGINS = [
     'firebaseapp.com',
     'googleapis.com',
     'accounts.google.com',
+    'supabase.co',
 ];
 
 // ---------------------------------------------------------------

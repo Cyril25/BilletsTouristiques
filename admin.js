@@ -88,21 +88,18 @@ if (typeof firebase !== 'undefined') {
 }
 
 // ============================================================
-// 4. CHARGEMENT DES BILLETS DEPUIS FIRESTORE
+// 4. CHARGEMENT DES BILLETS DEPUIS SUPABASE
 // ============================================================
 function loadAdminBillets() {
-    var db = firebase.firestore();
     var grid = document.getElementById('admin-cards-grid');
     if (!grid) return;
     currentPage = 1;
 
-    db.collection('billets').orderBy('Timestamp', 'desc').get()
-        .then(function(snapshot) {
-            adminBillets = [];
-            snapshot.forEach(function(doc) {
-                var data = doc.data();
-                data._id = doc.id;
-                adminBillets.push(data);
+    supabaseFetch('/rest/v1/billets?select=*&order=Timestamp.desc', { method: 'GET' })
+        .then(function(rows) {
+            adminBillets = rows.map(function(row) {
+                row._id = row.id;
+                return row;
             });
             // Story 2.1b — Initialiser compteurs et filtres
             renderStatusCounters();
@@ -788,12 +785,15 @@ function saveBillet(billetData) {
         saveBtn.textContent = 'Enregistrement...';
     }
 
-    // Ajouter le Timestamp pour le tri
-    billetData.Timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    // Timestamp est gere par Supabase (DEFAULT now())
+    delete billetData.Timestamp;
 
-    var db = firebase.firestore();
-    db.collection('billets').add(billetData)
-        .then(function(docRef) {
+    supabaseFetch('/rest/v1/billets', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify(billetData)
+    })
+        .then(function() {
             showToast('Billet ajoute avec succes', 'success');
             closeBilletPanel();
             loadAdminBillets();
@@ -820,8 +820,12 @@ function updateBillet(docId, billetData) {
     }
 
     // NE PAS inclure Timestamp dans la mise a jour
-    var db = firebase.firestore();
-    db.collection('billets').doc(docId).update(billetData)
+    delete billetData.Timestamp;
+
+    supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
+        method: 'PATCH',
+        body: JSON.stringify(billetData)
+    })
         .then(function() {
             showToast('Billet modifie avec succes', 'success');
             updateCardInList(docId, billetData);
@@ -992,8 +996,9 @@ function confirmDelete() {
         confirmBtn.textContent = 'Suppression...';
     }
 
-    var db = firebase.firestore();
-    db.collection('billets').doc(docId).delete()
+    supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
+        method: 'DELETE'
+    })
         .then(function() {
             showToast('Billet supprime avec succes', 'success');
             closeDeleteModal();
@@ -1076,9 +1081,11 @@ function handleQuickStatusChange(chip) {
     updateBadgeUI(badge, newStatus);
     closeAllStatusPopups();
 
-    // --- Mise a jour Firestore ---
-    var db = firebase.firestore();
-    db.collection('billets').doc(docId).update({ Categorie: newStatus })
+    // --- Mise a jour Supabase ---
+    supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
+        method: 'PATCH',
+        body: JSON.stringify({ Categorie: newStatus })
+    })
         .then(function() {
             // Succes : mettre a jour les donnees en memoire
             updateInMemoryStatus(docId, newStatus);

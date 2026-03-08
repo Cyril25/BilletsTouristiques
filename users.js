@@ -58,23 +58,17 @@ if (typeof firebase !== 'undefined') {
 }
 
 // ============================================================
-// 5. CHARGEMENT DES UTILISATEURS DEPUIS FIRESTORE
+// 5. CHARGEMENT DES UTILISATEURS DEPUIS SUPABASE
 // ============================================================
 function loadUsers() {
-    if (typeof firebase === 'undefined') return;
-    if (!firebase.apps.length) return;
-
-    var db = firebase.firestore();
     var grid = document.getElementById('user-cards-grid');
     if (!grid) return;
 
-    db.collection('whitelist').get()
-        .then(function(snapshot) {
-            usersList = [];
-            snapshot.forEach(function(doc) {
-                var data = doc.data();
-                data._id = doc.id;
-                usersList.push(data);
+    supabaseFetch('/rest/v1/whitelist?select=*&order=email.asc', { method: 'GET' })
+        .then(function(rows) {
+            usersList = rows.map(function(row) {
+                row._id = row.email;
+                return row;
             });
 
             if (usersList.length === 0) {
@@ -161,19 +155,18 @@ function initUserEvents() {
 }
 
 // ============================================================
-// 8. STORY 3.2 — CHANGEMENT DE ROLE FIRESTORE
+// 8. STORY 3.2 — CHANGEMENT DE ROLE SUPABASE
 // ============================================================
 function changeUserRole(email, newRole, isSelfDemotion) {
-    if (typeof firebase === 'undefined') return;
-    if (!firebase.apps.length) return;
-
     var previousRole = (newRole === 'admin') ? 'member' : 'admin';
 
     // Mise a jour optimiste du DOM
     updateRoleInDOM(email, newRole);
 
-    var db = firebase.firestore();
-    db.collection('whitelist').doc(email).update({ role: newRole })
+    supabaseFetch('/rest/v1/whitelist?email=eq.' + encodeURIComponent(email), {
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole })
+    })
         .then(function() {
             // Succes : mettre a jour usersList en memoire
             for (var i = 0; i < usersList.length; i++) {
