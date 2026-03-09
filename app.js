@@ -9,6 +9,20 @@ let displayedCount = 0;
 const BATCH_SIZE = 50;
 // isFullLoaded supprimé car on charge tout d'un coup
 
+// Couleurs des categories (meme mapping que admin.js)
+const CATEGORIE_COLORS = {
+    'Collecte': '#A4C2F4',
+    'Pré collecte': '#FFFF00',
+    'Terminé': '#C27BA0',
+    'Pas de collecte': '#FF0000',
+    'Jamais édité, projet': '#CECECE',
+    'Non defini': '#F57C00'
+};
+
+function getCategorieColor(categorie) {
+    return CATEGORIE_COLORS[categorie || 'Non defini'] || CATEGORIE_COLORS['Non defini'];
+}
+
 // Référence au slider (div vide dans le HTML)
 let dateSlider = document.getElementById('date-slider');
 
@@ -341,7 +355,7 @@ function showMore() {
         // Image HD
         const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${item.ImageId}&sz=w800` : '';
         const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
-        const couleur = item.Couleur || '#666';
+        const couleur = getCategorieColor(item.Categorie);
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE
@@ -376,15 +390,11 @@ function showMore() {
                         ${item.NomBillet || ''}
                     </div>
                     
-                    <div class="${item.CollecteCache || ''}">
-                        Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP || ''} ${item.FDP_Com || ''}
-                        <br><br>
-                        <div style="text-align:left; font-size:1.1em;">
-                            ${item.InfoPaiement.replace(/style='color:#00457C; font-size:24px;'/, `style='color:#5D3A7E; font-size:24px;'`) || ''}
-                        </div>
+                    <div>
+                        Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP_Com || ''}
                     </div>
                     
-                    <div class="${item.ComCache || ''}" style="margin-top:15px;">
+                    <div style="margin-top:15px;">
                         Commentaire : ${item.Commentaire || ''}
                     </div>
                 </div>
