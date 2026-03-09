@@ -226,7 +226,30 @@ function toggleMenu() {
 }
 
 // ============================================================
-// 5. SERVICE WORKER (Cache des assets statiques)
+// 5. STORY 5.3 — VERIFICATION PROFIL COMPLET
+// ============================================================
+
+/**
+ * Vérifie si le profil du membre connecté est complet (5 champs adresse renseignés).
+ * Utilisée par Story 5.4 avant inscription.
+ * @param {function} callback - Fonction appelée avec un booléen (true = complet)
+ */
+function isProfilComplet(callback) {
+    var user = firebase.auth().currentUser;
+    if (!user) { callback(false); return; }
+    var email = user.email;
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=prenom,rue,code_postal,ville,pays')
+        .then(function(data) {
+            if (!data || data.length === 0) { callback(false); return; }
+            var m = data[0];
+            var complet = m.prenom && m.rue && m.code_postal && m.ville && m.pays;
+            callback(!!complet);
+        })
+        .catch(function() { callback(false); });
+}
+
+// ============================================================
+// 6. SERVICE WORKER (Cache des assets statiques)
 // ============================================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

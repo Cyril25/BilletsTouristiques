@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestion des collecteurs — interface d'administration.">
+    <title>Gestion Collecteurs - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-require-admin="true">
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="admin-page-header">
+            <h1><i class="fa-solid fa-people-carry-box"></i> Gestion des collecteurs</h1>
+            <button type="button" id="add-collecteur-btn" class="admin-fab" title="Ajouter un collecteur">
+                <i class="fa-solid fa-user-plus"></i>
+            </button>
+        </div>
+
+        <!-- Formulaire d'ajout de collecteur -->
+        <div id="add-collecteur-form" class="user-add-form collecteur-add-form" style="display:none">
+            <input type="text" id="new-collecteur-alias" placeholder="Alias (obligatoire) *" autocomplete="off" required>
+            <input type="text" id="new-collecteur-nom" placeholder="Nom (optionnel)" autocomplete="off">
+            <input type="text" id="new-collecteur-prenom" placeholder="Prénom (optionnel)" autocomplete="off">
+            <input type="email" id="new-collecteur-paypal-email" placeholder="PayPal Email (optionnel)" autocomplete="off">
+            <input type="text" id="new-collecteur-paypal-me" placeholder="PayPal.me (optionnel)" autocomplete="off">
+            <input type="email" id="new-collecteur-email-membre" placeholder="Email membre rattaché (optionnel)" autocomplete="off">
+            <div class="collecteur-add-actions">
+                <button type="button" id="confirm-add-collecteur-btn" class="user-modal-btn user-modal-btn-primary">Ajouter</button>
+                <button type="button" id="cancel-add-collecteur-btn" class="user-modal-btn">Annuler</button>
+            </div>
+        </div>
+
+        <div class="user-cards-grid" id="collecteur-cards-grid"></div>
+
+        <div class="user-empty-state" id="collecteur-empty-state" style="display:none">
+            <i class="fa-solid fa-people-carry-box"></i>
+            <p>Aucun collecteur enregistré</p>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="collecteurs.js"></script>
+</body>
+</html>

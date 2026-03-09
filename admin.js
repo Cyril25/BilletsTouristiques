@@ -620,6 +620,10 @@ function openBilletPanel(billetData, docId) {
         saveBtn.textContent = 'Sauvegarder';
     }
 
+    // Story 5.2 — Reset des champs Google et du gel collecteur
+    resetGoogleFields();
+    resetCollecteurFreeze();
+
     if (billetData && docId) {
         // --- Mode edition (Story 2.3) ---
         panel.dataset.editId = docId;
@@ -632,6 +636,46 @@ function openBilletPanel(billetData, docId) {
 
         // Pre-remplir tous les champs
         prefillForm(billetData);
+
+        // Story 5.2 — Gestion des champs Google en mode edition
+        var hasGoogleData = (billetData.LinkSheet && billetData.LinkSheet !== '') ||
+                            (billetData.Sondage && billetData.Sondage !== '');
+
+        document.querySelectorAll('[data-google-field="true"]').forEach(function(group) {
+            if (hasGoogleData) {
+                group.style.display = '';
+                var input = group.querySelector('input');
+                if (input) {
+                    input.setAttribute('readonly', 'readonly');
+                    input.classList.add('admin-field-readonly');
+                }
+                var label = group.querySelector('label');
+                if (label && !label.querySelector('.badge-ancien-systeme')) {
+                    var badge = document.createElement('span');
+                    badge.className = 'badge-ancien-systeme';
+                    badge.textContent = 'Ancien système';
+                    label.appendChild(badge);
+                }
+            } else {
+                group.style.display = 'none';
+            }
+        });
+
+        // Story 5.2 — Gel du collecteur si des inscriptions existent
+        var collecteurSelect = document.getElementById('field-collecteur');
+        var collecteurValue = billetData.Collecteur || '';
+        if (collecteurSelect && collecteurValue && docId) {
+            hasInscriptions(docId).then(function(frozen) {
+                if (frozen) {
+                    collecteurSelect.disabled = true;
+                    collecteurSelect.classList.add('admin-field-frozen');
+                    var hint = document.createElement('small');
+                    hint.className = 'collecteur-frozen-hint';
+                    hint.textContent = 'Collecteur figé — des inscriptions existent pour ce billet';
+                    collecteurSelect.parentNode.appendChild(hint);
+                }
+            });
+        }
     } else {
         // --- Mode ajout (Story 2.2) ---
         delete panel.dataset.editId;
@@ -645,6 +689,11 @@ function openBilletPanel(billetData, docId) {
         // Statut par defaut
         var categorieField = document.getElementById('field-categorie');
         if (categorieField) categorieField.value = CATEGORIE_DEFAULT;
+
+        // Story 5.2 — Masquer les champs Google en mode ajout
+        document.querySelectorAll('[data-google-field="true"]').forEach(function(group) {
+            group.style.display = 'none';
+        });
     }
 
     // Ouvrir le panel
@@ -906,6 +955,7 @@ function collectFormData() {
     };
 
     var payerFdpEl = document.getElementById('field-payer-fdp');
+    var panel = document.getElementById('admin-panel');
     var billetData = {
         NomBillet: getValue('field-nom-billet'),
         Ville: getValue('field-ville'),
@@ -925,9 +975,10 @@ function collectFormData() {
         DateColl: getValue('field-date-coll') || null,
         DateFin: getValue('field-date-fin') || null,
         ImageId: getValue('field-image-id'),
-        Sondage: getValue('field-sondage'),
-        LinkSondage: getValue('field-link-sondage'),
-        LinkSheet: getValue('field-link-sheet'),
+        // Story 5.2 — Ne collecter les champs Google que si le panel est en mode edition
+        Sondage: panel && panel.dataset.editId ? getValue('field-sondage') : '',
+        LinkSondage: panel && panel.dataset.editId ? getValue('field-link-sondage') : '',
+        LinkSheet: panel && panel.dataset.editId ? getValue('field-link-sheet') : '',
         LinkFB: getValue('field-link-fb'),
         Commentaire: getValue('field-commentaire'),
         CompteurBT: getValue('field-compteur-bt'),
@@ -1468,4 +1519,46 @@ function adminResetFilters() {
 // Garde pour compatibilite si le onclick="handleAddBillet()" existe encore dans le HTML
 function handleAddBillet() {
     openBilletPanel();
+}
+
+// ============================================================
+// 20. STORY 5.2 — CHAMPS GOOGLE & GEL COLLECTEUR
+// ============================================================
+
+/**
+ * Vérifie si des inscriptions existent pour un billet donné.
+ * STUB: retourne toujours false — sera branché sur la table inscriptions en Story 5.4.
+ * @param {string|number} billetId - L'ID du billet
+ * @returns {Promise} Résout avec un booléen
+ */
+function hasInscriptions(billetId) {
+    // TODO Story 5.4: Remplacer ce stub par un vrai appel Supabase
+    // return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&select=id&limit=1')
+    //     .then(function(data) { return data && data.length > 0; });
+    return Promise.resolve(false);
+}
+
+// Reset des champs Google (retirer readonly, badges, afficher)
+function resetGoogleFields() {
+    document.querySelectorAll('[data-google-field="true"]').forEach(function(group) {
+        group.style.display = '';
+        var input = group.querySelector('input');
+        if (input) {
+            input.removeAttribute('readonly');
+            input.classList.remove('admin-field-readonly');
+        }
+        var badge = group.querySelector('.badge-ancien-systeme');
+        if (badge) badge.remove();
+    });
+}
+
+// Reset du gel collecteur
+function resetCollecteurFreeze() {
+    var collecteurSelect = document.getElementById('field-collecteur');
+    if (collecteurSelect) {
+        collecteurSelect.disabled = false;
+        collecteurSelect.classList.remove('admin-field-frozen');
+        var hint = collecteurSelect.parentNode.querySelector('.collecteur-frozen-hint');
+        if (hint) hint.remove();
+    }
 }

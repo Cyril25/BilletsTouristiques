@@ -6,7 +6,7 @@
 //                    Les données changent plusieurs fois par jour.
 // ============================================================
 
-const CACHE_NAME = 'billets-v5';
+const CACHE_NAME = 'billets-v6';
 
 const STATIC_ASSETS = [
     '/',
@@ -24,6 +24,10 @@ const STATIC_ASSETS = [
     '/global.js',
     '/users.html',
     '/users.js',
+    '/collecteurs.html',
+    '/collecteurs.js',
+    '/profil.html',
+    '/profil.js',
 ];
 
 // Domaines dont les réponses ne doivent JAMAIS être mises en cache
