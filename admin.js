@@ -299,7 +299,7 @@ function renderAdminCards() {
                 '<span>' + escapeHtml(billet.Ville || '') + '</span>' +
                 '<span class="admin-card-ref">' +
                     escapeHtml(billet.Reference || '') +
-                    (billet.Millesime ? ' - ' + escapeHtml(billet.Millesime) : '') +
+                    (billet.Millesime ? ' - ' + escapeHtml(billet.Millesime) + (billet.Version ? '-' + escapeHtml(billet.Version) : '') : '') +
                 '</span>' +
             '</div>' +
             // Story 4.5 — Badge variante
@@ -1029,7 +1029,7 @@ function updateCardInList(docId, billetData) {
         var refSpan = metaEl.querySelector('.admin-card-ref');
         if (refSpan) {
             refSpan.textContent = (billetData.Reference || '') +
-                (billetData.Millesime ? ' - ' + billetData.Millesime : '');
+                (billetData.Millesime ? ' - ' + billetData.Millesime + (billetData.Version ? '-' + billetData.Version : '') : '');
         }
     }
 
