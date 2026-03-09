@@ -559,7 +559,6 @@ function prefillForm(data) {
         'field-theme': 'Theme',
         'field-collecteur': 'Collecteur',
         'field-prix': 'Prix',
-        'field-fdp': 'FDP',
         'field-fdp-com': 'FDP_Com',
         'field-info-paiement': 'InfoPaiement',
         'field-date': 'Date',
@@ -568,12 +567,10 @@ function prefillForm(data) {
         'field-date-fin': 'DateFin',
         'field-image-id': 'ImageId',
         'field-sondage': 'Sondage',
+        'field-link-sondage': 'LinkSondage',
         'field-link-sheet': 'LinkSheet',
         'field-link-fb': 'LinkFB',
-        'field-couleur': 'Couleur',
-        'field-compteur-bt': 'CompteurBT',
-        'field-collecte-cache': 'CollecteCache',
-        'field-com-cache': 'ComCache'
+        'field-compteur-bt': 'CompteurBT'
     };
 
     for (var fieldId in fields) {
@@ -584,6 +581,10 @@ function prefillForm(data) {
     // Commentaire (textarea)
     var commentaireEl = document.getElementById('field-commentaire');
     if (commentaireEl) commentaireEl.value = data.Commentaire || '';
+
+    // Checkbox PayerFDP
+    var payerFdpEl = document.getElementById('field-payer-fdp');
+    if (payerFdpEl) payerFdpEl.checked = (data.PayerFDP === 'oui');
 
     // Statut
     var categorie = data.Categorie || CATEGORIE_DEFAULT;
@@ -739,6 +740,7 @@ function collectFormData() {
         return el ? el.value.trim() : '';
     };
 
+    var payerFdpEl = document.getElementById('field-payer-fdp');
     var billetData = {
         NomBillet: getValue('field-nom-billet'),
         Ville: getValue('field-ville'),
@@ -751,7 +753,7 @@ function collectFormData() {
         Theme: getValue('field-theme'),
         Collecteur: getValue('field-collecteur'),
         Prix: getValue('field-prix'),
-        FDP: getValue('field-fdp'),
+        PayerFDP: payerFdpEl && payerFdpEl.checked ? 'oui' : '',
         FDP_Com: getValue('field-fdp-com'),
         InfoPaiement: getValue('field-info-paiement'),
         Date: getValue('field-date'),
@@ -760,13 +762,11 @@ function collectFormData() {
         DateFin: getValue('field-date-fin'),
         ImageId: getValue('field-image-id'),
         Sondage: getValue('field-sondage'),
+        LinkSondage: getValue('field-link-sondage'),
         LinkSheet: getValue('field-link-sheet'),
         LinkFB: getValue('field-link-fb'),
-        Couleur: getValue('field-couleur'),
         Commentaire: getValue('field-commentaire'),
         CompteurBT: getValue('field-compteur-bt'),
-        CollecteCache: getValue('field-collecte-cache'),
-        ComCache: getValue('field-com-cache'),
         Categorie: getValue('field-categorie') || CATEGORIE_DEFAULT
     };
 

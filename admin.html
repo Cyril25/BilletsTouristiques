@@ -180,9 +180,11 @@
                         <span class="admin-form-error" id="error-prix"></span>
                     </div>
 
-                    <div class="admin-form-group">
-                        <label for="field-fdp">Frais de port</label>
-                        <input type="text" id="field-fdp" name="FDP" autocomplete="off" placeholder="1.50">
+                    <div class="admin-form-group admin-form-group-checkbox">
+                        <label for="field-payer-fdp">
+                            <input type="checkbox" id="field-payer-fdp" name="PayerFDP">
+                            Payer les frais de port
+                        </label>
                     </div>
 
                     <div class="admin-form-group">
@@ -214,21 +216,6 @@
                         <label for="field-link-fb">Lien Facebook</label>
                         <input type="text" id="field-link-fb" name="LinkFB" autocomplete="off">
                     </div>
-                </fieldset>
-
-                <!-- Section : Autres -->
-                <fieldset class="admin-form-section">
-                    <legend>Autres informations</legend>
-
-                    <div class="admin-form-group">
-                        <label for="field-couleur">Couleur</label>
-                        <input type="text" id="field-couleur" name="Couleur" autocomplete="off">
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label for="field-commentaire">Commentaire</label>
-                        <textarea id="field-commentaire" name="Commentaire" rows="3"></textarea>
-                    </div>
 
                     <div class="admin-form-group">
                         <label for="field-sondage">Sondage</label>
@@ -236,18 +223,23 @@
                     </div>
 
                     <div class="admin-form-group">
+                        <label for="field-link-sondage">Lien sondage</label>
+                        <input type="text" id="field-link-sondage" name="LinkSondage" autocomplete="off">
+                    </div>
+                </fieldset>
+
+                <!-- Section : Autres informations -->
+                <fieldset class="admin-form-section">
+                    <legend>Autres informations</legend>
+
+                    <div class="admin-form-group">
+                        <label for="field-commentaire">Commentaire</label>
+                        <textarea id="field-commentaire" name="Commentaire" rows="3"></textarea>
+                    </div>
+
+                    <div class="admin-form-group">
                         <label for="field-compteur-bt">Compteur BT</label>
                         <input type="text" id="field-compteur-bt" name="CompteurBT" autocomplete="off">
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label for="field-collecte-cache">Collecte cache</label>
-                        <input type="text" id="field-collecte-cache" name="CollecteCache" autocomplete="off">
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label for="field-com-cache">Commentaire cache</label>
-                        <input type="text" id="field-com-cache" name="ComCache" autocomplete="off">
                     </div>
                 </fieldset>
 

@@ -2209,6 +2209,20 @@ body.login-page {
     display: block;
 }
 
+.admin-form-group-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 400;
+}
+.admin-form-group-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
 /* Status chips */
 .admin-status-chips {
     display: flex;
