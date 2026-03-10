@@ -8,10 +8,6 @@ let currentData = [];
 let displayedCount = 0;
 const BATCH_SIZE = 50;
 
-// Story 5.4 : Inscriptions du membre connecté et collecteurs
-var mesInscriptions = {};
-var collecteursMap = {};
-
 // Couleurs des categories (meme mapping que admin.js)
 const CATEGORIE_COLORS = {
     'Collecte': '#A4C2F4',
@@ -40,8 +36,6 @@ if (typeof firebase !== 'undefined') {
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             fetchData();
-            loadMesInscriptions();
-            loadCollecteursForCatalogue();
         }
     });
 }
@@ -362,10 +356,6 @@ function showMore() {
         const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${item.ImageId}` : '#';
         const couleur = getCategorieColor(item.Categorie);
 
-        // HTML d'inscription (Story 5.4)
-        const inscriptionHtml = buildInscriptionHtml(item);
-        const pasInteresse = mesInscriptions[item.id] && mesInscriptions[item.id].pas_interesse;
-
         if (isGalleryMode) {
             // RENDU MODE GALERIE
             html += `
@@ -378,7 +368,7 @@ function showMore() {
         } else {
             // RENDU MODE COLLECTE (par défaut)
             html += `
-            <div class="global-container${pasInteresse ? ' carte-pas-interesse' : ''}" data-billet-id="${item.id}" style="border-top: 8px solid ${couleur};">
+            <div class="global-container" style="border-top: 8px solid ${couleur};">
 
                 <div class="header-container">
                     <div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(${imgUrl}) no-repeat; "></div>
@@ -407,8 +397,6 @@ function showMore() {
                         Commentaire : ${item.Commentaire || ''}
                     </div>
                 </div>
-
-                ${inscriptionHtml}
 
                 <div class="more">
                     <center>
@@ -509,213 +497,3 @@ function closeModal() {
 // 6. INSCRIPTIONS AUX COLLECTES (Story 5.4)
 // ============================================================
 
-// --- Toast pour le catalogue (billets.html ne charge pas admin.js) ---
-function showToast(message, type) {
-    var toast = document.createElement('div');
-    toast.className = 'toast toast-' + (type || 'success');
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    if (type === 'error') {
-        toast.onclick = function() { toast.remove(); };
-    } else {
-        setTimeout(function() {
-            if (toast.parentNode) toast.remove();
-        }, 4000);
-    }
-}
-
-// --- Chargement des inscriptions du membre connecté (Task 3) ---
-function loadMesInscriptions() {
-    var user = firebase.auth().currentUser;
-    if (!user) return;
-    var email = user.email;
-    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,nb_normaux,nb_variantes,paye,envoye,pas_interesse')
-        .then(function(data) {
-            mesInscriptions = {};
-            (data || []).forEach(function(insc) {
-                mesInscriptions[insc.billet_id] = insc;
-            });
-            applyFilters(false);
-        })
-        .catch(function(error) {
-            console.warn('Erreur chargement inscriptions:', error);
-        });
-}
-
-// --- Chargement des collecteurs pour liens contact (Task 4) ---
-function loadCollecteursForCatalogue() {
-    supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me')
-        .then(function(data) {
-            (data || []).forEach(function(c) {
-                collecteursMap[c.alias] = c;
-            });
-        })
-        .catch(function(error) {
-            console.warn('Erreur chargement collecteurs catalogue:', error);
-        });
-}
-
-// --- Génération du HTML d'inscription pour une carte (Task 5 & 9) ---
-function buildInscriptionHtml(item) {
-    var inscription = mesInscriptions[item.id];
-    var collecteOuverte = item.Collecteur &&
-        (item.Categorie === 'Pré collecte' || item.Categorie === 'Collecte') &&
-        !item.DateFin;
-
-    var html = '';
-    if (inscription && !inscription.pas_interesse) {
-        // Inscrit — badges + contact collecteur
-        var montant = parseFloat(item.Prix || 0) * (inscription.nb_normaux + inscription.nb_variantes);
-        html = '<div class="inscription-badges">'
-            + '<span class="badge-inscrit">Inscrit</span>'
-            + '<span class="badge-paiement ' + (inscription.paye ? 'badge-paye' : 'badge-non-paye') + '">'
-            + (inscription.paye ? 'Payé' : 'Non payé — ' + montant.toFixed(2) + ' €')
-            + '</span>'
-            + '</div>';
-        // Bouton contacter le collecteur (Task 9)
-        var collecteurInfo = collecteursMap[item.Collecteur] || {};
-        var contactEmail = collecteurInfo.paypal_email || '';
-        if (contactEmail) {
-            html += '<a href="mailto:' + contactEmail + '" class="btn-contacter-collecteur">Contacter le collecteur</a>';
-        }
-    } else if (inscription && inscription.pas_interesse) {
-        // Pas intéressé
-        html = '<div class="inscription-badges">'
-            + '<span class="badge-pas-interesse">Pas intéressé</span>'
-            + '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse">Annuler</button>'
-            + '</div>';
-    } else if (collecteOuverte) {
-        // Non inscrit, collecte ouverte
-        html = '<div class="inscription-badges">'
-            + '<span class="badge-non-inscrit">Non inscrit</span>'
-            + '<button onclick="ouvrirInscription(' + item.id + ')" class="btn-sinscrire">S\'inscrire</button>'
-            + '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse">Pas intéressé</button>'
-            + '</div>';
-    }
-    return html;
-}
-
-// --- Ouverture du mini-formulaire inline (Task 6) ---
-function ouvrirInscription(billetId) {
-    isProfilComplet(function(complet) {
-        if (!complet) {
-            showToast('Complétez votre profil avant de vous inscrire', 'error');
-            setTimeout(function() {
-                window.location.href = 'profil.html?from=inscription&billet=' + billetId;
-            }, 1500);
-            return;
-        }
-        var billet = allData.find(function(b) { return b.id === billetId; });
-        if (!billet) return;
-        var hasVariante = billet.HasVariante === 'oui';
-        var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + billetId + '">'
-            + '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="1" min="1"></div>'
-            + (hasVariante ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="0" min="0"></div>' : '')
-            + '<div class="mini-form-field"><label>Paiement</label><select id="insc-paiement-' + billetId + '"><option value="PayPal">PayPal</option><option value="Chèque">Chèque</option></select></div>'
-            + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + billetId + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="Recommandé">Recommandé</option></select></div>'
-            + '<div class="mini-form-field"><label>Commentaire</label><textarea id="insc-commentaire-' + billetId + '" rows="2"></textarea></div>'
-            + '<div class="mini-form-actions">'
-            + '<button onclick="confirmerInscription(' + billetId + ')" class="btn-confirmer-inscription">Confirmer</button>'
-            + '<button onclick="annulerInscription(' + billetId + ')" class="btn-annuler-inscription">Annuler</button>'
-            + '</div>'
-            + '</div>';
-        var card = document.querySelector('[data-billet-id="' + billetId + '"]');
-        if (!card) return;
-        var existingForm = card.querySelector('.mini-inscription-form');
-        if (existingForm) existingForm.remove();
-        card.insertAdjacentHTML('beforeend', formHtml);
-    });
-}
-
-// --- Annulation du formulaire (fermeture sans soumission) ---
-function annulerInscription(billetId) {
-    var form = document.getElementById('inscription-form-' + billetId);
-    if (form) form.remove();
-}
-
-// --- Soumission de l'inscription (Task 7) ---
-function confirmerInscription(billetId) {
-    var email = firebase.auth().currentUser.email;
-    var billet = allData.find(function(b) { return b.id === billetId; });
-    if (!billet) return;
-    var nbNormaux = parseInt(document.getElementById('insc-nb-normaux-' + billetId).value) || 1;
-    var nbVariantes = parseInt(document.getElementById('insc-nb-variantes-' + billetId).value) || 0;
-
-    // Charger l'adresse du profil pour le snapshot
-    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=prenom,rue,code_postal,ville,pays')
-        .then(function(membreData) {
-            var adresse = membreData && membreData[0] ? membreData[0] : {};
-            var body = {
-                billet_id: billetId,
-                membre_email: email,
-                collecteur_alias: billet.Collecteur || '',
-                nb_normaux: nbNormaux,
-                nb_variantes: nbVariantes,
-                mode_paiement: document.getElementById('insc-paiement-' + billetId).value,
-                mode_envoi: document.getElementById('insc-envoi-' + billetId).value,
-                commentaire: (document.getElementById('insc-commentaire-' + billetId).value || '').trim(),
-                adresse_snapshot: adresse,
-                paye: false,
-                envoye: false,
-                fdp_regles: false,
-                pas_interesse: false
-            };
-            return supabaseFetch('/rest/v1/inscriptions', {
-                method: 'POST',
-                body: JSON.stringify(body)
-            });
-        })
-        .then(function() {
-            showToast('Inscription confirmée !');
-            var form = document.getElementById('inscription-form-' + billetId);
-            if (form) form.remove();
-            loadMesInscriptions();
-        })
-        .catch(function(error) {
-            console.error('Erreur inscription:', error);
-            showToast('Erreur lors de l\'inscription', 'error');
-        });
-}
-
-// --- Marquage "Pas intéressé" (Task 8) ---
-function marquerPasInteresse(billetId) {
-    var email = firebase.auth().currentUser.email;
-    var billet = allData.find(function(b) { return b.id === billetId; });
-    var body = {
-        billet_id: billetId,
-        membre_email: email,
-        collecteur_alias: billet ? billet.Collecteur || '' : '',
-        pas_interesse: true,
-        nb_normaux: 0,
-        nb_variantes: 0
-    };
-    supabaseFetch('/rest/v1/inscriptions', {
-        method: 'POST',
-        body: JSON.stringify(body)
-    })
-    .then(function() {
-        showToast('Billet marqué "Pas intéressé"');
-        loadMesInscriptions();
-    })
-    .catch(function(error) {
-        console.error('Erreur marquage:', error);
-        showToast('Erreur', 'error');
-    });
-}
-
-// --- Annulation "Pas intéressé" (Task 8) ---
-function annulerPasInteresse(billetId) {
-    var inscription = mesInscriptions[billetId];
-    if (!inscription) return;
-    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscription.id, {
-        method: 'DELETE'
-    })
-    .then(function() {
-        showToast('Marquage annulé');
-        loadMesInscriptions();
-    })
-    .catch(function(error) {
-        console.error('Erreur annulation:', error);
-        showToast('Erreur', 'error');
-    });
-}
