@@ -618,7 +618,6 @@ function confirmerInscription(billetId) {
             var body = {
                 billet_id: billetId,
                 membre_email: email,
-                collecteur_alias: billet.Collecteur || '',
                 nb_normaux: nbNormaux,
                 nb_variantes: nbVariantes,
                 mode_paiement: document.getElementById('insc-paiement-' + billetId).value,
@@ -654,7 +653,6 @@ function marquerPasInteresse(billetId) {
     var body = {
         billet_id: billetId,
         membre_email: email,
-        collecteur_alias: billet ? billet.Collecteur || '' : '',
         pas_interesse: true,
         nb_normaux: 0,
         nb_variantes: 0

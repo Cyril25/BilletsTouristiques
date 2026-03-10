@@ -79,7 +79,7 @@ function renderInscriptions() {
         var montant = prix * (nbNormaux + nbVariantes);
         if (!insc.paye) totalDu += montant;
 
-        var collecteur = collecteursMap[insc.collecteur_alias] || {};
+        var collecteur = collecteursMap[billet.Collecteur] || {};
         var paypalLink = '';
         if (!insc.paye && insc.mode_paiement === 'PayPal') {
             if (collecteur.paypal_me) {
@@ -98,7 +98,7 @@ function renderInscriptions() {
             + '<span class="inscription-ville"><i class="fa-solid fa-location-dot"></i> ' + (billet.Ville || '') + '</span>'
             + '</div>'
             + '<div class="inscription-card-details">'
-            + '<span><i class="fa-solid fa-user"></i> ' + (insc.collecteur_alias || '\u2014') + '</span>'
+            + '<span><i class="fa-solid fa-user"></i> ' + (billet.Collecteur || '\u2014') + '</span>'
             + '<span><i class="fa-solid fa-ticket"></i> ' + nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : '') + '</span>'
             + '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>'
             + '</div>'

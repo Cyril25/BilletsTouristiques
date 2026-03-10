@@ -431,21 +431,21 @@ function showTab(tabName) {
 }
 
 function loadPreparationEnvois() {
-    if (!monCollecteur) return;
-    supabaseFetch('/rest/v1/inscriptions?collecteur_alias=eq.' + encodeURIComponent(monCollecteur.alias) + '&envoye=eq.false&pas_interesse=eq.false&select=*&order=membre_email.asc')
+    if (!monCollecteur || mesBillets.length === 0) {
+        renderEnvoisVide();
+        return;
+    }
+    // Récupérer les inscriptions via les billet_ids du collecteur (pas via collecteur_alias)
+    var billetIds = mesBillets.map(function(b) { return b.id; });
+    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&envoye=eq.false&pas_interesse=eq.false&select=*&order=membre_email.asc')
         .then(function(inscriptions) {
             if (!inscriptions || inscriptions.length === 0) {
                 renderEnvoisVide();
                 return;
             }
-            var billetIds = inscriptions.map(function(i) { return i.billet_id; });
-            var uniqueIds = billetIds.filter(function(id, idx) { return billetIds.indexOf(id) === idx; });
-            return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","Ville","Prix"')
-                .then(function(billets) {
-                    var billetsMap = {};
-                    (billets || []).forEach(function(b) { billetsMap[b.id] = b; });
-                    renderPreparationEnvois(inscriptions, billetsMap);
-                });
+            var billetsMap = {};
+            mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
+            renderPreparationEnvois(inscriptions, billetsMap);
         })
         .catch(function(error) {
             console.error('Erreur chargement envois:', error);
