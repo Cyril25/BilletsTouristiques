@@ -61,7 +61,7 @@ function checkCollecteur() {
 // 4. CHARGEMENT LISTE DES COLLECTES (Task 4)
 // ============================================================
 function loadMesCollectes() {
-    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","DateColl","DateFin","HasVariante"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Categorie".asc')
+    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","DateColl","DateFin","HasVariante","Date"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
         .then(function(billets) {
             mesBillets = billets || [];
             renderCollectesList();
