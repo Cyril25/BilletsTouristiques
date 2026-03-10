@@ -1526,16 +1526,13 @@ function handleAddBillet() {
 // ============================================================
 
 /**
- * Vérifie si des inscriptions existent pour un billet donné.
- * STUB: retourne toujours false — sera branché sur la table inscriptions en Story 5.4.
+ * Vérifie si des inscriptions existent pour un billet donné (Story 5.4).
  * @param {string|number} billetId - L'ID du billet
  * @returns {Promise} Résout avec un booléen
  */
 function hasInscriptions(billetId) {
-    // TODO Story 5.4: Remplacer ce stub par un vrai appel Supabase
-    // return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&select=id&limit=1')
-    //     .then(function(data) { return data && data.length > 0; });
-    return Promise.resolve(false);
+    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=id&limit=1')
+        .then(function(data) { return data && data.length > 0; });
 }
 
 // Reset des champs Google (retirer readonly, badges, afficher)
