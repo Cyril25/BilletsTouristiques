@@ -28,7 +28,7 @@ function loadMesInscriptions() {
                 return;
             }
             var idsParam = 'id=in.(' + billetIds.join(',') + ')';
-            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix"');
+            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante"');
         })
         .then(function(billets) {
             if (billets) {
@@ -74,9 +74,10 @@ function renderInscriptions() {
     var html = mesInscriptions.map(function(insc) {
         var billet = billetsMap[insc.billet_id] || {};
         var prix = parseFloat(billet.Prix || 0);
+        var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
         var nbNormaux = insc.nb_normaux || 0;
         var nbVariantes = insc.nb_variantes || 0;
-        var montant = prix * (nbNormaux + nbVariantes);
+        var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
         var statut = insc.statut_paiement || 'non_paye';
         if (statut !== 'confirme') totalDu += montant;
 
@@ -137,7 +138,7 @@ function badgePaiementMembre(statut, inscriptionId) {
         return '<span class="badge-paiement badge-declare">En attente de confirmation</span>';
     }
     // non_paye
-    return '<button class="btn-jai-paye" onclick="declarerPaiement(' + inscriptionId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
+    return '<button class="btn-jai-paye" title="Cliquez pour déclarer votre paiement" onclick="declarerPaiement(' + inscriptionId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
 }
 
 function declarerPaiement(inscriptionId) {

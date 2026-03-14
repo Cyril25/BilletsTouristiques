@@ -108,6 +108,7 @@
                             <option value="N">Pas de variante</option>
                             <option value="anniversary">Anniversaire</option>
                             <option value="doré">Doré</option>
+                            <option value="only">Uniquement variante</option>
                         </select>
                     </div>
                 </fieldset>
@@ -189,6 +190,12 @@
                         <label for="field-prix">Prix</label>
                         <input type="number" id="field-prix" name="Prix" step="0.01" min="0" placeholder="2.00">
                         <span class="admin-form-error" id="error-prix"></span>
+                    </div>
+
+                    <div class="admin-form-group" id="group-prix-variante" style="display:none;">
+                        <label for="field-prix-variante">Prix variante (€)</label>
+                        <input type="number" id="field-prix-variante" name="PrixVariante" step="0.01" min="0" placeholder="Laisser vide = même prix">
+                        <span class="admin-form-error" id="error-prix-variante"></span>
                     </div>
 
                     <div class="admin-form-group admin-form-group-checkbox">

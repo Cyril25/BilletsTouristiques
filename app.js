@@ -389,9 +389,19 @@ function showMore() {
                         ${item.NomBillet || ''}
                     </div>
 
-                    <div>
-                        Par ${item.Collecteur || '?'} au prix de ${item.Prix || '?'} euros ${item.FDP_Com || ''}
-                    </div>
+                    ${(function() {
+                        var parts = [];
+                        if (item.Collecteur) parts.push('Par ' + item.Collecteur);
+                        if (item.Prix) {
+                            var prixTxt = 'au prix de ' + item.Prix + ' euros';
+                            if (item.PrixVariante && item.PrixVariante !== item.Prix) {
+                                prixTxt += ' / Variante : ' + item.PrixVariante + ' euros';
+                            }
+                            parts.push(prixTxt);
+                        }
+                        if (parts.length === 0) return '';
+                        return '<div>' + parts.join(' ') + ' ' + (item.FDP_Com || '') + '</div>';
+                    })()}
 
                     <div style="margin-top:15px;">
                         Commentaire : ${item.Commentaire || ''}

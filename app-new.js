@@ -384,9 +384,19 @@ function showMore() {
                 (item.Cp || '') + ' ' + (item.Ville || '') + '<br />' +
                 (item.NomBillet || '') +
                 '</div>' +
-                '<div>' +
-                'Par ' + (item.Collecteur || '?') + ' au prix de ' + (item.Prix || '?') + ' euros ' + (item.FDP_Com || '') +
-                '</div>' +
+                (function() {
+                    var parts = [];
+                    if (item.Collecteur) parts.push('Par ' + item.Collecteur);
+                    if (item.Prix) {
+                        var prixTxt = 'au prix de ' + item.Prix + ' euros';
+                        if (item.PrixVariante && item.PrixVariante !== item.Prix) {
+                            prixTxt += ' / Variante : ' + item.PrixVariante + ' euros';
+                        }
+                        parts.push(prixTxt);
+                    }
+                    if (parts.length === 0) return '';
+                    return '<div>' + parts.join(' ') + ' ' + (item.FDP_Com || '') + '</div>';
+                })() +
                 '<div style="margin-top:15px;">' +
                 'Commentaire : ' + (item.Commentaire || '') +
                 '</div>' +
@@ -546,7 +556,9 @@ function buildInscriptionHtml(item) {
     var html = '';
     if (inscription && !inscription.pas_interesse) {
         // Inscrit — badges + contact collecteur
-        var montant = parseFloat(item.Prix || 0) * (inscription.nb_normaux + inscription.nb_variantes);
+        var prixNormal = parseFloat(item.Prix || 0);
+        var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
+        var montant = (prixNormal * (inscription.nb_normaux || 0)) + (prixVar * (inscription.nb_variantes || 0));
         html = '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit</span>'
             + badgePaiementCatalogue(inscription.statut_paiement, montant)
@@ -587,10 +599,17 @@ function ouvrirInscription(billetId) {
         }
         var billet = allData.find(function(b) { return b.id === billetId; });
         if (!billet) return;
-        var hasVariante = billet.HasVariante === 'oui';
+        var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
+        var uniquementVariante = billet.HasVariante === 'only';
+        var champNormaux = uniquementVariante
+            ? ''
+            : '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="' + (varianteActive ? '0' : '1') + '" min="0"></div>';
+        var champVariantes = varianteActive
+            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (uniquementVariante ? '1' : '0') + '" min="' + (uniquementVariante ? '1' : '0') + '"></div>'
+            : '';
         var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + billetId + '">'
-            + '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="1" min="1"></div>'
-            + (hasVariante ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="0" min="0"></div>' : '')
+            + champNormaux
+            + champVariantes
             + '<div class="mini-form-field"><label>Paiement</label><select id="insc-paiement-' + billetId + '"><option value="PayPal">PayPal</option><option value="Chèque">Chèque</option></select></div>'
             + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + billetId + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="Recommandé">Recommandé</option></select></div>'
             + '<div class="mini-form-field"><label>Commentaire</label><textarea id="insc-commentaire-' + billetId + '" rows="2"></textarea></div>'
@@ -618,9 +637,14 @@ function confirmerInscription(billetId) {
     var email = firebase.auth().currentUser.email;
     var billet = allData.find(function(b) { return b.id === billetId; });
     if (!billet) return;
-    var nbNormaux = parseInt(document.getElementById('insc-nb-normaux-' + billetId).value) || 1;
+    var normauxEl = document.getElementById('insc-nb-normaux-' + billetId);
+    var nbNormaux = normauxEl ? parseInt(normauxEl.value) || 0 : 0;
     var variantesEl = document.getElementById('insc-nb-variantes-' + billetId);
     var nbVariantes = variantesEl ? parseInt(variantesEl.value) || 0 : 0;
+    if (nbNormaux + nbVariantes === 0) {
+        showToast('Sélectionnez au moins un billet', 'error');
+        return;
+    }
 
     // Charger l'adresse du profil pour le snapshot
     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')

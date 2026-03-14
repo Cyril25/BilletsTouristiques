@@ -82,6 +82,68 @@ var paysListe = [];
 // Story 4.6 — Cache liste des collecteurs
 var collecteursList = [];
 
+// Story 9.3 — Hiérarchie des statuts pour la gestion des dates
+var STATUS_ORDER = {
+    'Jamais édité, projet': 0,
+    'Pré collecte': 1,
+    'Collecte': 2,
+    'Terminé': 3,
+    'Pas de collecte': -1
+};
+
+// Story 9.3 — Calcule les mises à jour de dates lors d'un changement de statut
+function getDateUpdatesForStatusChange(oldStatus, newStatus, existingDates) {
+    var today = new Date().toISOString().split('T')[0];
+    var updates = {};
+    var oldLevel = STATUS_ORDER[oldStatus] !== undefined ? STATUS_ORDER[oldStatus] : 0;
+    var newLevel = STATUS_ORDER[newStatus] !== undefined ? STATUS_ORDER[newStatus] : 0;
+
+    // Auto-remplissage : remplir la date du nouveau statut si vide
+    if (newStatus === 'Pré collecte' && !existingDates.DatePre) {
+        updates.DatePre = today;
+    }
+    if (newStatus === 'Collecte' && !existingDates.DateColl) {
+        updates.DateColl = today;
+    }
+    if (newStatus === 'Terminé' && !existingDates.DateFin) {
+        updates.DateFin = today;
+    }
+
+    // Nettoyage : si retour en arrière, effacer les dates des statuts supérieurs
+    if (newLevel < 3 && oldLevel >= 3) {
+        updates.DateFin = null;
+    }
+    if (newLevel < 2 && oldLevel >= 2) {
+        updates.DateColl = null;
+        updates.DateFin = null;
+    }
+
+    return updates;
+}
+
+// Story 9.3 — Active/désactive les champs date selon le statut
+function updateDateFieldsState(categorie) {
+    var datePre = document.getElementById('field-date-pre');
+    var dateColl = document.getElementById('field-date-coll');
+    var dateFin = document.getElementById('field-date-fin');
+    if (!datePre || !dateColl || !dateFin) return;
+
+    // Par défaut tout actif
+    datePre.disabled = false; datePre.title = '';
+    dateColl.disabled = false; dateColl.title = '';
+    dateFin.disabled = false; dateFin.title = '';
+
+    if (categorie === 'Pré collecte') {
+        dateColl.disabled = true;
+        dateColl.title = 'Passez en statut Collecte pour saisir cette date';
+        dateFin.disabled = true;
+        dateFin.title = 'Passez en statut Terminé pour saisir cette date';
+    } else if (categorie === 'Collecte') {
+        dateFin.disabled = true;
+        dateFin.title = 'Passez en statut Terminé pour saisir cette date';
+    }
+}
+
 // ============================================================
 // 3. INITIALISATION
 // ============================================================
@@ -487,6 +549,22 @@ function initPanel() {
         });
     }
 
+    // Story 9.2 — Toggle PrixVariante quand HasVariante change
+    var hasVarianteSelect = document.getElementById('field-has-variante');
+    if (hasVarianteSelect) {
+        hasVarianteSelect.addEventListener('change', function() {
+            togglePrixVarianteField();
+        });
+    }
+
+    // Story 9.3 — Mise à jour état des champs date quand catégorie change
+    var categorieSelect = document.getElementById('field-categorie');
+    if (categorieSelect) {
+        categorieSelect.addEventListener('change', function() {
+            updateDateFieldsState(categorieSelect.value);
+        });
+    }
+
     // Soumission du formulaire
     var form = document.getElementById('admin-billet-form');
     if (form) {
@@ -497,9 +575,25 @@ function initPanel() {
             var panel = document.getElementById('admin-panel');
             var billetData = collectFormData();
 
-            // Story 2.3 — Mode edition ou ajout ?
+            // Story 9.3 — Auto-remplissage/nettoyage dates si statut changé (mode édition)
             if (panel && panel.dataset.editId) {
-                updateBillet(panel.dataset.editId, billetData);
+                var editId = panel.dataset.editId;
+                var oldBillet = null;
+                for (var bi = 0; bi < adminBillets.length; bi++) {
+                    if (String(adminBillets[bi]._id) === String(editId)) { oldBillet = adminBillets[bi]; break; }
+                }
+                if (oldBillet && oldBillet.Categorie !== billetData.Categorie) {
+                    var existingDates = {
+                        DatePre: billetData.DatePre || oldBillet.DatePre,
+                        DateColl: billetData.DateColl || oldBillet.DateColl,
+                        DateFin: billetData.DateFin || oldBillet.DateFin
+                    };
+                    var dateUpdates = getDateUpdatesForStatusChange(oldBillet.Categorie, billetData.Categorie, existingDates);
+                    for (var dk in dateUpdates) {
+                        billetData[dk] = dateUpdates[dk];
+                    }
+                }
+                updateBillet(editId, billetData);
             } else {
                 saveBillet(billetData);
             }
@@ -727,6 +821,7 @@ function prefillForm(data) {
         'field-theme': 'Theme',
         'field-collecteur': 'Collecteur',
         'field-prix': 'Prix',
+        'field-prix-variante': 'PrixVariante',
         'field-fdp-com': 'FDP_Com',
         'field-date-pre': 'DatePre',
         'field-date-coll': 'DateColl',
@@ -804,6 +899,26 @@ function prefillForm(data) {
     var categorie = data.Categorie || CATEGORIE_DEFAULT;
     var categorieField = document.getElementById('field-categorie');
     if (categorieField) categorieField.value = categorie;
+
+    // Story 9.2 — Affichage conditionnel du champ PrixVariante
+    togglePrixVarianteField();
+
+    // Story 9.3 — Activer/désactiver les champs date selon le statut
+    updateDateFieldsState(categorie);
+}
+
+// --- Story 9.2 — Affichage conditionnel du champ PrixVariante ---
+function togglePrixVarianteField() {
+    var hasVarianteEl = document.getElementById('field-has-variante');
+    var groupPrixVariante = document.getElementById('group-prix-variante');
+    if (!hasVarianteEl || !groupPrixVariante) return;
+    var val = hasVarianteEl.value;
+    var show = val && val !== 'N';
+    groupPrixVariante.style.display = show ? '' : 'none';
+    if (!show) {
+        var prixVarEl = document.getElementById('field-prix-variante');
+        if (prixVarEl) prixVarEl.value = '';
+    }
 }
 
 // --- Fermeture du panel ---
@@ -937,6 +1052,14 @@ function validateBilletForm() {
         if (!firstErrorField) firstErrorField = prix;
     }
 
+    // Story 9.2 — Validation prix variante
+    var prixVariante = document.getElementById('field-prix-variante');
+    if (prixVariante && prixVariante.value !== '' && (isNaN(parseFloat(prixVariante.value)) || parseFloat(prixVariante.value) < 0)) {
+        setFieldError('field-prix-variante', 'error-prix-variante', 'Le prix variante doit etre un nombre positif');
+        valid = false;
+        if (!firstErrorField) firstErrorField = prixVariante;
+    }
+
     if (!valid && firstErrorField) {
         firstErrorField.focus();
     }
@@ -969,6 +1092,7 @@ function collectFormData() {
         Theme: getValue('field-theme'),
         Collecteur: getValue('field-collecteur'),
         Prix: getValue('field-prix'),
+        PrixVariante: getValue('field-prix-variante') || null,
         PayerFDP: payerFdpEl && payerFdpEl.checked ? 'oui' : '',
         FDP_Com: getValue('field-fdp-com'),
         DatePre: getValue('field-date-pre') || null,
@@ -1301,6 +1425,19 @@ function handleQuickStatusChange(chip) {
     var previousStatus = badge.getAttribute('data-current-status');
     if (previousStatus === newStatus) return;
 
+    // --- Story 9.3 — Calcul des mises à jour de dates ---
+    var billetData = null;
+    for (var k = 0; k < adminBillets.length; k++) {
+        if (String(adminBillets[k]._id) === String(docId)) { billetData = adminBillets[k]; break; }
+    }
+    var existingDates = {
+        DatePre: billetData ? billetData.DatePre : null,
+        DateColl: billetData ? billetData.DateColl : null,
+        DateFin: billetData ? billetData.DateFin : null
+    };
+    var dateUpdates = getDateUpdatesForStatusChange(previousStatus, newStatus, existingDates);
+    var patchBody = Object.assign({ Categorie: newStatus }, dateUpdates);
+
     // --- Mise a jour optimiste (UI d'abord) ---
     updateBadgeUI(badge, newStatus);
     closeAllStatusPopups();
@@ -1308,11 +1445,17 @@ function handleQuickStatusChange(chip) {
     // --- Mise a jour Supabase ---
     supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
         method: 'PATCH',
-        body: JSON.stringify({ Categorie: newStatus })
+        body: JSON.stringify(patchBody)
     })
         .then(function() {
             // Succes : mettre a jour les donnees en memoire
             updateInMemoryStatus(docId, newStatus);
+            // Story 9.3 — Mettre à jour les dates en mémoire
+            if (billetData) {
+                for (var dateKey in dateUpdates) {
+                    billetData[dateKey] = dateUpdates[dateKey];
+                }
+            }
 
             // Mettre a jour le popup de statut rapide
             var popup = document.getElementById('quick-status-popup-' + docId);

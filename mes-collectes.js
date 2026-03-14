@@ -63,7 +63,7 @@ function checkCollecteur() {
 var mesInscriptionsParBillet = {};
 
 function loadMesCollectes() {
-    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","DateColl","DateFin","HasVariante","Date","Reference","Millesime","Version"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
+    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","PrixVariante","DateColl","DateFin","HasVariante","Date","Reference","Millesime","Version"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
         .then(function(billets) {
             mesBillets = billets || [];
             if (mesBillets.length === 0) {
@@ -221,6 +221,7 @@ function renderCollecteDetail(billetId, inscriptions) {
     var billet = currentBillet;
     var isOpen = billet && (billet.Categorie === 'Collecte' || billet.Categorie === 'Pré collecte');
     var prix = parseFloat((billet && billet.Prix) || 0);
+    var prixVariante = (billet && billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
 
     // Compute counters
     var totalInscrits = inscriptions.length;
@@ -271,6 +272,11 @@ function renderCollecteDetail(billetId, inscriptions) {
     } else if (isClotured && impayes.length === 0) {
         html += '<span class="relance-ok"><i class="fa-solid fa-check-circle"></i> Tous les paiements sont reçus</span>';
     }
+    // Story 9.5 — Bouton export CSV
+    var inscActives = inscriptions.filter(function(i) { return !i.pas_interesse; });
+    if (inscActives.length > 0) {
+        html += '<button class="btn-export-csv" onclick="exporterCSV(' + billetId + ')"><i class="fa-solid fa-file-csv"></i> Exporter CSV</button>';
+    }
     html += '</div>';
 
     // Inscriptions table
@@ -280,7 +286,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         html += '<div class="collecte-table-wrap">';
         html += '<table class="collecte-table">';
         html += '<thead><tr>';
-        html += '<th>Nom / Prénom</th>';
+        html += '<th>Prénom / Nom</th>';
         html += '<th>Adresse</th>';
         html += '<th>Normaux</th>';
         html += '<th>Variantes</th>';
@@ -299,7 +305,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             var snap = ins.adresse_snapshot || {};
             var nomPrenom = ((snap.prenom || '') + ' ' + (snap.nom || '')).trim() || ins.membre_email;
             var adresse = formatAdresse(snap);
-            var montant = (prix * ((ins.nb_normaux || 0) + (ins.nb_variantes || 0))).toFixed(2);
+            var montant = ((prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0))).toFixed(2);
             var commentaire = ins.commentaire || '';
 
             html += '<tr>';
@@ -679,6 +685,7 @@ function ouvrirRelance(billetId) {
 
 function renderRelanceModal(billet, impayes) {
     var prix = parseFloat(billet.Prix || 0);
+    var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
     var paypalInfo = '';
     if (monCollecteur.paypal_me) {
         paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
@@ -689,7 +696,7 @@ function renderRelanceModal(billet, impayes) {
     var messagesHtml = impayes.map(function(insc, idx) {
         var adr = insc.adresse_snapshot || {};
         var prenom = adr.prenom || insc.membre_email;
-        var montant = prix * ((insc.nb_normaux || 0) + (insc.nb_variantes || 0));
+        var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
         var objet = 'Relance paiement — ' + (billet.NomBillet || 'Collecte');
 
         var corps = 'Bonjour ' + prenom + ',\n\n'
@@ -767,4 +774,72 @@ function fallbackCopy(textarea) {
 function fermerRelance() {
     var modal = document.getElementById('relance-modal');
     if (modal) modal.style.display = 'none';
+}
+
+// ============================================================
+// STORY 9.5 — EXPORT CSV DES INSCRIPTIONS
+// ============================================================
+
+function escapeCSV(val) {
+    var s = String(val == null ? '' : val);
+    if (s.indexOf(';') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0) {
+        return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+}
+
+function exporterCSV(billetId) {
+    if (!currentInscriptions || !currentBillet) return;
+
+    // Filtrer les inscriptions actives (pas_interesse = false)
+    var inscActives = currentInscriptions.filter(function(i) { return !i.pas_interesse; });
+    if (inscActives.length === 0) {
+        showToast('Aucune inscription à exporter', 'error');
+        return;
+    }
+
+    var inclureVariantes = currentBillet.HasVariante && currentBillet.HasVariante !== 'N';
+
+    // En-têtes
+    var headers = ['Nom', 'Prénom', 'Adresse', 'Code postal', 'Ville', 'Pays', 'Type de paiement', 'Type d\'envoi', 'Nb billets normaux'];
+    if (inclureVariantes) headers.push('Nb billets variantes');
+
+    // Lignes de données
+    var lines = inscActives.map(function(ins) {
+        var adr = ins.adresse_snapshot || {};
+        var row = [
+            escapeCSV(adr.nom),
+            escapeCSV(adr.prenom),
+            escapeCSV(adr.rue),
+            escapeCSV(adr.code_postal),
+            escapeCSV(adr.ville),
+            escapeCSV(adr.pays),
+            escapeCSV(ins.mode_paiement),
+            escapeCSV(ins.mode_envoi),
+            ins.nb_normaux || 0
+        ];
+        if (inclureVariantes) row.push(ins.nb_variantes || 0);
+        return row.join(';');
+    });
+
+    // Assemblage CSV avec BOM UTF-8
+    var csvContent = '\uFEFF' + headers.join(';') + '\r\n' + lines.join('\r\n');
+
+    // Nom de fichier
+    var nomBillet = (currentBillet.NomBillet || 'export').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
+    var today = new Date().toISOString().split('T')[0];
+    var nomFichier = 'Collecte_' + nomBillet + '_' + today + '.csv';
+
+    // Téléchargement
+    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', nomFichier);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast('Export CSV téléchargé !');
 }

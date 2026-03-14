@@ -3676,25 +3676,36 @@ body.login-page {
     margin-right: 4px;
 }
 
-/* Bouton "J'ai payé" — membre */
+/* Bouton "J'ai payé" — membre (Story 9.4 — renforcé visuellement) */
 .btn-jai-paye {
-    display: inline-block;
-    padding: 4px 12px;
-    background-color: #FF9800;
-    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background-color: #E67E22;
+    color: #fff;
     border: none;
-    border-radius: 12px;
-    font-size: 0.78rem;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: background-color var(--transition-fast);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+    min-height: 44px;
 }
 
 .btn-jai-paye:hover {
-    background-color: #F57C00;
+    background-color: #D35400;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-jai-paye:active {
+    background-color: #BA4A00;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .btn-jai-paye i {
-    margin-right: 4px;
+    margin-right: 0;
 }
 
 /* Boutons action paiement — collecteur */
@@ -3814,6 +3825,26 @@ body.login-page {
 
 .btn-relance:hover {
     filter: brightness(0.9);
+}
+
+/* Story 9.5 — Bouton export CSV */
+.btn-export-csv {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: #27AE60;
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.btn-export-csv:hover {
+    background-color: #219A52;
 }
 
 .relance-ok {
