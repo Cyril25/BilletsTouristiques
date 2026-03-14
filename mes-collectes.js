@@ -255,7 +255,8 @@ function renderCollecteDetail(billetId, inscriptions) {
     html += '</div>';
     html += '<div class="compteur-item">';
     html += '<span class="compteur-label">Billets</span>';
-    html += '<span class="compteur-value">' + totalNormaux + ' normaux, ' + totalVariantes + ' variantes</span>';
+    var vne = billet && billet.VersionNormaleExiste !== false;
+    html += '<span class="compteur-value">' + (vne ? totalNormaux + ' normaux, ' : '') + totalVariantes + ' variantes' + '</span>';
     html += '</div>';
     html += '</div>';
 
@@ -288,7 +289,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         html += '<thead><tr>';
         html += '<th>Prénom / Nom</th>';
         html += '<th>Adresse</th>';
-        html += '<th>Normaux</th>';
+        if (vne) html += '<th>Normaux</th>';
         html += '<th>Variantes</th>';
         html += '<th>Paiement</th>';
         html += '<th>Envoi</th>';
@@ -311,7 +312,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '<tr>';
             html += '<td data-label="Nom">' + nomPrenom + '</td>';
             html += '<td data-label="Adresse" class="td-adresse">' + adresse + '</td>';
-            html += '<td data-label="Normaux">' + (ins.nb_normaux || 0) + '</td>';
+            if (vne) html += '<td data-label="Normaux">' + (ins.nb_normaux || 0) + '</td>';
             html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
             html += '<td data-label="Paiement">' + (ins.mode_paiement || '') + '</td>';
             html += '<td data-label="Envoi">' + (ins.mode_envoi || '') + '</td>';
@@ -323,7 +324,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '</tr>';
 
             if (commentaire) {
-                html += '<tr class="tr-commentaire"><td colspan="11"><i class="fa-solid fa-comment"></i> ' + commentaire + '</td></tr>';
+                html += '<tr class="tr-commentaire"><td colspan="' + (vne ? 11 : 10) + '"><i class="fa-solid fa-comment"></i> ' + commentaire + '</td></tr>';
             }
         }
 

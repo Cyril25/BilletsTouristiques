@@ -600,12 +600,12 @@ function ouvrirInscription(billetId) {
         var billet = allData.find(function(b) { return b.id === billetId; });
         if (!billet) return;
         var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
-        var uniquementVariante = billet.HasVariante === 'only';
-        var champNormaux = uniquementVariante
-            ? ''
-            : '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="' + (varianteActive ? '0' : '1') + '" min="0"></div>';
+        var versionNormaleExiste = billet.VersionNormaleExiste !== false;
+        var champNormaux = (!varianteActive || versionNormaleExiste)
+            ? '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="' + (varianteActive ? '0' : '1') + '" min="0"></div>'
+            : '';
         var champVariantes = varianteActive
-            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (uniquementVariante ? '1' : '0') + '" min="' + (uniquementVariante ? '1' : '0') + '"></div>'
+            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (!versionNormaleExiste ? '1' : '0') + '" min="' + (!versionNormaleExiste ? '1' : '0') + '"></div>'
             : '';
         var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + billetId + '">'
             + champNormaux

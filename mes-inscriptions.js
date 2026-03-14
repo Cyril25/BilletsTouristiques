@@ -101,7 +101,7 @@ function renderInscriptions() {
             + '</div>'
             + '<div class="inscription-card-details">'
             + '<span><i class="fa-solid fa-user"></i> ' + (billet.Collecteur || '\u2014') + '</span>'
-            + '<span><i class="fa-solid fa-ticket"></i> ' + nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : '') + '</span>'
+            + '<span><i class="fa-solid fa-ticket"></i> ' + (billet.VersionNormaleExiste === false ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
             + (billet.Categorie === 'Pré collecte'
                 ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> En attente</span>'
                 : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>')
@@ -137,7 +137,7 @@ function renderInscriptions() {
 function badgeCollecte(categorie) {
     var cat = categorie || 'Pré collecte';
     if (cat === 'Terminé') {
-        return '<span class="badge-collecte badge-collecte-termine">Terminé</span>';
+        return '<span class="badge-collecte badge-collecte-termine">Collecte terminée</span>';
     }
     if (cat === 'Collecte') {
         return '<span class="badge-collecte badge-collecte-en-cours">Collecte en cours</span>';
@@ -151,7 +151,7 @@ function badgePaiementMembre(statut, inscriptionId, categorie) {
         return '<span class="badge-paiement badge-paye">Payé</span>';
     }
     if (statut === 'declare') {
-        return '<span class="badge-paiement badge-declare">En attente de confirmation</span>';
+        return '<span class="badge-paiement badge-declare">Paiement déclaré – en attente de vérification par le collecteur</span>';
     }
     // non_paye — Story 9.8 : bloquer en pré-collecte
     if (categorie === 'Pré collecte') {

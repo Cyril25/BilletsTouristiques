@@ -905,6 +905,19 @@ function prefillForm(data) {
     var categorieField = document.getElementById('field-categorie');
     if (categorieField) categorieField.value = categorie;
 
+    // Checkbox "Version normale existe"
+    var cbNormale = document.getElementById('field-version-normale');
+    if (cbNormale) {
+        // Si HasVariante était 'only', décocher la checkbox et remettre HasVariante à vide
+        if (data.HasVariante === 'only') {
+            var hasVarEl = document.getElementById('field-has-variante');
+            if (hasVarEl) hasVarEl.value = '';
+            cbNormale.checked = false;
+        } else {
+            cbNormale.checked = data.VersionNormaleExiste !== false;
+        }
+    }
+
     // Story 9.2 — Affichage conditionnel du champ PrixVariante
     togglePrixVarianteField();
 
@@ -919,10 +932,19 @@ function prefillForm(data) {
 function togglePrixVarianteField() {
     var hasVarianteEl = document.getElementById('field-has-variante');
     var groupPrixVariante = document.getElementById('group-prix-variante');
+    var groupVersionNormale = document.getElementById('group-version-normale');
     if (!hasVarianteEl || !groupPrixVariante) return;
     var val = hasVarianteEl.value;
     var show = val && val !== 'N';
     groupPrixVariante.style.display = show ? '' : 'none';
+    if (groupVersionNormale) {
+        groupVersionNormale.style.display = show ? '' : 'none';
+        // Quand pas de variante, remettre la checkbox cochée par défaut
+        if (!show) {
+            var cbNormale = document.getElementById('field-version-normale');
+            if (cbNormale) cbNormale.checked = true;
+        }
+    }
     if (!show) {
         var prixVarEl = document.getElementById('field-prix-variante');
         if (prixVarEl) prixVarEl.value = '';
@@ -1116,7 +1138,13 @@ function collectFormData() {
         Reference: getValue('field-reference'),
         Millesime: getValue('field-millesime'),
         Version: getValue('field-version'),
-        HasVariante: getValue('field-has-variante'),
+        HasVariante: getValue('field-has-variante') || null,
+        VersionNormaleExiste: (function() {
+            var hasVar = document.getElementById('field-has-variante');
+            var cb = document.getElementById('field-version-normale');
+            var varActive = hasVar && hasVar.value && hasVar.value !== 'N';
+            return varActive && cb ? cb.checked : true;
+        })(),
         Dep: getValue('field-dep'),
         Cp: getValue('field-cp'),
         Pays: getValue('field-pays'),
