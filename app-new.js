@@ -466,13 +466,25 @@ function showMore() {
                 (function() {
                     var parts = [];
                     if (item.Collecteur) parts.push('Par ' + item.Collecteur);
-                    if (item.Prix) {
-                        var prixTxt = 'au prix de ' + item.Prix + ' euros';
-                        if (item.PrixVariante && item.PrixVariante !== item.Prix) {
-                            prixTxt += ' / Variante : ' + item.PrixVariante + ' euros';
-                        }
-                        parts.push(prixTxt);
+
+                    var versionNormaleExiste = item.VersionNormaleExiste !== false;
+                    var varianteVal = item.HasVariante || '';
+                    var varianteActive = varianteVal && varianteVal !== 'N';
+
+                    var prixNormal = item.Prix ? parseFloat(item.Prix) : 0;
+                    var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
+
+                    if (!versionNormaleExiste && varianteActive && prixVar) {
+                        // Uniquement variante
+                        parts.push('au prix de ' + prixVar + ' euros uniquement ' + varianteVal);
+                    } else if (versionNormaleExiste && varianteActive && prixNormal) {
+                        // Normale + variante
+                        parts.push('au prix de ' + prixNormal + ' euros version normale & ' + prixVar + ' euros version ' + varianteVal);
+                    } else if (prixNormal) {
+                        // Normale seule
+                        parts.push('au prix de ' + prixNormal + ' euros');
                     }
+
                     if (parts.length === 0) return '';
                     return '<div>' + parts.join(' ') + ' ' + (item.FDP_Com || '') + '</div>';
                 })() +
@@ -631,16 +643,12 @@ function buildVersionBadgesHtml(item) {
     var versionNormaleExiste = item.VersionNormaleExiste !== false;
     var varianteVal = item.HasVariante || '';
     var varianteActive = varianteVal && varianteVal !== 'N';
-    var varianteLabel = '';
-    if (varianteVal === 'anniversary') varianteLabel = 'Anniversaire';
-    else if (varianteVal === 'doré') varianteLabel = 'Doré';
-
     var html = '<div class="version-badges">';
     if (!versionNormaleExiste) {
         html += '<span class="version-badge version-badge--warning"><i class="fa-solid fa-triangle-exclamation"></i> Pas de version normale</span>';
     }
-    if (varianteActive && varianteLabel) {
-        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + varianteLabel + '</span>';
+    if (varianteActive) {
+        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + varianteVal + '</span>';
     } else if (varianteVal === 'N') {
         html += '<span class="version-badge version-badge--no-variante">Pas de variante</span>';
     }

@@ -567,6 +567,14 @@ function initPanel() {
         });
     }
 
+    // Toggle prix normal quand VersionNormaleExiste change
+    var cbVersionNormale = document.getElementById('field-version-normale');
+    if (cbVersionNormale) {
+        cbVersionNormale.addEventListener('change', function() {
+            togglePrixVarianteField();
+        });
+    }
+
     // Story 9.3 — Mise à jour état des champs date quand catégorie change
     // Story 9.6 — Toggle prix fields quand catégorie change
     var categorieSelect = document.getElementById('field-categorie');
@@ -1009,18 +1017,34 @@ function prefillForm(data) {
     togglePrixFields();
 }
 
-// --- Story 9.9 — Affichage conditionnel du champ PrixVariante ---
+// --- Story 9.9 — Affichage conditionnel des champs Prix / PrixVariante ---
 function togglePrixVarianteField() {
     var hasVarianteEl = document.getElementById('field-has-variante');
     var groupPrixVariante = document.getElementById('group-prix-variante');
-    if (!hasVarianteEl || !groupPrixVariante) return;
-    var val = hasVarianteEl.value;
-    var show = val && val !== 'N';
-    groupPrixVariante.style.display = show ? '' : 'none';
-    if (!show) {
-        var prixVarEl = document.getElementById('field-prix-variante');
-        if (prixVarEl) prixVarEl.value = '';
+    var cbNormale = document.getElementById('field-version-normale');
+    var groupPrix = document.getElementById('field-prix');
+    var labelPrix = groupPrix ? groupPrix.closest('.admin-form-group') : null;
+
+    // Affichage du prix variante : seulement si variante active
+    if (hasVarianteEl && groupPrixVariante) {
+        var val = hasVarianteEl.value;
+        var showVariante = val && val !== 'N';
+        groupPrixVariante.style.display = showVariante ? '' : 'none';
+        if (!showVariante) {
+            var prixVarEl = document.getElementById('field-prix-variante');
+            if (prixVarEl) prixVarEl.value = '';
+        }
     }
+
+    // Affichage du prix normal : masqué si pas de version normale
+    if (cbNormale && labelPrix) {
+        var normaleActive = cbNormale.checked;
+        labelPrix.style.display = normaleActive ? '' : 'none';
+        if (!normaleActive && groupPrix) {
+            groupPrix.value = '';
+        }
+    }
+
     // Effacer l'erreur de validation croisee quand on change la variante
     var errorVariante = document.getElementById('error-has-variante');
     if (errorVariante) errorVariante.textContent = '';
