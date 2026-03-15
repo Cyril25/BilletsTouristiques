@@ -1232,7 +1232,9 @@ body.login-page {
 
 /* --- Status badge pill --- */
 .admin-badge-status {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: 12px;
     font-size: 0.75rem;
@@ -1241,7 +1243,6 @@ body.login-page {
     white-space: nowrap;
     line-height: 1;
     min-height: 22px;
-    text-align: center;
 }
 
 /* --- Empty state --- */
@@ -2646,18 +2647,20 @@ body.login-page {
     background: none;
     border: 1px solid #ddd;
     border-radius: var(--radius-sm);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: var(--spacing-xs);
     cursor: pointer;
     font-size: 0.8rem;
     min-height: 36px;
     min-width: 36px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     transition: all var(--transition-fast);
 }
 
 .admin-card-edit-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
     color: var(--color-primary);
 }
 
