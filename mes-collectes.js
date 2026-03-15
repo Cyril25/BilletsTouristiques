@@ -570,8 +570,15 @@ function renderPreparationEnvois(inscriptions, billetsMap) {
             var billet = billetsMap[insc.billet_id] || {};
             var envVne = billet.VersionNormaleExiste !== false;
             var envQty = envVne ? 'N:' + (insc.nb_normaux || 0) + (insc.nb_variantes > 0 ? ' V:' + insc.nb_variantes : '') : 'V:' + (insc.nb_variantes || 0);
+            var envRefParts = [];
+            if (billet.Reference) envRefParts.push(billet.Reference);
+            var envMilVersion = '';
+            if (billet.Millesime) envMilVersion += billet.Millesime;
+            if (billet.Version) envMilVersion += '-' + billet.Version;
+            if (envMilVersion) envRefParts.push(envMilVersion);
+            var envRefPrefix = envRefParts.length > 0 ? envRefParts.join(' - ') + ' ' : '';
             lignes += '<div class="envoi-ligne">'
-                + '<span class="envoi-billet">' + (billet.NomBillet || '?') + '</span>'
+                + '<span class="envoi-billet">' + envRefPrefix + (billet.NomBillet || '?') + '</span>'
                 + '<span class="envoi-qty">' + envQty + '</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<span class="badge-' + (insc.fdp_regles ? 'paye' : 'non-paye') + '">' + (insc.fdp_regles ? 'FDP OK' : 'FDP —') + '</span>'
@@ -737,8 +744,15 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
             var prix = parseFloat(billet.Prix || 0);
             var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
             var montant = ((prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0))).toFixed(2);
+            var payRefParts = [];
+            if (billet.Reference) payRefParts.push(billet.Reference);
+            var payMilVersion = '';
+            if (billet.Millesime) payMilVersion += billet.Millesime;
+            if (billet.Version) payMilVersion += '-' + billet.Version;
+            if (payMilVersion) payRefParts.push(payMilVersion);
+            var payRefPrefix = payRefParts.length > 0 ? payRefParts.join(' - ') + ' ' : '';
             lignes += '<div class="envoi-ligne">'
-                + '<span class="envoi-billet">' + (billet.NomBillet || '?') + '</span>'
+                + '<span class="envoi-billet">' + payRefPrefix + (billet.NomBillet || '?') + '</span>'
                 + '<span class="envoi-montant">' + montant + ' €</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<button onclick="validerPaiementVue(' + insc.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement"><i class="fa-solid fa-check"></i></button>'
