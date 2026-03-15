@@ -1193,12 +1193,17 @@ body.login-page {
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     display: flex;
     flex-direction: column;
+    position: relative;
     gap: var(--spacing-sm);
 }
 
 .admin-card-billet:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.admin-card-billet.popup-open {
+    z-index: 100;
 }
 
 .admin-card-header {
@@ -2543,11 +2548,6 @@ body.login-page {
 .card-badge-wrapper {
     position: relative;
     display: inline-block;
-    z-index: 1;
-}
-
-.card-badge-wrapper.popup-open {
-    z-index: 999;
 }
 
 /* Mini-formulaire collecte rapide */
