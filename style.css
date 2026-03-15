@@ -2549,6 +2549,82 @@ body.login-page {
     z-index: 999;
 }
 
+/* Mini-formulaire collecte rapide */
+.quick-collecte-form {
+    padding: var(--spacing-xs) 0 0;
+}
+
+.quick-collecte-form__title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-secondary, #555);
+    margin: 0 0 var(--spacing-sm);
+}
+
+.quick-collecte-form__field {
+    margin-bottom: var(--spacing-sm);
+}
+
+.quick-collecte-form__field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 2px;
+    color: #333;
+}
+
+.quick-collecte-form__select,
+.quick-collecte-form__input {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid #ccc;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    box-sizing: border-box;
+}
+
+.quick-collecte-form__select:focus,
+.quick-collecte-form__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb, 59, 130, 246), 0.2);
+}
+
+.quick-collecte-form__actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+}
+
+.quick-collecte-form__btn {
+    flex: 1;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 36px;
+}
+
+.quick-collecte-form__btn--cancel {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.quick-collecte-form__btn--cancel:hover {
+    background: #d1d5db;
+}
+
+.quick-collecte-form__btn--confirm {
+    background: var(--color-primary, #3b82f6);
+    color: #fff;
+}
+
+.quick-collecte-form__btn--confirm:hover {
+    opacity: 0.9;
+}
+
 .admin-badge-status.clickable {
     cursor: pointer;
 }

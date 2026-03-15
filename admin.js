@@ -1564,7 +1564,7 @@ function handleQuickStatusChange(chip) {
         if (!billetData.Collecteur) missing.push('Collecteur');
         if (!billetData.Prix || parseFloat(billetData.Prix) <= 0) missing.push('Prix');
         if (missing.length > 0) {
-            showToast('Impossible de passer en Collecte : ' + missing.join(' et ') + ' manquant(s). Modifiez le billet d\'abord.', 'error');
+            showCollecteQuickForm(docId, billetData);
             return;
         }
     }
@@ -1633,6 +1633,142 @@ function updateInMemoryStatus(docId, newStatus) {
             break;
         }
     }
+}
+
+// ============================================================
+// 14b. MINI-FORMULAIRE COLLECTE RAPIDE
+// ============================================================
+
+function showCollecteQuickForm(docId, billetData) {
+    var popup = document.getElementById('quick-status-popup-' + docId);
+    if (!popup) return;
+
+    var existingCollecteur = billetData.Collecteur || '';
+    var existingPrix = billetData.Prix || '';
+
+    // Construire les options du select collecteur
+    var collecteurOptions = '<option value="">— Collecteur —</option>';
+    collecteursList.forEach(function(coll) {
+        var selected = coll.alias === existingCollecteur ? ' selected' : '';
+        collecteurOptions += '<option value="' + escapeAttr(coll.alias) + '"' + selected + '>' + escapeHtml(coll.alias) + '</option>';
+    });
+
+    var formHtml =
+        '<div class="quick-collecte-form" id="quick-collecte-form-' + docId + '">' +
+            '<p class="quick-collecte-form__title">Infos requises pour passer en Collecte</p>' +
+            '<div class="quick-collecte-form__field">' +
+                '<label for="quick-collecteur-' + docId + '">Collecteur *</label>' +
+                '<select id="quick-collecteur-' + docId + '" class="quick-collecte-form__select">' +
+                    collecteurOptions +
+                '</select>' +
+            '</div>' +
+            '<div class="quick-collecte-form__field">' +
+                '<label for="quick-prix-' + docId + '">Prix * (€)</label>' +
+                '<input type="number" id="quick-prix-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrix)) + '">' +
+            '</div>' +
+            '<div class="quick-collecte-form__actions">' +
+                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--cancel" onclick="cancelQuickCollecte(\'' + docId + '\')">Annuler</button>' +
+                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--confirm" onclick="confirmQuickCollecte(\'' + docId + '\')">Valider</button>' +
+            '</div>' +
+        '</div>';
+
+    // Masquer les chips et afficher le formulaire
+    var chipsContainer = popup.querySelector('.quick-status-chips');
+    if (chipsContainer) chipsContainer.style.display = 'none';
+
+    // Supprimer un formulaire précédent s'il existe
+    var oldForm = popup.querySelector('.quick-collecte-form');
+    if (oldForm) oldForm.remove();
+
+    popup.insertAdjacentHTML('beforeend', formHtml);
+}
+
+function cancelQuickCollecte(docId) {
+    var popup = document.getElementById('quick-status-popup-' + docId);
+    if (!popup) return;
+
+    var form = popup.querySelector('.quick-collecte-form');
+    if (form) form.remove();
+
+    var chipsContainer = popup.querySelector('.quick-status-chips');
+    if (chipsContainer) chipsContainer.style.display = '';
+
+    closeAllStatusPopups();
+}
+
+function confirmQuickCollecte(docId) {
+    var collecteurSelect = document.getElementById('quick-collecteur-' + docId);
+    var prixInput = document.getElementById('quick-prix-' + docId);
+    if (!collecteurSelect || !prixInput) return;
+
+    var collecteur = collecteurSelect.value;
+    var prix = prixInput.value;
+
+    // Validation
+    var errors = [];
+    if (!collecteur) errors.push('Collecteur');
+    if (!prix || parseFloat(prix) <= 0) errors.push('Prix');
+    if (errors.length > 0) {
+        showToast('Veuillez renseigner : ' + errors.join(' et '), 'error');
+        return;
+    }
+
+    // Trouver les données du billet
+    var billetData = null;
+    for (var k = 0; k < adminBillets.length; k++) {
+        if (String(adminBillets[k]._id) === String(docId)) { billetData = adminBillets[k]; break; }
+    }
+
+    var badge = document.querySelector('.admin-badge-status[data-doc-id="' + docId + '"]');
+    if (!badge) return;
+    var previousStatus = badge.getAttribute('data-current-status');
+    var newStatus = 'Collecte';
+
+    var existingDates = {
+        DatePre: billetData ? billetData.DatePre : null,
+        DateColl: billetData ? billetData.DateColl : null,
+        DateFin: billetData ? billetData.DateFin : null
+    };
+    var dateUpdates = getDateUpdatesForStatusChange(previousStatus, newStatus, existingDates);
+    var patchBody = Object.assign({ Categorie: newStatus, Collecteur: collecteur, Prix: parseFloat(prix) }, dateUpdates);
+
+    // Mise à jour optimiste
+    updateBadgeUI(badge, newStatus);
+    closeAllStatusPopups();
+
+    supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
+        method: 'PATCH',
+        body: JSON.stringify(patchBody)
+    })
+        .then(function() {
+            updateInMemoryStatus(docId, newStatus);
+            if (billetData) {
+                billetData.Collecteur = collecteur;
+                billetData.Prix = parseFloat(prix);
+                for (var dateKey in dateUpdates) {
+                    billetData[dateKey] = dateUpdates[dateKey];
+                }
+            }
+
+            var popup = document.getElementById('quick-status-popup-' + docId);
+            if (popup) {
+                var form = popup.querySelector('.quick-collecte-form');
+                if (form) form.remove();
+                var chipsContainer = popup.querySelector('.quick-status-chips');
+                if (chipsContainer) {
+                    chipsContainer.style.display = '';
+                    chipsContainer.innerHTML = buildStatusChipsHtml(docId, newStatus);
+                }
+            }
+
+            renderStatusCounters();
+            showToast('Statut mis a jour : ' + newStatus + ' (Collecteur: ' + collecteur + ', Prix: ' + prix + '€)', 'success');
+        })
+        .catch(function(error) {
+            console.error('Erreur changement statut:', error);
+            updateBadgeUI(badge, previousStatus);
+            showToast('Erreur : ' + error.message, 'error');
+        });
 }
 
 // ============================================================
