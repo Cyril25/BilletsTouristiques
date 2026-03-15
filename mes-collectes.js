@@ -729,7 +729,15 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
     var container = document.getElementById('paiements-view');
     if (!container) return;
 
-    var html = '';
+    var totalEnAttente = 0;
+    inscriptions.forEach(function(insc) {
+        var billet = billetsMap[insc.billet_id] || {};
+        var prix = parseFloat(billet.Prix || 0);
+        var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+        totalEnAttente += (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
+    });
+
+    var html = '<div class="paiement-total-attente">En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong></div>';
     var emails = Object.keys(groupes);
     for (var g = 0; g < emails.length; g++) {
         var email = emails[g];
@@ -751,8 +759,13 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
             if (billet.Version) payMilVersion += '-' + billet.Version;
             if (payMilVersion) payRefParts.push(payMilVersion);
             var payRefPrefix = payRefParts.length > 0 ? payRefParts.join(' - ') + ' ' : '';
+            var payDateStr = '';
+            if (insc.date_inscription) {
+                var payDate = new Date(insc.date_inscription);
+                payDateStr = ' (' + payDate.toLocaleDateString('fr-FR') + ')';
+            }
             lignes += '<div class="envoi-ligne">'
-                + '<span class="envoi-billet">' + payRefPrefix + (billet.NomBillet || '?') + '</span>'
+                + '<span class="envoi-billet">' + payRefPrefix + (billet.NomBillet || '?') + payDateStr + '</span>'
                 + '<span class="envoi-montant">' + montant + ' €</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<button onclick="validerPaiementVue(' + insc.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement"><i class="fa-solid fa-check"></i></button>'

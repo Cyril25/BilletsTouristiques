@@ -3751,6 +3751,16 @@ body.login-page {
     border-bottom-color: var(--color-primary);
 }
 
+.paiement-total-attente {
+    background: var(--color-primary);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.1rem;
+    text-align: center;
+}
+
 /* --- Groupes par membre --- */
 .envoi-groupe {
     background: white;
