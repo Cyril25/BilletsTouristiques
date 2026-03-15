@@ -63,7 +63,7 @@ function checkCollecteur() {
 var mesInscriptionsParBillet = {};
 
 function loadMesCollectes() {
-    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","PrixVariante","DateColl","DateFin","HasVariante","Date","Reference","Millesime","Version"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
+    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
         .then(function(billets) {
             mesBillets = billets || [];
             if (mesBillets.length === 0) {
@@ -134,8 +134,18 @@ function renderCollectesList() {
         html += '<h3>' + (b.NomBillet || '') + '</h3>';
         html += '<span class="collecte-status ' + statusClass + '">' + statusLabel + '</span>';
         html += '</div>';
+        var bVne = b.VersionNormaleExiste !== false;
+        var bVarActive = b.HasVariante && b.HasVariante !== 'N';
+        var bPrixVar = (b.PrixVariante !== null && b.PrixVariante !== undefined && b.PrixVariante !== '') ? parseFloat(b.PrixVariante) : null;
+
         html += '<div class="collecte-card-info">';
-        if (b.Prix) html += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + '</span>';
+        if (bVne && b.Prix) {
+            html += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + (bVarActive && bPrixVar !== null ? ' / ' + bPrixVar + ' (var.)' : '') + '</span>';
+        } else if (!bVne && bVarActive && bPrixVar !== null) {
+            html += '<span><i class="fa-solid fa-euro-sign"></i> ' + bPrixVar + ' (var.)</span>';
+        } else if (b.Prix) {
+            html += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + '</span>';
+        }
         if (b.DateColl) html += '<span><i class="fa-solid fa-calendar"></i> ' + b.DateColl + '</span>';
         html += '</div>';
 
@@ -398,7 +408,8 @@ function updateCompteurs() {
     // Update counter display
     var compteurs = document.querySelectorAll('.compteur-value');
     if (compteurs.length >= 1) compteurs[0].textContent = totalConfirmes + '/' + totalInscrits + ' payés';
-    if (compteurs.length >= 2) compteurs[1].textContent = totalNormaux + ' normaux, ' + totalVariantes + ' variantes';
+    var vne = currentBillet && currentBillet.VersionNormaleExiste !== false;
+    if (compteurs.length >= 2) compteurs[1].textContent = (vne ? totalNormaux + ' normaux, ' : '') + totalVariantes + ' variantes';
 
     var progressFill = document.querySelector('.progress-fill');
     if (progressFill) progressFill.style.width = progressPct + '%';
@@ -541,9 +552,11 @@ function renderPreparationEnvois(inscriptions, billetsMap) {
         for (var l = 0; l < groupe.inscriptions.length; l++) {
             var insc = groupe.inscriptions[l];
             var billet = billetsMap[insc.billet_id] || {};
+            var envVne = billet.VersionNormaleExiste !== false;
+            var envQty = envVne ? 'N:' + (insc.nb_normaux || 0) + (insc.nb_variantes > 0 ? ' V:' + insc.nb_variantes : '') : 'V:' + (insc.nb_variantes || 0);
             lignes += '<div class="envoi-ligne">'
                 + '<span class="envoi-billet">' + (billet.NomBillet || '?') + '</span>'
-                + '<span class="envoi-qty">N:' + (insc.nb_normaux || 0) + (insc.nb_variantes > 0 ? ' V:' + insc.nb_variantes : '') + '</span>'
+                + '<span class="envoi-qty">' + envQty + '</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<span class="badge-' + (insc.fdp_regles ? 'paye' : 'non-paye') + '">' + (insc.fdp_regles ? 'FDP OK' : 'FDP —') + '</span>'
                 + '<button onclick="marquerEnvoye(' + insc.id + ')" class="btn-marquer-envoye" title="Marquer envoyé"><i class="fa-solid fa-check"></i></button>'
@@ -700,10 +713,11 @@ function renderRelanceModal(billet, impayes) {
         var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
         var objet = 'Relance paiement — ' + (billet.NomBillet || 'Collecte');
 
+        var relVne = billet.VersionNormaleExiste !== false;
         var corps = 'Bonjour ' + prenom + ',\n\n'
             + 'Je me permets de vous relancer concernant votre inscription à la collecte "' + (billet.NomBillet || '') + '".\n\n'
             + 'Détails :\n'
-            + '- Billets normaux : ' + (insc.nb_normaux || 0) + '\n'
+            + (relVne ? '- Billets normaux : ' + (insc.nb_normaux || 0) + '\n' : '')
             + (insc.nb_variantes > 0 ? '- Billets variantes : ' + insc.nb_variantes + '\n' : '')
             + '- Montant dû : ' + montant.toFixed(2) + ' €\n'
             + '- Mode d\'envoi : ' + (insc.mode_envoi || 'Normal') + '\n'
@@ -800,9 +814,11 @@ function exporterCSV(billetId) {
     }
 
     var inclureVariantes = currentBillet.HasVariante && currentBillet.HasVariante !== 'N';
+    var csvVne = currentBillet.VersionNormaleExiste !== false;
 
     // En-têtes
-    var headers = ['Nom', 'Prénom', 'Adresse', 'Code postal', 'Ville', 'Pays', 'Type de paiement', 'Type d\'envoi', 'Nb billets normaux'];
+    var headers = ['Nom', 'Prénom', 'Adresse', 'Code postal', 'Ville', 'Pays', 'Type de paiement', 'Type d\'envoi'];
+    if (csvVne) headers.push('Nb billets normaux');
     if (inclureVariantes) headers.push('Nb billets variantes');
 
     // Lignes de données
@@ -816,9 +832,9 @@ function exporterCSV(billetId) {
             escapeCSV(adr.ville),
             escapeCSV(adr.pays),
             escapeCSV(ins.mode_paiement),
-            escapeCSV(ins.mode_envoi),
-            ins.nb_normaux || 0
+            escapeCSV(ins.mode_envoi)
         ];
+        if (csvVne) row.push(ins.nb_normaux || 0);
         if (inclureVariantes) row.push(ins.nb_variantes || 0);
         return row.join(';');
     });
