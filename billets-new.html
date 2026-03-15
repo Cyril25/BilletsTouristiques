@@ -47,12 +47,14 @@
                 </div>
             </div>
 
-            <div class="filter-group"><label for="sel-cat">Catégorie</label><select id="sel-cat" onchange="applyFilters()"><option value="">Tout</option></select></div>
+            <div class="filter-group"><label for="sel-coll">Collecteur</label><select id="sel-coll" onchange="applyFilters()"><option value="">Tout</option></select></div>
             <div class="filter-group"><label for="sel-pays">Pays</label><select id="sel-pays" onchange="applyFilters()"><option value="">Tout</option></select></div>
             <div class="filter-group"><label for="sel-year">Millésime</label><select id="sel-year" onchange="applyFilters()"><option value="">Tout</option></select></div>
             <div class="filter-group"><label for="sel-theme">Thème</label><select id="sel-theme" onchange="applyFilters()"><option value="">Tout</option></select></div>
-            <div class="filter-group"><label for="sel-coll">Collecteur</label><select id="sel-coll" onchange="applyFilters()"><option value="">Tout</option></select></div>
         </div>
+
+        <!-- Filtres par catégorie (chips) -->
+        <div id="billets-status-counters" class="admin-status-counters"></div>
 
         <div id="cards-grid">
             <p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement de la collection...</p>

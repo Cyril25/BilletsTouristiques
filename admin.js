@@ -34,11 +34,11 @@ var adminBillets = [];
 
 // Categories (= statuts) — valeurs reelles du Google Sheet
 var CATEGORIES = [
-    'Jamais édité, projet',
     'Pré collecte',
     'Collecte',
+    'Terminé',
     'Pas de collecte',
-    'Terminé'
+    'Jamais édité, projet'
 ];
 var CATEGORIE_FLOW = {
     'Jamais édité, projet': 'Pré collecte',

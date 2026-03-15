@@ -11,6 +11,18 @@ var BATCH_SIZE = 50;
 var mesInscriptions = {};
 var collecteursMap = {};
 
+// Filtre par catégorie actif
+var billetsActiveStatusFilter = 'tous';
+
+// Catégories dans l'ordre d'affichage
+var BILLETS_CATEGORIES = [
+    'Pré collecte',
+    'Collecte',
+    'Terminé',
+    'Pas de collecte',
+    'Jamais édité, projet'
+];
+
 // Couleurs des categories (meme mapping que admin.js)
 var CATEGORIE_COLORS = {
     'Collecte': '#A4C2F4',
@@ -23,6 +35,14 @@ var CATEGORIE_COLORS = {
 
 function getCategorieColor(categorie) {
     return CATEGORIE_COLORS[categorie || 'Non defini'] || CATEGORIE_COLORS['Non defini'];
+}
+
+function getTextColorForBg(hex) {
+    if (!hex || hex.charAt(0) !== '#') return '#000';
+    var r = parseInt(hex.substr(1, 2), 16);
+    var g = parseInt(hex.substr(3, 2), 16);
+    var b = parseInt(hex.substr(5, 2), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#000' : '#fff';
 }
 
 // Référence au slider (div vide dans le HTML)
@@ -201,7 +221,6 @@ function normalizeDate(str) {
 
 function populateFilters() {
     var maps = [
-        { id: 'sel-cat', key: 'Categorie' },
         { id: 'sel-pays', key: 'Pays' },
         { id: 'sel-year', key: 'Millesime' },
         { id: 'sel-theme', key: 'Theme' },
@@ -228,6 +247,54 @@ function populateFilters() {
         });
         select.innerHTML = h;
     });
+
+    renderBilletsStatusCounters();
+}
+
+function renderBilletsStatusCounters() {
+    var container = document.getElementById('billets-status-counters');
+    if (!container) return;
+
+    var counts = {};
+    var total = allData.length;
+    allData.forEach(function(billet) {
+        var statut = billet.Categorie || 'Non defini';
+        counts[statut] = (counts[statut] || 0) + 1;
+    });
+
+    var statutOrder = BILLETS_CATEGORIES.slice();
+    Object.keys(counts).forEach(function(s) {
+        if (statutOrder.indexOf(s) === -1) statutOrder.push(s);
+    });
+
+    var html = '<button class="admin-status-counter' +
+        (billetsActiveStatusFilter === 'tous' ? ' admin-status-counter--active' : '') +
+        '" data-status="tous" onclick="billetsFilterByStatus(\'tous\')" aria-pressed="' +
+        (billetsActiveStatusFilter === 'tous' ? 'true' : 'false') + '">' +
+        '<span class="admin-status-counter__count">' + total + '</span>' +
+        '<span class="admin-status-counter__label">Tous</span></button>';
+
+    statutOrder.forEach(function(statut) {
+        if (!counts[statut]) return;
+        var isActive = billetsActiveStatusFilter === statut;
+        var color = getCategorieColor(statut);
+        html += '<button class="admin-status-counter' +
+            (isActive ? ' admin-status-counter--active' : '') +
+            '" data-status="' + statut.replace(/"/g, '&quot;') + '" onclick="billetsFilterByStatus(\'' +
+            statut.replace(/'/g, "\\'") + '\')" aria-pressed="' +
+            (isActive ? 'true' : 'false') +
+            '" style="border-left-color: ' + color + ';">' +
+            '<span class="admin-status-counter__count">' + counts[statut] + '</span>' +
+            '<span class="admin-status-counter__label">' + statut + '</span></button>';
+    });
+
+    container.innerHTML = html;
+}
+
+function billetsFilterByStatus(statut) {
+    billetsActiveStatusFilter = statut;
+    renderBilletsStatusCounters();
+    applyFilters();
 }
 
 function applyFilters(silent) {
@@ -238,7 +305,7 @@ function applyFilters(silent) {
 
     var searchInput = document.getElementById('search-input');
     var s = searchInput ? searchInput.value.toLowerCase() : '';
-    var fCat = document.getElementById('sel-cat').value;
+    var fCat = billetsActiveStatusFilter !== 'tous' ? billetsActiveStatusFilter : '';
     var fPays = document.getElementById('sel-pays').value;
     var fYear = document.getElementById('sel-year').value;
     var fTheme = document.getElementById('sel-theme').value;
@@ -260,7 +327,7 @@ function applyFilters(silent) {
             (!fEnd || (itemDate && itemDate <= fEnd));
 
         return txt && matchDate &&
-            (!fCat || item.Categorie === fCat) &&
+            (!fCat || (item.Categorie || 'Non defini') === fCat) &&
             (!fPays || item.Pays === fPays) && (!fYear || item.Millesime == fYear) &&
             (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl);
     });
