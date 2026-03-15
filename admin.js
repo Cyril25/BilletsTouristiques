@@ -1719,6 +1719,10 @@ function showCollecteQuickForm(docId, billetData) {
 
     var existingCollecteur = billetData.Collecteur || '';
     var existingPrix = billetData.Prix || '';
+    var existingPrixVariante = billetData.PrixVariante || '';
+    var versionNormaleExiste = billetData.VersionNormaleExiste !== false;
+    var varianteVal = billetData.HasVariante || '';
+    var varianteActive = varianteVal && varianteVal !== 'N';
 
     // Construire les options du select collecteur
     var collecteurOptions = '<option value="">— Collecteur —</option>';
@@ -1726,6 +1730,22 @@ function showCollecteQuickForm(docId, billetData) {
         var selected = coll.alias === existingCollecteur ? ' selected' : '';
         collecteurOptions += '<option value="' + escapeAttr(coll.alias) + '"' + selected + '>' + escapeHtml(coll.alias) + '</option>';
     });
+
+    // Champ prix normal (masqué si pas de version normale)
+    var prixNormalHtml = versionNormaleExiste
+        ? '<div class="quick-collecte-form__field">' +
+              '<label for="quick-prix-' + docId + '">Prix normal * (€)</label>' +
+              '<input type="number" id="quick-prix-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrix)) + '">' +
+          '</div>'
+        : '';
+
+    // Champ prix variante (affiché si variante active)
+    var prixVarianteHtml = varianteActive
+        ? '<div class="quick-collecte-form__field">' +
+              '<label for="quick-prix-variante-' + docId + '">Prix ' + escapeHtml(varianteVal) + ' * (€)</label>' +
+              '<input type="number" id="quick-prix-variante-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrixVariante)) + '">' +
+          '</div>'
+        : '';
 
     var formHtml =
         '<div class="quick-collecte-form" id="quick-collecte-form-' + docId + '">' +
@@ -1736,10 +1756,8 @@ function showCollecteQuickForm(docId, billetData) {
                     collecteurOptions +
                 '</select>' +
             '</div>' +
-            '<div class="quick-collecte-form__field">' +
-                '<label for="quick-prix-' + docId + '">Prix * (€)</label>' +
-                '<input type="number" id="quick-prix-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrix)) + '">' +
-            '</div>' +
+            prixNormalHtml +
+            prixVarianteHtml +
             '<div class="quick-collecte-form__actions">' +
                 '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--cancel" onclick="cancelQuickCollecte(\'' + docId + '\')">Annuler</button>' +
                 '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--confirm" onclick="confirmQuickCollecte(\'' + docId + '\')">Valider</button>' +
@@ -1773,15 +1791,18 @@ function cancelQuickCollecte(docId) {
 function confirmQuickCollecte(docId) {
     var collecteurSelect = document.getElementById('quick-collecteur-' + docId);
     var prixInput = document.getElementById('quick-prix-' + docId);
-    if (!collecteurSelect || !prixInput) return;
+    var prixVarianteInput = document.getElementById('quick-prix-variante-' + docId);
+    if (!collecteurSelect) return;
 
     var collecteur = collecteurSelect.value;
-    var prix = prixInput.value;
+    var prix = prixInput ? prixInput.value : '';
+    var prixVariante = prixVarianteInput ? prixVarianteInput.value : '';
 
     // Validation
     var errors = [];
     if (!collecteur) errors.push('Collecteur');
-    if (!prix || parseFloat(prix) <= 0) errors.push('Prix');
+    if (prixInput && (!prix || parseFloat(prix) <= 0)) errors.push('Prix normal');
+    if (prixVarianteInput && (!prixVariante || parseFloat(prixVariante) <= 0)) errors.push('Prix variante');
     if (errors.length > 0) {
         showToast('Veuillez renseigner : ' + errors.join(' et '), 'error');
         return;
@@ -1804,7 +1825,9 @@ function confirmQuickCollecte(docId) {
         DateFin: billetData ? billetData.DateFin : null
     };
     var dateUpdates = getDateUpdatesForStatusChange(previousStatus, newStatus, existingDates);
-    var patchBody = Object.assign({ Categorie: newStatus, Collecteur: collecteur, Prix: parseFloat(prix) }, dateUpdates);
+    var patchBody = Object.assign({ Categorie: newStatus, Collecteur: collecteur }, dateUpdates);
+    if (prixInput) patchBody.Prix = parseFloat(prix);
+    if (prixVarianteInput) patchBody.PrixVariante = parseFloat(prixVariante);
 
     // Mise à jour optimiste
     updateBadgeUI(badge, newStatus);
@@ -1818,7 +1841,8 @@ function confirmQuickCollecte(docId) {
             updateInMemoryStatus(docId, newStatus);
             if (billetData) {
                 billetData.Collecteur = collecteur;
-                billetData.Prix = parseFloat(prix);
+                if (prixInput) billetData.Prix = parseFloat(prix);
+                if (prixVarianteInput) billetData.PrixVariante = parseFloat(prixVariante);
                 for (var dateKey in dateUpdates) {
                     billetData[dateKey] = dateUpdates[dateKey];
                 }
@@ -1836,7 +1860,9 @@ function confirmQuickCollecte(docId) {
             }
 
             renderStatusCounters();
-            showToast('Statut mis a jour : ' + newStatus + ' (Collecteur: ' + collecteur + ', Prix: ' + prix + '€)', 'success');
+            var toastPrix = prix ? prix + '€' : '';
+            if (prixVariante) toastPrix += (toastPrix ? ' / Variante: ' : '') + prixVariante + '€';
+            showToast('Statut mis a jour : ' + newStatus + ' (Collecteur: ' + collecteur + (toastPrix ? ', Prix: ' + toastPrix : '') + ')', 'success');
         })
         .catch(function(error) {
             console.error('Erreur changement statut:', error);
