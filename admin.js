@@ -1099,10 +1099,28 @@ function validateBilletForm() {
     }
 
     var prix = document.getElementById('field-prix');
+    var categorie = document.getElementById('field-categorie');
+    var isCollecte = categorie && categorie.value === 'Collecte';
+
     if (prix && prix.value !== '' && (isNaN(parseFloat(prix.value)) || parseFloat(prix.value) < 0)) {
         setFieldError('field-prix', 'error-prix', 'Le prix doit etre un nombre positif');
         valid = false;
         if (!firstErrorField) firstErrorField = prix;
+    }
+
+    // Prix obligatoire en statut Collecte
+    if (isCollecte && prix && (prix.value.trim() === '' || parseFloat(prix.value) <= 0)) {
+        setFieldError('field-prix', 'error-prix', 'Le prix est obligatoire pour passer en Collecte');
+        valid = false;
+        if (!firstErrorField) firstErrorField = prix;
+    }
+
+    // Collecteur obligatoire en statut Collecte
+    var collecteur = document.getElementById('field-collecteur');
+    if (isCollecte && collecteur && collecteur.value === '') {
+        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire pour passer en Collecte');
+        valid = false;
+        if (!firstErrorField) firstErrorField = collecteur;
     }
 
     // Story 9.2 — Validation prix variante
@@ -1484,10 +1502,19 @@ function handleQuickStatusChange(chip) {
     var previousStatus = badge.getAttribute('data-current-status');
     if (previousStatus === newStatus) return;
 
-    // --- Story 9.3 — Calcul des mises à jour de dates ---
+    // --- Validation collecteur et prix pour passage en Collecte ---
     var billetData = null;
     for (var k = 0; k < adminBillets.length; k++) {
         if (String(adminBillets[k]._id) === String(docId)) { billetData = adminBillets[k]; break; }
+    }
+    if (newStatus === 'Collecte' && billetData) {
+        var missing = [];
+        if (!billetData.Collecteur) missing.push('Collecteur');
+        if (!billetData.Prix || parseFloat(billetData.Prix) <= 0) missing.push('Prix');
+        if (missing.length > 0) {
+            showToast('Impossible de passer en Collecte : ' + missing.join(' et ') + ' manquant(s). Modifiez le billet d\'abord.', 'error');
+            return;
+        }
     }
     var existingDates = {
         DatePre: billetData ? billetData.DatePre : null,
