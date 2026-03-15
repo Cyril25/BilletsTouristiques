@@ -1519,6 +1519,10 @@ function handleBadgeClick(badge) {
 
     popup.style.display = 'block';
 
+    // Elever le z-index du wrapper pour eviter la superposition
+    var wrapper = badge.closest('.card-badge-wrapper');
+    if (wrapper) wrapper.classList.add('popup-open');
+
     // Mettre a jour les chips actifs
     var currentStatus = badge.getAttribute('data-current-status');
     highlightActiveAndNextChip(popup, currentStatus);
@@ -1528,6 +1532,11 @@ function closeAllStatusPopups() {
     var popups = document.querySelectorAll('.quick-status-popup');
     popups.forEach(function(popup) {
         popup.style.display = 'none';
+    });
+    // Retirer le z-index eleve de tous les wrappers
+    var wrappers = document.querySelectorAll('.card-badge-wrapper.popup-open');
+    wrappers.forEach(function(wrapper) {
+        wrapper.classList.remove('popup-open');
     });
 }
 

@@ -2546,7 +2546,7 @@ body.login-page {
     z-index: 1;
 }
 
-.card-badge-wrapper:has(.quick-status-popup) {
+.card-badge-wrapper.popup-open {
     z-index: 999;
 }
 
