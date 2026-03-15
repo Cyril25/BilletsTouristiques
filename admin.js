@@ -382,6 +382,9 @@ function renderAdminCards() {
                 '<button class="admin-card-edit-btn" data-doc-id="' + docId + '" title="Modifier">' +
                     '<i class="fa-solid fa-pen"></i> Modifier' +
                 '</button>' +
+                '<button class="admin-card-copy-btn" data-doc-id="' + docId + '" title="Dupliquer">' +
+                    '<i class="fa-solid fa-copy"></i>' +
+                '</button>' +
                 '<button class="admin-card-delete-btn" data-doc-id="' + docId + '" data-billet-name="' + escapeAttr(nom) + '" title="Supprimer">' +
                     '<i class="fa-solid fa-trash-can"></i>' +
                 '</button>' +
@@ -647,6 +650,20 @@ function initPanel() {
                 }
                 return;
             }
+
+            // Clic sur le bouton dupliquer
+            var copyBtn = event.target.closest('.admin-card-copy-btn');
+            if (copyBtn) {
+                event.stopPropagation();
+                var copyDocId = copyBtn.getAttribute('data-doc-id');
+                if (copyDocId) {
+                    var billetCopyData = findBilletById(copyDocId);
+                    if (billetCopyData) {
+                        copyBillet(billetCopyData);
+                    }
+                }
+                return;
+            }
         });
     }
 
@@ -808,6 +825,41 @@ function openBilletPanel(billetData, docId) {
     if (firstInput) {
         setTimeout(function() { firstInput.focus(); }, 350);
     }
+}
+
+// Dupliquer un billet — ouvre le panel en mode ajout avec les données copiées
+function copyBillet(billetData) {
+    // Copier les données sans l'id, les dates et les champs Google
+    var copy = {};
+    for (var key in billetData) {
+        if (billetData.hasOwnProperty(key)) {
+            copy[key] = billetData[key];
+        }
+    }
+    delete copy._id;
+    delete copy.id;
+    delete copy.DatePre;
+    delete copy.DateColl;
+    delete copy.DateFin;
+    delete copy.Sondage;
+    delete copy.LinkSondage;
+    delete copy.LinkSheet;
+    copy.NomBillet = (copy.NomBillet || '') + ' (copie)';
+    copy.Categorie = CATEGORIE_DEFAULT;
+
+    // Ouvrir le panel en mode ajout (pas de docId)
+    openBilletPanel(null, null);
+
+    // Pré-remplir avec les données copiées
+    prefillForm(copy);
+
+    // Remettre le statut par défaut après prefill
+    var categorieField = document.getElementById('field-categorie');
+    if (categorieField) categorieField.value = CATEGORIE_DEFAULT;
+    togglePrixFields();
+    updateDateFieldsState(CATEGORIE_DEFAULT);
+
+    showToast('Billet dupliqué — modifiez puis sauvegardez', 'info');
 }
 
 // Story 2.3 — Pre-remplir le formulaire avec les donnees du billet

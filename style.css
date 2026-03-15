@@ -2557,6 +2557,7 @@ body.login-page {
 }
 
 .admin-card-edit-btn,
+.admin-card-copy-btn,
 .admin-card-delete-btn {
     background: none;
     border: 1px solid #ddd;
@@ -2581,6 +2582,15 @@ body.login-page {
     border-color: var(--color-primary);
 }
 
+.admin-card-copy-btn {
+    color: var(--color-secondary);
+}
+
+.admin-card-copy-btn:hover {
+    background: var(--color-surface);
+    border-color: var(--color-secondary);
+}
+
 .admin-card-delete-btn {
     color: var(--color-danger);
 }
@@ -2598,6 +2608,7 @@ body.login-page {
     }
 
     .admin-card-edit-btn,
+    .admin-card-copy-btn,
     .admin-card-delete-btn {
         min-height: 44px;
         min-width: 44px;
