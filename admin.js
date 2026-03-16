@@ -31,6 +31,8 @@ function showToast(message, type) {
 // 2. CONSTANTES & CONFIGURATION
 // ============================================================
 var adminBillets = [];
+var adminInscriptionCounts = {};
+var adminMembresCache = null;
 
 // Categories (= statuts) — valeurs reelles du Google Sheet
 var CATEGORIES = [
@@ -151,6 +153,7 @@ if (typeof firebase !== 'undefined') {
     firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
             loadAdminBillets();
+            loadAdminInscriptionCounts();
             loadPays();
             loadCollecteurs();
             initPanel();
@@ -185,6 +188,24 @@ function loadAdminBillets() {
                     '<p>Impossible de charger les billets.</p>' +
                     '</div>';
             }
+        });
+}
+
+// ============================================================
+// 4a-bis. CHARGEMENT DES COMPTEURS D'INSCRIPTIONS
+// ============================================================
+function loadAdminInscriptionCounts() {
+    supabaseFetch('/rest/v1/inscriptions?select=billet_id&pas_interesse=eq.false')
+        .then(function(data) {
+            adminInscriptionCounts = {};
+            (data || []).forEach(function(row) {
+                adminInscriptionCounts[row.billet_id] = (adminInscriptionCounts[row.billet_id] || 0) + 1;
+            });
+            // Re-render si les billets sont déjà chargés
+            if (adminBillets.length > 0) renderAdminCards();
+        })
+        .catch(function(error) {
+            console.warn('Erreur chargement compteurs inscriptions:', error);
         });
 }
 
@@ -384,10 +405,20 @@ function renderAdminCards() {
                 }
                 return html;
             })() +
+            // Badge compteur inscriptions
+            (function() {
+                var count = adminInscriptionCounts[docId] || 0;
+                return '<button class="admin-card-inscriptions-badge" onclick="openInscriptionsModal(' + docId + ')" title="Voir les inscriptions">' +
+                    '<i class="fa-solid fa-users"></i> ' + count + ' inscription' + (count !== 1 ? 's' : '') +
+                    '</button>';
+            })() +
             // Story 2.3/2.4 — Boutons d'action
             '<div class="admin-card-actions">' +
                 '<button class="admin-card-edit-btn" data-doc-id="' + docId + '" title="Modifier">' +
                     '<i class="fa-solid fa-pen"></i> Modifier' +
+                '</button>' +
+                '<button class="admin-card-share-btn" onclick="openShareModal(' + docId + ')" title="Partager">' +
+                    '<i class="fa-solid fa-share-nodes"></i>' +
                 '</button>' +
                 '<button class="admin-card-copy-btn" data-doc-id="' + docId + '" title="Dupliquer">' +
                     '<i class="fa-solid fa-copy"></i>' +
@@ -2101,4 +2132,475 @@ function resetCollecteurFreeze() {
     // Retirer le message d'avertissement type
     var typeHints = document.querySelectorAll('.type-frozen-hint');
     typeHints.forEach(function(h) { h.remove(); });
+}
+
+// ============================================================
+// FEAT-1 : MODALE PARTAGE (bouton Facebook/copie)
+// ============================================================
+
+function openShareModal(billetId) {
+    var billet = adminBillets.find(function(b) { return b._id === billetId; });
+    if (!billet) return;
+
+    var pays = billet.Pays || '';
+    var ref = (billet.Reference || '') + ' ' + (billet.Millesime || 'XXXX') + '-' + (billet.Version || 'X');
+    var nom = billet.NomBillet || '';
+    var statut = billet.Categorie || '';
+
+    var lines = [];
+    lines.push('🎫 ' + pays + ' - ' + ref + ' - ' + nom);
+
+    // Statut + collecteur
+    var statutLine = '📌 Statut : ' + statut;
+    if (statut === 'Collecte' && billet.Collecteur) {
+        statutLine += ' | Collecteur : ' + billet.Collecteur;
+    }
+    lines.push(statutLine);
+
+    // Prix
+    var vne = billet.VersionNormaleExiste !== false;
+    var varianteVal = billet.HasVariante || '';
+    var varianteActive = varianteVal && varianteVal !== 'N';
+    var prixNormal = billet.Prix ? parseFloat(billet.Prix) : 0;
+    var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prixNormal;
+
+    if (!vne && varianteActive && prixVar) {
+        lines.push('💰 Prix : ' + prixVar.toFixed(2) + '€ ' + varianteVal);
+    } else if (vne && varianteActive && prixNormal) {
+        lines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€ normal / ' + prixVar.toFixed(2) + '€ ' + varianteVal);
+    } else if (prixNormal) {
+        lines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€');
+    }
+
+    // Lien
+    var baseUrl = 'https://cyril25.github.io/BilletsTouristiques/billets-new.html';
+    lines.push('');
+    lines.push('👉 S\'inscrire : ' + baseUrl + '?billet=' + billetId);
+
+    var text = lines.join('\n');
+
+    document.getElementById('share-modal-text').textContent = text;
+    document.getElementById('share-modal-overlay').style.display = '';
+
+    // Reset bouton copie
+    var btn = document.getElementById('share-copy-btn');
+    btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copier';
+    btn.classList.remove('admin-modal-btn-success');
+    btn.classList.add('admin-modal-btn-primary');
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal-overlay').style.display = 'none';
+}
+
+function copyShareText() {
+    var text = document.getElementById('share-modal-text').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = document.getElementById('share-copy-btn');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copié !';
+        btn.classList.remove('admin-modal-btn-primary');
+        btn.classList.add('admin-modal-btn-success');
+        setTimeout(function() {
+            btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copier';
+            btn.classList.remove('admin-modal-btn-success');
+            btn.classList.add('admin-modal-btn-primary');
+        }, 2000);
+    }).catch(function() {
+        showToast('Erreur lors de la copie', 'error');
+    });
+}
+
+// Fermer les modales avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('share-modal-overlay').style.display !== 'none') {
+            closeShareModal();
+        }
+        if (document.getElementById('inscriptions-modal-overlay').style.display !== 'none') {
+            closeInscriptionsModal();
+        }
+    }
+});
+
+// Fermer en cliquant sur l'overlay
+document.getElementById('share-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeShareModal();
+});
+document.getElementById('inscriptions-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeInscriptionsModal();
+});
+
+// ============================================================
+// FEAT-2 : MODALE GESTION DES INSCRIPTIONS
+// ============================================================
+
+var adminCurrentInscriptions = [];
+var adminCurrentBilletId = null;
+
+function openInscriptionsModal(billetId) {
+    var billet = adminBillets.find(function(b) { return b._id === billetId; });
+    if (!billet) return;
+
+    adminCurrentBilletId = billetId;
+    document.getElementById('inscriptions-modal-title').innerHTML =
+        '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
+    document.getElementById('inscriptions-modal-body').innerHTML =
+        '<p style="text-align:center; padding:20px; color:#666;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
+    document.getElementById('inscriptions-modal-overlay').style.display = '';
+
+    // Charger les inscriptions pour ce billet
+    supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.desc')
+        .then(function(data) {
+            adminCurrentInscriptions = data || [];
+            renderInscriptionsModalContent(billet);
+        })
+        .catch(function(error) {
+            console.error('Erreur chargement inscriptions:', error);
+            document.getElementById('inscriptions-modal-body').innerHTML =
+                '<p style="text-align:center; padding:20px; color:var(--color-danger);">Erreur lors du chargement</p>';
+        });
+}
+
+function closeInscriptionsModal() {
+    document.getElementById('inscriptions-modal-overlay').style.display = 'none';
+    adminCurrentBilletId = null;
+    adminCurrentInscriptions = [];
+}
+
+function renderInscriptionsModalContent(billet) {
+    var body = document.getElementById('inscriptions-modal-body');
+    var vne = billet.VersionNormaleExiste !== false;
+    var varianteVal = billet.HasVariante || '';
+    var varianteActive = varianteVal && varianteVal !== 'N';
+
+    var html = '';
+
+    // Bouton ajouter
+    html += '<div class="admin-insc-toolbar">' +
+        '<button class="admin-modal-btn admin-modal-btn-primary" onclick="openAdminAddInscription()">' +
+        '<i class="fa-solid fa-user-plus"></i> Ajouter une inscription</button>' +
+        '</div>';
+
+    if (adminCurrentInscriptions.length === 0) {
+        html += '<p style="text-align:center; padding:20px; color:#666;">Aucune inscription pour ce billet</p>';
+    } else {
+        html += '<div class="admin-insc-table-wrapper"><table class="admin-insc-table">';
+        html += '<thead><tr><th>Membre</th>';
+        if (vne) html += '<th>Normaux</th>';
+        if (varianteActive) html += '<th>Variantes</th>';
+        html += '<th>Actions</th></tr></thead><tbody>';
+
+        adminCurrentInscriptions.forEach(function(insc) {
+            var snap = insc.adresse_snapshot || {};
+            var nomMembre = ((snap.prenom || '') + ' ' + (snap.nom || '')).trim() || insc.membre_email;
+
+            html += '<tr id="admin-insc-row-' + insc.id + '">';
+            html += '<td title="' + escapeAttr(insc.membre_email) + '">' + escapeHtml(nomMembre) + '</td>';
+
+            if (vne) {
+                html += '<td class="admin-insc-qty" id="admin-insc-normaux-' + insc.id + '">' + (insc.nb_normaux || 0) + '</td>';
+            }
+            if (varianteActive) {
+                html += '<td class="admin-insc-qty" id="admin-insc-variantes-' + insc.id + '">' + (insc.nb_variantes || 0) + '</td>';
+            }
+
+            html += '<td class="admin-insc-actions">' +
+                '<button class="btn-modifier-inscription" onclick="openAdminEditInscription(' + insc.id + ')" title="Modifier">' +
+                '<i class="fa-solid fa-pen"></i></button>' +
+                '<button class="btn-supprimer-inscription" onclick="confirmAdminDeleteInscription(' + insc.id + ')" title="Supprimer">' +
+                '<i class="fa-solid fa-trash-can"></i></button>' +
+                '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+    }
+
+    // Zone formulaire ajout/modification (cachée par défaut)
+    html += '<div id="admin-insc-form-container" style="display:none;"></div>';
+
+    body.innerHTML = html;
+}
+
+// --- Chargement des membres (cache admin) ---
+function chargerAdminMembres() {
+    if (adminMembresCache) return Promise.resolve(adminMembresCache);
+    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays&order=nom.asc')
+        .then(function(data) {
+            adminMembresCache = data || [];
+            return adminMembresCache;
+        });
+}
+
+// --- Ajout inscription ---
+function openAdminAddInscription() {
+    var billet = adminBillets.find(function(b) { return b._id === adminCurrentBilletId; });
+    if (!billet) return;
+
+    chargerAdminMembres().then(function(membres) {
+        renderAdminInscriptionForm(billet, membres, null);
+    }).catch(function(error) {
+        console.error('Erreur chargement membres:', error);
+        showToast('Erreur lors du chargement des membres', 'error');
+    });
+}
+
+// --- Modification inscription ---
+function openAdminEditInscription(inscriptionId) {
+    var billet = adminBillets.find(function(b) { return b._id === adminCurrentBilletId; });
+    if (!billet) return;
+
+    var inscription = adminCurrentInscriptions.find(function(i) { return i.id === inscriptionId; });
+    if (!inscription) return;
+
+    chargerAdminMembres().then(function(membres) {
+        renderAdminInscriptionForm(billet, membres, inscription);
+    }).catch(function(error) {
+        console.error('Erreur chargement membres:', error);
+        showToast('Erreur lors du chargement des membres', 'error');
+    });
+}
+
+function renderAdminInscriptionForm(billet, membres, editInscription) {
+    var container = document.getElementById('admin-insc-form-container');
+    if (!container) return;
+
+    var isEdit = !!editInscription;
+    var titre = isEdit ? 'Modifier l\'inscription' : 'Inscrire un membre';
+    var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
+    var vne = billet.VersionNormaleExiste !== false;
+
+    var defEmail = isEdit ? editInscription.membre_email : '';
+    var defNormaux = isEdit ? (editInscription.nb_normaux || 0) : (varianteActive && vne ? 0 : (vne ? 1 : 0));
+    var defVariantes = isEdit ? (editInscription.nb_variantes || 0) : (!vne ? 1 : 0);
+    var defPaiement = isEdit ? (editInscription.mode_paiement || 'PayPal') : 'PayPal';
+    var defEnvoi = isEdit ? (editInscription.mode_envoi || 'Normal') : 'Normal';
+    var defCommentaire = isEdit ? (editInscription.commentaire || '') : '';
+
+    // Filtrer les membres déjà inscrits
+    var emailsInscrits = {};
+    if (!isEdit) {
+        adminCurrentInscriptions.forEach(function(ins) {
+            emailsInscrits[ins.membre_email] = true;
+        });
+    }
+
+    var optionsMembres = '<option value="">— Sélectionner un membre —</option>';
+    membres.forEach(function(m) {
+        if (!isEdit && emailsInscrits[m.email]) return;
+        var label = ((m.prenom || '') + ' ' + (m.nom || '')).trim() || m.email;
+        var selected = (m.email === defEmail) ? ' selected' : '';
+        optionsMembres += '<option value="' + m.email + '"' + selected + '>' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
+    });
+
+    var html = '<div class="admin-insc-form">';
+    html += '<h3><i class="fa-solid fa-user-plus"></i> ' + titre + '</h3>';
+
+    // Sélecteur de membre
+    if (isEdit) {
+        var snap = editInscription.adresse_snapshot || {};
+        var nomAffiche = ((snap.prenom || '') + ' ' + (snap.nom || '')).trim() || defEmail;
+        html += '<div class="admin-insc-form-field"><label>Membre</label><span class="admin-insc-readonly">' + escapeHtml(nomAffiche) + '</span></div>';
+    } else {
+        html += '<div class="admin-insc-form-field"><label>Membre</label>' +
+            '<input type="text" id="admin-insc-membre-search" placeholder="Rechercher un membre..." oninput="filtrerAdminMembresModal()" autocomplete="off">' +
+            '<select id="admin-insc-membre-email" size="5" class="admin-insc-membre-select">' + optionsMembres + '</select></div>';
+    }
+
+    // Champs quantités
+    if (vne) {
+        html += '<div class="admin-insc-form-field"><label>Nb normaux</label><input type="number" id="admin-insc-nb-normaux" value="' + defNormaux + '" min="0"></div>';
+    }
+    if (varianteActive) {
+        html += '<div class="admin-insc-form-field"><label>Nb variantes</label><input type="number" id="admin-insc-nb-variantes" value="' + defVariantes + '" min="0"></div>';
+    }
+
+    // Mode paiement et envoi
+    html += '<div class="admin-insc-form-field"><label>Paiement</label><select id="admin-insc-paiement">' +
+        '<option value="PayPal"' + (defPaiement === 'PayPal' ? ' selected' : '') + '>PayPal</option>' +
+        '<option value="Chèque"' + (defPaiement === 'Chèque' ? ' selected' : '') + '>Chèque</option></select></div>';
+
+    html += '<div class="admin-insc-form-field"><label>Envoi</label><select id="admin-insc-envoi">' +
+        '<option value="Normal"' + (defEnvoi === 'Normal' ? ' selected' : '') + '>Normal</option>' +
+        '<option value="Suivi"' + (defEnvoi === 'Suivi' ? ' selected' : '') + '>Suivi</option>' +
+        '<option value="Recommandé"' + (defEnvoi === 'Recommandé' ? ' selected' : '') + '>Recommandé</option></select></div>';
+
+    // Commentaire
+    html += '<div class="admin-insc-form-field"><label>Commentaire</label><textarea id="admin-insc-commentaire" rows="2">' + escapeHtml(defCommentaire) + '</textarea></div>';
+
+    // Boutons
+    html += '<div class="admin-insc-form-actions">';
+    if (isEdit) {
+        html += '<button onclick="submitAdminEditInscription(' + editInscription.id + ')" class="admin-modal-btn admin-modal-btn-primary"><i class="fa-solid fa-check"></i> Enregistrer</button>';
+    } else {
+        html += '<button onclick="submitAdminAddInscription()" class="admin-modal-btn admin-modal-btn-primary"><i class="fa-solid fa-check"></i> Inscrire</button>';
+    }
+    html += '<button onclick="cancelAdminInscriptionForm()" class="admin-modal-btn admin-modal-btn-secondary">Annuler</button>';
+    html += '</div>';
+
+    html += '</div>';
+
+    container.innerHTML = html;
+    container.style.display = '';
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function filtrerAdminMembresModal() {
+    var searchInput = document.getElementById('admin-insc-membre-search');
+    var selectEl = document.getElementById('admin-insc-membre-email');
+    if (!searchInput || !selectEl || !adminMembresCache) return;
+
+    var terme = searchInput.value.toLowerCase().trim();
+    var emailsInscrits = {};
+    adminCurrentInscriptions.forEach(function(ins) {
+        emailsInscrits[ins.membre_email] = true;
+    });
+
+    var html = '<option value="">— Sélectionner un membre —</option>';
+    adminMembresCache.forEach(function(m) {
+        if (emailsInscrits[m.email]) return;
+        var label = ((m.prenom || '') + ' ' + (m.nom || '')).trim() || m.email;
+        var searchable = (label + ' ' + m.email).toLowerCase();
+        if (terme && searchable.indexOf(terme) === -1) return;
+        html += '<option value="' + m.email + '">' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
+    });
+    selectEl.innerHTML = html;
+}
+
+function cancelAdminInscriptionForm() {
+    var container = document.getElementById('admin-insc-form-container');
+    if (container) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+    }
+}
+
+function submitAdminAddInscription() {
+    var selectEl = document.getElementById('admin-insc-membre-email');
+    if (!selectEl || !selectEl.value) {
+        showToast('Veuillez sélectionner un membre', 'error');
+        return;
+    }
+    var email = selectEl.value;
+    var normauxEl = document.getElementById('admin-insc-nb-normaux');
+    var nbNormaux = normauxEl ? parseInt(normauxEl.value) || 0 : 0;
+    var variantesEl = document.getElementById('admin-insc-nb-variantes');
+    var nbVariantes = variantesEl ? parseInt(variantesEl.value) || 0 : 0;
+
+    if (nbNormaux + nbVariantes === 0) {
+        showToast('Sélectionnez au moins un billet', 'error');
+        return;
+    }
+
+    // Snapshot adresse du membre
+    var membre = null;
+    if (adminMembresCache) {
+        for (var i = 0; i < adminMembresCache.length; i++) {
+            if (adminMembresCache[i].email === email) {
+                membre = adminMembresCache[i];
+                break;
+            }
+        }
+    }
+    var adresseSnapshot = {};
+    if (membre) {
+        adresseSnapshot = {
+            nom: membre.nom || '',
+            prenom: membre.prenom || '',
+            rue: membre.rue || '',
+            code_postal: membre.code_postal || '',
+            ville: membre.ville || '',
+            pays: membre.pays || ''
+        };
+    }
+
+    var body = {
+        billet_id: adminCurrentBilletId,
+        membre_email: email,
+        nb_normaux: nbNormaux,
+        nb_variantes: nbVariantes,
+        mode_paiement: document.getElementById('admin-insc-paiement').value,
+        mode_envoi: document.getElementById('admin-insc-envoi').value,
+        commentaire: (document.getElementById('admin-insc-commentaire').value || '').trim(),
+        adresse_snapshot: adresseSnapshot,
+        statut_paiement: 'non_paye',
+        envoye: false,
+        fdp_regles: false,
+        pas_interesse: false
+    };
+
+    supabaseFetch('/rest/v1/inscriptions', {
+        method: 'POST',
+        body: JSON.stringify(body)
+    })
+    .then(function() {
+        showToast('Membre inscrit avec succès !');
+        cancelAdminInscriptionForm();
+        // Mettre à jour le compteur
+        adminInscriptionCounts[adminCurrentBilletId] = (adminInscriptionCounts[adminCurrentBilletId] || 0) + 1;
+        renderAdminCards();
+        // Recharger la liste des inscriptions dans la modale
+        openInscriptionsModal(adminCurrentBilletId);
+    })
+    .catch(function(error) {
+        console.error('Erreur inscription:', error);
+        if (error.message && error.message.indexOf('unique') !== -1) {
+            showToast('Ce membre est déjà inscrit à cette collecte', 'error');
+        } else {
+            showToast('Erreur lors de l\'inscription', 'error');
+        }
+    });
+}
+
+function submitAdminEditInscription(inscriptionId) {
+    var normauxEl = document.getElementById('admin-insc-nb-normaux');
+    var nbNormaux = normauxEl ? parseInt(normauxEl.value) || 0 : 0;
+    var variantesEl = document.getElementById('admin-insc-nb-variantes');
+    var nbVariantes = variantesEl ? parseInt(variantesEl.value) || 0 : 0;
+
+    if (nbNormaux + nbVariantes === 0) {
+        showToast('Sélectionnez au moins un billet', 'error');
+        return;
+    }
+
+    var body = {
+        nb_normaux: nbNormaux,
+        nb_variantes: nbVariantes,
+        mode_paiement: document.getElementById('admin-insc-paiement').value,
+        mode_envoi: document.getElementById('admin-insc-envoi').value,
+        commentaire: (document.getElementById('admin-insc-commentaire').value || '').trim()
+    };
+
+    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+    })
+    .then(function() {
+        showToast('Inscription modifiée !');
+        cancelAdminInscriptionForm();
+        openInscriptionsModal(adminCurrentBilletId);
+    })
+    .catch(function(error) {
+        console.error('Erreur modification inscription:', error);
+        showToast('Erreur lors de la modification', 'error');
+    });
+}
+
+function confirmAdminDeleteInscription(inscriptionId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette inscription ?')) return;
+
+    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+        method: 'DELETE'
+    })
+    .then(function() {
+        showToast('Inscription supprimée');
+        // Mettre à jour le compteur
+        adminInscriptionCounts[adminCurrentBilletId] = Math.max(0, (adminInscriptionCounts[adminCurrentBilletId] || 1) - 1);
+        renderAdminCards();
+        openInscriptionsModal(adminCurrentBilletId);
+    })
+    .catch(function(error) {
+        console.error('Erreur suppression inscription:', error);
+        showToast('Erreur lors de la suppression', 'error');
+    });
 }

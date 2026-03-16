@@ -104,6 +104,9 @@ function fetchData() {
                 counter.style.color = "white";
                 counter.innerText = allData.length + " billets";
             }
+
+            // Lien direct : ?billet=ID → scroll + ouverture formulaire
+            handleDeepLinkBillet();
         })
         .catch(function(err) {
             console.error("Erreur chargement Supabase :", err);
@@ -830,4 +833,60 @@ function annulerPasInteresse(billetId) {
         console.error('Erreur annulation:', error);
         showToast('Erreur', 'error');
     });
+}
+
+// ============================================================
+// 7. LIEN DIRECT — ?billet=ID (deep link depuis admin)
+// ============================================================
+function handleDeepLinkBillet() {
+    var params = new URLSearchParams(window.location.search);
+    var billetId = params.get('billet');
+    if (!billetId) return;
+
+    billetId = parseInt(billetId);
+    if (isNaN(billetId)) return;
+
+    // Vérifier que le billet existe
+    var billet = allData.find(function(b) { return b.id === billetId; });
+    if (!billet) return;
+
+    // S'assurer qu'on est en mode collecte (cartes)
+    if (!document.body.classList.contains('view-collecte')) {
+        changeView('collecte');
+    }
+
+    // Réinitialiser les filtres pour s'assurer que le billet est visible
+    billetsActiveStatusFilter = 'tous';
+    var searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = '';
+
+    // Recharger l'affichage
+    applyFilters(false);
+
+    // Attendre le rendu puis scroller
+    setTimeout(function() {
+        var card = document.querySelector('[data-billet-id="' + billetId + '"]');
+        if (!card) {
+            // Le billet est peut-être dans un batch non chargé, charger plus
+            while (displayedCount < currentData.length) {
+                showMore();
+            }
+            card = document.querySelector('[data-billet-id="' + billetId + '"]');
+        }
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.boxShadow = '0 0 0 3px var(--color-primary)';
+            setTimeout(function() {
+                card.style.boxShadow = '';
+                // Ouvrir le formulaire d'inscription
+                ouvrirInscription(billetId);
+            }, 800);
+        }
+    }, 300);
+
+    // Nettoyer l'URL pour éviter de re-déclencher au refresh
+    if (window.history.replaceState) {
+        var cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
 }
