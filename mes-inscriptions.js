@@ -71,6 +71,7 @@ function renderInscriptions() {
     if (emptyState) emptyState.style.display = 'none';
 
     var totalDu = 0;
+    var totalEnAttente = 0;
     var html = mesInscriptions.map(function(insc) {
         var billet = billetsMap[insc.billet_id] || {};
         var prix = parseFloat(billet.Prix || 0);
@@ -79,7 +80,10 @@ function renderInscriptions() {
         var nbVariantes = insc.nb_variantes || 0;
         var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
         var statut = insc.statut_paiement || 'non_paye';
-        if (statut !== 'confirme' && billet.Categorie !== 'Pré collecte') totalDu += montant;
+        if (billet.Categorie !== 'Pré collecte') {
+            if (statut === 'non_paye') totalDu += montant;
+            else if (statut === 'declare') totalEnAttente += montant;
+        }
 
         var collecteur = collecteursMap[billet.Collecteur] || {};
         var paypalLink = '';
@@ -124,7 +128,10 @@ function renderInscriptions() {
     if (summary) {
         summary.innerHTML = '<div class="inscriptions-resume">'
             + '<span>' + mesInscriptions.length + ' inscription(s)</span>'
+            + '<span class="inscriptions-resume-montants">'
             + '<span class="montant-non-paye"><strong>' + totalDu.toFixed(2) + ' \u20AC restant \u00E0 payer</strong></span>'
+            + (totalEnAttente > 0 ? '<span class="montant-en-attente"><strong>' + totalEnAttente.toFixed(2) + ' \u20AC en attente de validation par les collecteurs</strong></span>' : '')
+            + '</span>'
             + '</div>';
     }
 }

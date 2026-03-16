@@ -3962,6 +3962,17 @@ body.login-page {
     margin-bottom: var(--spacing-lg);
     font-size: 0.95rem;
 }
+.inscriptions-resume-montants {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+.montant-en-attente {
+    color: var(--color-accent);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
 
 /* Cartes d'inscription */
 .inscription-card {
