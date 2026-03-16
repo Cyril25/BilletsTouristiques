@@ -492,7 +492,6 @@ function showMore() {
                 'Commentaire : ' + (item.Commentaire || '') +
                 '</div>' +
                 '</div>' +
-                inscriptionHtml +
                 '<div class="more">' +
                 '<center>' +
                 '<table class="dates">' +
@@ -520,6 +519,7 @@ function showMore() {
                     : '') +
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
+                inscriptionHtml +
                 '</div>';
         }
     });
