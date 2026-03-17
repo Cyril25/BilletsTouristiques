@@ -852,10 +852,32 @@ function confirmerInscription(billetId) {
             var form = document.getElementById('inscription-form-' + billetId);
             if (form) form.remove();
             loadMesInscriptions();
+            // Créer l'enveloppe en_cours si elle n'existe pas encore
+            if (billet.Collecteur) {
+                creerEnveloppeSiAbsente(billet.Collecteur, email);
+            }
         })
         .catch(function(error) {
             console.error('Erreur inscription:', error);
             showToast('Erreur lors de l\'inscription', 'error');
+        });
+}
+
+function creerEnveloppeSiAbsente(collecteurAlias, membreEmail) {
+    return supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&membre_email=eq.' + encodeURIComponent(membreEmail) + '&statut=eq.en_cours&select=id')
+        .then(function(enveloppes) {
+            if (enveloppes && enveloppes.length > 0) return;
+            return supabaseFetch('/rest/v1/enveloppes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    collecteur_alias: collecteurAlias,
+                    membre_email: membreEmail,
+                    statut: 'en_cours'
+                })
+            });
+        })
+        .catch(function(error) {
+            console.warn('Erreur création enveloppe:', error);
         });
 }
 

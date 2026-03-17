@@ -228,51 +228,53 @@ function showInscriptionsTab(tab) {
     if (tab === 'envois') loadMesEnvois();
 }
 
-var envoisData = { enveloppes: [], inscByEnv: {}, billetsEnvoisMap: {} };
+var envoisData = { enveloppes: [], inscByEnv: {}, billetsEnvoisMap: {}, inscSansEnveloppe: [] };
 
 function loadMesEnvois() {
     var user = firebase.auth().currentUser;
     if (!user) return;
     var email = user.email;
 
-    supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&select=*&order=date_creation.desc')
-        .then(function(enveloppes) {
-            enveloppes = enveloppes || [];
+    // Charger en parallèle : enveloppes + toutes les inscriptions actives du membre
+    var pEnveloppes = supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&select=*&order=date_creation.desc');
+    var pInscriptions = supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.false&select=*');
+
+    Promise.all([pEnveloppes, pInscriptions])
+        .then(function(results) {
+            var enveloppes = results[0] || [];
+            var toutesInscriptions = results[1] || [];
             envoisData.enveloppes = enveloppes;
 
-            var allIds = enveloppes.map(function(e) { return e.id; });
-            if (allIds.length === 0) {
-                envoisData.inscByEnv = {};
+            // Séparer inscriptions avec/sans enveloppe
+            var inscByEnv = {};
+            var inscSansEnveloppe = [];
+            toutesInscriptions.forEach(function(insc) {
+                if (insc.enveloppe_id) {
+                    if (!inscByEnv[insc.enveloppe_id]) inscByEnv[insc.enveloppe_id] = [];
+                    inscByEnv[insc.enveloppe_id].push(insc);
+                } else if (!insc.envoye) {
+                    // Inscription sans enveloppe et pas encore envoyée
+                    inscSansEnveloppe.push(insc);
+                }
+            });
+            envoisData.inscByEnv = inscByEnv;
+            envoisData.inscSansEnveloppe = inscSansEnveloppe;
+
+            // Charger les billets pour toutes les inscriptions
+            var billetIds = toutesInscriptions.map(function(i) { return i.billet_id; });
+            var uniqueIds = billetIds.filter(function(id, idx) { return billetIds.indexOf(id) === idx; });
+            if (uniqueIds.length === 0) {
                 envoisData.billetsEnvoisMap = {};
                 renderMesEnvois();
                 return;
             }
 
-            return supabaseFetch('/rest/v1/inscriptions?enveloppe_id=in.(' + allIds.join(',') + ')&select=*')
-                .then(function(inscriptions) {
-                    inscriptions = inscriptions || [];
-                    var inscByEnv = {};
-                    inscriptions.forEach(function(insc) {
-                        if (!inscByEnv[insc.enveloppe_id]) inscByEnv[insc.enveloppe_id] = [];
-                        inscByEnv[insc.enveloppe_id].push(insc);
-                    });
-                    envoisData.inscByEnv = inscByEnv;
-
-                    var billetIds = inscriptions.map(function(i) { return i.billet_id; });
-                    var uniqueIds = billetIds.filter(function(id, idx) { return billetIds.indexOf(id) === idx; });
-                    if (uniqueIds.length === 0) {
-                        envoisData.billetsEnvoisMap = {};
-                        renderMesEnvois();
-                        return;
-                    }
-
-                    return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","PayerFDP"')
-                        .then(function(billets) {
-                            var map = {};
-                            (billets || []).forEach(function(b) { map[b.id] = b; });
-                            envoisData.billetsEnvoisMap = map;
-                            renderMesEnvois();
-                        });
+            return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","PayerFDP","Collecteur"')
+                .then(function(billets) {
+                    var map = {};
+                    (billets || []).forEach(function(b) { map[b.id] = b; });
+                    envoisData.billetsEnvoisMap = map;
+                    renderMesEnvois();
                 });
         })
         .catch(function(error) {
@@ -287,18 +289,30 @@ function renderMesEnvois() {
     var enveloppes = envoisData.enveloppes;
     var inscByEnv = envoisData.inscByEnv;
     var billetsMap2 = envoisData.billetsEnvoisMap;
+    var inscSansEnveloppe = envoisData.inscSansEnveloppe;
 
     var enCours = enveloppes.filter(function(e) { return e.statut === 'en_cours'; });
     var expediees = enveloppes.filter(function(e) { return e.statut === 'expediee'; });
     var recues = enveloppes.filter(function(e) { return e.statut === 'recue'; });
 
-    // Filtrer enveloppes en cours avec billets prêts
+    // Enveloppes en cours avec billets prêts
     var enCoursAvecBillets = enCours.filter(function(env) {
         var inscs = inscByEnv[env.id] || [];
         return inscs.some(function(i) { return i.statut_livraison === 'pret_a_envoyer'; });
     });
 
-    if (enCoursAvecBillets.length === 0 && expediees.length === 0 && recues.length === 0) {
+    // Grouper inscriptions sans enveloppe par collecteur
+    var sansEnvParCollecteur = {};
+    inscSansEnveloppe.forEach(function(insc) {
+        var b = billetsMap2[insc.billet_id];
+        var collecteur = b ? b.Collecteur : 'Inconnu';
+        if (!sansEnvParCollecteur[collecteur]) sansEnvParCollecteur[collecteur] = [];
+        sansEnvParCollecteur[collecteur].push(insc);
+    });
+    var collecteursSansEnv = Object.keys(sansEnvParCollecteur);
+
+    var rien = enCoursAvecBillets.length === 0 && collecteursSansEnv.length === 0 && expediees.length === 0 && recues.length === 0;
+    if (rien) {
         container.innerHTML = '<div class="inscriptions-empty-state">'
             + '<i class="fa-solid fa-circle-info"></i>'
             + '<p>Aucun envoi en cours.</p>'
@@ -308,11 +322,12 @@ function renderMesEnvois() {
 
     var html = '';
 
-    // === Section "Chez le collecteur" (enveloppes en cours) ===
-    if (enCoursAvecBillets.length > 0) {
+    // === Section "Chez le collecteur" ===
+    if (enCoursAvecBillets.length > 0 || collecteursSansEnv.length > 0) {
         html += '<div class="envois-section">'
             + '<h3><i class="fa-solid fa-box-archive"></i> Chez le collecteur</h3>';
 
+        // Enveloppes en cours avec billets prêts à envoyer
         enCoursAvecBillets.forEach(function(env) {
             var inscs = (inscByEnv[env.id] || []).filter(function(i) {
                 return i.statut_livraison === 'pret_a_envoyer';
@@ -334,14 +349,13 @@ function renderMesEnvois() {
             html += '<div class="envoi-carte">'
                 + '<div class="envoi-carte-header">'
                 + '<span><i class="fa-solid fa-user"></i> ' + escapeHtml(env.collecteur_alias || '') + '</span>'
-                + '<span class="envoi-nb-billets">' + nbBillets + ' billet(s)</span>'
+                + '<span class="envoi-nb-billets">' + nbBillets + ' billet(s) prêt(s) à envoyer</span>'
                 + '</div>'
                 + '<div class="envoi-carte-details">'
                 + '<span>' + escapeHtml(nomsBillets) + '</span>'
                 + '</div>';
 
             if (tousAvecFDP) {
-                // Billets avec FDP : le collecteur envoie directement, pas de bouton demande
                 html += '<span class="envoi-info-fdp"><i class="fa-solid fa-info-circle"></i> '
                     + 'Le collecteur vous enverra ces billets dès qu\'il les aura répartis.'
                     + '</span>';
@@ -359,6 +373,31 @@ function renderMesEnvois() {
             }
 
             html += '</div>';
+        });
+
+        // Inscriptions sans enveloppe (en attente de préparation par le collecteur)
+        collecteursSansEnv.forEach(function(collecteur) {
+            var inscs = sansEnvParCollecteur[collecteur];
+            var nbBillets = inscs.reduce(function(sum, i) {
+                return sum + (i.nb_normaux || 0) + (i.nb_variantes || 0);
+            }, 0);
+            var nomsBillets = inscs.map(function(i) {
+                var b = billetsMap2[i.billet_id];
+                return b ? b.NomBillet : 'Billet';
+            }).join(', ');
+
+            html += '<div class="envoi-carte envoi-carte-attente">'
+                + '<div class="envoi-carte-header">'
+                + '<span><i class="fa-solid fa-user"></i> ' + escapeHtml(collecteur) + '</span>'
+                + '<span class="envoi-nb-billets">' + nbBillets + ' billet(s)</span>'
+                + '</div>'
+                + '<div class="envoi-carte-details">'
+                + '<span>' + escapeHtml(nomsBillets) + '</span>'
+                + '</div>'
+                + '<span class="envoi-info-fdp"><i class="fa-solid fa-hourglass-half"></i> '
+                + 'En attente de préparation par le collecteur'
+                + '</span>'
+                + '</div>';
         });
 
         html += '</div>';

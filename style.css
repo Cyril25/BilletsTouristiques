@@ -4317,6 +4317,11 @@ body.login-page {
     opacity: 0.85;
 }
 
+.envoi-carte-attente {
+    border-left: 3px solid #ccc;
+    opacity: 0.8;
+}
+
 .envoi-info-fdp {
     display: block;
     font-size: 0.85rem;
