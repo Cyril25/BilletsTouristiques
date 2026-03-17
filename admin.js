@@ -49,7 +49,7 @@ var CATEGORIE_FLOW = {
     'Pas de collecte': null,
     'Terminé': null
 };
-var CATEGORIE_DEFAULT = 'Jamais édité, projet';
+var CATEGORIE_DEFAULT = 'Pré collecte';
 
 // Couleurs des categories
 var CATEGORIE_COLORS = {
