@@ -5192,6 +5192,14 @@ body.login-page {
     margin-bottom: var(--spacing-md);
 }
 
+.admin-insc-summary {
+    text-align: center;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-md);
+    font-size: 0.95rem;
+}
+
 .admin-insc-table-wrapper {
     overflow-x: auto;
     margin-bottom: var(--spacing-md);

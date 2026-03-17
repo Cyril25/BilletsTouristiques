@@ -2648,6 +2648,27 @@ function renderInscriptionsModalContent(billet) {
         '<i class="fa-solid fa-user-plus"></i> Ajouter une inscription</button>' +
         '</div>';
 
+    // Résumé des totaux
+    if (adminCurrentInscriptions.length > 0) {
+        var totalNormaux = 0, totalVariantes = 0;
+        adminCurrentInscriptions.forEach(function(i) {
+            totalNormaux += (i.nb_normaux || 0);
+            totalVariantes += (i.nb_variantes || 0);
+        });
+        var summaryParts = [];
+        summaryParts.push(adminCurrentInscriptions.length + ' inscription' + (adminCurrentInscriptions.length > 1 ? 's' : ''));
+        var detailParts = [];
+        if (totalNormaux > 0) detailParts.push(totalNormaux + ' billet' + (totalNormaux > 1 ? 's' : '') + ' normaux');
+        if (totalVariantes > 0) {
+            var vLabel = varianteVal;
+            if (vLabel === 'anniversary') vLabel = 'anniv';
+            else if (vLabel === 'doré') vLabel = 'dorés';
+            detailParts.push(totalVariantes + ' billet' + (totalVariantes > 1 ? 's' : '') + ' ' + vLabel);
+        }
+        if (detailParts.length > 0) summaryParts.push('(' + detailParts.join(', ') + ')');
+        html += '<p class="admin-insc-summary"><i class="fa-solid fa-chart-simple"></i> ' + summaryParts.join(' ') + '</p>';
+    }
+
     if (adminCurrentInscriptions.length === 0) {
         html += '<p style="text-align:center; padding:20px; color:#666;">Aucune inscription pour ce billet</p>';
     } else {
