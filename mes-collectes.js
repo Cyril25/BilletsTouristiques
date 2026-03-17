@@ -533,7 +533,7 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
         }
     }
     var modeSuggere = inscription ? inscription.mode_envoi || 'Normal' : 'Normal';
-    var modeMap = { Normal: 'normal', Suivi: 'suivi', 'Recommandé': 'recommande' };
+    var modeMap = { Normal: 'normal', Suivi: 'suivi', R1: 'r1', R2: 'r2', R3: 'r3' };
     var modeVal = modeMap[modeSuggere] || 'normal';
 
     // Injecter un mini-formulaire après la ligne
@@ -555,7 +555,9 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
         + '<select id="exp-direct-mode">'
         + '<option value="normal"' + (modeVal === 'normal' ? ' selected' : '') + '>Normal</option>'
         + '<option value="suivi"' + (modeVal === 'suivi' ? ' selected' : '') + '>Suivi</option>'
-        + '<option value="recommande"' + (modeVal === 'recommande' ? ' selected' : '') + '>Recommandé</option>'
+        + '<option value="r1"' + (modeVal === 'r1' ? ' selected' : '') + '>Recommandé R1</option>'
+        + '<option value="r2"' + (modeVal === 'r2' ? ' selected' : '') + '>Recommandé R2</option>'
+        + '<option value="r3"' + (modeVal === 'r3' ? ' selected' : '') + '>Recommandé R3</option>'
         + '</select>'
         + '<span class="expedition-form-label">N° suivi :</span>'
         + '<input type="text" id="exp-direct-suivi" placeholder="Optionnel" style="width:160px">'
@@ -957,7 +959,7 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     if (!container) return;
 
     var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '—';
-    var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[env.mode_envoi_reel] || env.mode_envoi_reel || '—';
+    var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[env.mode_envoi_reel] || env.mode_envoi_reel || '—';
 
     var html = '';
     html += '<button class="btn-retour-liste" onclick="retourEnveloppes()"><i class="fa-solid fa-arrow-left"></i> Retour aux enveloppes</button>';
@@ -1069,7 +1071,7 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
     for (var h = 0; h < envPassees.length; h++) {
         var envH = envPassees[h];
         var dateExp = envH.date_expedition ? new Date(envH.date_expedition).toLocaleDateString('fr-FR') : '—';
-        var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[envH.mode_envoi_reel] || envH.mode_envoi_reel || '—';
+        var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[envH.mode_envoi_reel] || envH.mode_envoi_reel || '—';
         var statutHtml = '';
         if (envH.statut === 'recue') {
             var dateRec = envH.date_reception ? new Date(envH.date_reception).toLocaleDateString('fr-FR') : '';
@@ -1306,7 +1308,7 @@ function renderHistoriqueEnveloppes(enveloppes, inscByEnv, billetsMap, container
         var env = enveloppes[h];
         var inscs = inscByEnv[env.id] || [];
         var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '—';
-        var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[env.mode_envoi_reel] || env.mode_envoi_reel || '—';
+        var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[env.mode_envoi_reel] || env.mode_envoi_reel || '—';
 
         var statutHtml = '';
         if (env.statut === 'recue') {
@@ -1340,7 +1342,7 @@ function renderHistoriqueEnveloppes(enveloppes, inscByEnv, billetsMap, container
 // ============================================================
 
 function getModeEnvoiPlusExigeant(inscriptions) {
-    var priorite = { Normal: 1, Suivi: 2, 'Recommandé': 3 };
+    var priorite = { Normal: 1, Suivi: 2, R1: 3, R2: 4, R3: 5 };
     var max = 'Normal';
     for (var i = 0; i < inscriptions.length; i++) {
         var mode = inscriptions[i].mode_envoi || 'Normal';
@@ -1364,7 +1366,7 @@ function ouvrirFormulaireExpedition(enveloppeId) {
         .then(function(inscriptions) {
             inscriptions = inscriptions || [];
             var modeSuggere = getModeEnvoiPlusExigeant(inscriptions);
-            var modeMap = { Normal: 'normal', Suivi: 'suivi', 'Recommandé': 'recommande' };
+            var modeMap = { Normal: 'normal', Suivi: 'suivi', R1: 'r1', R2: 'r2', R3: 'r3' };
             var modeVal = modeMap[modeSuggere] || 'normal';
 
             var html = '<div class="expedition-form">'
@@ -1373,7 +1375,9 @@ function ouvrirFormulaireExpedition(enveloppeId) {
                 + '<select id="mode-envoi-reel">'
                 + '<option value="normal"' + (modeVal === 'normal' ? ' selected' : '') + '>Normal</option>'
                 + '<option value="suivi"' + (modeVal === 'suivi' ? ' selected' : '') + '>Suivi</option>'
-                + '<option value="recommande"' + (modeVal === 'recommande' ? ' selected' : '') + '>Recommandé</option>'
+                + '<option value="r1"' + (modeVal === 'r1' ? ' selected' : '') + '>Recommandé R1</option>'
+                + '<option value="r2"' + (modeVal === 'r2' ? ' selected' : '') + '>Recommandé R2</option>'
+                + '<option value="r3"' + (modeVal === 'r3' ? ' selected' : '') + '>Recommandé R3</option>'
                 + '</select></div>'
                 + '<div class="insc-form-field"><label>Numéro de suivi (optionnel)</label>'
                 + '<input type="text" id="numero-suivi" placeholder="Ex: 1Z999AA..."></div>'
@@ -2038,7 +2042,9 @@ function renderInscriptionModal(membres, editInscription) {
     html += '<div class="insc-form-field"><label>Envoi</label><select id="insc-envoi">'
         + '<option value="Normal"' + (defEnvoi === 'Normal' ? ' selected' : '') + '>Normal</option>'
         + '<option value="Suivi"' + (defEnvoi === 'Suivi' ? ' selected' : '') + '>Suivi</option>'
-        + '<option value="Recommandé"' + (defEnvoi === 'Recommandé' ? ' selected' : '') + '>Recommandé</option>'
+        + '<option value="R1"' + (defEnvoi === 'R1' ? ' selected' : '') + '>Recommandé R1</option>'
+        + '<option value="R2"' + (defEnvoi === 'R2' ? ' selected' : '') + '>Recommandé R2</option>'
+        + '<option value="R3"' + (defEnvoi === 'R3' ? ' selected' : '') + '>Recommandé R3</option>'
         + '</select></div>';
 
     // Commentaire

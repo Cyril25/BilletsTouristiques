@@ -50,8 +50,10 @@ function initProfilPage(user) {
         if (redirectMsg) redirectMsg.style.display = 'flex';
     }
 
-    // Charger le profil
-    loadProfil();
+    // Charger la liste des pays puis le profil
+    loadPaysList().then(function() {
+        loadProfil();
+    });
 
     // Initialiser le formulaire
     var form = document.getElementById('profil-form');
@@ -61,6 +63,26 @@ function initProfilPage(user) {
             saveProfil();
         });
     }
+}
+
+// ============================================================
+// 2b. CHARGEMENT DE LA LISTE DES PAYS
+// ============================================================
+function loadPaysList() {
+    return supabaseFetch('/rest/v1/pays?select=nom&order=nom')
+        .then(function(data) {
+            var select = document.getElementById('profil-pays');
+            if (!select || !data) return;
+            data.forEach(function(p) {
+                var option = document.createElement('option');
+                option.value = p.nom;
+                option.textContent = p.nom;
+                select.appendChild(option);
+            });
+        })
+        .catch(function(error) {
+            console.error('Erreur chargement pays:', error);
+        });
 }
 
 // ============================================================

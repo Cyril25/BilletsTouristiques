@@ -2809,7 +2809,9 @@ function renderAdminInscriptionForm(billet, membres, editInscription) {
     html += '<div class="admin-insc-form-field"><label>Envoi</label><select id="admin-insc-envoi">' +
         '<option value="Normal"' + (defEnvoi === 'Normal' ? ' selected' : '') + '>Normal</option>' +
         '<option value="Suivi"' + (defEnvoi === 'Suivi' ? ' selected' : '') + '>Suivi</option>' +
-        '<option value="Recommandé"' + (defEnvoi === 'Recommandé' ? ' selected' : '') + '>Recommandé</option></select></div>';
+        '<option value="R1"' + (defEnvoi === 'R1' ? ' selected' : '') + '>Recommandé R1</option>' +
+        '<option value="R2"' + (defEnvoi === 'R2' ? ' selected' : '') + '>Recommandé R2</option>' +
+        '<option value="R3"' + (defEnvoi === 'R3' ? ' selected' : '') + '>Recommandé R3</option></select></div>';
 
     // Commentaire
     html += '<div class="admin-insc-form-field"><label>Commentaire</label><textarea id="admin-insc-commentaire" rows="2">' + escapeHtml(defCommentaire) + '</textarea></div>';

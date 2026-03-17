@@ -442,7 +442,7 @@ function renderEnvoiCarteExpediee(env, inscByEnv, billetsMap2, estRecue) {
 
     var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '';
     var modeEnvoi = env.mode_envoi_reel || 'normal';
-    var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[modeEnvoi] || modeEnvoi;
+    var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[modeEnvoi] || modeEnvoi;
 
     var html = '<div class="envoi-carte' + (estRecue ? ' envoi-carte-recue' : ' envoi-carte-expedition') + '">'
         + '<div class="envoi-carte-header">'

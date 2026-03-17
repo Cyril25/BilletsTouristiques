@@ -789,7 +789,7 @@ function ouvrirInscription(billetId) {
             + champNormaux
             + champVariantes
             + '<div class="mini-form-field"><label>Paiement</label><select id="insc-paiement-' + billetId + '"><option value="PayPal">PayPal</option><option value="Chèque">Chèque</option></select></div>'
-            + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + billetId + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="Recommandé">Recommandé</option></select></div>'
+            + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + billetId + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="R1">Recommandé R1</option><option value="R2">Recommandé R2</option><option value="R3">Recommandé R3</option></select></div>'
             + '<div class="mini-form-field"><label>Commentaire</label><textarea id="insc-commentaire-' + billetId + '" rows="2"></textarea></div>'
             + '<div class="mini-form-actions">'
             + '<button onclick="confirmerInscription(' + billetId + ')" class="btn-confirmer-inscription">Confirmer</button>'
