@@ -664,7 +664,10 @@ function loadCompteursInscriptions() {
         .then(function(compteurs) {
             compteurInscriptionsMap = {};
             (compteurs || []).forEach(function(c) {
-                compteurInscriptionsMap[c.billet_id] = c.total;
+                compteurInscriptionsMap[c.billet_id] = {
+                    normaux: c.total_normaux || 0,
+                    variantes: c.total_variantes || 0
+                };
             });
         })
         .catch(function(error) {
@@ -674,8 +677,17 @@ function loadCompteursInscriptions() {
 
 function getCompteurBT(item) {
     var isInscriptionSite = !item.LinkSheet && !item.Sondage;
-    if (isInscriptionSite && compteurInscriptionsMap[item.id] !== undefined) {
-        return compteurInscriptionsMap[item.id];
+    if (isInscriptionSite && compteurInscriptionsMap[item.id]) {
+        var c = compteurInscriptionsMap[item.id];
+        var parts = [];
+        if (c.normaux > 0) {
+            parts.push(c.normaux + ' billet' + (c.normaux > 1 ? 's' : ''));
+        }
+        if (c.variantes > 0) {
+            var nomVariante = item.HasVariante || 'variante';
+            parts.push(c.variantes + ' billet' + (c.variantes > 1 ? 's' : '') + ' ' + nomVariante);
+        }
+        return parts.join(' + ') || '';
     }
     return item.CompteurBT || '';
 }
