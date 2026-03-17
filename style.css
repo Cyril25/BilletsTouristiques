@@ -2313,9 +2313,16 @@ body.login-page {
 }
 .image-preview {
     max-width: 100%;
-    max-height: 200px;
+    max-height: 250px;
     object-fit: contain;
     border-radius: 4px;
+    display: block;
+    margin: 0 auto;
+}
+.image-id-legacy input {
+    background-color: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
 }
 .image-upload-progress {
     position: absolute;

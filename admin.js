@@ -1206,6 +1206,17 @@ function prefillForm(data) {
     // Prévisualisation image — priorité ImageUrl > ImageId (Google Drive)
     var imgUrl = data.ImageUrl || '';
     var imgId = data.ImageId || '';
+
+    // Afficher le champ ImageId legacy uniquement si le billet en a un
+    var groupImageId = document.getElementById('group-image-id');
+    if (groupImageId) {
+        if (imgId) {
+            groupImageId.classList.remove('hidden');
+        } else {
+            groupImageId.classList.add('hidden');
+        }
+    }
+
     if (imgUrl) {
         var previewEl = document.getElementById('image-preview');
         var placeholderEl = document.getElementById('image-upload-placeholder');
@@ -1221,11 +1232,13 @@ function prefillForm(data) {
         var driveUrl = 'https://drive.google.com/thumbnail?id=' + safeId + '&sz=w400';
         var previewEl2 = document.getElementById('image-preview');
         var placeholderEl2 = document.getElementById('image-upload-placeholder');
+        var removeBtnEl2 = document.getElementById('btn-image-remove');
         if (previewEl2) {
             previewEl2.src = driveUrl;
             previewEl2.classList.remove('hidden');
         }
         if (placeholderEl2) placeholderEl2.classList.add('hidden');
+        if (removeBtnEl2) removeBtnEl2.classList.remove('hidden');
     } else {
         clearImageUpload();
     }
