@@ -347,11 +347,15 @@ function renderMesEnvois() {
                     + '</span>';
             } else if (env.demande_envoi) {
                 var dateStr = env.date_demande_envoi ? new Date(env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
-                html += '<span class="demande-envoyee"><i class="fa-solid fa-check"></i> Demande d\'envoi transmise le ' + dateStr + '</span>';
+                var modeDemande = env.mode_envoi || 'normal';
+                var modeLabelDemande = { normal: 'Normal', suivi: 'Suivi', recommande_r1: 'Recommandé R1', recommande_r2: 'Recommandé R2', recommande_r3: 'Recommandé R3' }[modeDemande] || modeDemande;
+                html += '<span class="demande-envoyee"><i class="fa-solid fa-check"></i> Demande d\'envoi transmise le ' + dateStr + ' — ' + modeLabelDemande + '</span>';
             } else {
-                html += '<button onclick="demanderEnvoi(' + env.id + ')" class="btn-demande-envoi">'
+                html += '<div id="demande-envoi-' + env.id + '">'
+                    + '<button onclick="afficherFormDemandeEnvoi(' + env.id + ')" class="btn-demande-envoi">'
                     + '<i class="fa-solid fa-paper-plane"></i> Je souhaite recevoir mes billets'
-                    + '</button>';
+                    + '</button>'
+                    + '</div>';
             }
 
             html += '</div>';
@@ -429,12 +433,40 @@ function renderEnvoiCarteExpediee(env, inscByEnv, billetsMap2, estRecue) {
     return html;
 }
 
-function demanderEnvoi(enveloppeId) {
+function afficherFormDemandeEnvoi(enveloppeId) {
+    var container = document.getElementById('demande-envoi-' + enveloppeId);
+    if (!container) return;
+
+    container.innerHTML = '<div class="demande-envoi-form">'
+        + '<label class="expedition-form-label">Mode d\'envoi souhaité</label>'
+        + '<select id="mode-envoi-demande-' + enveloppeId + '" class="expedition-form-select">'
+        + '<option value="normal">Normal</option>'
+        + '<option value="suivi">Suivi</option>'
+        + '<option value="recommande_r1">Recommandé R1</option>'
+        + '<option value="recommande_r2">Recommandé R2</option>'
+        + '<option value="recommande_r3">Recommandé R3</option>'
+        + '</select>'
+        + '<div class="demande-envoi-actions">'
+        + '<button onclick="confirmerDemandeEnvoi(' + enveloppeId + ')" class="btn-confirmer-expedition">'
+        + '<i class="fa-solid fa-paper-plane"></i> Confirmer la demande'
+        + '</button>'
+        + '<button onclick="loadMesEnvois()" class="btn-annuler-expedition">'
+        + '<i class="fa-solid fa-xmark"></i> Annuler'
+        + '</button>'
+        + '</div>'
+        + '</div>';
+}
+
+function confirmerDemandeEnvoi(enveloppeId) {
+    var select = document.getElementById('mode-envoi-demande-' + enveloppeId);
+    var modeEnvoi = select ? select.value : 'normal';
+
     supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
         method: 'PATCH',
         body: JSON.stringify({
             demande_envoi: true,
-            date_demande_envoi: new Date().toISOString()
+            date_demande_envoi: new Date().toISOString(),
+            mode_envoi: modeEnvoi
         })
     })
     .then(function() {

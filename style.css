@@ -4376,6 +4376,28 @@ body.login-page {
     margin-top: var(--spacing-xs);
 }
 
+.demande-envoi-form {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+}
+
+.demande-envoi-form select {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    margin-top: var(--spacing-xs);
+    margin-bottom: var(--spacing-sm);
+}
+
+.demande-envoi-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
 .btn-confirmer-reception {
     display: inline-flex;
     align-items: center;
