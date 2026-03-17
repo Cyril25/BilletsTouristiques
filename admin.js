@@ -61,6 +61,10 @@ var CATEGORIE_COLORS = {
     'Non defini': '#F57C00'
 };
 
+// Cloudinary — configuration upload unsigned
+var CLOUDINARY_CLOUD_NAME = 'dxoyqxben';
+var CLOUDINARY_UPLOAD_PRESET = 'billets-touristiques';
+
 // Story 2.2 — Focus trap
 var focusTrapHandler = null;
 var escapeHandler = null;
@@ -147,6 +151,153 @@ function updateDateFieldsState(categorie) {
 }
 
 // ============================================================
+// 2b. UPLOAD IMAGE CLOUDINARY
+// ============================================================
+
+function uploadImageToCloudinary(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    return fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.secure_url) {
+            return data.secure_url;
+        }
+        throw new Error(data.error ? data.error.message : 'Erreur upload');
+    });
+}
+
+function initImageUpload() {
+    var zone = document.getElementById('image-upload-zone');
+    var fileInput = document.getElementById('field-image-file');
+    var browseBtn = document.getElementById('btn-image-browse');
+    var removeBtn = document.getElementById('btn-image-remove');
+    var preview = document.getElementById('image-preview');
+    var placeholder = document.getElementById('image-upload-placeholder');
+    var progressBar = document.getElementById('image-upload-bar');
+    var progressContainer = document.getElementById('image-upload-progress');
+    var imageUrlField = document.getElementById('field-image-url');
+
+    if (!zone || !fileInput) return;
+
+    // Clic sur le bouton Parcourir ou la zone
+    browseBtn.addEventListener('click', function() { fileInput.click(); });
+    zone.addEventListener('click', function(e) {
+        if (e.target === zone || e.target === placeholder || e.target.parentNode === placeholder) {
+            fileInput.click();
+        }
+    });
+
+    // Drag & drop
+    zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        zone.classList.add('dragover');
+    });
+    zone.addEventListener('dragleave', function() {
+        zone.classList.remove('dragover');
+    });
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        var files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            handleImageFile(files[0]);
+        }
+    });
+
+    // Sélection via input file
+    fileInput.addEventListener('change', function() {
+        if (fileInput.files.length > 0) {
+            handleImageFile(fileInput.files[0]);
+        }
+    });
+
+    // Supprimer l'image
+    removeBtn.addEventListener('click', function() {
+        clearImageUpload();
+    });
+
+    // Changement manuel de l'URL — mettre à jour la prévisualisation
+    imageUrlField.addEventListener('change', function() {
+        var url = imageUrlField.value.trim();
+        if (url) {
+            showImagePreview(url);
+        } else {
+            clearImageUpload();
+        }
+    });
+
+    function handleImageFile(file) {
+        // Validation taille (max 10 MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Image trop volumineuse (max 10 Mo)', 'error');
+            return;
+        }
+
+        // Prévisualisation locale immédiate
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            showImagePreview(e.target.result);
+        };
+        reader.readAsDataURL(file);
+
+        // Upload vers Cloudinary
+        progressContainer.classList.remove('hidden');
+        progressBar.style.width = '30%';
+        zone.classList.add('uploading');
+
+        uploadImageToCloudinary(file)
+            .then(function(url) {
+                progressBar.style.width = '100%';
+                imageUrlField.value = url;
+                showImagePreview(url);
+                showToast('Image uploadée avec succès', 'success');
+                setTimeout(function() {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                    zone.classList.remove('uploading');
+                }, 800);
+            })
+            .catch(function(error) {
+                progressContainer.classList.add('hidden');
+                progressBar.style.width = '0%';
+                zone.classList.remove('uploading');
+                showToast('Erreur upload image : ' + error.message, 'error');
+                console.error('Erreur upload Cloudinary:', error);
+            });
+    }
+
+    function showImagePreview(url) {
+        preview.src = url;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        removeBtn.classList.remove('hidden');
+    }
+}
+
+function clearImageUpload() {
+    var preview = document.getElementById('image-preview');
+    var placeholder = document.getElementById('image-upload-placeholder');
+    var removeBtn = document.getElementById('btn-image-remove');
+    var imageUrlField = document.getElementById('field-image-url');
+    var fileInput = document.getElementById('field-image-file');
+
+    if (preview) {
+        preview.src = '';
+        preview.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (removeBtn) removeBtn.classList.add('hidden');
+    if (imageUrlField) imageUrlField.value = '';
+    if (fileInput) fileInput.value = '';
+}
+
+// ============================================================
 // 3. INITIALISATION
 // ============================================================
 if (typeof firebase !== 'undefined') {
@@ -157,6 +308,7 @@ if (typeof firebase !== 'undefined') {
             loadPays();
             loadCollecteurs();
             initPanel();
+            initImageUpload();
         }
     });
 }
@@ -783,6 +935,9 @@ function openBilletPanel(billetData, docId) {
     resetGoogleFields();
     resetCollecteurFreeze();
 
+    // Reset prévisualisation image
+    clearImageUpload();
+
     if (billetData && docId) {
         // --- Mode edition (Story 2.3) ---
         panel.dataset.editId = docId;
@@ -952,6 +1107,7 @@ function prefillForm(data) {
         'field-date-pre': 'DatePre',
         'field-date-coll': 'DateColl',
         'field-date-fin': 'DateFin',
+        'field-image-url': 'ImageUrl',
         'field-image-id': 'ImageId',
         'field-sondage': 'Sondage',
         'field-link-sondage': 'LinkSondage',
@@ -1046,6 +1202,33 @@ function prefillForm(data) {
 
     // Story 9.6 — Bloquer les champs prix en Pré-collecte
     togglePrixFields();
+
+    // Prévisualisation image — priorité ImageUrl > ImageId (Google Drive)
+    var imgUrl = data.ImageUrl || '';
+    var imgId = data.ImageId || '';
+    if (imgUrl) {
+        var previewEl = document.getElementById('image-preview');
+        var placeholderEl = document.getElementById('image-upload-placeholder');
+        var removeBtnEl = document.getElementById('btn-image-remove');
+        if (previewEl) {
+            previewEl.src = imgUrl;
+            previewEl.classList.remove('hidden');
+        }
+        if (placeholderEl) placeholderEl.classList.add('hidden');
+        if (removeBtnEl) removeBtnEl.classList.remove('hidden');
+    } else if (imgId) {
+        var safeId = imgId.replace(/[^a-zA-Z0-9_-]/g, '');
+        var driveUrl = 'https://drive.google.com/thumbnail?id=' + safeId + '&sz=w400';
+        var previewEl2 = document.getElementById('image-preview');
+        var placeholderEl2 = document.getElementById('image-upload-placeholder');
+        if (previewEl2) {
+            previewEl2.src = driveUrl;
+            previewEl2.classList.remove('hidden');
+        }
+        if (placeholderEl2) placeholderEl2.classList.add('hidden');
+    } else {
+        clearImageUpload();
+    }
 }
 
 // --- Story 9.9 — Affichage conditionnel des champs Prix / PrixVariante ---
@@ -1336,6 +1519,7 @@ function collectFormData() {
         DatePre: getValue('field-date-pre') || null,
         DateColl: getValue('field-date-coll') || null,
         DateFin: getValue('field-date-fin') || null,
+        ImageUrl: getValue('field-image-url'),
         ImageId: getValue('field-image-id'),
         // Story 5.2 — Ne collecter les champs Google que si le panel est en mode edition
         Sondage: panel && panel.dataset.editId ? getValue('field-sondage') : '',

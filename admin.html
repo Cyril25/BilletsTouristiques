@@ -234,7 +234,31 @@
                     <legend>Image & Liens</legend>
 
                     <div class="admin-form-group">
-                        <label for="field-image-id">Image ID</label>
+                        <label>Image</label>
+                        <div class="image-upload-zone" id="image-upload-zone">
+                            <img id="image-preview" class="image-preview hidden" alt="Prévisualisation">
+                            <div id="image-upload-placeholder" class="image-upload-placeholder">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Cliquer ou glisser une image</span>
+                            </div>
+                            <input type="file" id="field-image-file" accept="image/*" class="hidden">
+                            <div id="image-upload-progress" class="image-upload-progress hidden">
+                                <div class="image-upload-progress-bar" id="image-upload-bar"></div>
+                            </div>
+                        </div>
+                        <div class="image-upload-actions">
+                            <button type="button" id="btn-image-browse" class="btn-image-action">Parcourir</button>
+                            <button type="button" id="btn-image-remove" class="btn-image-action btn-image-remove hidden">Supprimer</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label for="field-image-url">URL Image</label>
+                        <input type="text" id="field-image-url" name="ImageUrl" autocomplete="off" placeholder="Rempli automatiquement ou saisir manuellement">
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label for="field-image-id">Image ID (Google Drive - ancien)</label>
                         <input type="text" id="field-image-id" name="ImageId" autocomplete="off">
                     </div>
 

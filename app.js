@@ -21,6 +21,28 @@ function sanitizeUrl(url) {
     return '';
 }
 
+// Resolution image — priorite ImageUrl (Cloudinary) > ImageId (Google Drive)
+function resolveImageUrl(item, size) {
+    if (item.ImageUrl) {
+        return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/');
+    }
+    if (item.ImageId) {
+        var safeId = escapeAttr(item.ImageId);
+        return 'https://drive.google.com/thumbnail?id=' + safeId + '&sz=w' + (size || 800);
+    }
+    return '';
+}
+
+function resolveDownloadUrl(item) {
+    if (item.ImageUrl) {
+        return item.ImageUrl;
+    }
+    if (item.ImageId) {
+        return 'https://drive.usercontent.google.com/download?id=' + escapeAttr(item.ImageId);
+    }
+    return '#';
+}
+
 let allData = [];
 let currentData = [];
 let displayedCount = 0;
@@ -369,17 +391,16 @@ function showMore() {
 
     let html = "";
     batch.forEach(item => {
-        // Image HD — ImageId est un ID Google Drive, on le sanitize
-        const safeImageId = escapeAttr(item.ImageId || '');
-        const imgUrl = item.ImageId ? `https://drive.google.com/thumbnail?id=${safeImageId}&sz=w800` : '';
-        const downloadLink = item.ImageId ? `https://drive.usercontent.google.com/download?id=${safeImageId}` : '#';
+        // Image — priorité ImageUrl (Cloudinary) > ImageId (Google Drive)
+        const imgUrl = resolveImageUrl(item, 800);
+        const downloadLink = resolveDownloadUrl(item);
         const couleur = getCategorieColor(item.Categorie);
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE
             html += `
             <div class="galerie-item" data-img-url="${escapeAttr(imgUrl)}">
-                ${item.ImageId ? `<img src="${escapeAttr(imgUrl)}" class="galerie-image" alt="${escapeAttr(item.NomBillet || 'Billet')}">` : `
+                ${imgUrl ? `<img src="${escapeAttr(imgUrl)}" class="galerie-image" alt="${escapeAttr(item.NomBillet || 'Billet')}">` : `
                     <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${escapeHtml(item.Reference || '')}</div>
                 `}
             </div>`;
@@ -457,7 +478,7 @@ function showMore() {
                             <i class="fa-brands fa-facebook"></i>
                         </a>` : ''}
 
-                    ${item.ImageId ? `
+                    ${imgUrl ? `
                         <a href="${escapeAttr(downloadLink)}" target="_blank" rel="noopener" class="icon-btn ico-dl" title="Télécharger l'image HD">
                             <i class="fa-solid fa-download"></i>
                         </a>` : ''}
@@ -516,8 +537,14 @@ function openModal(imgUrl) {
 
     modal.classList.remove('hidden');
 
-    // Utiliser une taille d'image plus grande pour le zoom
-    modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600');
+    // Zoom : résolution plus grande selon la source
+    if (imgUrl.indexOf('cloudinary.com') !== -1) {
+        // Cloudinary — remplacer w_800 par w_1600
+        modalImg.src = imgUrl.replace('/w_800/', '/w_1600/');
+    } else {
+        // Google Drive — remplacer sz=w800 par sz=w1600
+        modalImg.src = imgUrl.replace('sz=w800', 'sz=w1600');
+    }
 
     // Empêche le scroll de la page derrière
     document.body.style.overflow = 'hidden';
