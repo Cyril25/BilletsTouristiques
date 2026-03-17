@@ -524,31 +524,38 @@ function loadEnveloppes() {
         return;
     }
     var alias = monCollecteur.alias;
-    // Charger les enveloppes en_cours du collecteur
-    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(alias) + '&statut=eq.en_cours&select=*&order=membre_email.asc')
-        .then(function(enveloppes) {
-            if (!enveloppes || enveloppes.length === 0) {
+    // Charger TOUTES les enveloppes du collecteur (en_cours + passées)
+    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(alias) + '&select=*&order=membre_email.asc,date_expedition.desc')
+        .then(function(toutesEnveloppes) {
+            toutesEnveloppes = toutesEnveloppes || [];
+            var enveloppes = toutesEnveloppes.filter(function(e) { return e.statut === 'en_cours'; });
+            var envPassees = toutesEnveloppes.filter(function(e) { return e.statut === 'expediee' || e.statut === 'recue'; });
+
+            // Charger toutes les inscriptions non-expédiées du collecteur (non_reparti + pret_a_envoyer)
+            var billetIds = mesBillets.map(function(b) { return b.id; });
+            if (billetIds.length === 0 && enveloppes.length === 0 && envPassees.length === 0) {
                 renderEnveloppesVide();
                 return;
             }
-            // Charger toutes les inscriptions non-expédiées du collecteur (non_reparti + pret_a_envoyer)
-            var billetIds = mesBillets.map(function(b) { return b.id; });
             if (billetIds.length === 0) {
-                renderEnveloppesListe(enveloppes, [], {});
+                renderEnveloppesListe(enveloppes, [], {}, envPassees);
                 return;
             }
             return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&statut_livraison=in.(non_reparti,pret_a_envoyer)&select=*')
                 .then(function(inscriptions) {
                     inscriptions = inscriptions || [];
-                    // Enrichir les snapshots avec les noms des membres
+                    // Enrichir les snapshots avec les noms des membres (en cours + passées)
                     var emails = [];
                     inscriptions.forEach(function(ins) {
                         if (ins.membre_email && emails.indexOf(ins.membre_email) === -1) emails.push(ins.membre_email);
                     });
+                    envPassees.forEach(function(ep) {
+                        if (ep.membre_email && emails.indexOf(ep.membre_email) === -1) emails.push(ep.membre_email);
+                    });
                     if (emails.length === 0) {
                         var billetsMap = {};
                         mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
-                        renderEnveloppesListe(enveloppes, inscriptions, billetsMap);
+                        renderEnveloppesListe(enveloppes, inscriptions, billetsMap, envPassees);
                         return;
                     }
                     var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
@@ -567,7 +574,7 @@ function loadEnveloppes() {
                             });
                             var billetsMap = {};
                             mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
-                            renderEnveloppesListe(enveloppes, inscriptions, billetsMap);
+                            renderEnveloppesListe(enveloppes, inscriptions, billetsMap, envPassees, membresMap);
                         });
                 });
         })
@@ -576,9 +583,12 @@ function loadEnveloppes() {
         });
 }
 
-function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
+function renderEnveloppesListe(enveloppes, inscriptions, billetsMap, envPassees, membresMap) {
     var container = document.getElementById('envois-view');
     if (!container) return;
+
+    envPassees = envPassees || [];
+    membresMap = membresMap || {};
 
     // Grouper les inscriptions par membre_email
     var inscByMembre = {};
@@ -588,45 +598,180 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
     });
 
     var html = '';
-    for (var e = 0; e < enveloppes.length; e++) {
-        var env = enveloppes[e];
-        var membreInscs = inscByMembre[env.membre_email] || [];
-        var dansEnveloppe = membreInscs.filter(function(i) { return i.statut_livraison === 'pret_a_envoyer' && i.enveloppe_id === env.id; });
-        var aRepartir = membreInscs.filter(function(i) { return i.statut_livraison === 'non_reparti'; });
-        var totalBillets = dansEnveloppe.length;
 
-        // Trouver le nom/prénom depuis la première inscription avec adresse_snapshot
-        var adr = {};
-        for (var a = 0; a < membreInscs.length; a++) {
-            if (membreInscs[a].adresse_snapshot && (membreInscs[a].adresse_snapshot.nom || membreInscs[a].adresse_snapshot.prenom)) {
-                adr = membreInscs[a].adresse_snapshot;
-                break;
+    // Section enveloppes en cours
+    if (enveloppes.length > 0) {
+        html += '<h3 class="enveloppes-section-titre"><i class="fa-solid fa-envelope-open"></i> Enveloppes en cours</h3>';
+        for (var e = 0; e < enveloppes.length; e++) {
+            var env = enveloppes[e];
+            var membreInscs = inscByMembre[env.membre_email] || [];
+            var dansEnveloppe = membreInscs.filter(function(i) { return i.statut_livraison === 'pret_a_envoyer' && i.enveloppe_id === env.id; });
+            var aRepartir = membreInscs.filter(function(i) { return i.statut_livraison === 'non_reparti'; });
+            var totalBillets = dansEnveloppe.length;
+
+            var adr = {};
+            for (var a = 0; a < membreInscs.length; a++) {
+                if (membreInscs[a].adresse_snapshot && (membreInscs[a].adresse_snapshot.nom || membreInscs[a].adresse_snapshot.prenom)) {
+                    adr = membreInscs[a].adresse_snapshot;
+                    break;
+                }
             }
-        }
-        var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || env.membre_email;
-        var adresseStr = [adr.rue, adr.code_postal, adr.ville, adr.pays].filter(Boolean).join(', ');
+            var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || env.membre_email;
+            var adresseStr = [adr.rue, adr.code_postal, adr.ville, adr.pays].filter(Boolean).join(', ');
 
-        // Indicateur demande d'envoi
-        var demandeHtml = '';
-        if (env.demande_envoi) {
-            var dateStr = env.date_demande_envoi ? new Date(env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
-            demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi (' + dateStr + ')</span>';
-        }
+            var demandeHtml = '';
+            if (env.demande_envoi) {
+                var dateStr = env.date_demande_envoi ? new Date(env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
+                demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi (' + dateStr + ')</span>';
+            }
 
-        html += '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + env.id + ')" style="cursor:pointer">'
-            + '<div class="envoi-groupe-header">'
-            + '<strong>' + escapeHtmlMC(nom) + '</strong>'
-            + '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>'
-            + '<span class="envoi-count">' + totalBillets + ' dans l\'enveloppe, ' + aRepartir.length + ' à répartir</span>'
-            + demandeHtml
-            + '</div>'
-            + '</div>';
+            html += '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + env.id + ')" style="cursor:pointer">'
+                + '<div class="envoi-groupe-header">'
+                + '<strong>' + escapeHtmlMC(nom) + '</strong>'
+                + '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>'
+                + '<span class="envoi-count">' + totalBillets + ' dans l\'enveloppe, ' + aRepartir.length + ' à répartir</span>'
+                + demandeHtml
+                + '</div>'
+                + '</div>';
+        }
+    }
+
+    // Section historique des envois
+    if (envPassees.length > 0) {
+        html += '<h3 class="enveloppes-section-titre enveloppes-section-historique"><i class="fa-solid fa-clock-rotate-left"></i> Historique des envois (' + envPassees.length + ')</h3>';
+        for (var h = 0; h < envPassees.length; h++) {
+            var envH = envPassees[h];
+            var dateExp = envH.date_expedition ? new Date(envH.date_expedition).toLocaleDateString('fr-FR') : '—';
+            var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[envH.mode_envoi_reel] || envH.mode_envoi_reel || '—';
+            var statutHtml = '';
+            if (envH.statut === 'recue') {
+                var dateRec = envH.date_reception ? new Date(envH.date_reception).toLocaleDateString('fr-FR') : '';
+                statutHtml = '<span class="badge-recue"><i class="fa-solid fa-circle-check"></i> Reçue ' + dateRec + '</span>';
+            } else {
+                statutHtml = '<span class="badge-pas-retour">Pas de retour</span>';
+            }
+
+            var membreH = membresMap[envH.membre_email];
+            var nomH = membreH ? ((membreH.prenom || '') + ' ' + (membreH.nom || '')).trim() : '';
+            nomH = nomH || envH.membre_email;
+
+            html += '<div class="envoi-groupe historique-envoi-card" onclick="openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
+                + '<div class="envoi-groupe-header">'
+                + '<strong>' + escapeHtmlMC(nomH) + '</strong>'
+                + '<span class="envoi-date"><i class="fa-solid fa-calendar"></i> ' + dateExp + '</span>'
+                + '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>'
+                + (envH.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + escapeHtmlMC(envH.numero_suivi) + '</span>' : '')
+                + statutHtml
+                + '</div>'
+                + '</div>';
+        }
     }
 
     if (html === '') {
         renderEnveloppesVide();
         return;
     }
+
+    container.innerHTML = html;
+}
+
+function openEnveloppePassee(enveloppeId) {
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId + '&select=*')
+        .then(function(enveloppes) {
+            if (!enveloppes || enveloppes.length === 0) return;
+            var env = enveloppes[0];
+            // Charger le nom du membre
+            return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(env.membre_email) + '&select=nom,prenom')
+                .then(function(membres) {
+                    if (membres && membres[0]) {
+                        env._nomAffiche = ((membres[0].prenom || '') + ' ' + (membres[0].nom || '')).trim() || env.membre_email;
+                    } else {
+                        env._nomAffiche = env.membre_email;
+                    }
+                    // Charger les inscriptions de cette enveloppe
+                    return supabaseFetch('/rest/v1/inscriptions?enveloppe_id=eq.' + enveloppeId + '&select=*');
+                })
+                .then(function(inscriptions) {
+                    inscriptions = inscriptions || [];
+                    var billetsMap = {};
+                    mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
+                    // Charger aussi les billets qu'on n'a peut-être plus dans mesBillets
+                    var missingIds = [];
+                    inscriptions.forEach(function(ins) {
+                        if (!billetsMap[ins.billet_id] && missingIds.indexOf(ins.billet_id) === -1) {
+                            missingIds.push(ins.billet_id);
+                        }
+                    });
+                    if (missingIds.length > 0) {
+                        return supabaseFetch('/rest/v1/billets?id=in.(' + missingIds.join(',') + ')&select=id,"NomBillet","Reference","Millesime","Version","VersionNormaleExiste"')
+                            .then(function(billets) {
+                                (billets || []).forEach(function(b) { billetsMap[b.id] = b; });
+                                renderEnveloppePasseeDetail(env, inscriptions, billetsMap);
+                            });
+                    }
+                    renderEnveloppePasseeDetail(env, inscriptions, billetsMap);
+                });
+        })
+        .catch(function(error) {
+            console.error('Erreur chargement enveloppe passée:', error);
+            showToast('Erreur lors du chargement', 'error');
+        });
+}
+
+function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
+    var container = document.getElementById('envois-view');
+    if (!container) return;
+
+    var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '—';
+    var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande: 'Recommandé' }[env.mode_envoi_reel] || env.mode_envoi_reel || '—';
+
+    var html = '';
+    html += '<button class="btn-retour-liste" onclick="retourEnveloppes()"><i class="fa-solid fa-arrow-left"></i> Retour aux enveloppes</button>';
+
+    html += '<div class="enveloppe-detail-header">';
+    html += '<h2><i class="fa-solid fa-envelope"></i> Envoi à ' + escapeHtmlMC(env._nomAffiche || env.membre_email) + '</h2>';
+    html += '<div class="historique-envoi-header" style="margin-top:8px">';
+    html += '<span><i class="fa-solid fa-calendar"></i> Expédié le ' + dateExp + '</span>';
+    html += '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>';
+    if (env.numero_suivi) {
+        html += '<span><i class="fa-solid fa-barcode"></i> N° suivi : ' + escapeHtmlMC(env.numero_suivi) + '</span>';
+    }
+    if (env.statut === 'recue') {
+        var dateRec = env.date_reception ? new Date(env.date_reception).toLocaleDateString('fr-FR') : '';
+        html += '<span class="badge-recue"><i class="fa-solid fa-circle-check"></i> Reçue le ' + dateRec + '</span>';
+    } else {
+        html += '<span class="badge-pas-retour">Pas de retour</span>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // Liste des billets dans l'enveloppe
+    html += '<div class="enveloppe-section">';
+    html += '<h3><i class="fa-solid fa-box"></i> Contenu de l\'enveloppe (' + inscriptions.length + ' billet(s))</h3>';
+    if (inscriptions.length === 0) {
+        html += '<p class="enveloppe-vide">Aucun billet enregistré</p>';
+    } else {
+        for (var i = 0; i < inscriptions.length; i++) {
+            var insc = inscriptions[i];
+            var billet = billetsMap[insc.billet_id] || {};
+            var envVne = billet.VersionNormaleExiste !== false;
+            var envQty = envVne ? 'N:' + (insc.nb_normaux || 0) + (insc.nb_variantes > 0 ? ' V:' + insc.nb_variantes : '') : 'V:' + (insc.nb_variantes || 0);
+            var envRefParts = [];
+            if (billet.Reference) envRefParts.push(billet.Reference);
+            var envMilVersion = '';
+            if (billet.Millesime) envMilVersion += billet.Millesime;
+            if (billet.Version) envMilVersion += '-' + billet.Version;
+            if (envMilVersion) envRefParts.push(envMilVersion);
+            var envRefPrefix = envRefParts.length > 0 ? envRefParts.join(' - ') + ' ' : '';
+
+            html += '<div class="envoi-ligne">'
+                + '<span class="envoi-billet">' + envRefPrefix + escapeHtmlMC(billet.NomBillet || '?') + '</span>'
+                + '<span class="envoi-qty">' + envQty + '</span>'
+                + badgePaiementEnvoi(insc.statut_paiement)
+                + '</div>';
+        }
+    }
+    html += '</div>';
 
     container.innerHTML = html;
 }
