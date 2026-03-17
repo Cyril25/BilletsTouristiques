@@ -309,7 +309,8 @@ function renderCollecteDetail(billetId, inscriptions) {
     if (billet.PayerFDP !== 'oui') {
         html += '<div class="message-gerer-envoi">'
             + '<i class="fa-solid fa-info-circle"></i> '
-            + 'Veuillez gérer l\'envoi de ce billet via l\'onglet <strong><a href="#" onclick="showTab(\'envois\');return false;">Préparation des envois</a></strong>.'
+            + 'Cochez la colonne <strong>Enveloppe</strong> pour ajouter le billet à la préparation des envois, '
+            + 'puis gérez l\'expédition via l\'onglet <strong><a href="#" onclick="showTab(\'envois\');return false;">Préparation des envois</a></strong>.'
             + '</div>';
     }
 
@@ -341,6 +342,8 @@ function renderCollecteDetail(billetId, inscriptions) {
         if (billet.PayerFDP === 'oui') {
             html += '<th>FDP</th>';
             html += '<th>Envoyé</th>';
+        } else {
+            html += '<th>Enveloppe</th>';
         }
         html += '<th>Actions</th>';
         html += '</tr></thead>';
@@ -366,6 +369,10 @@ function renderCollecteDetail(billetId, inscriptions) {
             if (billet.PayerFDP === 'oui') {
                 html += '<td data-label="FDP"><input type="checkbox" id="chk-fdp_regles-' + ins.id + '" ' + (ins.fdp_regles ? 'checked' : '') + ' onchange="toggleInscriptionField(' + ins.id + ', \'fdp_regles\', this.checked)"></td>';
                 html += '<td data-label="Envoyé"><input type="checkbox" id="chk-envoye-' + ins.id + '" ' + (ins.envoye ? 'checked' : '') + ' onchange="demanderExpeditionDirecte(' + ins.id + ', this)"></td>';
+            } else {
+                var dansEnv = ins.statut_livraison === 'pret_a_envoyer' || ins.statut_livraison === 'expedie';
+                var envDisabled = ins.statut_livraison === 'expedie' ? ' disabled title="Déjà expédié"' : '';
+                html += '<td data-label="Enveloppe"><input type="checkbox"' + envDisabled + ' ' + (dansEnv ? 'checked' : '') + ' onchange="toggleEnveloppeDepuisCollecte(' + ins.id + ', \'' + escapeAttrMC(ins.membre_email) + '\', this)"></td>';
             }
             html += '<td data-label="Actions">'
                 + '<button class="btn-modifier-inscription" onclick="ouvrirModalModification(' + ins.id + ')" title="Modifier l\'inscription"><i class="fa-solid fa-pen"></i></button>'
@@ -374,7 +381,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '</tr>';
 
             if (commentaire) {
-                var colCount = (vne ? 9 : 8) + (billet.PayerFDP === 'oui' ? 2 : 0);
+                var colCount = (vne ? 9 : 8) + (billet.PayerFDP === 'oui' ? 2 : 1);
                 html += '<tr class="tr-commentaire"><td colspan="' + colCount + '"><i class="fa-solid fa-comment"></i> ' + escapeHtmlMC(commentaire) + '</td></tr>';
             }
         }
@@ -446,6 +453,47 @@ function toggleInscriptionField(inscriptionId, field, newValue) {
 // ============================================================
 // 6b. EXPEDITION DIRECTE DEPUIS VUE COLLECTE (checkbox envoyé)
 // ============================================================
+
+function toggleEnveloppeDepuisCollecte(inscriptionId, membreEmail, checkbox) {
+    if (!monCollecteur) return;
+
+    if (checkbox.checked) {
+        // Ajouter à l'enveloppe en_cours
+        creerEnveloppeSiAbsente(monCollecteur.alias, membreEmail)
+            .then(function() {
+                return supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(monCollecteur.alias) + '&membre_email=eq.' + encodeURIComponent(membreEmail) + '&statut=eq.en_cours&select=id');
+            })
+            .then(function(envs) {
+                if (!envs || envs.length === 0) throw new Error('Enveloppe introuvable');
+                return supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ statut_livraison: 'pret_a_envoyer', enveloppe_id: envs[0].id })
+                });
+            })
+            .then(function() {
+                showToast('Billet ajouté à l\'enveloppe');
+            })
+            .catch(function(error) {
+                console.error('Erreur ajout enveloppe:', error);
+                checkbox.checked = false;
+                showToast('Erreur', 'error');
+            });
+    } else {
+        // Retirer de l'enveloppe
+        supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_livraison: 'non_reparti', enveloppe_id: null })
+        })
+        .then(function() {
+            showToast('Billet retiré de l\'enveloppe');
+        })
+        .catch(function(error) {
+            console.error('Erreur retrait enveloppe:', error);
+            checkbox.checked = true;
+            showToast('Erreur', 'error');
+        });
+    }
+}
 
 function demanderExpeditionDirecte(inscriptionId, checkbox) {
     if (!checkbox.checked) {
