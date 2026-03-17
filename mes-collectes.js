@@ -876,6 +876,9 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             var aRepartir = membreInscs.filter(function(i) { return i.statut_livraison === 'non_reparti'; });
             var totalBillets = dansEnveloppe.length;
 
+            // Masquer les enveloppes vides (0 dans l'enveloppe et 0 à répartir)
+            if (totalBillets === 0 && aRepartir.length === 0) continue;
+
             var adr = enveloppesMeta[e].adr;
             var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || env.membre_email;
             var adresseStr = [adr.rue, adr.code_postal, adr.ville, adr.pays].filter(Boolean).join(', ');
