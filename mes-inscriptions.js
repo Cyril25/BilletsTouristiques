@@ -6,6 +6,8 @@
 var mesInscriptions = [];
 var billetsMap = {};
 var collecteursMap = {};
+var membrePays = '';
+var fraisPortData = [];
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -35,19 +37,21 @@ function loadMesInscriptions() {
     if (!user) return;
     var email = user.email;
 
+    var annee = new Date().getFullYear();
+
     // Étape 1 : charger les inscriptions du membre (pas_interesse = false)
     supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.false&select=*&order=date_inscription.desc')
         .then(function(data) {
             mesInscriptions = data || [];
 
-            // Étape 2 : charger les billets associés pour noms, villes, prix
+            // Étape 2 : charger les billets associés pour noms, villes, prix, PayerFDP
             var billetIds = mesInscriptions.map(function(i) { return i.billet_id; });
             if (billetIds.length === 0) {
                 renderInscriptions();
                 return;
             }
             var idsParam = 'id=in.(' + billetIds.join(',') + ')';
-            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante","Categorie"');
+            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante","Categorie","PayerFDP"');
         })
         .then(function(billets) {
             if (billets) {
@@ -55,14 +59,26 @@ function loadMesInscriptions() {
                 billets.forEach(function(b) { billetsMap[b.id] = b; });
             }
 
-            // Étape 3 : charger les collecteurs pour les liens PayPal
-            return supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me');
+            // Étape 3 : charger collecteurs, pays du membre, frais de port en parallèle
+            return Promise.all([
+                supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me'),
+                supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays'),
+                supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
+            ]);
         })
-        .then(function(collecteurs) {
+        .then(function(results) {
+            if (!results) return;
+            var collecteurs = results[0];
+            var membres = results[1];
+            var fraisPort = results[2];
+
             if (collecteurs) {
                 collecteursMap = {};
                 collecteurs.forEach(function(c) { collecteursMap[c.alias] = c; });
             }
+            membrePays = (membres && membres[0]) ? (membres[0].pays || '') : '';
+            fraisPortData = fraisPort || [];
+
             renderInscriptions();
         })
         .catch(function(error) {
@@ -73,6 +89,17 @@ function loadMesInscriptions() {
 // ============================================================
 // 2. RENDU DE LA LISTE
 // ============================================================
+
+function findFdpPrice(nbBillets, destination, typeEnvoi) {
+    for (var i = 0; i < fraisPortData.length; i++) {
+        var r = fraisPortData[i];
+        if (r.destination === destination && r.type_envoi === typeEnvoi &&
+            nbBillets >= r.qte_min && nbBillets <= r.qte_max) {
+            return parseFloat(r.prix);
+        }
+    }
+    return 0;
+}
 
 function renderInscriptions() {
     var container = document.getElementById('inscriptions-list');
@@ -99,16 +126,27 @@ function renderInscriptions() {
         var nbVariantes = insc.nb_variantes || 0;
         var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
         var statut = insc.statut_paiement || 'non_paye';
+
+        // Calcul des frais de port si demandés pour ce billet
+        var fdpMontant = 0;
+        if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+            var nbTotal = nbNormaux + nbVariantes;
+            var dest = (membrePays === 'France') ? 'france' : 'international';
+            var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
+            fdpMontant = findFdpPrice(nbTotal, dest, typeEnvoi);
+        }
+        var montantAvecFdp = montant + fdpMontant;
+
         if (billet.Categorie !== 'Pré collecte') {
-            if (statut === 'non_paye') totalDu += montant;
-            else if (statut === 'declare') totalEnAttente += montant;
+            if (statut === 'non_paye') totalDu += montantAvecFdp;
+            else if (statut === 'declare') totalEnAttente += montantAvecFdp;
         }
 
         var collecteur = collecteursMap[billet.Collecteur] || {};
         var paypalLink = '';
         if (statut === 'non_paye' && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte') {
             if (collecteur.paypal_me) {
-                paypalLink = '<a href="https://paypal.me/' + collecteur.paypal_me + '/' + montant.toFixed(2) + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
+                paypalLink = '<a href="https://paypal.me/' + collecteur.paypal_me + '/' + montantAvecFdp.toFixed(2) + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
             } else if (collecteur.paypal_email) {
                 paypalLink = '<a href="https://www.paypal.com/paypalme/' + collecteur.paypal_email + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
             }
@@ -127,7 +165,9 @@ function renderInscriptions() {
             + '<span><i class="fa-solid fa-ticket"></i> ' + (billet.VersionNormaleExiste === false ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
             + (billet.Categorie === 'Pré collecte'
                 ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> En attente</span>'
-                : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>')
+                : (fdpMontant > 0
+                    ? '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC + fdp ' + fdpMontant.toFixed(2) + ' \u20AC, soit ' + montantAvecFdp.toFixed(2) + ' \u20AC</span>'
+                    : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>'))
             + '</div>'
             + '<div class="inscription-card-statuts">'
             + badgeCollecte(billet.Categorie)

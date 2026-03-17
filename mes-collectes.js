@@ -18,6 +18,18 @@ var mesBillets = [];
 var currentBilletId = null;
 var currentBillet = null;
 var currentInscriptions = [];
+var fraisPortCollecte = [];
+
+function findFdpPriceCollecte(nbBillets, destination, typeEnvoi) {
+    for (var i = 0; i < fraisPortCollecte.length; i++) {
+        var r = fraisPortCollecte[i];
+        if (r.destination === destination && r.type_envoi === typeEnvoi &&
+            nbBillets >= r.qte_min && nbBillets <= r.qte_max) {
+            return parseFloat(r.prix);
+        }
+    }
+    return 0;
+}
 
 // ============================================================
 // 1. TOAST NOTIFICATIONS
@@ -196,9 +208,14 @@ function openCollecteDetail(billetId) {
         }
     }
 
-    supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.asc')
-        .then(function(inscriptions) {
-            currentInscriptions = inscriptions || [];
+    var annee = new Date().getFullYear();
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.asc'),
+        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
+    ])
+        .then(function(results) {
+            currentInscriptions = results[0] || [];
+            fraisPortCollecte = results[1] || [];
             // Enrichir les snapshots avec les noms actuels des membres
             var emails = [];
             currentInscriptions.forEach(function(ins) {
@@ -262,9 +279,18 @@ function renderCollecteDetail(billetId, inscriptions) {
     // Back button
     html += '<button class="btn-retour-liste" onclick="retourListe()"><i class="fa-solid fa-arrow-left"></i> Retour à la liste</button>';
 
-    // Header
+    // Header avec prix
+    var prixHeader = '';
+    if (billet && prix > 0) {
+        var vne = billet.VersionNormaleExiste !== false;
+        if (vne && prixVariante !== prix) {
+            prixHeader = ' — ' + prix.toFixed(2) + ' \u20AC / ' + prixVariante.toFixed(2) + ' \u20AC var.';
+        } else {
+            prixHeader = ' — ' + prix.toFixed(2) + ' \u20AC';
+        }
+    }
     html += '<div class="collecte-detail-header">';
-    html += '<h2>' + escapeHtmlMC((billet && billet.NomBillet) || '') + '</h2>';
+    html += '<h2>' + escapeHtmlMC((billet && billet.NomBillet) || '') + '<span style="font-weight:400; font-size:0.75em; color:#666;">' + prixHeader + '</span></h2>';
     if (billet && billet.Ville) html += '<span class="collecte-detail-ville"><i class="fa-solid fa-location-dot"></i> ' + escapeHtmlMC(billet.Ville) + '</span>';
     html += '</div>';
 
@@ -354,8 +380,18 @@ function renderCollecteDetail(billetId, inscriptions) {
             var snap = ins.adresse_snapshot || {};
             var nomPrenom = ((snap.prenom || '') + ' ' + (snap.nom || '')).trim() || ins.membre_email;
             var adresse = formatAdresse(snap);
-            var montant = ((prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0))).toFixed(2);
+            var montantBillets = (prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0));
             var commentaire = ins.commentaire || '';
+
+            // Calcul FDP si demandé
+            var fdpMontantIns = 0;
+            if (billet.PayerFDP === 'oui') {
+                var nbTotalIns = (ins.nb_normaux || 0) + (ins.nb_variantes || 0);
+                var destIns = (snap.pays === 'France') ? 'france' : 'international';
+                var typeEnvoiIns = (ins.mode_envoi || 'Normal').toLowerCase();
+                fdpMontantIns = findFdpPriceCollecte(nbTotalIns, destIns, typeEnvoiIns);
+            }
+            var montantAffiche = montantBillets.toFixed(2) + ' \u20AC' + (fdpMontantIns > 0 ? ' + ' + fdpMontantIns.toFixed(2) + ' \u20AC fdp' : '');
 
             html += '<tr>';
             html += '<td data-label="Nom">' + escapeHtmlMC(nomPrenom) + '</td>';
@@ -364,7 +400,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
             html += '<td data-label="Paiement">' + escapeHtmlMC(ins.mode_paiement || '') + '</td>';
             html += '<td data-label="Envoi">' + escapeHtmlMC(ins.mode_envoi || '') + '</td>';
-            html += '<td data-label="Montant">' + montant + ' €</td>';
+            html += '<td data-label="Montant">' + montantAffiche + '</td>';
             html += '<td data-label="Payé">' + badgePaiementCollecteur(ins) + '</td>';
             if (billet.PayerFDP === 'oui') {
                 html += '<td data-label="FDP"><input type="checkbox" id="chk-fdp_regles-' + ins.id + '" ' + (ins.fdp_regles ? 'checked' : '') + ' onchange="toggleInscriptionField(' + ins.id + ', \'fdp_regles\', this.checked)"></td>';

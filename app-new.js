@@ -11,6 +11,10 @@ var BATCH_SIZE = 50;
 var mesInscriptions = {};
 var collecteursMap = {};
 
+// Frais de port dynamiques
+var fraisPortCatalogue = [];
+var membrePaysCatalogue = '';
+
 // Story 5.12 : Compteurs BT automatiques
 var compteurInscriptionsMap = {};
 
@@ -86,6 +90,7 @@ if (typeof firebase !== 'undefined') {
             loadMesInscriptions();
             loadCollecteursForCatalogue();
             loadCompteursInscriptions();
+            loadFraisPortCatalogue(user.email);
         }
     });
 }
@@ -502,15 +507,23 @@ function showMore() {
                     var prixNormal = item.Prix ? parseFloat(item.Prix) : 0;
                     var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
 
+                    // Calcul FDP si demandé
+                    var fdpInfo = '';
+                    if (item.PayerFDP === 'oui' && membrePaysCatalogue) {
+                        var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
+                        var fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
+                        if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
+                    }
+
                     if (!versionNormaleExiste && varianteActive && prixVar) {
                         // Uniquement variante
-                        parts.push('au prix de ' + prixVar + ' euros uniquement ' + varianteVal);
+                        parts.push('au prix de ' + prixVar + ' euros' + fdpInfo + ' uniquement ' + varianteVal);
                     } else if (versionNormaleExiste && varianteActive && prixNormal) {
                         // Normale + variante
-                        parts.push('au prix de ' + prixNormal + ' euros version normale & ' + prixVar + ' euros version ' + varianteVal);
+                        parts.push('au prix de ' + prixNormal + ' euros version normale & ' + prixVar + ' euros version ' + varianteVal + fdpInfo);
                     } else if (prixNormal) {
                         // Normale seule
-                        parts.push('au prix de ' + prixNormal + ' euros');
+                        parts.push('au prix de ' + prixNormal + ' euros' + fdpInfo);
                     }
 
                     if (parts.length === 0) return '';
@@ -673,6 +686,33 @@ function loadCompteursInscriptions() {
         .catch(function(error) {
             console.warn('Compteurs inscriptions non disponibles:', error);
         });
+}
+
+// --- Chargement frais de port et pays du membre pour le catalogue ---
+function loadFraisPortCatalogue(email) {
+    var annee = new Date().getFullYear();
+    Promise.all([
+        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays')
+    ])
+    .then(function(results) {
+        fraisPortCatalogue = results[0] || [];
+        membrePaysCatalogue = (results[1] && results[1][0]) ? (results[1][0].pays || '') : '';
+    })
+    .catch(function(error) {
+        console.warn('Erreur chargement frais de port catalogue:', error);
+    });
+}
+
+function findFdpPriceCatalogue(nbBillets, destination, typeEnvoi) {
+    for (var i = 0; i < fraisPortCatalogue.length; i++) {
+        var r = fraisPortCatalogue[i];
+        if (r.destination === destination && r.type_envoi === typeEnvoi &&
+            nbBillets >= r.qte_min && nbBillets <= r.qte_max) {
+            return parseFloat(r.prix);
+        }
+    }
+    return 0;
 }
 
 function getCompteurBT(item) {
