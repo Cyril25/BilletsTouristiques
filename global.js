@@ -82,12 +82,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Sécurité supplémentaire
     if (typeof firebase === 'undefined') return;
 
-    const auth = firebase.auth();
+    var auth = firebase.auth();
 
-    auth.onAuthStateChanged(user => {
-        const path = window.location.pathname;
-        const page = path.split("/").pop();
-        const isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
+    auth.onAuthStateChanged(function(user) {
+        var path = window.location.pathname;
+        var page = path.split("/").pop();
+        var isLoginPage = (page === "login.html" || page === "login"); // petit fix au cas où
 
         if (user) {
             console.log("Utilisateur détecté : " + user.email);
@@ -142,10 +142,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 var appContent = document.getElementById('app-content');
                 if (appContent) {
                     appContent.style.display = 'block';
-                    appContent.innerHTML = '<div style="text-align:center;padding:40px;color:#CC4444;">' +
+                    appContent.innerHTML = '<div style="text-align:center;padding:40px;color:var(--color-danger, #CC4444);">' +
                         '<i class="fa-solid fa-circle-exclamation" style="font-size:2em;margin-bottom:12px;display:block;"></i>' +
                         '<strong>Erreur de connexion au serveur.</strong><br>' +
-                        '<span style="color:#666;">Veuillez rafraichir la page ou reessayer plus tard.</span>' +
+                        '<span style="color:var(--color-text-light, #666);">Veuillez rafraichir la page ou reessayer plus tard.</span>' +
                         '</div>';
                 }
             });
@@ -165,9 +165,9 @@ document.addEventListener("DOMContentLoaded", function() {
 // ============================================================
 function loginWithGoogle() {
     if (typeof firebase === 'undefined') return;
-    const provider = new firebase.auth.GoogleAuthProvider();
+    var provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider)
-        .catch(error => {
+        .catch(function(error) {
             console.error(error);
             alert("Erreur connexion : " + error.message);
 
@@ -185,7 +185,7 @@ function loginWithGoogle() {
 
 function logout() {
     if (typeof firebase === 'undefined') return;
-    firebase.auth().signOut().then(() => {
+    firebase.auth().signOut().then(function() {
         window.location.href = "login.html";
     });
 }
@@ -194,12 +194,12 @@ function logout() {
 // 4. MENU (Mise à jour)
 // ============================================================
 function loadMenu() {
-    const placeholder = document.getElementById("menu-placeholder");
+    var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
     fetch("menu.html")
-        .then(response => response.text())
-        .then(html => {
+        .then(function(response) { return response.text(); })
+        .then(function(html) {
             // 1. On injecte le HTML
             placeholder.innerHTML = html;
 
@@ -207,8 +207,8 @@ function loadMenu() {
             highlightActiveLink();
 
             // 3. ON AFFICHE L'EMAIL
-            const user = firebase.auth().currentUser;
-            const emailSpan = document.getElementById("user-email-display");
+            var user = firebase.auth().currentUser;
+            var emailSpan = document.getElementById("user-email-display");
 
             // On vérifie si l'utilisateur est là et si le span existe
             if (user && emailSpan) {
@@ -221,23 +221,23 @@ function loadMenu() {
                 adminLinks.forEach(function(el) { el.classList.remove('admin-only'); });
             }
         })
-        .catch(err => console.error("Menu introuvable :", err));
+        .catch(function(err) { console.error("Menu introuvable :", err); });
 }
 
 function highlightActiveLink() {
-    let page = window.location.pathname.split("/").pop();
+    var page = window.location.pathname.split("/").pop();
     if(page === "") page = "index.html";
 
-    setTimeout(() => {
-        const links = document.querySelectorAll(".nav-links a");
-        links.forEach(link => {
+    setTimeout(function() {
+        var links = document.querySelectorAll(".nav-links a");
+        links.forEach(function(link) {
             if(link.getAttribute("href") === page) link.classList.add("active");
         });
     }, 100);
 }
 
 function toggleMenu() {
-    const nav = document.getElementById('nav-links');
+    var nav = document.getElementById('nav-links');
     if(nav) nav.classList.toggle('active');
 }
 
@@ -268,8 +268,8 @@ function isProfilComplet(callback) {
 // 6. SERVICE WORKER (Cache des assets statiques)
 // ============================================================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js')
-            .catch(err => console.warn('Service Worker non enregistré :', err));
+            .catch(function(err) { console.warn('Service Worker non enregistré :', err); });
     });
 }

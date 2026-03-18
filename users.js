@@ -374,7 +374,10 @@ function openDeleteUserModal(email) {
 
 function closeDeleteUserModal() {
     var overlay = document.getElementById('delete-user-modal-overlay');
-    if (overlay) overlay.style.display = 'none';
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.removeEventListener('click', onDeleteUserOverlayClick);
+    }
     deleteUserTargetEmail = null;
     document.removeEventListener('keydown', onDeleteUserKeydown);
 }
@@ -447,7 +450,7 @@ function changeUserRole(email, newRole, isSelfDemotion) {
 }
 
 function updateRoleInDOM(email, newRole) {
-    var card = document.querySelector('.user-card[data-doc-id="' + escapeAttr(email) + '"]');
+    var card = document.querySelector('.user-card[data-doc-id="' + CSS.escape(email) + '"]');
     if (!card) return;
 
     var badge = card.querySelector('.user-badge-role');
