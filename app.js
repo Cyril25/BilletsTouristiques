@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Le chargement des données est déclenché après confirmation de l'auth Firebase.
-// global.js gère les redirections et la whitelist ; app.js se contente d'écouter.
+// global.js gère les redirections et les membres ; app.js se contente d'écouter.
 if (typeof firebase !== 'undefined') {
     firebase.auth().onAuthStateChanged(user => {
         if (user) {

@@ -16,7 +16,7 @@ export default {
 
     // --- CORS preflight ---
     // SEC-04 — Pas de CORS necessaire : le Apps Script appelle en mode serveur (UrlFetchApp)
-    // Si un domaine frontend specifique doit appeler, le whitelister ici.
+    // Si un domaine frontend specifique doit appeler, l'autoriser ici.
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204 });
     }
