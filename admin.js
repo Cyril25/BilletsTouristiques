@@ -2316,7 +2316,7 @@ function renderStatusCounters() {
         html += '<button class="admin-status-counter' +
             (isActive ? ' admin-status-counter--active' : '') +
             '" data-status="' + escapeAttr(statut) + '" onclick="adminFilterByStatus(\'' +
-            statut.replace(/'/g, "\\'") + '\')" aria-pressed="' +
+            escapeAttr(statut) + '\')" aria-pressed="' +
             (isActive ? 'true' : 'false') +
             '" style="border-left-color: ' + color + ';">' +
             '<span class="admin-status-counter__count">' + counts[statut] + '</span>' +
@@ -2511,6 +2511,11 @@ function openShareModal(billetId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
 
+    var shareTextEl = document.getElementById('share-modal-text');
+    var shareOverlay = document.getElementById('share-modal-overlay');
+    var btn = document.getElementById('share-copy-btn');
+    if (!shareTextEl || !shareOverlay || !btn) return;
+
     var pays = billet.Pays || '';
     var ref = (billet.Reference || '') + ' ' + (billet.Millesime || 'XXXX') + '-' + (billet.Version || 'X');
     var nom = billet.NomBillet || '';
@@ -2548,18 +2553,18 @@ function openShareModal(billetId) {
 
     var text = lines.join('\n');
 
-    document.getElementById('share-modal-text').textContent = text;
-    document.getElementById('share-modal-overlay').style.display = '';
+    shareTextEl.textContent = text;
+    shareOverlay.style.display = '';
 
     // Reset bouton copie
-    var btn = document.getElementById('share-copy-btn');
     btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copier';
     btn.classList.remove('admin-modal-btn-success');
     btn.classList.add('admin-modal-btn-primary');
 }
 
 function closeShareModal() {
-    document.getElementById('share-modal-overlay').style.display = 'none';
+    var overlay = document.getElementById('share-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 function copyShareText() {
@@ -2582,22 +2587,30 @@ function copyShareText() {
 // Fermer les modales avec Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        if (document.getElementById('share-modal-overlay').style.display !== 'none') {
+        var shareOverlay = document.getElementById('share-modal-overlay');
+        if (shareOverlay && shareOverlay.style.display !== 'none') {
             closeShareModal();
         }
-        if (document.getElementById('inscriptions-modal-overlay').style.display !== 'none') {
+        var inscOverlay = document.getElementById('inscriptions-modal-overlay');
+        if (inscOverlay && inscOverlay.style.display !== 'none') {
             closeInscriptionsModal();
         }
     }
 });
 
 // Fermer en cliquant sur l'overlay
-document.getElementById('share-modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closeShareModal();
-});
-document.getElementById('inscriptions-modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closeInscriptionsModal();
-});
+var shareOverlayEl = document.getElementById('share-modal-overlay');
+if (shareOverlayEl) {
+    shareOverlayEl.addEventListener('click', function(e) {
+        if (e.target === this) closeShareModal();
+    });
+}
+var inscOverlayEl = document.getElementById('inscriptions-modal-overlay');
+if (inscOverlayEl) {
+    inscOverlayEl.addEventListener('click', function(e) {
+        if (e.target === this) closeInscriptionsModal();
+    });
+}
 
 // ============================================================
 // FEAT-2 : MODALE GESTION DES INSCRIPTIONS
@@ -2610,12 +2623,17 @@ function openInscriptionsModal(billetId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
 
+    var titleEl = document.getElementById('inscriptions-modal-title');
+    var bodyEl = document.getElementById('inscriptions-modal-body');
+    var overlayEl = document.getElementById('inscriptions-modal-overlay');
+    if (!titleEl || !bodyEl || !overlayEl) return;
+
     adminCurrentBilletId = billetId;
-    document.getElementById('inscriptions-modal-title').innerHTML =
+    titleEl.innerHTML =
         '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
-    document.getElementById('inscriptions-modal-body').innerHTML =
-        '<p style="text-align:center; padding:20px; color:#666;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
-    document.getElementById('inscriptions-modal-overlay').style.display = '';
+    bodyEl.innerHTML =
+        '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
+    overlayEl.style.display = '';
 
     // Charger les inscriptions pour ce billet
     supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.desc')
@@ -2625,13 +2643,15 @@ function openInscriptionsModal(billetId) {
         })
         .catch(function(error) {
             console.error('Erreur chargement inscriptions:', error);
-            document.getElementById('inscriptions-modal-body').innerHTML =
+            var errBody = document.getElementById('inscriptions-modal-body');
+            if (errBody) errBody.innerHTML =
                 '<p style="text-align:center; padding:20px; color:var(--color-danger);">Erreur lors du chargement</p>';
         });
 }
 
 function closeInscriptionsModal() {
-    document.getElementById('inscriptions-modal-overlay').style.display = 'none';
+    var overlay = document.getElementById('inscriptions-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
     adminCurrentBilletId = null;
     adminCurrentInscriptions = [];
 }
@@ -2672,7 +2692,7 @@ function renderInscriptionsModalContent(billet) {
     }
 
     if (adminCurrentInscriptions.length === 0) {
-        html += '<p style="text-align:center; padding:20px; color:#666;">Aucune inscription pour ce billet</p>';
+        html += '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);">Aucune inscription pour ce billet</p>';
     } else {
         html += '<div class="admin-insc-table-wrapper"><table class="admin-insc-table">';
         html += '<thead><tr><th>Membre</th>';
@@ -2926,11 +2946,10 @@ function submitAdminAddInscription() {
         body: JSON.stringify(body)
     })
     .then(function() {
-        showToast('Membre inscrit avec succès !');
+        showToast('Membre inscrit avec succès !', 'success');
         cancelAdminInscriptionForm();
-        // Mettre à jour le compteur
-        adminInscriptionCounts[adminCurrentBilletId] = (adminInscriptionCounts[adminCurrentBilletId] || 0) + 1;
-        renderAdminCards();
+        // Recharger les compteurs depuis l'API (le cache stocke des objets, pas des nombres)
+        loadAdminInscriptionCounts();
         // Recharger la liste des inscriptions dans la modale
         openInscriptionsModal(adminCurrentBilletId);
     })
@@ -2968,7 +2987,7 @@ function submitAdminEditInscription(inscriptionId) {
         body: JSON.stringify(body)
     })
     .then(function() {
-        showToast('Inscription modifiée !');
+        showToast('Inscription modifiée !', 'success');
         cancelAdminInscriptionForm();
         openInscriptionsModal(adminCurrentBilletId);
     })
@@ -2985,10 +3004,9 @@ function confirmAdminDeleteInscription(inscriptionId) {
         method: 'DELETE'
     })
     .then(function() {
-        showToast('Inscription supprimée');
-        // Mettre à jour le compteur
-        adminInscriptionCounts[adminCurrentBilletId] = Math.max(0, (adminInscriptionCounts[adminCurrentBilletId] || 1) - 1);
-        renderAdminCards();
+        showToast('Inscription supprimée', 'success');
+        // Recharger les compteurs depuis l'API (le cache stocke des objets, pas des nombres)
+        loadAdminInscriptionCounts();
         openInscriptionsModal(adminCurrentBilletId);
     })
     .catch(function(error) {
