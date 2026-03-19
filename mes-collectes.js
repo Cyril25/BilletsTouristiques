@@ -120,6 +120,57 @@ function loadMesCollectes() {
         });
 }
 
+// #14 — Onboarding collecteur
+function showOnboardingIfNeeded() {
+    var key = 'bt_onboarding_collecteur_dismissed';
+    if (localStorage.getItem(key)) return;
+    var existing = document.getElementById('onboarding-collecteur');
+    if (existing) return;
+
+    var container = document.getElementById('collectes-list');
+    if (!container) return;
+
+    var html = '<div class="onboarding-banner" id="onboarding-collecteur">'
+        + '<button class="onboarding-close" onclick="dismissOnboarding()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>'
+        + '<h3 class="onboarding-title"><i class="fa-solid fa-graduation-cap"></i> Bienvenue, collecteur !</h3>'
+        + '<p class="onboarding-subtitle">Voici comment fonctionne le workflow de collecte en 4 étapes :</p>'
+        + '<div class="onboarding-steps">'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">1</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Les membres s\'inscrivent</strong>'
+        + '<p>Les membres choisissent vos collectes et s\'inscrivent via le catalogue.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">2</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Vérifiez les paiements</strong>'
+        + '<p>Dans l\'onglet <em>Vérification paiement</em>, confirmez les déclarations de paiement des membres.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">3</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Préparez les envois</strong>'
+        + '<p>Dans <em>Préparation des envois</em>, regroupez les billets par membre dans des enveloppes.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">4</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Expédiez !</strong>'
+        + '<p>Renseignez le mode d\'envoi et le numéro de suivi, puis marquez l\'enveloppe comme expédiée.</p>'
+        + '</div></div>'
+        + '</div>'
+        + '</div>';
+
+    container.insertAdjacentHTML('afterbegin', html);
+}
+
+function dismissOnboarding() {
+    localStorage.setItem('bt_onboarding_collecteur_dismissed', '1');
+    var el = document.getElementById('onboarding-collecteur');
+    if (el) el.remove();
+}
+
 function renderCollectesList() {
     var container = document.getElementById('collectes-list');
     if (!container) return;
@@ -129,6 +180,9 @@ function renderCollectesList() {
     if (detailDiv) detailDiv.style.display = 'none';
     container.style.display = '';
 
+    // #14 — Afficher l'onboarding si premier accès
+    showOnboardingIfNeeded();
+
     // #12 — Compteurs sur l'onglet "Mes collectes"
     var enCours = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
     var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
@@ -136,6 +190,7 @@ function renderCollectesList() {
 
     if (mesBillets.length === 0) {
         container.innerHTML = '<p class="collectes-empty"><i class="fa-solid fa-inbox"></i> Aucune collecte assignée.</p>';
+        showOnboardingIfNeeded();
         return;
     }
 
@@ -1150,16 +1205,54 @@ function loadHistoriqueGlobal() {
         });
 }
 
+// #15 — Données historique pour recherche/export
+var _historiqueEnvois = [];
+var _historiqueMembresMap = {};
+
 function renderHistoriqueGlobal(envPassees, membresMap) {
     var container = document.getElementById('historique-view');
     if (!container) return;
 
-    var html = '<h3 class="enveloppes-section-titre"><i class="fa-solid fa-clock-rotate-left"></i> Historique des envois (' + envPassees.length + ')</h3>';
+    _historiqueEnvois = envPassees;
+    _historiqueMembresMap = membresMap;
 
+    var html = '<div class="historique-toolbar">'
+        + '<div class="admin-search" style="flex:1;max-width:350px">'
+        + '<i class="fa-solid fa-magnifying-glass admin-search__icon"></i>'
+        + '<input type="text" id="historique-search" class="admin-search__input" placeholder="Rechercher un membre, n° suivi…" oninput="filterHistorique()">'
+        + '<button id="historique-search-clear" class="admin-search__clear" onclick="clearHistoriqueSearch()" style="display:none"><i class="fa-solid fa-xmark"></i></button>'
+        + '</div>'
+        + '<button class="btn-export-csv" onclick="exportHistoriqueCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>'
+        + '</div>';
+
+    html += '<h3 class="enveloppes-section-titre"><i class="fa-solid fa-clock-rotate-left"></i> Historique des envois (<span id="historique-count">' + envPassees.length + '</span>)</h3>';
+    html += '<div id="historique-cards">';
+    html += buildHistoriqueCards(envPassees, membresMap, '');
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function buildHistoriqueCards(envPassees, membresMap, query) {
+    var html = '';
+    var count = 0;
+    var q = query.toLowerCase();
     for (var h = 0; h < envPassees.length; h++) {
         var envH = envPassees[h];
         var dateExp = envH.date_expedition ? new Date(envH.date_expedition).toLocaleDateString('fr-FR') : '—';
         var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[envH.mode_envoi_reel] || envH.mode_envoi_reel || '—';
+
+        var membreH = membresMap[envH.membre_email];
+        var nomH = membreH ? ((membreH.prenom || '') + ' ' + (membreH.nom || '')).trim() : '';
+        nomH = nomH || envH.membre_email;
+
+        // Filtre recherche
+        if (q) {
+            var haystack = (nomH + ' ' + dateExp + ' ' + modeLabel + ' ' + (envH.numero_suivi || '') + ' ' + envH.statut).toLowerCase();
+            if (haystack.indexOf(q) === -1) continue;
+        }
+        count++;
+
         var statutHtml = '';
         if (envH.statut === 'recue') {
             var dateRec = envH.date_reception ? new Date(envH.date_reception).toLocaleDateString('fr-FR') : '';
@@ -1167,10 +1260,6 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
         } else {
             statutHtml = '<span class="badge-pas-retour">Pas de retour</span>';
         }
-
-        var membreH = membresMap[envH.membre_email];
-        var nomH = membreH ? ((membreH.prenom || '') + ' ' + (membreH.nom || '')).trim() : '';
-        nomH = nomH || envH.membre_email;
 
         html += '<div class="envoi-groupe historique-envoi-card" onclick="_retourDepuisHistorique=true;openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
@@ -1182,8 +1271,53 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
             + '</div>'
             + '</div>';
     }
+    if (count === 0 && q) {
+        html = '<div class="envois-empty"><p>Aucun résultat pour « ' + escapeHtmlMC(query) + ' »</p></div>';
+    }
+    var countEl = document.getElementById('historique-count');
+    if (countEl) countEl.textContent = count;
+    return html;
+}
 
-    container.innerHTML = html;
+function filterHistorique() {
+    var input = document.getElementById('historique-search');
+    var clearBtn = document.getElementById('historique-search-clear');
+    var q = input ? input.value : '';
+    if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+    var cardsContainer = document.getElementById('historique-cards');
+    if (cardsContainer) {
+        cardsContainer.innerHTML = buildHistoriqueCards(_historiqueEnvois, _historiqueMembresMap, q);
+    }
+}
+
+function clearHistoriqueSearch() {
+    var input = document.getElementById('historique-search');
+    if (input) { input.value = ''; input.focus(); }
+    filterHistorique();
+}
+
+function exportHistoriqueCSV() {
+    if (!_historiqueEnvois || _historiqueEnvois.length === 0) return;
+    var sep = ';';
+    var lines = ['Membre' + sep + 'Email' + sep + 'Date expédition' + sep + 'Mode envoi' + sep + 'N° suivi' + sep + 'Statut' + sep + 'Date réception'];
+    for (var i = 0; i < _historiqueEnvois.length; i++) {
+        var e = _historiqueEnvois[i];
+        var m = _historiqueMembresMap[e.membre_email];
+        var nom = m ? ((m.prenom || '') + ' ' + (m.nom || '')).trim() : '';
+        var dateExp = e.date_expedition ? new Date(e.date_expedition).toLocaleDateString('fr-FR') : '';
+        var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[e.mode_envoi_reel] || e.mode_envoi_reel || '';
+        var statut = e.statut === 'recue' ? 'Reçue' : 'Expédiée';
+        var dateRec = e.date_reception ? new Date(e.date_reception).toLocaleDateString('fr-FR') : '';
+        lines.push([nom, e.membre_email || '', dateExp, modeLabel, e.numero_suivi || '', statut, dateRec].join(sep));
+    }
+    var csvContent = '\uFEFF' + lines.join('\n');
+    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'historique-envois-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function openEnveloppeDetail(enveloppeId) {

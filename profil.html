@@ -66,13 +66,13 @@
                 <div class="profil-form-group">
                     <label>Téléphone</label>
                     <div class="profil-phone-row">
-                        <div class="indicatif-dropdown" id="indicatif-dropdown">
+                        <div class="indicatif-dropdown" id="indicatif-dropdown" role="combobox" aria-expanded="false" aria-haspopup="listbox">
                             <input type="hidden" id="profil-indicatif" name="indicatif_tel">
-                            <button type="button" class="indicatif-btn" id="indicatif-btn">
+                            <button type="button" class="indicatif-btn" id="indicatif-btn" aria-label="Choisir l'indicatif téléphonique">
                                 <span class="indicatif-placeholder">Indicatif</span>
                             </button>
-                            <div class="indicatif-list" id="indicatif-list">
-                                <input type="text" class="indicatif-search" id="indicatif-search" placeholder="Rechercher un pays...">
+                            <div class="indicatif-list" id="indicatif-list" role="listbox" aria-label="Liste des indicatifs">
+                                <input type="text" class="indicatif-search" id="indicatif-search" placeholder="Rechercher un pays..." aria-label="Rechercher un pays">
                                 <div class="indicatif-options" id="indicatif-options"></div>
                             </div>
                         </div>

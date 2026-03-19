@@ -138,13 +138,17 @@ function loadIndicatifsList() {
     var search = document.getElementById('indicatif-search');
     if (!container || !btn || !hiddenInput) return;
 
+    var dropdown = document.getElementById('indicatif-dropdown');
+
     // Générer les options
-    indicatifsList.forEach(function(item) {
+    indicatifsList.forEach(function(item, index) {
         var div = document.createElement('div');
         div.className = 'indicatif-option';
+        div.setAttribute('role', 'option');
         div.setAttribute('data-dial', item.dial);
         div.setAttribute('data-nom', item.nom.toLowerCase());
         div.setAttribute('data-code', item.code);
+        div.setAttribute('data-index', index);
         div.innerHTML = '<img src="' + flagUrl(item.code) + '" alt="' + item.code + '" class="indicatif-flag">'
             + '<span class="indicatif-nom">' + item.nom + '</span>'
             + '<span class="indicatif-dial">' + item.dial + '</span>';
@@ -154,34 +158,102 @@ function loadIndicatifsList() {
         container.appendChild(div);
     });
 
+    function openDropdown() {
+        list.classList.add('open');
+        if (dropdown) dropdown.setAttribute('aria-expanded', 'true');
+        if (search) {
+            search.value = '';
+            filterIndicatifs('');
+            setTimeout(function() { search.focus(); }, 50);
+        }
+    }
+
+    function closeDropdown() {
+        list.classList.remove('open');
+        if (dropdown) dropdown.setAttribute('aria-expanded', 'false');
+        _indicatifActiveIndex = -1;
+        clearIndicatifHighlight();
+    }
+
     // Ouvrir/fermer le dropdown
     btn.addEventListener('click', function(e) {
         e.stopPropagation();
         var isOpen = list.classList.contains('open');
-        list.classList.toggle('open');
-        if (!isOpen && search) {
-            search.value = '';
-            filterIndicatifs('');
-            setTimeout(function() { search.focus(); }, 50);
+        if (isOpen) { closeDropdown(); } else { openDropdown(); }
+    });
+
+    // #13 — Navigation clavier
+    btn.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!list.classList.contains('open')) openDropdown();
         }
     });
 
     // Recherche
     if (search) {
         search.addEventListener('input', function() {
+            _indicatifActiveIndex = -1;
             filterIndicatifs(search.value.toLowerCase());
         });
         search.addEventListener('click', function(e) {
             e.stopPropagation();
+        });
+        search.addEventListener('keydown', function(e) {
+            var visibles = getVisibleIndicatifOptions();
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                _indicatifActiveIndex = Math.min(_indicatifActiveIndex + 1, visibles.length - 1);
+                highlightIndicatifOption(visibles);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                _indicatifActiveIndex = Math.max(_indicatifActiveIndex - 1, 0);
+                highlightIndicatifOption(visibles);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (_indicatifActiveIndex >= 0 && visibles[_indicatifActiveIndex]) {
+                    visibles[_indicatifActiveIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeDropdown();
+                btn.focus();
+            }
         });
     }
 
     // Fermer en cliquant ailleurs
     document.addEventListener('click', function(e) {
         if (!e.target.closest('#indicatif-dropdown')) {
-            list.classList.remove('open');
+            closeDropdown();
         }
     });
+}
+
+var _indicatifActiveIndex = -1;
+
+function getVisibleIndicatifOptions() {
+    var all = document.querySelectorAll('.indicatif-option');
+    var visibles = [];
+    for (var i = 0; i < all.length; i++) {
+        if (all[i].style.display !== 'none') visibles.push(all[i]);
+    }
+    return visibles;
+}
+
+function clearIndicatifHighlight() {
+    var all = document.querySelectorAll('.indicatif-option');
+    for (var i = 0; i < all.length; i++) {
+        all[i].classList.remove('indicatif-option--focused');
+    }
+}
+
+function highlightIndicatifOption(visibles) {
+    clearIndicatifHighlight();
+    if (_indicatifActiveIndex >= 0 && visibles[_indicatifActiveIndex]) {
+        visibles[_indicatifActiveIndex].classList.add('indicatif-option--focused');
+        visibles[_indicatifActiveIndex].scrollIntoView({ block: 'nearest' });
+    }
 }
 
 function selectIndicatif(item) {
