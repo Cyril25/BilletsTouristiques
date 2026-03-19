@@ -816,7 +816,7 @@ function buildInscriptionHtml(item) {
         html = '<div class="inscription-badges">'
             + '<span class="badge-non-inscrit">Non inscrit</span>'
             + (isInscriptionSite
-                ? '<button onclick="ouvrirInscription(' + item.id + ')" class="btn-sinscrire">S\'inscrire</button>'
+                ? '<button onclick="ouvrirInscription(' + item.id + ')" class="btn-sinscrire"><i class="fa-solid fa-pen-to-square"></i> S\'inscrire</button>'
                   + '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse">Pas intéressé</button>'
                 : '')
             + '</div>';
