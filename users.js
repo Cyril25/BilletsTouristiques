@@ -94,14 +94,53 @@ function loadUsers() {
 }
 
 // ============================================================
+// 5b. QW-5 — RECHERCHE MEMBRES
+// ============================================================
+function filterUsers() {
+    var input = document.getElementById('user-search-input');
+    var clearBtn = document.getElementById('user-search-clear');
+    var query = input ? input.value.trim().toLowerCase() : '';
+    if (clearBtn) clearBtn.style.display = query ? '' : 'none';
+    renderUserCards(query);
+}
+
+function clearUserSearch() {
+    var input = document.getElementById('user-search-input');
+    if (input) input.value = '';
+    var clearBtn = document.getElementById('user-search-clear');
+    if (clearBtn) clearBtn.style.display = 'none';
+    renderUserCards('');
+}
+
+// ============================================================
 // 6. RENDU DES CARTES UTILISATEURS
 // ============================================================
-function renderUserCards() {
+function renderUserCards(searchQuery) {
     var grid = document.getElementById('user-cards-grid');
     if (!grid) return;
 
+    var query = (searchQuery || '').toLowerCase();
+    var filtered = usersList;
+    if (query) {
+        filtered = usersList.filter(function(user) {
+            var email = (user._id || '').toLowerCase();
+            var pseudo = (user.pseudo || '').toLowerCase();
+            var nom = (user.nom || '').toLowerCase();
+            var prenom = (user.prenom || '').toLowerCase();
+            return email.indexOf(query) !== -1 || pseudo.indexOf(query) !== -1
+                || nom.indexOf(query) !== -1 || prenom.indexOf(query) !== -1;
+        });
+    }
+
+    // Afficher le compteur
+    var countEl = document.getElementById('user-count');
+    if (countEl) {
+        countEl.textContent = filtered.length + ' membre' + (filtered.length > 1 ? 's' : '')
+            + (query ? ' sur ' + usersList.length : '');
+    }
+
     var html = '';
-    usersList.forEach(function(user) {
+    filtered.forEach(function(user) {
         var email = user._id || '';
         var pseudo = user.pseudo || '';
         var nom = user.nom || '';

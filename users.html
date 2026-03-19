@@ -21,6 +21,14 @@
             </button>
         </div>
 
+        <!-- QW-5 — Barre de recherche membres -->
+        <div class="admin-search" style="margin-bottom: 12px;">
+            <i class="fa-solid fa-magnifying-glass admin-search__icon"></i>
+            <input type="text" id="user-search-input" class="admin-search__input" placeholder="Rechercher un membre (nom, email, pseudo)..." oninput="filterUsers()">
+            <button type="button" class="admin-search__clear" id="user-search-clear" onclick="clearUserSearch()" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="user-count" style="margin-bottom: 12px; font-size: 0.875rem; color: var(--color-text-light, #666);"></div>
+
         <!-- Formulaire d'ajout de membre -->
         <div id="add-user-form" class="user-add-form" style="display:none">
             <input type="email" id="new-user-email" placeholder="email@exemple.com" autocomplete="off" required>

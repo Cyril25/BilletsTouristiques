@@ -42,6 +42,42 @@
         <div id="relance-modal" class="relance-modal-overlay" style="display:none"></div>
         <div id="inscription-modal" class="relance-modal-overlay" style="display:none"></div>
 
+        <!-- QW-6 — Modale confirmation clôture collecte -->
+        <div id="cloturer-modal" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)fermerModalCloturer()">
+            <div class="user-modal" role="alertdialog" aria-modal="true">
+                <h2 class="user-modal-title"><i class="fa-solid fa-lock"></i> Clôturer cette collecte ?</h2>
+                <p class="user-modal-desc">Aucune nouvelle inscription ne sera acceptée après la clôture.</p>
+                <div class="user-modal-actions">
+                    <button type="button" class="user-modal-btn" onclick="fermerModalCloturer()">Annuler</button>
+                    <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerCloturer()">Clôturer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QW-6 — Modale confirmation annulation envoi -->
+        <div id="annuler-envoi-modal" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)fermerModalAnnulerEnvoi()">
+            <div class="user-modal" role="alertdialog" aria-modal="true">
+                <h2 class="user-modal-title"><i class="fa-solid fa-rotate-left"></i> Annuler cet envoi ?</h2>
+                <p class="user-modal-desc">Les billets repasseront dans la préparation des envois.</p>
+                <div class="user-modal-actions">
+                    <button type="button" class="user-modal-btn" onclick="fermerModalAnnulerEnvoi()">Annuler</button>
+                    <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerAnnulationEnvoi()">Confirmer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QW-6 — Modale confirmation désinscription -->
+        <div id="desinscrire-modal" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)fermerModalDesinscrire()">
+            <div class="user-modal" role="alertdialog" aria-modal="true">
+                <h2 class="user-modal-title"><i class="fa-solid fa-user-minus"></i> Désinscrire ce membre ?</h2>
+                <p id="desinscrire-msg" class="user-modal-desc"></p>
+                <div class="user-modal-actions">
+                    <button type="button" class="user-modal-btn" onclick="fermerModalDesinscrire()">Annuler</button>
+                    <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerDesinscrire()">Désinscrire</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>

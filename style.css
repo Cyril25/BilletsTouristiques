@@ -191,6 +191,12 @@ body {
     gap: 5px;
 }
 
+/* QW-2 — Dropdown parent actif quand une page enfant est active */
+.dropbtn.active {
+    color: var(--color-accent);
+    font-weight: 500;
+}
+
 .dropdown-content {
     display: none;
     position: absolute;
@@ -224,6 +230,13 @@ body {
 .dropdown-content a:hover {
     background-color: var(--color-bg-hover);
     color: var(--color-secondary);
+}
+
+/* QW-2 — Lien actif dans un dropdown */
+.dropdown-content a.active {
+    color: var(--color-accent);
+    font-weight: 500;
+    background-color: var(--color-bg-hover) !important;
 }
 
 .dropdown-header {

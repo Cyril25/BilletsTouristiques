@@ -217,7 +217,8 @@ function badgePaiementMembre(statut, inscriptionId, categorie) {
         return '<span class="badge-paiement badge-paye">Payé</span>';
     }
     if (statut === 'declare') {
-        return '<span class="badge-paiement badge-declare">Paiement déclaré – en attente de vérification par le collecteur</span>';
+        // QW-4 — Badge raccourci avec tooltip pour le détail
+        return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>';
     }
     // non_paye — Story 9.8 : bloquer en pré-collecte
     if (categorie === 'Pré collecte') {
@@ -226,13 +227,43 @@ function badgePaiementMembre(statut, inscriptionId, categorie) {
     return '<button class="btn-jai-paye" title="Cliquez pour déclarer votre paiement" onclick="declarerPaiement(' + inscriptionId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
 }
 
+// QW-3 — Confirmation avant déclaration de paiement
+var pendingDeclarationId = null;
+
 function declarerPaiement(inscriptionId) {
+    // Trouver le billet associé pour afficher le montant
+    var insc = null;
+    for (var i = 0; i < mesInscriptions.length; i++) {
+        if (mesInscriptions[i].id === inscriptionId) { insc = mesInscriptions[i]; break; }
+    }
+    var billet = insc ? billetsMap[insc.billet_id] : null;
+    var collecteur = billet ? (billet.Collecteur || '') : '';
+    var prix = parseFloat((billet && billet.Prix) || 0);
+    var prixVar = (billet && billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+    var montant = insc ? (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0)) : 0;
+
+    pendingDeclarationId = inscriptionId;
+    var modal = document.getElementById('confirm-paiement-modal');
+    var msgEl = document.getElementById('confirm-paiement-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Confirmez-vous avoir payé <strong>' + montant.toFixed(2) + ' \u20AC</strong>'
+            + (collecteur ? ' à <strong>' + escapeHtml(collecteur) + '</strong>' : '') + ' ?';
+    }
+    if (modal) modal.style.display = 'flex';
+}
+
+function confirmerDeclarationPaiement() {
+    var modal = document.getElementById('confirm-paiement-modal');
+    if (modal) modal.style.display = 'none';
+    if (!pendingDeclarationId) return;
+    var inscriptionId = pendingDeclarationId;
+    pendingDeclarationId = null;
+
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'PATCH',
         body: JSON.stringify({ statut_paiement: 'declare' })
     })
     .then(function() {
-        // Mettre à jour localement et re-render
         for (var i = 0; i < mesInscriptions.length; i++) {
             if (mesInscriptions[i].id === inscriptionId) {
                 mesInscriptions[i].statut_paiement = 'declare';
@@ -240,10 +271,18 @@ function declarerPaiement(inscriptionId) {
             }
         }
         renderInscriptions();
+        showToast('Paiement déclaré — le collecteur sera notifié');
     })
     .catch(function(error) {
         console.error('Erreur déclaration paiement:', error);
+        showToast('Erreur lors de la déclaration', 'error');
     });
+}
+
+function annulerDeclarationPaiement() {
+    var modal = document.getElementById('confirm-paiement-modal');
+    if (modal) modal.style.display = 'none';
+    pendingDeclarationId = null;
 }
 
 // ============================================================

@@ -220,6 +220,19 @@ function loadMenu() {
                 var adminLinks = document.querySelectorAll('.admin-only');
                 adminLinks.forEach(function(el) { el.classList.remove('admin-only'); });
             }
+
+            // QW-1 — Masquer "Mes collectes" pour les non-collecteurs
+            var user2 = firebase.auth().currentUser;
+            if (user2) {
+                supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(user2.email) + '&select=id')
+                    .then(function(data) {
+                        if (!data || data.length === 0) {
+                            var collectesLink = document.querySelector('a[href="mes-collectes.html"]');
+                            if (collectesLink) collectesLink.style.display = 'none';
+                        }
+                    })
+                    .catch(function() {});
+            }
         })
         .catch(function(err) { console.error("Menu introuvable :", err); });
 }
@@ -229,9 +242,18 @@ function highlightActiveLink() {
     if(page === "") page = "index.html";
 
     setTimeout(function() {
+        // QW-2 — Marquer le lien actif dans la navbar ET les dropdowns
         var links = document.querySelectorAll(".nav-links a");
         links.forEach(function(link) {
-            if(link.getAttribute("href") === page) link.classList.add("active");
+            if(link.getAttribute("href") === page) {
+                link.classList.add("active");
+                // Si le lien actif est dans un dropdown, marquer aussi le bouton parent
+                var dropdown = link.closest('.dropdown');
+                if (dropdown) {
+                    var dropbtn = dropdown.querySelector('.dropbtn');
+                    if (dropbtn) dropbtn.classList.add('active');
+                }
+            }
         });
     }, 100);
 }

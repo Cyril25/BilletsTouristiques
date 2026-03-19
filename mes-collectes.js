@@ -736,8 +736,27 @@ function updateCompteurs() {
 // ============================================================
 // 7. CLOTURER UNE COLLECTE (Task 7)
 // ============================================================
+// QW-6 — Modale custom pour clôturer une collecte
+var pendingClotureId = null;
+
 function cloturerCollecte(billetId) {
-    if (!confirm('Êtes-vous sûr de vouloir clôturer cette collecte ? Aucune nouvelle inscription ne sera acceptée.')) return;
+    pendingClotureId = billetId;
+    var modal = document.getElementById('cloturer-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function fermerModalCloturer() {
+    var modal = document.getElementById('cloturer-modal');
+    if (modal) modal.style.display = 'none';
+    pendingClotureId = null;
+}
+
+function confirmerCloturer() {
+    fermerModalCloturer();
+    if (!pendingClotureId) return;
+    var billetId = pendingClotureId;
+    pendingClotureId = null;
+
     var today = new Date().toISOString().slice(0, 10);
     supabaseFetch('/rest/v1/billets?id=eq.' + billetId, {
         method: 'PATCH',
@@ -756,8 +775,29 @@ function cloturerCollecte(billetId) {
 // ============================================================
 // 8. DESINSCRIPTION D'UN MEMBRE (Task 8)
 // ============================================================
+// QW-6 — Modale custom pour désinscrire un membre
+var pendingDesinscriptionId = null;
+
 function desinscrireMembre(inscriptionId, membrePrenom) {
-    if (!confirm('Désinscrire ' + membrePrenom + ' de cette collecte ?')) return;
+    pendingDesinscriptionId = inscriptionId;
+    var msgEl = document.getElementById('desinscrire-msg');
+    if (msgEl) msgEl.textContent = 'Désinscrire ' + membrePrenom + ' de cette collecte ?';
+    var modal = document.getElementById('desinscrire-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function fermerModalDesinscrire() {
+    var modal = document.getElementById('desinscrire-modal');
+    if (modal) modal.style.display = 'none';
+    pendingDesinscriptionId = null;
+}
+
+function confirmerDesinscrire() {
+    fermerModalDesinscrire();
+    if (!pendingDesinscriptionId) return;
+    var inscriptionId = pendingDesinscriptionId;
+    pendingDesinscriptionId = null;
+
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'DELETE'
     })
@@ -1497,9 +1537,30 @@ function creerNouvelleEnveloppe(ancienneEnveloppeId) {
         });
 }
 
-function annulerEnvoi(enveloppeId) {
-    if (!confirm('Annuler cet envoi ? Les billets repasseront dans la préparation des envois.')) return;
+// QW-6 — Modale custom pour annuler un envoi
+var pendingAnnulationEnvoiId = null;
 
+function annulerEnvoi(enveloppeId) {
+    pendingAnnulationEnvoiId = enveloppeId;
+    var modal = document.getElementById('annuler-envoi-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function fermerModalAnnulerEnvoi() {
+    var modal = document.getElementById('annuler-envoi-modal');
+    if (modal) modal.style.display = 'none';
+    pendingAnnulationEnvoiId = null;
+}
+
+function confirmerAnnulationEnvoi() {
+    fermerModalAnnulerEnvoi();
+    if (!pendingAnnulationEnvoiId) return;
+    var enveloppeId = pendingAnnulationEnvoiId;
+    pendingAnnulationEnvoiId = null;
+    executerAnnulationEnvoi(enveloppeId);
+}
+
+function executerAnnulationEnvoi(enveloppeId) {
     var envData;
 
     // 1. Récupérer l'enveloppe
