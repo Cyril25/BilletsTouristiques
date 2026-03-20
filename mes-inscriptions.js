@@ -10,6 +10,50 @@ var membrePays = '';
 var fraisPortData = [];
 var currentInscFilter = 'tous'; // #9 — filtre actif
 
+// #14 — Onboarding membre inscriptions
+function getOnboardingMembreHtml() {
+    var key = 'bt_onboarding_membre_dismissed';
+    if (localStorage.getItem(key)) return '';
+
+    return '<div class="onboarding-banner" id="onboarding-membre">'
+        + '<button class="onboarding-close" onclick="dismissOnboardingMembre()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>'
+        + '<h3 class="onboarding-title"><i class="fa-solid fa-hand-wave"></i> Bienvenue sur vos inscriptions !</h3>'
+        + '<p class="onboarding-subtitle">Nouveau système : fini le Google Form ! Voici comment s\'inscrire à une collecte :</p>'
+        + '<div class="onboarding-steps">'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">1</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Choisissez un billet dans le catalogue</strong>'
+        + '<p>Depuis la page <a href="billets.html">Les billets</a>, cliquez sur <em>« S\'inscrire »</em> sur la collecte qui vous intéresse.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">2</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Indiquez la quantité voulue</strong>'
+        + '<p>Choisissez le nombre de billets (normal et/ou variante) puis validez.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">3</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Payez le collecteur</strong>'
+        + '<p>Réglez le collecteur (virement, chèque…), puis déclarez votre paiement ici avec le bouton <em>« Déclarer paiement »</em>.</p>'
+        + '</div></div>'
+        + '<div class="onboarding-step">'
+        + '<div class="onboarding-step-num">4</div>'
+        + '<div class="onboarding-step-content">'
+        + '<strong>Recevez vos billets par courrier</strong>'
+        + '<p>Le collecteur prépare votre enveloppe et vous l\'envoie. Vous pouvez suivre l\'avancement dans l\'onglet <em>« Mes envois »</em>.</p>'
+        + '</div></div>'
+        + '</div>'
+        + '</div>';
+}
+
+function dismissOnboardingMembre() {
+    localStorage.setItem('bt_onboarding_membre_dismissed', '1');
+    var el = document.getElementById('onboarding-membre');
+    if (el) el.remove();
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -122,11 +166,14 @@ function renderInscriptions() {
     var summary = document.getElementById('inscriptions-summary');
     if (!container) return;
 
+    // #14 — Onboarding membre
+    var onboardingHtml = getOnboardingMembreHtml();
+
     // État vide
     if (mesInscriptions.length === 0) {
         container.innerHTML = '';
         if (emptyState) emptyState.style.display = '';
-        if (summary) summary.innerHTML = '';
+        if (summary) summary.innerHTML = onboardingHtml;
         return;
     }
     if (emptyState) emptyState.style.display = 'none';
@@ -257,7 +304,7 @@ function renderInscriptions() {
     });
 
     if (summary) {
-        summary.innerHTML = '<div class="inscriptions-resume">'
+        summary.innerHTML = onboardingHtml + '<div class="inscriptions-resume">'
             + '<span>' + mesInscriptions.length + ' inscription(s)</span>'
             + '<span class="inscriptions-resume-montants">'
             + '<span class="montant-non-paye"><strong>' + totalDuGlobal.toFixed(2) + ' \u20AC restant \u00E0 payer</strong></span>'

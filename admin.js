@@ -34,6 +34,31 @@ var adminBillets = [];
 var adminInscriptionCounts = {};
 var adminMembresCache = null;
 
+// #14 — Onboarding admin
+function showAdminOnboarding() {
+    var key = 'bt_onboarding_admin_dismissed';
+    if (localStorage.getItem(key)) return;
+
+    var target = document.querySelector('.admin-page-header');
+    if (!target) return;
+
+    var html = '<div class="onboarding-banner onboarding-banner--compact" id="onboarding-admin">'
+        + '<button class="onboarding-close" onclick="dismissOnboardingAdmin()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>'
+        + '<h3 class="onboarding-title"><i class="fa-solid fa-hand-wave"></i> Espace administration</h3>'
+        + '<p class="onboarding-text">Depuis cette page, vous gérez le <strong>catalogue des billets</strong> : '
+        + 'créer, modifier, changer le statut (pré-collecte → collecte → terminé…). '
+        + 'Les autres pages admin vous permettent de gérer les <strong>membres</strong>, les <strong>collecteurs</strong> et les <strong>frais de port</strong> via le menu.</p>'
+        + '</div>';
+
+    target.insertAdjacentHTML('afterend', html);
+}
+
+function dismissOnboardingAdmin() {
+    localStorage.setItem('bt_onboarding_admin_dismissed', '1');
+    var el = document.getElementById('onboarding-admin');
+    if (el) el.remove();
+}
+
 // Categories (= statuts) — valeurs reelles du Google Sheet
 var CATEGORIES = [
     'Pré collecte',
@@ -424,6 +449,7 @@ function clearImageUpload() {
 if (typeof firebase !== 'undefined') {
     firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
+            showAdminOnboarding();
             loadAdminBillets();
             loadAdminInscriptionCounts();
             loadPays();

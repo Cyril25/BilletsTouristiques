@@ -4537,6 +4537,27 @@ body.login-page {
     }
 }
 
+/* Variante compacte (texte seul, pas de steps) */
+.onboarding-banner--compact {
+    padding: 1rem 1.25rem;
+}
+
+.onboarding-banner--compact .onboarding-title {
+    margin-bottom: 0.5rem;
+}
+
+.onboarding-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.onboarding-text a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
 .btn-ajouter-enveloppe {
     background: var(--color-success);
     color: var(--color-text-inverse);

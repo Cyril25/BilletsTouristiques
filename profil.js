@@ -299,6 +299,30 @@ if (typeof firebase !== 'undefined') {
     });
 }
 
+// #14 — Onboarding profil
+function showProfilOnboarding() {
+    var key = 'bt_onboarding_profil_dismissed';
+    if (localStorage.getItem(key)) return;
+
+    var target = document.querySelector('.profil-email-display');
+    if (!target) return;
+
+    var html = '<div class="onboarding-banner onboarding-banner--compact" id="onboarding-profil">'
+        + '<button class="onboarding-close" onclick="dismissOnboardingProfil()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>'
+        + '<h3 class="onboarding-title"><i class="fa-solid fa-circle-info"></i> Pourquoi remplir mon profil ?</h3>'
+        + '<p class="onboarding-text">Votre <strong>nom</strong>, <strong>prénom</strong> et <strong>adresse postale</strong> sont indispensables pour que les collecteurs puissent vous envoyer vos billets par courrier. '
+        + 'Sans profil complet, vous ne pourrez pas vous inscrire à une collecte.</p>'
+        + '</div>';
+
+    target.insertAdjacentHTML('afterend', html);
+}
+
+function dismissOnboardingProfil() {
+    localStorage.setItem('bt_onboarding_profil_dismissed', '1');
+    var el = document.getElementById('onboarding-profil');
+    if (el) el.remove();
+}
+
 function initProfilPage(user) {
     // Afficher l'email
     var emailDisplay = document.getElementById('profil-email');
@@ -310,6 +334,9 @@ function initProfilPage(user) {
         var redirectMsg = document.getElementById('profil-redirect-msg');
         if (redirectMsg) redirectMsg.style.display = 'flex';
     }
+
+    // #14 — Onboarding profil
+    showProfilOnboarding();
 
     // Charger les indicatifs téléphoniques
     loadIndicatifsList();
