@@ -3423,7 +3423,7 @@ body.login-page {
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .badge-inscrit {
@@ -3665,6 +3665,7 @@ body.login-page {
 
     .inscription-badges {
         padding: var(--spacing-xs) var(--spacing-sm);
+        flex-wrap: wrap;
     }
 }
 
