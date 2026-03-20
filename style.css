@@ -6099,45 +6099,50 @@ body.login-page {
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
 }
 
 .preinsc-fieldset legend input[type="checkbox"] {
     margin: 0;
+    flex-shrink: 0;
 }
 
 .preinsc-radio-group {
     display: flex;
     gap: var(--spacing-md);
-    flex-wrap: wrap;
     align-items: center;
+    margin-bottom: var(--spacing-sm);
 }
 
 .preinsc-radio-group label {
     display: inline-flex !important;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
     cursor: pointer;
 }
 
 .preinsc-radio-group input[type="radio"] {
     margin: 0;
+    flex-shrink: 0;
 }
 
 .preinsc-country-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, 280px);
     gap: var(--spacing-sm);
     margin-top: var(--spacing-sm);
 }
 
 .preinsc-country-item {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: var(--spacing-xs);
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 6px var(--spacing-xs);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg);
+    min-height: 38px;
 }
 
 .preinsc-country-item label {
@@ -6146,16 +6151,20 @@ body.login-page {
     gap: 6px;
     font-weight: 500;
     font-size: 0.9rem;
+    white-space: nowrap;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .preinsc-country-item label input[type="checkbox"] {
     margin: 0;
+    flex-shrink: 0;
 }
 
 .preinsc-pays-qte {
     display: flex;
     gap: var(--spacing-xs);
+    margin-left: auto;
 }
 
 .preinsc-pays-qte input {
