@@ -20,7 +20,17 @@
         <h1>Espace Membres</h1>
         <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes de l'association.</p>
 
-        <button class="btn-google" onclick="loginWithGoogle()">
+        <div id="webview-warning" style="display:none; background:#FFF3CD; border:1px solid #FFCC02; border-radius:8px; padding:16px; margin-bottom:20px; text-align:center;">
+            <p style="margin:0 0 10px 0; color:#664D03; font-size:0.95rem; line-height:1.5;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                La connexion Google ne fonctionne pas depuis Messenger ou Facebook. Ouvrez cette page dans votre navigateur :
+            </p>
+            <a id="webview-open-btn" href="#" style="display:inline-block; background:var(--color-primary); color:#fff; padding:10px 24px; border-radius:6px; text-decoration:none; font-weight:500;">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir dans le navigateur
+            </a>
+        </div>
+
+        <button id="btn-google-login" class="btn-google" onclick="loginWithGoogle()">
             <i class="fa-brands fa-google"></i> Se connecter avec Google
         </button>
 
@@ -33,6 +43,33 @@
 <script src="global.js"></script>
 
 <script>
+// Détection navigateur intégré (Messenger, Facebook, Instagram, etc.)
+(function() {
+    var ua = navigator.userAgent || '';
+    var isWebView = /FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\//i.test(ua);
+    if (isWebView) {
+        var warning = document.getElementById('webview-warning');
+        var btnGoogle = document.getElementById('btn-google-login');
+        if (warning) warning.style.display = 'block';
+        if (btnGoogle) btnGoogle.style.display = 'none';
+
+        // Lien pour ouvrir dans le navigateur par défaut
+        var openBtn = document.getElementById('webview-open-btn');
+        if (openBtn) {
+            var url = window.location.href;
+            // Android : intent:// ouvre dans le navigateur par défaut
+            var isAndroid = /android/i.test(ua);
+            if (isAndroid) {
+                openBtn.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;end';
+            } else {
+                // iOS et autres : lien direct (l'utilisateur peut long-press ou copier)
+                openBtn.href = url;
+                openBtn.setAttribute('target', '_blank');
+            }
+        }
+    }
+})();
+
 // STORY 1.2 — Afficher le message d'erreur si paramètre ?error=unauthorized
 var urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('error') === 'unauthorized') {
