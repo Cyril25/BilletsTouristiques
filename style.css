@@ -6098,13 +6098,18 @@ body.login-page {
     color: var(--color-primary);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     white-space: nowrap;
 }
 
-.preinsc-fieldset legend input[type="checkbox"] {
+.preinsc-fieldset legend input[type="checkbox"],
+.preinsc-radio-group input[type="radio"],
+.preinsc-country-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
     margin: 0;
     flex-shrink: 0;
+    accent-color: var(--color-primary);
 }
 
 .preinsc-radio-group {
@@ -6117,14 +6122,9 @@ body.login-page {
 .preinsc-radio-group label {
     display: inline-flex !important;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     white-space: nowrap;
     cursor: pointer;
-}
-
-.preinsc-radio-group input[type="radio"] {
-    margin: 0;
-    flex-shrink: 0;
 }
 
 .preinsc-country-grid {
@@ -6148,16 +6148,11 @@ body.login-page {
 .preinsc-country-item label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     font-weight: 500;
     font-size: 0.9rem;
     white-space: nowrap;
     cursor: pointer;
-    flex-shrink: 0;
-}
-
-.preinsc-country-item label input[type="checkbox"] {
-    margin: 0;
     flex-shrink: 0;
 }
 

@@ -45,7 +45,7 @@ function preInscLoadMembres() {
 }
 
 function preInscLoadPays() {
-    return supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc')
+    return supabaseFetch('/rest/v1/pays?select=nom&nom=neq.France&order=nom.asc')
         .then(function(data) {
             preInscPaysListe = (data || []).map(function(p) { return p.nom; });
         });
@@ -237,7 +237,7 @@ function preInscOpenForm(membreEmail) {
     // Section France
     var frChecked = existing ? existing.france : false;
     html += '<fieldset class="preinsc-fieldset">';
-    html += '<legend><input type="checkbox" id="preinsc-france" onchange="preInscToggleSection(\'france\')"' + (frChecked ? ' checked' : '') + '> Billets français</legend>';
+    html += '<legend><input type="checkbox" id="preinsc-france" onchange="preInscToggleSection(\'france\')"' + (frChecked ? ' checked' : '') + '>Billets français</legend>';
     html += '<div id="preinsc-france-details" style="' + (frChecked ? '' : 'display:none;') + '">';
     html += '<div class="preinsc-form-row">';
     html += '<div class="preinsc-form-group"><label>Nb normaux :</label><input type="number" id="preinsc-nb-normaux-fr" class="admin-form-input" min="0" value="' + (existing ? existing.nb_normaux_fr : 1) + '"></div>';
@@ -250,13 +250,13 @@ function preInscOpenForm(membreEmail) {
     var etrChecked = existing ? existing.etranger : false;
     var hasFineSelection = existingPays.length > 0;
     html += '<fieldset class="preinsc-fieldset">';
-    html += '<legend><input type="checkbox" id="preinsc-etranger" onchange="preInscToggleSection(\'etranger\')"' + (etrChecked ? ' checked' : '') + '> Billets étrangers</legend>';
+    html += '<legend><input type="checkbox" id="preinsc-etranger" onchange="preInscToggleSection(\'etranger\')"' + (etrChecked ? ' checked' : '') + '>Billets étrangers</legend>';
     html += '<div id="preinsc-etranger-details" style="' + (etrChecked ? '' : 'display:none;') + '">';
 
     // Toggle global / sélection fine
     html += '<div class="preinsc-radio-group">';
-    html += '<label><input type="radio" name="preinsc-etr-mode" value="global" onchange="preInscToggleEtrMode()"' + (!hasFineSelection ? ' checked' : '') + '> Tous les pays étrangers</label>';
-    html += '<label><input type="radio" name="preinsc-etr-mode" value="fine" onchange="preInscToggleEtrMode()"' + (hasFineSelection ? ' checked' : '') + '> Sélection par pays</label>';
+    html += '<label><input type="radio" name="preinsc-etr-mode" value="global" onchange="preInscToggleEtrMode()"' + (!hasFineSelection ? ' checked' : '') + '>Tous les pays étrangers</label>';
+    html += '<label><input type="radio" name="preinsc-etr-mode" value="fine" onchange="preInscToggleEtrMode()"' + (hasFineSelection ? ' checked' : '') + '>Sélection par pays</label>';
     html += '</div>';
 
     // Mode global
@@ -281,7 +281,7 @@ function preInscOpenForm(membreEmail) {
         }
         var pChecked = !!paysExisting;
         html += '<div class="preinsc-country-item">';
-        html += '<label><input type="checkbox" class="preinsc-pays-cb" data-pays="' + preInscEscapeHtml(paysNom) + '" onchange="preInscTogglePays(this)"' + (pChecked ? ' checked' : '') + '> ' + preInscEscapeHtml(paysNom) + '</label>';
+        html += '<label><input type="checkbox" class="preinsc-pays-cb" data-pays="' + preInscEscapeHtml(paysNom) + '" onchange="preInscTogglePays(this)"' + (pChecked ? ' checked' : '') + '>' + preInscEscapeHtml(paysNom) + '</label>';
         html += '<div class="preinsc-pays-qte" style="' + (pChecked ? '' : 'display:none;') + '">';
         html += '<input type="number" class="admin-form-input preinsc-pays-normaux" data-pays="' + preInscEscapeHtml(paysNom) + '" min="0" value="' + (paysExisting ? paysExisting.nb_normaux : 1) + '" placeholder="Norm.">';
         html += '<input type="number" class="admin-form-input preinsc-pays-variantes" data-pays="' + preInscEscapeHtml(paysNom) + '" min="0" value="' + (paysExisting ? paysExisting.nb_variantes : 0) + '" placeholder="Var.">';
