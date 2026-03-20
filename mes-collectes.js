@@ -121,14 +121,9 @@ function loadMesCollectes() {
 }
 
 // #14 — Onboarding collecteur
-function showOnboardingIfNeeded() {
+function getOnboardingHtml() {
     var key = 'bt_onboarding_collecteur_dismissed';
-    if (localStorage.getItem(key)) return;
-    var existing = document.getElementById('onboarding-collecteur');
-    if (existing) return;
-
-    var container = document.getElementById('collectes-list');
-    if (!container) return;
+    if (localStorage.getItem(key)) return '';
 
     var html = '<div class="onboarding-banner" id="onboarding-collecteur">'
         + '<button class="onboarding-close" onclick="dismissOnboarding()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>'
@@ -162,7 +157,7 @@ function showOnboardingIfNeeded() {
         + '</div>'
         + '</div>';
 
-    container.insertAdjacentHTML('afterbegin', html);
+    return html;
 }
 
 function dismissOnboarding() {
@@ -180,8 +175,8 @@ function renderCollectesList() {
     if (detailDiv) detailDiv.style.display = 'none';
     container.style.display = '';
 
-    // #14 — Afficher l'onboarding si premier accès
-    showOnboardingIfNeeded();
+    // #14 — Onboarding collecteur
+    var onboardingHtml = getOnboardingHtml();
 
     // #12 — Compteurs sur l'onglet "Mes collectes"
     var enCours = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
@@ -189,8 +184,7 @@ function renderCollectesList() {
     if (tabs[0]) tabs[0].innerHTML = 'Mes collectes <span class="tab-badge">' + mesBillets.length + '</span>';
 
     if (mesBillets.length === 0) {
-        container.innerHTML = '<p class="collectes-empty"><i class="fa-solid fa-inbox"></i> Aucune collecte assignée.</p>';
-        showOnboardingIfNeeded();
+        container.innerHTML = onboardingHtml + '<p class="collectes-empty"><i class="fa-solid fa-inbox"></i> Aucune collecte assignée.</p>';
         return;
     }
 
@@ -250,7 +244,7 @@ function renderCollectesList() {
         html += '</div>';
     }
     html += '</div>';
-    container.innerHTML = html;
+    container.innerHTML = onboardingHtml + html;
 }
 
 // ============================================================
