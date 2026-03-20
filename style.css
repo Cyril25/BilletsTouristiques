@@ -6129,7 +6129,7 @@ body.login-page {
 
 .preinsc-country-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 280px);
+    grid-template-columns: repeat(auto-fill, 340px);
     gap: var(--spacing-sm);
     margin-top: var(--spacing-sm);
 }
