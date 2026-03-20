@@ -1763,10 +1763,14 @@ function saveBillet(billetData) {
         headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(billetData)
     })
-        .then(function() {
+        .then(function(data) {
+            var newBillet = Array.isArray(data) ? data[0] : data;
             showToast('Billet ajoute avec succes', 'success');
             closeBilletPanel();
             loadAdminBillets();
+            if (newBillet && newBillet.id) {
+                creerAutoInscriptions(newBillet);
+            }
         })
         .catch(function(error) {
             showToast('Erreur lors de l\'ajout : ' + error.message, 'error');
@@ -1776,6 +1780,144 @@ function saveBillet(billetData) {
                 saveBtn.textContent = 'Sauvegarder';
             }
         });
+}
+
+// ============================================================
+// 11b. AUTO-INSCRIPTIONS À LA CRÉATION D'UN BILLET
+// ============================================================
+
+function creerAutoInscriptions(billet) {
+    var isFrance = !billet.Pays || billet.Pays === 'France';
+    var annee = parseInt(billet.Millesime) || new Date().getFullYear();
+    var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+    var hasVariante = !!billet.HasVariante;
+
+    // Charger les paramétrages pour cette année
+    supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*')
+        .then(function(autoData) {
+            if (!autoData || autoData.length === 0) return;
+
+            // Filtrer selon type de billet
+            var qualifies;
+            if (isFrance) {
+                qualifies = autoData.filter(function(a) { return a.france; });
+            } else {
+                qualifies = autoData.filter(function(a) { return a.etranger; });
+            }
+
+            if (qualifies.length === 0) return;
+
+            if (isFrance) {
+                // Billet FR : on a toutes les infos, créer les inscriptions
+                creerAutoInscriptionsBatch(billet, qualifies, [], isFrance, hasNormale, hasVariante);
+            } else {
+                // Billet étranger : charger les sélections pays pour vérifier la sélection fine
+                supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
+                    .then(function(paysData) {
+                        creerAutoInscriptionsBatch(billet, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
+                    })
+                    .catch(function(err) {
+                        console.warn('Erreur chargement pays auto-inscriptions:', err);
+                    });
+            }
+        })
+        .catch(function(err) {
+            console.warn('Erreur auto-inscriptions:', err);
+        });
+}
+
+function creerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, hasNormale, hasVariante) {
+    var inscriptions = [];
+
+    for (var i = 0; i < qualifies.length; i++) {
+        var auto = qualifies[i];
+        var nbNormaux = 0;
+        var nbVariantes = 0;
+
+        if (isFrance) {
+            nbNormaux = hasNormale ? auto.nb_normaux_fr : 0;
+            nbVariantes = hasVariante ? auto.nb_variantes_fr : 0;
+        } else {
+            // Vérifier si le membre a des lignes pays spécifiques
+            var membrePays = paysData.filter(function(p) {
+                return p.membre_email === auto.membre_email && p.annee === auto.annee;
+            });
+
+            if (membrePays.length > 0) {
+                // Mode sélection fine : chercher le pays spécifique
+                var paysMatch = null;
+                for (var mp = 0; mp < membrePays.length; mp++) {
+                    if (membrePays[mp].pays_nom === billet.Pays) {
+                        paysMatch = membrePays[mp];
+                        break;
+                    }
+                }
+                if (!paysMatch) continue; // pas de match pour ce pays → pas d'inscription
+                nbNormaux = hasNormale ? paysMatch.nb_normaux : 0;
+                nbVariantes = hasVariante ? paysMatch.nb_variantes : 0;
+            } else {
+                // Mode global : tous les pays étrangers
+                nbNormaux = hasNormale ? auto.nb_normaux_etr_defaut : 0;
+                nbVariantes = hasVariante ? auto.nb_variantes_etr_defaut : 0;
+            }
+        }
+
+        if (nbNormaux + nbVariantes === 0) continue;
+
+        // Construire adresse_snapshot depuis adminMembresCache
+        var adresseSnapshot = {};
+        var membreTrouve = false;
+        if (adminMembresCache) {
+            for (var m = 0; m < adminMembresCache.length; m++) {
+                if (adminMembresCache[m].email === auto.membre_email) {
+                    var membre = adminMembresCache[m];
+                    adresseSnapshot = {
+                        nom: membre.nom || '',
+                        prenom: membre.prenom || '',
+                        rue: membre.rue || '',
+                        code_postal: membre.code_postal || '',
+                        ville: membre.ville || '',
+                        pays: membre.pays || ''
+                    };
+                    membreTrouve = true;
+                    break;
+                }
+            }
+        }
+        if (!membreTrouve) {
+            console.warn('Auto-inscription: membre non trouvé dans le cache pour ' + auto.membre_email + ', adresse_snapshot vide');
+        }
+
+        inscriptions.push({
+            billet_id: billet.id,
+            membre_email: auto.membre_email,
+            nb_normaux: nbNormaux,
+            nb_variantes: nbVariantes,
+            mode_paiement: auto.mode_paiement,
+            mode_envoi: auto.mode_envoi,
+            commentaire: '',
+            adresse_snapshot: adresseSnapshot,
+            statut_paiement: 'non_paye',
+            envoye: false,
+            fdp_regles: false,
+            pas_interesse: false
+        });
+    }
+
+    if (inscriptions.length === 0) return;
+
+    // POST batch (Supabase accepte un array)
+    supabaseFetch('/rest/v1/inscriptions?on_conflict=billet_id,membre_email', {
+        method: 'POST',
+        body: JSON.stringify(inscriptions),
+        headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
+    })
+    .then(function() {
+        showToast(inscriptions.length + ' membre(s) pré-inscrit(s) automatiquement', 'info');
+    })
+    .catch(function(err) {
+        console.warn('Erreur batch auto-inscriptions:', err);
+    });
 }
 
 // ============================================================
