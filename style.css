@@ -656,6 +656,23 @@ body {
     margin-bottom: 5px;
 }
 
+.messenger-link {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 14px;
+    background: var(--color-facebook);
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.messenger-link:hover {
+    opacity: 0.85;
+}
+
 /* --- STYLES LIENS UTILES --- */
 .facebook-link-box {
     text-align: center;
