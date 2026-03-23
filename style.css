@@ -7323,6 +7323,39 @@ body.login-page {
     margin-top: var(--spacing-sm);
 }
 
+/* --- Impersonation --- */
+.coll-impersonate-banner {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.88rem;
+    color: #856404;
+}
+.coll-impersonate-banner .btn-link {
+    color: #856404;
+    font-weight: 600;
+    margin-left: auto;
+}
+.coll-impersonate-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.coll-impersonate-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.88rem;
+    transition: background 0.12s;
+}
+.coll-impersonate-item:hover {
+    background: rgba(var(--color-primary-rgb, 44,62,80), 0.08);
+}
+
 /* --- Onboarding wizard --- */
 .onboarding-overlay {
     margin-bottom: var(--spacing-md);

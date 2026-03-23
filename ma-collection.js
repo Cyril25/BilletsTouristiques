@@ -30,8 +30,13 @@
     var filterAnnee = '';           // '' = toutes
     var viewMode = 'table';         // table | card
     var collectionMap = {};        // billet_id -> { owned_normal, owned_variante, ... }
+    var impersonatedEmail = '';     // email du membre impersonné (vide = soi-même)
     var minYear = 2015;
     var maxYear = new Date().getFullYear();
+
+    function getCollEmail() {
+        return impersonatedEmail || firebase.auth().currentUser.email;
+    }
 
     // --- Exposer les fonctions appelées depuis le HTML ---
     window.collToggleParams = collToggleParams;
@@ -55,6 +60,9 @@
     window.collSetView = collSetView;
     window.collShowBillet = collShowBillet;
     window.collCloseModal = collCloseModal;
+    window.collImpersonate = collImpersonate;
+    window.collStopImpersonate = collStopImpersonate;
+    window.collSelectMembre = collSelectMembre;
     window.onboardingNext = onboardingNext;
     window.onboardingPrev = onboardingPrev;
     window.onboardingSkip = onboardingSkip;
@@ -79,8 +87,8 @@
         Promise.all([
             supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId,Dep&order=Millesime.asc.nullslast,Pays.asc'),
             supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc'),
-            supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(firebase.auth().currentUser.email) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
-            supabaseFetch('/rest/v1/collection?select=*')
+            supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(getCollEmail()) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
+            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(getCollEmail()) + '&select=*')
         ])
         .then(function(results) {
             allBillets = results[0] || [];
@@ -286,7 +294,7 @@
 
     function collToggleSerial(checked) {
         trackSerial = checked;
-        var email = firebase.auth().currentUser.email;
+        var email = getCollEmail();
         supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email), {
             method: 'PATCH',
             body: JSON.stringify({ track_serial_numbers: checked }),
@@ -335,13 +343,10 @@
     }
 
     function collSaveParams() {
-        var user = firebase.auth().currentUser;
-        if (!user) return;
-
         // Trier par année avant sauvegarde
         editRules.sort(function(a, b) { return a.annee - b.annee; });
 
-        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(user.email), {
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(getCollEmail()), {
             method: 'PATCH',
             body: JSON.stringify({ collection_rules: editRules }),
             headers: { 'Prefer': 'return=minimal' }
@@ -1184,9 +1189,7 @@
     // ============================================================
 
     function collToggleOwned(billetId, field, checked) {
-        var user = firebase.auth().currentUser;
-        if (!user) return;
-
+        var email = getCollEmail();
         var existing = collectionMap[billetId];
 
         // Mise à jour optimiste : on met à jour collectionMap AVANT l'appel async
@@ -1201,7 +1204,7 @@
 
             var patch = {};
             patch[field] = checked;
-            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(user.email) + '&billet_id=eq.' + billetId, {
+            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
                 method: 'PATCH',
                 body: JSON.stringify(patch),
                 headers: { 'Prefer': 'return=minimal' }
@@ -1217,7 +1220,7 @@
             });
         } else {
             var row = {
-                membre_email: user.email,
+                membre_email: email,
                 billet_id: billetId,
                 owned_normal: false,
                 owned_variante: false,
@@ -1253,15 +1256,13 @@
     }
 
     window.collUpdateSerial = function(billetId, field, value) {
-        var user = firebase.auth().currentUser;
-        if (!user) return;
-
+        var email = getCollEmail();
         var existing = collectionMap[billetId];
 
         if (existing) {
             var patch = {};
             patch[field] = value;
-            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(user.email) + '&billet_id=eq.' + billetId, {
+            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
                 method: 'PATCH',
                 body: JSON.stringify(patch),
                 headers: { 'Prefer': 'return=minimal' }
@@ -1276,7 +1277,7 @@
         } else {
             // Créer la ligne avec le numéro de série
             var row = {
-                membre_email: user.email,
+                membre_email: email,
                 billet_id: billetId,
                 owned_normal: false,
                 owned_variante: false,
@@ -1307,10 +1308,7 @@
     // ============================================================
 
     function saveOverrides() {
-        var user = firebase.auth().currentUser;
-        if (!user) return Promise.reject(new Error('Non connecté'));
-
-        return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(user.email), {
+        return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(getCollEmail()), {
             method: 'PATCH',
             body: JSON.stringify({ collection_overrides: memberOverrides }),
             headers: { 'Prefer': 'return=minimal' }
@@ -1378,6 +1376,7 @@
         renderCounter();
         renderCountryCounters();
         renderCollection();
+        renderImpersonationUI();
     }
 
     // ============================================================
@@ -1548,10 +1547,7 @@
 
         memberRules = [rule];
 
-        var user = firebase.auth().currentUser;
-        if (!user) return;
-
-        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(user.email), {
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(getCollEmail()), {
             method: 'PATCH',
             body: JSON.stringify({ collection_rules: memberRules }),
             headers: { 'Prefer': 'return=minimal' }
@@ -1698,7 +1694,100 @@
     };
 
     // ============================================================
-    // 17. HELPERS
+    // 17. IMPERSONATION (cyril.samson41@gmail.com uniquement)
+    // ============================================================
+
+    function canImpersonate() {
+        return firebase.auth().currentUser &&
+               firebase.auth().currentUser.email === 'cyril.samson41@gmail.com';
+    }
+
+    function renderImpersonationUI() {
+        // Bouton dans la toolbar (ajouté dynamiquement)
+        var existing = document.getElementById('coll-impersonate-btn');
+        if (canImpersonate() && !existing) {
+            var toolbar = document.querySelector('.collection-excel-actions');
+            if (toolbar) {
+                var btn = document.createElement('button');
+                btn.id = 'coll-impersonate-btn';
+                btn.className = 'btn-secondary btn-sm';
+                btn.title = 'Voir la collection d\'un membre';
+                btn.innerHTML = '<i class="fa-solid fa-user-secret"></i>';
+                btn.onclick = collImpersonate;
+                toolbar.appendChild(btn);
+            }
+        }
+
+        // Bannière d'impersonation
+        var banner = document.getElementById('coll-impersonate-banner');
+        if (impersonatedEmail) {
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'coll-impersonate-banner';
+                banner.className = 'coll-impersonate-banner';
+                var section = document.querySelector('.collection-section');
+                if (section) section.parentNode.insertBefore(banner, section);
+            }
+            banner.innerHTML = '<i class="fa-solid fa-user-secret"></i> Vue en tant que <strong>' + escapeHtml(impersonatedEmail) + '</strong> ' +
+                '<button class="btn-link" onclick="collStopImpersonate()"><i class="fa-solid fa-xmark"></i> Revenir à mon compte</button>';
+            banner.style.display = '';
+        } else if (banner) {
+            banner.style.display = 'none';
+        }
+    }
+
+    function collImpersonate() {
+        if (!canImpersonate()) return;
+
+        // Charger la liste des membres
+        supabaseFetch('/rest/v1/membres?select=email,prenom,nom&order=nom.asc')
+        .then(function(membres) {
+            var html = '<div class="coll-modal-overlay" onclick="collCloseImpersonateModal()">';
+            html += '<div class="coll-modal-card" onclick="event.stopPropagation()">';
+            html += '<button class="coll-modal-close" onclick="collCloseImpersonateModal()">&times;</button>';
+            html += '<h2>Voir la collection de...</h2>';
+            html += '<div class="coll-impersonate-list">';
+            membres.forEach(function(m) {
+                var label = (m.prenom || '') + ' ' + (m.nom || '') + ' — ' + m.email;
+                html += '<div class="coll-impersonate-item" onclick="collSelectMembre(\'' + escapeAttr(m.email) + '\')">';
+                html += escapeHtml(label.trim());
+                html += '</div>';
+            });
+            html += '</div></div></div>';
+
+            var container = document.getElementById('coll-impersonate-modal');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'coll-impersonate-modal';
+                document.body.appendChild(container);
+            }
+            container.innerHTML = html;
+        })
+        .catch(function(err) {
+            console.error('Erreur chargement membres:', err);
+            showToast('Erreur chargement des membres', true);
+        });
+    }
+
+    window.collCloseImpersonateModal = function() {
+        var container = document.getElementById('coll-impersonate-modal');
+        if (container) container.innerHTML = '';
+    };
+
+    function collSelectMembre(email) {
+        window.collCloseImpersonateModal();
+        impersonatedEmail = email;
+        // Recharger les données pour ce membre
+        init();
+    }
+
+    function collStopImpersonate() {
+        impersonatedEmail = '';
+        init();
+    }
+
+    // ============================================================
+    // 18. HELPERS
     // ============================================================
 
     function resolveImageUrl(item, size) {
@@ -1911,7 +2000,7 @@
             }
 
             // Exécuter l'import par batch
-            var email = firebase.auth().currentUser.email;
+            var email = getCollEmail();
             var batchSize = 50;
             var batches = [];
             for (var i = 0; i < changes.length; i += batchSize) {
