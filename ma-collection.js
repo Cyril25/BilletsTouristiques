@@ -26,6 +26,8 @@
     var currentFilter = 'all';     // all | owned | missing | outofscope
     var currentGroupBy = 'pays';   // pays | annee | combo
     var searchQuery = '';
+    var filterPays = '';            // '' = tous
+    var filterAnnee = '';           // '' = toutes
     var collectionMap = {};        // billet_id -> { owned_normal, owned_variante, ... }
     var minYear = 2015;
     var maxYear = new Date().getFullYear();
@@ -44,6 +46,10 @@
     window.collForceExclude = collForceExclude;
     window.collRemoveOverride = collRemoveOverride;
     window.collGroupBy = collGroupBy;
+    window.collFilterPays = collFilterPays;
+    window.collFilterAnnee = collFilterAnnee;
+    window.collShowBillet = collShowBillet;
+    window.collCloseModal = collCloseModal;
     window.onboardingNext = onboardingNext;
     window.onboardingPrev = onboardingPrev;
     window.onboardingSkip = onboardingSkip;
@@ -66,7 +72,7 @@
         if (counter) counter.innerHTML = '<span class="collection-loading">Chargement...</span>';
 
         Promise.all([
-            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version&order=Millesime.asc.nullslast,Pays.asc'),
+            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId&order=Millesime.asc.nullslast,Pays.asc'),
             supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc'),
             supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(firebase.auth().currentUser.email) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
             supabaseFetch('/rest/v1/collection?select=*')
@@ -176,22 +182,30 @@
         if (!counter) return;
 
         var perimetre = calculerPerimetre(allBillets, memberRules, memberOverrides);
-        var totalPerimetre = Object.keys(perimetre).length;
+        var filtered = getFilteredBillets();
 
-        // Compter les possédés
+        var totalPerimetre = 0;
         var owned = 0;
-        collectionData.forEach(function(c) {
-            if (perimetre[c.billet_id] && (c.owned_normal || c.owned_variante)) {
-                owned++;
-            }
+        filtered.forEach(function(b) {
+            if (!perimetre[b.id]) return;
+            totalPerimetre++;
+            var c = collectionMap[b.id];
+            if (c && (c.owned_normal || c.owned_variante)) owned++;
         });
 
         var pct = totalPerimetre > 0 ? Math.round((owned / totalPerimetre) * 100) : 0;
+        var filterLabel = 'billets dans mon périmètre';
+        if (filterPays || filterAnnee) {
+            var parts = [];
+            if (filterPays) parts.push(filterPays);
+            if (filterAnnee) parts.push(filterAnnee);
+            filterLabel = parts.join(' ') + ' — ' + filterLabel;
+        }
 
         counter.innerHTML =
             '<div class="collection-hero">' +
                 '<div class="collection-hero-number">' + owned + ' <span class="collection-hero-sep">/</span> ' + totalPerimetre + '</div>' +
-                '<div class="collection-hero-label">billets dans mon périmètre</div>' +
+                '<div class="collection-hero-label">' + escapeHtml(filterLabel) + '</div>' +
                 '<div class="collection-hero-bar"><div class="collection-hero-fill" style="width:' + pct + '%"></div></div>' +
                 '<div class="collection-hero-pct">' + pct + '%</div>' +
             '</div>';
@@ -616,10 +630,11 @@
 
         var perimetre = calculerPerimetre(allBillets, memberRules, memberOverrides);
 
-        // Calculer stats par pays ET par année
+        // Calculer stats par pays ET par année (sur le sous-ensemble filtré)
         var paysStats = {};
         var anneeStats = {};
-        allBillets.forEach(function(b) {
+        var filtered = getFilteredBillets();
+        filtered.forEach(function(b) {
             if (!perimetre[b.id]) return;
             var pays = b.Pays || 'Inconnu';
             var annee = (b.Millesime || 'Inconnu').toString();
@@ -763,12 +778,71 @@
 
     function collFilter(filter) {
         currentFilter = filter;
-        // Toggle bouton actif
         var btns = document.querySelectorAll('.coll-filter-btn');
         btns.forEach(function(btn) {
             btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
         });
+        renderCounter();
+        renderCountryCounters();
         renderCollection();
+    }
+
+    function collFilterPays() {
+        var sel = document.getElementById('coll-filter-pays');
+        filterPays = sel ? sel.value : '';
+        renderCounter();
+        renderCountryCounters();
+        renderCollection();
+    }
+
+    function collFilterAnnee() {
+        var sel = document.getElementById('coll-filter-annee');
+        filterAnnee = sel ? sel.value : '';
+        renderCounter();
+        renderCountryCounters();
+        renderCollection();
+    }
+
+    function populateFilterDropdowns() {
+        var perimetre = calculerPerimetre(allBillets, memberRules, memberOverrides);
+
+        var paysSet = {};
+        var anneeSet = {};
+        allBillets.forEach(function(b) {
+            if (!perimetre[b.id]) return;
+            if (b.Pays) paysSet[b.Pays] = true;
+            if (b.Millesime) anneeSet[b.Millesime.toString()] = true;
+        });
+
+        var paysList = Object.keys(paysSet).sort();
+        var anneeList = Object.keys(anneeSet).sort(function(a, b) { return parseInt(a) - parseInt(b); });
+
+        var selPays = document.getElementById('coll-filter-pays');
+        if (selPays) {
+            var hP = '<option value="">Tous les pays</option>';
+            paysList.forEach(function(p) {
+                hP += '<option value="' + escapeAttr(p) + '"' + (p === filterPays ? ' selected' : '') + '>' + escapeHtml(p) + '</option>';
+            });
+            selPays.innerHTML = hP;
+        }
+
+        var selAnnee = document.getElementById('coll-filter-annee');
+        if (selAnnee) {
+            var hA = '<option value="">Toutes les années</option>';
+            anneeList.forEach(function(a) {
+                hA += '<option value="' + a + '"' + (a === filterAnnee ? ' selected' : '') + '>' + a + '</option>';
+            });
+            selAnnee.innerHTML = hA;
+        }
+    }
+
+    // Helper : billets filtrés par pays/année (utilisé par compteurs et grille)
+    function getFilteredBillets() {
+        return allBillets.filter(function(b) {
+            if (filterPays && b.Pays !== filterPays) return false;
+            if (filterAnnee && (b.Millesime || '').toString() !== filterAnnee) return false;
+            return true;
+        });
     }
 
     // ============================================================
@@ -789,8 +863,9 @@
 
         // Filtrer et catégoriser les billets
         var billetsFiltres = [];
+        var billetsSource = getFilteredBillets();
 
-        allBillets.forEach(function(b) {
+        billetsSource.forEach(function(b) {
             var inScope = !!perimetre[b.id];
             var c = collectionMap[b.id];
             var isOwned = c && (c.owned_normal || c.owned_variante);
@@ -892,7 +967,7 @@
         var c = item.collData;
         var hasVariante = b.HasVariante && b.HasVariante !== 'N';
 
-        var cssClass = 'coll-billet-card';
+        var cssClass = 'coll-billet-card coll-billet-clickable';
         if (!item.inScope) {
             cssClass += ' coll-out-of-scope';
         } else if (item.isOwned) {
@@ -902,6 +977,9 @@
         }
 
         var html = '<div class="' + cssClass + '" data-billet-id="' + b.id + '">';
+
+        // Zone cliquable pour ouvrir la modale (en-tête + nom)
+        html += '<div class="coll-billet-clickzone" onclick="collShowBillet(' + b.id + ')">';
 
         // En-tête : référence + année-version
         html += '<div class="coll-billet-header">';
@@ -916,6 +994,8 @@
         if (hasVariante) {
             html += '<div class="coll-billet-variante"><i class="fa-solid fa-star"></i> ' + escapeHtml(b.HasVariante) + '</div>';
         }
+
+        html += '</div>'; // fin .coll-billet-clickzone
 
         // Override badge
         if (item.override === 'include') {
@@ -1152,6 +1232,7 @@
     // ============================================================
 
     function renderAll() {
+        populateFilterDropdowns();
         renderPerimetreSummary();
         renderCounter();
         renderCountryCounters();
@@ -1361,8 +1442,133 @@
     };
 
     // ============================================================
-    // 16. HELPERS
+    // 16. MODALE VISUALISATION BILLET
     // ============================================================
+
+    function collShowBillet(billetId) {
+        var billet = null;
+        for (var i = 0; i < allBillets.length; i++) {
+            if (allBillets[i].id === billetId) { billet = allBillets[i]; break; }
+        }
+        if (!billet) return;
+
+        var c = collectionMap[billetId] || null;
+        var hasVariante = billet.HasVariante && billet.HasVariante !== 'N';
+        var ownedNormal = c && c.owned_normal;
+        var ownedVariante = c && c.owned_variante;
+        var imgUrl = resolveImageUrl(billet, 800);
+
+        // Override actuel
+        var overrideAction = null;
+        memberOverrides.forEach(function(ov) {
+            if (ov.billet_id === billetId) overrideAction = ov.action;
+        });
+
+        var perimetre = calculerPerimetre(allBillets, memberRules, memberOverrides);
+        var inScope = !!perimetre[billetId];
+
+        var html = '<div class="coll-modal-overlay" onclick="collCloseModal()">';
+        html += '<div class="coll-modal-card" onclick="event.stopPropagation()">';
+
+        // Bouton fermer
+        html += '<button class="coll-modal-close" onclick="collCloseModal()"><i class="fa-solid fa-xmark"></i></button>';
+
+        // Image
+        if (imgUrl) {
+            html += '<div class="coll-modal-img"><img src="' + escapeAttr(imgUrl) + '" alt="' + escapeAttr(billet.NomBillet || '') + '"></div>';
+        }
+
+        // Infos
+        html += '<div class="coll-modal-infos">';
+        html += '<div class="coll-modal-ref">' + escapeHtml(billet.Reference || '') + '</div>';
+        html += '<h2 class="coll-modal-name">' + escapeHtml(billet.NomBillet || '') + '</h2>';
+        html += '<div class="coll-modal-meta">';
+        html += '<span><i class="fa-solid fa-earth-europe"></i> ' + escapeHtml(billet.Pays || '') + '</span>';
+        html += '<span><i class="fa-solid fa-calendar"></i> ' + escapeHtml((billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '')) + '</span>';
+        if (hasVariante) {
+            html += '<span><i class="fa-solid fa-star"></i> ' + escapeHtml(billet.HasVariante) + '</span>';
+        }
+        html += '</div>';
+
+        // Possession
+        html += '<div class="coll-modal-possession">';
+        html += '<h3>Possession</h3>';
+        html += '<label class="coll-own-cb"><input type="checkbox"' + (ownedNormal ? ' checked' : '') + ' onchange="collToggleOwned(' + billetId + ', \'owned_normal\', this.checked); collRefreshModal(' + billetId + ')"> Normal</label>';
+        if (hasVariante) {
+            html += '<label class="coll-own-cb"><input type="checkbox"' + (ownedVariante ? ' checked' : '') + ' onchange="collToggleOwned(' + billetId + ', \'owned_variante\', this.checked); collRefreshModal(' + billetId + ')"> ' + escapeHtml(billet.HasVariante) + '</label>';
+        }
+
+        // Numéros de série
+        if (trackSerial) {
+            var serialNormal = (c && c.serial_normal) || '';
+            var serialVariante = (c && c.serial_variante) || '';
+            html += '<div class="coll-modal-serial">';
+            html += '<input type="text" class="coll-serial-input" placeholder="N° série normal" value="' + escapeAttr(serialNormal) + '" onchange="collUpdateSerial(' + billetId + ', \'serial_normal\', this.value)">';
+            if (hasVariante) {
+                html += '<input type="text" class="coll-serial-input" placeholder="N° série variante" value="' + escapeAttr(serialVariante) + '" onchange="collUpdateSerial(' + billetId + ', \'serial_variante\', this.value)">';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Forçage
+        html += '<div class="coll-modal-actions">';
+        if (overrideAction) {
+            var badge = overrideAction === 'include' ? '<i class="fa-solid fa-thumbtack"></i> Inclus manuellement' : '<i class="fa-solid fa-ban"></i> Exclu manuellement';
+            html += '<div class="coll-override-badge ' + (overrideAction === 'include' ? 'coll-override-include' : 'coll-override-exclude') + '">' + badge + '</div>';
+            html += '<button class="btn-secondary btn-sm" onclick="collRemoveOverride(' + billetId + '); collRefreshModal(' + billetId + ')"><i class="fa-solid fa-rotate-left"></i> Retirer forçage</button>';
+        } else if (inScope) {
+            html += '<button class="btn-secondary btn-sm" onclick="collForceExclude(' + billetId + '); collCloseModal()"><i class="fa-solid fa-ban"></i> Exclure</button>';
+        } else {
+            html += '<button class="btn-secondary btn-sm" onclick="collForceInclude(' + billetId + '); collCloseModal()"><i class="fa-solid fa-thumbtack"></i> Inclure</button>';
+        }
+        html += '</div>';
+
+        html += '</div>'; // .coll-modal-infos
+        html += '</div>'; // .coll-modal-card
+        html += '</div>'; // .coll-modal-overlay
+
+        // Injecter dans le DOM
+        var existing = document.getElementById('coll-modal');
+        if (existing) existing.remove();
+        var modal = document.createElement('div');
+        modal.id = 'coll-modal';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+
+        // Bloquer le scroll du body
+        document.body.style.overflow = 'hidden';
+    }
+
+    function collCloseModal() {
+        var modal = document.getElementById('coll-modal');
+        if (modal) modal.remove();
+        document.body.style.overflow = '';
+
+        // Rafraîchir la grille (la possession a pu changer)
+        renderCounter();
+        renderCountryCounters();
+        renderCollection();
+    }
+
+    window.collRefreshModal = function(billetId) {
+        // Re-render la modale avec les données à jour (après toggle possession)
+        setTimeout(function() { collShowBillet(billetId); }, 50);
+    };
+
+    // ============================================================
+    // 17. HELPERS
+    // ============================================================
+
+    function resolveImageUrl(item, size) {
+        if (item.ImageUrl) {
+            return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/');
+        }
+        if (item.ImageId) {
+            return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 800);
+        }
+        return '';
+    }
 
     function escapeHtml(str) {
         var div = document.createElement('div');

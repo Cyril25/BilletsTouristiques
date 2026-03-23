@@ -64,7 +64,15 @@
             <div class="collection-toolbar">
                 <div class="collection-search">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="coll-search" placeholder="Chercher par référence, nom ou pays..." oninput="collSearch()">
+                    <input type="text" id="coll-search" placeholder="Chercher par référence, nom..." oninput="collSearch()">
+                </div>
+                <div class="collection-dropdowns">
+                    <select id="coll-filter-pays" class="coll-dropdown" onchange="collFilterPays()">
+                        <option value="">Tous les pays</option>
+                    </select>
+                    <select id="coll-filter-annee" class="coll-dropdown" onchange="collFilterAnnee()">
+                        <option value="">Toutes les années</option>
+                    </select>
                 </div>
                 <div class="collection-filters">
                     <button class="coll-filter-btn active" data-filter="all" onclick="collFilter('all')">Dans le périmètre</button>
