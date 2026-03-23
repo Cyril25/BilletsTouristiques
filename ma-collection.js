@@ -1673,8 +1673,25 @@
                 }
             }
             row['Nb doubles'] = (c && c.nb_doubles) ? c.nb_doubles : 0;
+            row._sort = b;
             rows.push(row);
         });
+
+        // Trier comme le site : pays, millésime, dep, référence, version
+        rows.sort(function(a, b) {
+            var ba = a._sort, bb = b._sort;
+            var pA = (ba.Pays || ''), pB = (bb.Pays || '');
+            if (pA !== pB) return pA.localeCompare(pB);
+            var yA = parseInt(ba.Millesime) || 0, yB = parseInt(bb.Millesime) || 0;
+            if (yA !== yB) return yA - yB;
+            var dA = (ba.dep || ''), dB = (bb.dep || '');
+            if (dA !== dB) return dA.localeCompare(dB);
+            var rA = (ba.Reference || ''), rB = (bb.Reference || '');
+            if (rA !== rB) return rA.localeCompare(rB);
+            var vA = (ba.Version || ''), vB = (bb.Version || '');
+            return vA.localeCompare(vB);
+        });
+        rows.forEach(function(r) { delete r._sort; });
 
         var ws = XLSX.utils.json_to_sheet(rows);
         // Masquer la colonne ID (col 0) pour éviter les modifications accidentelles
