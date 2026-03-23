@@ -1647,6 +1647,7 @@
 
             var c = collectionMap[b.id];
             var row = {
+                'ID': b.id,
                 'Référence': b.Reference || '',
                 'Millésime': b.Millesime || '',
                 'Version': b.Version || '',
@@ -1707,7 +1708,7 @@
                 input.value = '';
                 return;
             }
-            var requiredCols = ['Référence', 'Millésime', 'Version', 'Possédé'];
+            var requiredCols = ['ID', 'Possédé'];
             var firstRow = rows[0];
             var missing = requiredCols.filter(function(col) { return !(col in firstRow); });
             if (missing.length > 0) {
@@ -1716,11 +1717,10 @@
                 return;
             }
 
-            // Construire un index par clé (ref + millésime + version)
+            // Construire un index par ID
             var billetIndex = {};
             allBillets.forEach(function(b) {
-                var key = (b.Reference || '') + '|' + (b.Millesime || '') + '|' + (b.Version || '');
-                billetIndex[key] = b;
+                billetIndex[b.id] = b;
             });
 
             // Analyser les changements
@@ -1729,14 +1729,14 @@
             var unchanged = 0;
 
             rows.forEach(function(row, idx) {
-                var key = (row['Référence'] || '') + '|' + (row['Millésime'] || '') + '|' + (row['Version'] || '');
-                var billet = billetIndex[key];
+                var id = parseInt(row['ID']);
+                var billet = billetIndex[id];
                 if (!billet) {
-                    errors.push('Ligne ' + (idx + 2) + ' : référence inconnue (' + key + ')');
+                    errors.push('Ligne ' + (idx + 2) + ' : ID inconnu (' + id + ')');
                     return;
                 }
 
-                var c = collectionMap[billet.id] || {};
+                var c = collectionMap[id] || {};
                 var newOwned = (row['Possédé'] || '').toString().toLowerCase() === 'oui';
                 var newOwnedVar = (row['Possédé variante'] || '').toString().toLowerCase() === 'oui';
                 var newSerial = (row['N° série'] || '').toString();
@@ -1757,7 +1757,7 @@
                 }
 
                 changes.push({
-                    billet_id: billet.id,
+                    billet_id: id,
                     owned_normal: newOwned,
                     owned_variante: newOwnedVar,
                     serial_normal: newSerial,
