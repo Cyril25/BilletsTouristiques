@@ -72,7 +72,7 @@
         if (counter) counter.innerHTML = '<span class="collection-loading">Chargement...</span>';
 
         Promise.all([
-            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId&order=Millesime.asc.nullslast,Pays.asc'),
+            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId,dep&order=Millesime.asc.nullslast,Pays.asc'),
             supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc'),
             supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(firebase.auth().currentUser.email) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
             supabaseFetch('/rest/v1/collection?select=*')
@@ -933,13 +933,17 @@
         var html = '';
         groupKeys.forEach(function(key) {
             var items = grouped[key];
-            // Trier par millésime puis pays puis version
+            // Trier par millésime, pays, dep (France), référence, version
             items.sort(function(a, b) {
                 var yA = parseInt(a.billet.Millesime) || 0;
                 var yB = parseInt(b.billet.Millesime) || 0;
                 if (yA !== yB) return yA - yB;
                 var pA = (a.billet.Pays || ''), pB = (b.billet.Pays || '');
                 if (pA !== pB) return pA.localeCompare(pB);
+                var dA = (a.billet.dep || ''), dB = (b.billet.dep || '');
+                if (dA !== dB) return dA.localeCompare(dB);
+                var rA = (a.billet.Reference || ''), rB = (b.billet.Reference || '');
+                if (rA !== rB) return rA.localeCompare(rB);
                 return (a.billet.Version || '').localeCompare(b.billet.Version || '');
             });
 
@@ -981,8 +985,11 @@
         // Zone cliquable pour ouvrir la modale (en-tête + nom)
         html += '<div class="coll-billet-clickzone" onclick="collShowBillet(' + b.id + ')">';
 
-        // En-tête : référence + année-version
+        // En-tête : dep + référence + année-version
         html += '<div class="coll-billet-header">';
+        if (b.dep) {
+            html += '<span class="coll-billet-dep">' + escapeHtml(b.dep) + '</span>';
+        }
         html += '<span class="coll-billet-ref">' + escapeHtml(b.Reference || '') + '</span>';
         html += '<span class="coll-billet-year">' + escapeHtml((b.Millesime || '') + (b.Version ? '-' + b.Version : '')) + '</span>';
         html += '</div>';
@@ -1037,16 +1044,7 @@
             html += '</div>';
         }
 
-        // Actions forçage (Story 6-4)
-        html += '<div class="coll-billet-actions">';
-        if (item.override) {
-            html += '<button class="btn-link btn-sm" onclick="collRemoveOverride(' + b.id + ')" title="Retirer le forçage"><i class="fa-solid fa-rotate-left"></i> Retirer forçage</button>';
-        } else if (item.inScope) {
-            html += '<button class="btn-link btn-sm" onclick="collForceExclude(' + b.id + ')" title="Exclure manuellement"><i class="fa-solid fa-ban"></i> Exclure</button>';
-        } else {
-            html += '<button class="btn-link btn-sm" onclick="collForceInclude(' + b.id + ')" title="Inclure manuellement"><i class="fa-solid fa-thumbtack"></i> Inclure</button>';
-        }
-        html += '</div>';
+        // Actions forçage uniquement dans la modale (clic sur carte)
 
         html += '</div>';
         return html;

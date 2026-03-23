@@ -6990,6 +6990,13 @@ body.login-page {
     gap: var(--spacing-xs);
 }
 
+.coll-billet-dep {
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
 .coll-billet-ref {
     font-family: monospace;
     font-size: 0.78rem;
@@ -7048,7 +7055,7 @@ body.login-page {
 }
 
 .coll-own-cb {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 3px;
     font-size: 0.8rem;
