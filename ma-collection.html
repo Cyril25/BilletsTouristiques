@@ -19,13 +19,49 @@
                 <h1><i class="fa-solid fa-layer-group"></i> Ma collection</h1>
             </div>
 
-            <div id="collection-counter" class="collection-counter">
-                <!-- Compteur héros injecté par JS -->
+            <!-- Compteur héros -->
+            <div id="collection-counter" class="collection-counter"></div>
+
+            <!-- Section paramétrage -->
+            <div class="collection-section">
+                <div class="collection-section-header">
+                    <h2><i class="fa-solid fa-sliders"></i> Mon périmètre de collection</h2>
+                    <button id="btn-toggle-params" class="btn-secondary btn-sm" onclick="collToggleParams()">
+                        <i class="fa-solid fa-chevron-down"></i> Modifier
+                    </button>
+                </div>
+                <div id="collection-perimetre-summary" class="collection-perimetre-summary">
+                    <!-- Résumé du périmètre injecté par JS -->
+                </div>
             </div>
 
-            <div id="collection-content">
-                <!-- Contenu injecté par JS -->
+            <!-- Panel de paramétrage (masqué par défaut) -->
+            <div id="collection-params-panel" class="collection-params-panel" style="display:none">
+
+                <!-- Frise temporelle visuelle -->
+                <div id="collection-frise" class="collection-frise"></div>
+
+                <!-- Liste des points de rupture -->
+                <div id="collection-breakpoints" class="collection-breakpoints"></div>
+
+                <!-- Bouton ajouter -->
+                <div class="collection-params-actions">
+                    <button class="btn-secondary btn-sm" onclick="collAddBreakpoint()">
+                        <i class="fa-solid fa-plus"></i> Ajouter un point de rupture
+                    </button>
+                </div>
+
+                <!-- Boutons sauvegarder/annuler -->
+                <div class="collection-params-save">
+                    <button class="btn-secondary" onclick="collCancelParams()">Annuler</button>
+                    <button class="btn-primary" onclick="collSaveParams()">
+                        <i class="fa-solid fa-check"></i> Enregistrer
+                    </button>
+                </div>
             </div>
+
+            <!-- Contenu collection (billets) -->
+            <div id="collection-content"></div>
         </div>
 
     </div>

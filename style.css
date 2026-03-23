@@ -6361,3 +6361,368 @@ body.login-page {
         min-width: 100%;
     }
 }
+
+/* =========================================
+   MA COLLECTION
+   ========================================= */
+
+.collection-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+}
+
+.collection-header h1 {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.collection-loading {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* --- Compteur héros --- */
+.collection-counter {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.collection-hero {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+}
+
+.collection-hero-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1.1;
+}
+
+.collection-hero-sep {
+    font-weight: 300;
+    color: var(--color-accent);
+}
+
+.collection-hero-label {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+.collection-hero-bar {
+    height: 8px;
+    background: var(--color-border);
+    border-radius: 4px;
+    margin-top: var(--spacing-sm);
+    overflow: hidden;
+}
+
+.collection-hero-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 4px;
+    transition: width var(--transition-normal);
+}
+
+.collection-hero-pct {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+/* --- Section paramétrage --- */
+.collection-section {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.collection-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+}
+
+.collection-section-header h2 {
+    font-size: 1.1rem;
+    color: var(--color-primary);
+    margin: 0;
+}
+
+/* --- Résumé du périmètre --- */
+.collection-perimetre-summary {
+    margin-top: var(--spacing-sm);
+}
+
+.collection-rules-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.collection-rule-chip {
+    background: var(--color-surface);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--color-text);
+}
+
+.collection-rule-chip i {
+    color: var(--color-primary);
+    margin-right: 4px;
+}
+
+.collection-no-rules {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    padding: var(--spacing-sm) 0;
+}
+
+.collection-no-rules i {
+    color: var(--color-accent);
+    margin-right: 4px;
+}
+
+/* --- Panel paramétrage --- */
+.collection-params-panel {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+/* --- Frise temporelle --- */
+.frise-container {
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
+}
+
+.frise-bar {
+    position: relative;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    margin-top: 28px;
+    margin-bottom: 24px;
+}
+
+.frise-year-tick {
+    position: absolute;
+    top: 14px;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.frise-segment {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+}
+
+.frise-point {
+    position: absolute;
+    top: -10px;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    cursor: default;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* --- Breakpoint cards --- */
+.collection-breakpoints {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.breakpoint-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    background: var(--color-bg);
+}
+
+.breakpoint-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.breakpoint-card-header select {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    font-size: 0.9rem;
+}
+
+.breakpoint-type {
+    width: 140px;
+}
+
+.breakpoint-year {
+    width: 90px;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.btn-icon:hover {
+    background: var(--color-surface);
+}
+
+.btn-danger-icon {
+    color: var(--color-danger);
+}
+
+.btn-danger-icon:hover {
+    background: #fce4ec;
+}
+
+.breakpoint-card-body {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--color-border);
+}
+
+.breakpoint-option {
+    margin-bottom: var(--spacing-xs);
+    font-size: 0.9rem;
+}
+
+.breakpoint-option label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px 0;
+    text-decoration: underline;
+}
+
+.btn-link:hover {
+    color: var(--color-secondary);
+}
+
+/* --- Grille pays dans breakpoint --- */
+.breakpoint-pays-grid {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px dashed var(--color-border);
+}
+
+.breakpoint-pays-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* --- Actions paramétrage --- */
+.collection-params-actions {
+    margin-bottom: var(--spacing-md);
+}
+
+.collection-params-save {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background: var(--color-secondary);
+}
+
+/* --- Toast --- */
+.collection-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--color-primary);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.collection-toast-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.collection-toast-error {
+    background: var(--color-danger);
+}
+
+/* --- Responsive --- */
+@media (max-width: 600px) {
+    .collection-hero-number {
+        font-size: 1.8rem;
+    }
+
+    .collection-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .breakpoint-card-header {
+        flex-wrap: wrap;
+    }
+
+    .frise-year-tick {
+        font-size: 0.6rem;
+    }
+
+    .frise-year-tick:nth-child(odd) {
+        display: none;
+    }
+}
