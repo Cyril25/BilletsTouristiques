@@ -24,6 +24,7 @@
     var trackSerial = false;       // track_serial_numbers du membre
     var paramsOpen = false;
     var currentFilter = 'all';     // all | owned | missing | outofscope
+    var currentGroupBy = 'pays';   // pays | annee | combo
     var searchQuery = '';
     var collectionMap = {};        // billet_id -> { owned_normal, owned_variante, ... }
     var minYear = 2015;
@@ -42,6 +43,7 @@
     window.collForceInclude = collForceInclude;
     window.collForceExclude = collForceExclude;
     window.collRemoveOverride = collRemoveOverride;
+    window.collGroupBy = collGroupBy;
     window.onboardingNext = onboardingNext;
     window.onboardingPrev = onboardingPrev;
     window.onboardingSkip = onboardingSkip;
@@ -605,7 +607,7 @@
     }
 
     // ============================================================
-    // 9. COMPTEURS PAR PAYS (Story 7-2)
+    // 9. COMPTEURS HIÉRARCHIQUES (Story 7-2)
     // ============================================================
 
     function renderCountryCounters() {
@@ -614,47 +616,134 @@
 
         var perimetre = calculerPerimetre(allBillets, memberRules, memberOverrides);
 
-        // Grouper par pays
+        // Calculer stats par pays ET par année
         var paysStats = {};
+        var anneeStats = {};
         allBillets.forEach(function(b) {
             if (!perimetre[b.id]) return;
             var pays = b.Pays || 'Inconnu';
+            var annee = (b.Millesime || 'Inconnu').toString();
+            var isOwned = false;
+            var c = collectionMap[b.id];
+            if (c && (c.owned_normal || c.owned_variante)) isOwned = true;
+
             if (!paysStats[pays]) paysStats[pays] = { total: 0, owned: 0 };
             paysStats[pays].total++;
-            var c = collectionMap[b.id];
-            if (c && (c.owned_normal || c.owned_variante)) {
-                paysStats[pays].owned++;
-            }
+            if (isOwned) paysStats[pays].owned++;
+
+            if (!anneeStats[annee]) anneeStats[annee] = { total: 0, owned: 0 };
+            anneeStats[annee].total++;
+            if (isOwned) anneeStats[annee].owned++;
         });
 
-        // Trier par progression décroissante puis par nom
-        var paysList = Object.keys(paysStats).sort(function(a, b) {
-            var pctA = paysStats[a].total > 0 ? paysStats[a].owned / paysStats[a].total : 0;
-            var pctB = paysStats[b].total > 0 ? paysStats[b].owned / paysStats[b].total : 0;
-            if (pctB !== pctA) return pctB - pctA;
-            return a.localeCompare(b);
-        });
+        // Trier par progression décroissante puis par nom/année
+        var paysList = sortStatKeys(paysStats, 'alpha');
+        var anneeList = sortStatKeys(anneeStats, 'num');
 
-        if (paysList.length === 0) {
+        if (paysList.length === 0 && anneeList.length === 0) {
             el.innerHTML = '';
             return;
         }
 
-        var html = '<details class="collection-counters-details"><summary><i class="fa-solid fa-chart-bar"></i> Détail par pays (' + paysList.length + ')</summary><div class="collection-counters-grid">';
+        var html = '<details class="collection-counters-details">';
+        html += '<summary><i class="fa-solid fa-chart-bar"></i> Détail par ' + (currentGroupBy === 'annee' ? 'année' : currentGroupBy === 'combo' ? 'pays × année' : 'pays') + '</summary>';
 
-        paysList.forEach(function(pays) {
-            var s = paysStats[pays];
+        // Onglets de vue
+        html += '<div class="counters-view-tabs">';
+        html += '<button class="counters-tab' + (currentGroupBy === 'pays' ? ' active' : '') + '" onclick="collGroupBy(\'pays\')"><i class="fa-solid fa-earth-europe"></i> Par pays</button>';
+        html += '<button class="counters-tab' + (currentGroupBy === 'annee' ? ' active' : '') + '" onclick="collGroupBy(\'annee\')"><i class="fa-solid fa-calendar"></i> Par année</button>';
+        html += '<button class="counters-tab' + (currentGroupBy === 'combo' ? ' active' : '') + '" onclick="collGroupBy(\'combo\')"><i class="fa-solid fa-table-cells"></i> Combo</button>';
+        html += '</div>';
+
+        if (currentGroupBy === 'pays') {
+            html += renderCounterGrid(paysList, paysStats);
+        } else if (currentGroupBy === 'annee') {
+            html += renderCounterGrid(anneeList, anneeStats);
+        } else {
+            html += renderComboCounters(perimetre);
+        }
+
+        html += '</details>';
+        el.innerHTML = html;
+    }
+
+    function sortStatKeys(stats, mode) {
+        return Object.keys(stats).sort(function(a, b) {
+            var pctA = stats[a].total > 0 ? stats[a].owned / stats[a].total : 0;
+            var pctB = stats[b].total > 0 ? stats[b].owned / stats[b].total : 0;
+            if (pctB !== pctA) return pctB - pctA;
+            if (mode === 'num') return parseInt(a) - parseInt(b);
+            return a.localeCompare(b);
+        });
+    }
+
+    function renderCounterGrid(keys, stats) {
+        var html = '<div class="collection-counters-grid">';
+        keys.forEach(function(key) {
+            var s = stats[key];
             var pct = s.total > 0 ? Math.round((s.owned / s.total) * 100) : 0;
             html +=
                 '<div class="country-counter-item">' +
-                    '<div class="country-counter-label">' + escapeHtml(pays) + '</div>' +
+                    '<div class="country-counter-label">' + escapeHtml(key) + '</div>' +
                     '<div class="country-counter-bar"><div class="country-counter-fill" style="width:' + pct + '%"></div></div>' +
                     '<div class="country-counter-value">' + s.owned + '/' + s.total + '</div>' +
                 '</div>';
         });
+        html += '</div>';
+        return html;
+    }
 
-        html += '</div></details>';
-        el.innerHTML = html;
+    function renderComboCounters(perimetre) {
+        // Matrice pays × année
+        var combo = {};  // "pays|annee" -> { total, owned }
+        var anneesSet = {};
+        var paysSet = {};
+
+        allBillets.forEach(function(b) {
+            if (!perimetre[b.id]) return;
+            var pays = b.Pays || 'Inconnu';
+            var annee = (b.Millesime || '?').toString();
+            var key = pays + '|' + annee;
+            paysSet[pays] = true;
+            anneesSet[annee] = true;
+
+            if (!combo[key]) combo[key] = { total: 0, owned: 0 };
+            combo[key].total++;
+            var c = collectionMap[b.id];
+            if (c && (c.owned_normal || c.owned_variante)) combo[key].owned++;
+        });
+
+        var annees = Object.keys(anneesSet).sort(function(a, b) { return parseInt(a) - parseInt(b); });
+        var pays = Object.keys(paysSet).sort();
+
+        var html = '<div class="combo-table-wrapper"><table class="combo-table">';
+        html += '<thead><tr><th></th>';
+        annees.forEach(function(a) { html += '<th>' + a + '</th>'; });
+        html += '</tr></thead><tbody>';
+
+        pays.forEach(function(p) {
+            html += '<tr><td class="combo-pays-cell">' + escapeHtml(p) + '</td>';
+            annees.forEach(function(a) {
+                var s = combo[p + '|' + a];
+                if (s) {
+                    var pct = s.total > 0 ? Math.round((s.owned / s.total) * 100) : 0;
+                    var cls = pct === 100 ? 'combo-full' : pct > 0 ? 'combo-partial' : 'combo-empty';
+                    html += '<td class="combo-cell ' + cls + '" title="' + escapeAttr(p) + ' ' + a + ' — ' + s.owned + '/' + s.total + '">' + s.owned + '/' + s.total + '</td>';
+                } else {
+                    html += '<td class="combo-cell combo-na">—</td>';
+                }
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    }
+
+    function collGroupBy(mode) {
+        currentGroupBy = mode;
+        renderCountryCounters();
+        renderCollection();
     }
 
     // ============================================================
@@ -740,33 +829,50 @@
             return;
         }
 
-        // Grouper par pays
+        // Grouper selon le mode choisi
         var grouped = {};
         billetsFiltres.forEach(function(item) {
-            var pays = item.billet.Pays || 'Inconnu';
-            if (!grouped[pays]) grouped[pays] = [];
-            grouped[pays].push(item);
+            var key;
+            if (currentGroupBy === 'annee') {
+                key = (item.billet.Millesime || 'Inconnu').toString();
+            } else if (currentGroupBy === 'combo') {
+                key = (item.billet.Pays || 'Inconnu') + ' — ' + (item.billet.Millesime || '?');
+            } else {
+                key = item.billet.Pays || 'Inconnu';
+            }
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(item);
         });
 
-        var paysSorted = Object.keys(grouped).sort();
+        var groupKeys = Object.keys(grouped).sort(function(a, b) {
+            if (currentGroupBy === 'annee') return parseInt(a) - parseInt(b);
+            if (currentGroupBy === 'combo') {
+                // Trier par pays puis année
+                var pa = a.split(' — '), pb = b.split(' — ');
+                if (pa[0] !== pb[0]) return pa[0].localeCompare(pb[0]);
+                return parseInt(pa[1]) - parseInt(pb[1]);
+            }
+            return a.localeCompare(b);
+        });
 
         var html = '';
-        paysSorted.forEach(function(pays) {
-            var items = grouped[pays];
-            // Trier par millésime puis version
+        groupKeys.forEach(function(key) {
+            var items = grouped[key];
+            // Trier par millésime puis pays puis version
             items.sort(function(a, b) {
                 var yA = parseInt(a.billet.Millesime) || 0;
                 var yB = parseInt(b.billet.Millesime) || 0;
                 if (yA !== yB) return yA - yB;
+                var pA = (a.billet.Pays || ''), pB = (b.billet.Pays || '');
+                if (pA !== pB) return pA.localeCompare(pB);
                 return (a.billet.Version || '').localeCompare(b.billet.Version || '');
             });
 
-            // Compteur pays
             var ownedCount = items.filter(function(i) { return i.isOwned; }).length;
 
             html += '<div class="coll-country-group">';
             html += '<div class="coll-country-header">';
-            html += '<h3>' + escapeHtml(pays) + '</h3>';
+            html += '<h3>' + escapeHtml(key) + '</h3>';
             html += '<span class="coll-country-badge">' + ownedCount + ' / ' + items.length + '</span>';
             html += '</div>';
             html += '<div class="coll-billets-grid">';

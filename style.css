@@ -6762,11 +6762,105 @@ body.login-page {
     padding: var(--spacing-xs) 0;
 }
 
+/* Onglets de vue compteurs */
+.counters-view-tabs {
+    display: flex;
+    gap: 4px;
+    margin: var(--spacing-sm) 0;
+}
+
+.counters-tab {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--color-text-muted);
+}
+
+.counters-tab:hover {
+    background: var(--color-surface);
+}
+
+.counters-tab.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.counters-tab i {
+    margin-right: 3px;
+}
+
 .collection-counters-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: var(--spacing-xs) var(--spacing-md);
     margin-top: var(--spacing-sm);
+}
+
+/* Tableau combo pays × année */
+.combo-table-wrapper {
+    overflow-x: auto;
+    margin-top: var(--spacing-sm);
+    -webkit-overflow-scrolling: touch;
+}
+
+.combo-table {
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.combo-table th,
+.combo-table td {
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    text-align: center;
+}
+
+.combo-table th {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.combo-pays-cell {
+    text-align: left;
+    font-weight: 500;
+    background: var(--color-bg);
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+.combo-cell {
+    min-width: 50px;
+}
+
+.combo-full {
+    background: #d4edda;
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+.combo-partial {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.combo-empty {
+    background: #f8d7da;
+    color: var(--color-danger);
+}
+
+.combo-na {
+    color: var(--color-border);
+    background: var(--color-bg);
 }
 
 .country-counter-item {
