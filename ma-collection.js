@@ -72,7 +72,7 @@
         if (counter) counter.innerHTML = '<span class="collection-loading">Chargement...</span>';
 
         Promise.all([
-            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId,dep&order=Millesime.asc.nullslast,Pays.asc'),
+            supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId,Dep&order=Millesime.asc.nullslast,Pays.asc'),
             supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc'),
             supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(firebase.auth().currentUser.email) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
             supabaseFetch('/rest/v1/collection?select=*')
@@ -940,7 +940,7 @@
                 if (yA !== yB) return yA - yB;
                 var pA = (a.billet.Pays || ''), pB = (b.billet.Pays || '');
                 if (pA !== pB) return pA.localeCompare(pB);
-                var dA = (a.billet.dep || ''), dB = (b.billet.dep || '');
+                var dA = (a.billet.Dep || ''), dB = (b.billet.Dep || '');
                 if (dA !== dB) return dA.localeCompare(dB);
                 var rA = (a.billet.Reference || ''), rB = (b.billet.Reference || '');
                 if (rA !== rB) return rA.localeCompare(rB);
@@ -987,8 +987,8 @@
 
         // En-tête : dep + référence + année-version
         html += '<div class="coll-billet-header">';
-        if (b.dep) {
-            html += '<span class="coll-billet-dep">' + escapeHtml(b.dep) + '</span>';
+        if (b.Dep) {
+            html += '<span class="coll-billet-dep">' + escapeHtml(b.Dep) + '</span>';
         }
         html += '<span class="coll-billet-ref">' + escapeHtml(b.Reference || '') + '</span>';
         html += '<span class="coll-billet-year">' + escapeHtml((b.Millesime || '') + (b.Version ? '-' + b.Version : '')) + '</span>';
