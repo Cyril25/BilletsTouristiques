@@ -1677,6 +1677,25 @@
         });
 
         var ws = XLSX.utils.json_to_sheet(rows);
+
+        // Colonnes en lecture seule (verrouillées)
+        var lockedCols = { 'ID': true, 'Référence': true, 'Millésime': true, 'Version': true, 'Nom': true, 'Pays': true, 'Dep': true, 'Variante': true };
+        var headers = Object.keys(rows[0] || {});
+        var range = XLSX.utils.decode_range(ws['!ref']);
+        for (var R = range.s.r; R <= range.e.r; R++) {
+            for (var C = range.s.c; C <= range.e.c; C++) {
+                var addr = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[addr]) continue;
+                var colName = headers[C];
+                if (R === 0 || lockedCols[colName]) {
+                    ws[addr].s = { protection: { locked: true } };
+                } else {
+                    ws[addr].s = { protection: { locked: false } };
+                }
+            }
+        }
+        ws['!protect'] = { sheet: true, objects: true, scenarios: true };
+
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Ma collection');
         var filename = 'ma-collection';
