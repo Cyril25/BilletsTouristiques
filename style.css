@@ -6623,10 +6623,11 @@ body.login-page {
 }
 
 .breakpoint-option label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: 4px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .btn-link {
