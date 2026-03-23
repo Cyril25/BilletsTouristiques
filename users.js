@@ -167,7 +167,7 @@ function renderUserCards(searchQuery) {
         var role = user.role || '';
         var lastActive = user.last_active_at || '';
         var displayName = pseudo || ((prenom && nom) ? prenom + ' ' + nom : (prenom || nom)) || email;
-        var isAdmin = role === 'admin';
+        var isAdmin = role === 'admin' || role === 'superadmin';
         var badgeClass = isAdmin ? 'user-badge-role user-badge-admin' : 'user-badge-role user-badge-member';
         var badgeLabel = isAdmin ? 'Admin' : 'Membre';
         var btnClass = isAdmin ? 'user-role-toggle-btn demote' : 'user-role-toggle-btn promote';
@@ -208,12 +208,13 @@ function renderUserCards(searchQuery) {
                     'title="Modifier profil">' +
                     '<i class="fa-solid fa-pen"></i> Modifier profil' +
                 '</button>' +
+                (role === 'superadmin' ? '' :
                 '<button class="' + btnClass + '" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'data-current-role="' + escapeAttr(role) + '" ' +
                     'title="' + escapeAttr(btnText) + '">' +
                     '<i class="' + btnIcon + '"></i> ' + escapeHtml(btnText) +
-                '</button>' +
+                '</button>') +
                 '<button class="user-delete-btn" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'title="Supprimer ce membre">' +
@@ -238,6 +239,7 @@ function initUserEvents() {
                 event.stopPropagation();
                 var email = roleBtn.getAttribute('data-doc-id');
                 var currentRole = roleBtn.getAttribute('data-current-role');
+                if (currentRole === 'superadmin') return; // rôle protégé
                 var newRole = (currentRole === 'admin') ? 'member' : 'admin';
 
                 // Verifier auto-retrogradation
