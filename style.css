@@ -6480,6 +6480,16 @@ body.login-page {
     margin-right: 4px;
 }
 
+.coll-serial-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    margin-top: var(--spacing-xs);
+}
+
 .collection-no-rules {
     color: var(--color-text-muted);
     font-size: 0.9rem;

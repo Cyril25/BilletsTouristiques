@@ -48,6 +48,7 @@
     window.collGroupBy = collGroupBy;
     window.collFilterPays = collFilterPays;
     window.collFilterAnnee = collFilterAnnee;
+    window.collToggleSerial = collToggleSerial;
     window.collShowBillet = collShowBillet;
     window.collCloseModal = collCloseModal;
     window.onboardingNext = onboardingNext;
@@ -225,7 +226,11 @@
                     '<i class="fa-solid fa-circle-info"></i> ' +
                     'Aucun périmètre configuré — tous les billets du catalogue sont inclus. ' +
                     '<button class="btn-link" onclick="collToggleParams()">Configurer mon périmètre</button>' +
-                '</div>';
+                '</div>' +
+                '<label class="coll-serial-toggle">' +
+                '<input type="checkbox"' + (trackSerial ? ' checked' : '') + ' onchange="collToggleSerial(this.checked)">' +
+                ' Je souhaite suivre les numéros de série' +
+                '</label>';
             return;
         }
 
@@ -265,7 +270,29 @@
         });
 
         html += '</div>';
+
+        // Toggle numéros de série
+        html += '<label class="coll-serial-toggle">';
+        html += '<input type="checkbox"' + (trackSerial ? ' checked' : '') + ' onchange="collToggleSerial(this.checked)">';
+        html += ' Je souhaite suivre les numéros de série';
+        html += '</label>';
+
         el.innerHTML = html;
+    }
+
+    function collToggleSerial(checked) {
+        trackSerial = checked;
+        var email = firebase.auth().currentUser.email;
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email), {
+            method: 'PATCH',
+            body: JSON.stringify({ track_serial_numbers: checked }),
+        }).then(function() {
+            renderCollection();
+        }).catch(function(err) {
+            console.error('Erreur toggle serial:', err);
+            trackSerial = !checked;
+            renderPerimetreSummary();
+        });
     }
 
     // ============================================================
