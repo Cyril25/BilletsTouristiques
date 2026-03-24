@@ -281,7 +281,7 @@ function openCollecteDetail(billetId) {
                 return;
             }
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays')
                 .then(function(membres) {
                     var membresMap = {};
                     if (membres) {
@@ -289,9 +289,14 @@ function openCollecteDetail(billetId) {
                     }
                     currentInscriptions.forEach(function(ins) {
                         var membre = membresMap[ins.membre_email];
-                        if (membre && ins.adresse_snapshot) {
-                            if (!ins.adresse_snapshot.nom && membre.nom) ins.adresse_snapshot.nom = membre.nom;
-                            if (!ins.adresse_snapshot.prenom && membre.prenom) ins.adresse_snapshot.prenom = membre.prenom;
+                        if (membre) {
+                            if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                            ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                            ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                            ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                            ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                            ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                            ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
                         }
                     });
                     renderCollecteDetail(billetId, currentInscriptions);
@@ -951,7 +956,7 @@ function loadEnveloppes() {
                         return;
                     }
                     var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-                    return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
+                    return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays')
                         .then(function(membres) {
                             var membresMap = {};
                             if (membres) {
@@ -959,9 +964,14 @@ function loadEnveloppes() {
                             }
                             inscriptions.forEach(function(ins) {
                                 var membre = membresMap[ins.membre_email];
-                                if (membre && ins.adresse_snapshot) {
-                                    if (!ins.adresse_snapshot.nom && membre.nom) ins.adresse_snapshot.nom = membre.nom;
-                                    if (!ins.adresse_snapshot.prenom && membre.prenom) ins.adresse_snapshot.prenom = membre.prenom;
+                                if (membre) {
+                                    if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                                    ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                                    ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                                    ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                                    ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                                    ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                                    ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
                                 }
                             });
                             var billetsMap = {};
@@ -1831,7 +1841,7 @@ function loadVerificationPaiement() {
                 if (ins.membre_email && emails.indexOf(ins.membre_email) === -1) emails.push(ins.membre_email);
             });
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays')
                 .then(function(membres) {
                     var membresMap = {};
                     if (membres) {
@@ -1839,9 +1849,14 @@ function loadVerificationPaiement() {
                     }
                     inscriptions.forEach(function(ins) {
                         var membre = membresMap[ins.membre_email];
-                        if (membre && ins.adresse_snapshot) {
-                            if (!ins.adresse_snapshot.nom && membre.nom) ins.adresse_snapshot.nom = membre.nom;
-                            if (!ins.adresse_snapshot.prenom && membre.prenom) ins.adresse_snapshot.prenom = membre.prenom;
+                        if (membre) {
+                            if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                            ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                            ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                            ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                            ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                            ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                            ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
                         }
                     });
                     var billetsMap = {};
@@ -1991,7 +2006,7 @@ function ouvrirRelance(billetId) {
                 return;
             }
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays')
                 .then(function(membres) {
                     var membresMap = {};
                     if (membres) {
@@ -1999,9 +2014,14 @@ function ouvrirRelance(billetId) {
                     }
                     impayes.forEach(function(ins) {
                         var membre = membresMap[ins.membre_email];
-                        if (membre && ins.adresse_snapshot) {
-                            if (!ins.adresse_snapshot.nom && membre.nom) ins.adresse_snapshot.nom = membre.nom;
-                            if (!ins.adresse_snapshot.prenom && membre.prenom) ins.adresse_snapshot.prenom = membre.prenom;
+                        if (membre) {
+                            if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                            ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                            ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                            ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                            ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                            ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                            ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
                         }
                     });
                     renderRelanceModal(billet, impayes);
