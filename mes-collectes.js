@@ -350,7 +350,13 @@ function renderCollecteDetail(billetId, inscriptions) {
         }
     }
     html += '<div class="collecte-detail-header">';
-    html += '<h2>' + escapeHtmlMC((billet && billet.NomBillet) || '') + '<span style="font-weight:400; font-size:0.75em; color:#666;">' + prixHeader + '</span></h2>';
+    var titreDetail = '';
+    if (billet) {
+        if (billet.Reference) titreDetail += billet.Reference + ' - ';
+        if (billet.Millesime) titreDetail += billet.Millesime + (billet.Version ? '-' + billet.Version : '') + ' ';
+        titreDetail += billet.NomBillet || '';
+    }
+    html += '<h2>' + escapeHtmlMC(titreDetail) + '<span style="font-weight:400; font-size:0.75em; color:#666;">' + prixHeader + '</span></h2>';
     if (billet && billet.Ville) html += '<span class="collecte-detail-ville"><i class="fa-solid fa-location-dot"></i> ' + escapeHtmlMC(billet.Ville) + '</span>';
     html += '</div>';
 
