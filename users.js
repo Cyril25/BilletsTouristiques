@@ -433,7 +433,9 @@ function saveUserEditModal(email) {
             }
             showToast('Fiche mise à jour', 'success');
             closeUserEditModal();
-            renderUserCards();
+            var searchInput = document.getElementById('user-search-input');
+            var currentQuery = searchInput ? searchInput.value.trim() : '';
+            renderUserCards(currentQuery);
         })
         .catch(function(error) {
             showToast('Erreur : ' + error.message, 'error');
