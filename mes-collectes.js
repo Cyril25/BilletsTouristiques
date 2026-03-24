@@ -189,6 +189,15 @@ function renderCollectesList() {
         return;
     }
 
+    // Tri : en cours d'abord, puis terminées — chaque groupe trié par date desc
+    mesBillets.sort(function(a, b) {
+        var aOpen = (a.Categorie === 'Collecte' || a.Categorie === 'Pré collecte') ? 0 : 1;
+        var bOpen = (b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte') ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        var dA = a.Date || '', dB = b.Date || '';
+        return dB.localeCompare(dA);
+    });
+
     var html = '<div class="collectes-cards">';
     for (var i = 0; i < mesBillets.length; i++) {
         var b = mesBillets[i];
