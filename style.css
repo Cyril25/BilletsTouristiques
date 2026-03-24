@@ -3888,22 +3888,14 @@ body.login-page {
     color: var(--color-accent);
 }
 
-.collecte-card-sheet {
-    margin: 4px 0;
-}
-.collecte-card-sheet a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+.collecte-sheet-link {
     color: var(--color-accent);
-    text-decoration: none;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: var(--color-surface, #f5f5f5);
+    font-size: 1rem;
+    padding: 2px 4px;
+    white-space: nowrap;
 }
-.collecte-card-sheet a:hover {
-    text-decoration: underline;
+.collecte-sheet-link:hover {
+    color: var(--color-primary);
 }
 
 .collecte-card-indicators {

@@ -220,6 +220,10 @@ function renderCollectesList() {
         if (refPrefix) html += '<span class="collecte-ref">' + escapeHtmlMC(refPrefix) + '</span>';
         html += '<h3>' + escapeHtmlMC(b.NomBillet || '') + '</h3>';
         html += '<span class="collecte-status ' + statusClass + '">' + escapeHtmlMC(statusLabel) + '</span>';
+        var sheetUrl = (b.LinkSheet || '').trim();
+        if (!isOpen && sheetUrl && /^https?:\/\//i.test(sheetUrl)) {
+            html += '<a href="' + escapeAttrMC(sheetUrl) + '" target="_blank" onclick="event.stopPropagation()" class="collecte-sheet-link" title="Voir le fichier Google Sheet"><i class="fa-solid fa-file-csv"></i></a>';
+        }
         html += '</div>';
         var bVne = b.VersionNormaleExiste !== false;
         var bVarActive = b.HasVariante && b.HasVariante !== 'N';
@@ -235,14 +239,6 @@ function renderCollectesList() {
         }
         if (b.DateColl) html += '<span><i class="fa-solid fa-calendar"></i> ' + b.DateColl + '</span>';
         html += '</div>';
-
-        // Lien Google Sheet pour les collectes terminées
-        var sheetUrl = (b.LinkSheet || '').trim();
-        if (!isOpen && sheetUrl && /^https?:\/\//i.test(sheetUrl)) {
-            html += '<div class="collecte-card-sheet">';
-            html += '<a href="' + escapeAttrMC(sheetUrl) + '" target="_blank" onclick="event.stopPropagation()" class="icon-btn ico-sheet" title="Voir le fichier Google Sheet"><i class="fa-solid fa-file-csv"></i> Google Sheet</a>';
-            html += '</div>';
-        }
 
         // Indicateurs payé / envoyé
         var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, envoyes: 0 };
