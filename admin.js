@@ -1154,6 +1154,25 @@ function openBilletPanel(billetData, docId) {
                 if (input) {
                     input.setAttribute('readonly', 'readonly');
                     input.classList.add('admin-field-readonly');
+                    // Bouton supprimer le lien Google
+                    if (input.value && !group.querySelector('.btn-clear-google')) {
+                        var wrapper = document.createElement('div');
+                        wrapper.className = 'google-field-wrapper';
+                        input.parentNode.insertBefore(wrapper, input);
+                        wrapper.appendChild(input);
+                        var clearBtn = document.createElement('button');
+                        clearBtn.type = 'button';
+                        clearBtn.className = 'btn-clear-google';
+                        clearBtn.title = 'Supprimer ce lien';
+                        clearBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                        clearBtn.onclick = function() {
+                            input.value = '';
+                            input.removeAttribute('readonly');
+                            input.classList.remove('admin-field-readonly');
+                            clearBtn.remove();
+                        };
+                        wrapper.appendChild(clearBtn);
+                    }
                 }
                 var label = group.querySelector('label');
                 if (label && !label.querySelector('.badge-ancien-systeme')) {
