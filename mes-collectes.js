@@ -404,20 +404,20 @@ function renderCollecteDetail(billetId, inscriptions) {
     if (inscriptions.length === 0) {
         html += '<p class="collectes-empty"><i class="fa-solid fa-users-slash"></i> Aucun inscrit pour cette collecte.</p>';
     } else {
-        // Tri par prénom puis nom
+        // Tri par nom puis prénom
         inscriptions.sort(function(a, b) {
             var sa = a.adresse_snapshot || {}, sb = b.adresse_snapshot || {};
-            var pa = (sa.prenom || '').toLowerCase(), pb = (sb.prenom || '').toLowerCase();
-            if (pa < pb) return -1; if (pa > pb) return 1;
             var na = (sa.nom || '').toLowerCase(), nb = (sb.nom || '').toLowerCase();
             if (na < nb) return -1; if (na > nb) return 1;
+            var pa = (sa.prenom || '').toLowerCase(), pb = (sb.prenom || '').toLowerCase();
+            if (pa < pb) return -1; if (pa > pb) return 1;
             return 0;
         });
 
         html += '<div class="collecte-table-wrap">';
         html += '<table class="collecte-table">';
         html += '<thead><tr>';
-        html += '<th>Prénom / Nom</th>';
+        html += '<th>Nom / Prénom</th>';
         html += '<th>Adresse</th>';
         if (vne) html += '<th>Normaux</th>';
         html += '<th>Variantes</th>';
@@ -438,7 +438,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         for (var j = 0; j < inscriptions.length; j++) {
             var ins = inscriptions[j];
             var snap = ins.adresse_snapshot || {};
-            var nomPrenom = ((snap.prenom || '') + ' ' + (snap.nom || '')).trim() || ins.membre_email;
+            var nomPrenom = ((snap.nom || '') + ' ' + (snap.prenom || '')).trim() || ins.membre_email;
             var adresse = formatAdresse(snap);
             var montantBillets = (prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0));
             var commentaire = ins.commentaire || '';
