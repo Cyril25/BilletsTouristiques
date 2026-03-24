@@ -210,7 +210,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=42")
+    fetch("menu.html?v=43")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -241,16 +241,27 @@ function loadMenu() {
             }
 
             // STORY 1.2 — Menu conditionnel : afficher les liens admin uniquement pour les admins
-            if (window.userRole === 'admin' || window.userRole === 'superadmin') {
-                var adminLinks = document.querySelectorAll('.admin-only');
-                adminLinks.forEach(function(el) { el.classList.remove('admin-only'); });
+            // En mode impersonation, on affiche le menu selon le rôle de la personne impersonnée
+            var activeEmail = window.getActiveEmail();
+            var menuRolePromise;
+            if (window.impersonatedEmail && window.userRole === 'superadmin') {
+                menuRolePromise = supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(activeEmail) + '&select=role')
+                    .then(function(rows) {
+                        return (rows && rows.length > 0) ? rows[0].role || 'member' : 'member';
+                    })
+                    .catch(function() { return 'member'; });
+            } else {
+                menuRolePromise = Promise.resolve(window.userRole);
             }
 
+            menuRolePromise.then(function(effectiveRole) {
+                if (effectiveRole === 'admin' || effectiveRole === 'superadmin') {
+                    var adminLinks = document.querySelectorAll('.admin-only');
+                    adminLinks.forEach(function(el) { el.classList.remove('admin-only'); });
+                }
 
-            // QW-1 — Masquer "Mes collectes" pour les non-collecteurs
-            var user2 = firebase.auth().currentUser;
-            if (user2) {
-                supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(user2.email) + '&select=id')
+                // QW-1 — Masquer "Mes collectes" pour les non-collecteurs
+                supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(activeEmail) + '&select=id')
                     .then(function(data) {
                         if (!data || data.length === 0) {
                             var collectesLink = document.querySelector('a[href="mes-collectes.html"]');
@@ -258,7 +269,7 @@ function loadMenu() {
                         }
                     })
                     .catch(function() {});
-            }
+            });
         })
         .catch(function(err) { console.error("Menu introuvable :", err); });
 }
