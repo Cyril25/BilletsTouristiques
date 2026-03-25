@@ -5816,19 +5816,30 @@ body.login-page {
     color: var(--color-text);
 }
 
-.share-modal-text {
+.share-modal-content {
     background: var(--color-surface);
     border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-disabled);
+    margin: 0 0 var(--spacing-md) 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.share-modal-text {
     padding: var(--spacing-md);
     font-family: inherit;
     font-size: 0.9rem;
     line-height: 1.6;
     white-space: pre-wrap;
     word-wrap: break-word;
-    margin: 0 0 var(--spacing-md) 0;
-    border: 1px solid var(--color-border-disabled);
-    max-height: 300px;
-    overflow-y: auto;
+    margin: 0;
+}
+.share-modal-image {
+    display: block;
+    max-width: 100%;
+    max-height: 250px;
+    margin: 0 auto;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
 }
 
 .admin-modal-btn-primary {

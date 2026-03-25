@@ -2726,27 +2726,28 @@ function openShareModal(billetId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
 
-    var shareTextEl = document.getElementById('share-modal-text');
+    var textTopEl = document.getElementById('share-modal-text-top');
+    var textBottomEl = document.getElementById('share-modal-text-bottom');
+    var imgEl = document.getElementById('share-modal-image');
     var shareOverlay = document.getElementById('share-modal-overlay');
     var btn = document.getElementById('share-copy-btn');
-    if (!shareTextEl || !shareOverlay || !btn) return;
+    if (!textTopEl || !textBottomEl || !shareOverlay || !btn) return;
 
     var pays = billet.Pays || '';
     var ref = (billet.Reference || '') + ' ' + (billet.Millesime || 'XXXX') + '-' + (billet.Version || 'X');
     var nom = billet.NomBillet || '';
     var statut = billet.Categorie || '';
 
-    var lines = [];
-    lines.push('🎫 ' + pays + ' - ' + ref + ' - ' + nom);
+    // Partie haute : titre + statut + prix
+    var topLines = [];
+    topLines.push('🎫 ' + pays + ' - ' + ref + ' - ' + nom);
 
-    // Statut + collecteur
     var statutLine = '📌 Statut : ' + statut;
     if (statut === 'Collecte' && billet.Collecteur) {
         statutLine += ' | Collecteur : ' + billet.Collecteur;
     }
-    lines.push(statutLine);
+    topLines.push(statutLine);
 
-    // Prix
     var vne = billet.VersionNormaleExiste !== false;
     var varianteVal = billet.HasVariante || '';
     var varianteActive = varianteVal && varianteVal !== 'N';
@@ -2754,21 +2755,32 @@ function openShareModal(billetId) {
     var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prixNormal;
 
     if (!vne && varianteActive && prixVar) {
-        lines.push('💰 Prix : ' + prixVar.toFixed(2) + '€ ' + varianteVal);
+        topLines.push('💰 Prix : ' + prixVar.toFixed(2) + '€ ' + varianteVal);
     } else if (vne && varianteActive && prixNormal) {
-        lines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€ normal / ' + prixVar.toFixed(2) + '€ ' + varianteVal);
+        topLines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€ normal / ' + prixVar.toFixed(2) + '€ ' + varianteVal);
     } else if (prixNormal) {
-        lines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€');
+        topLines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€');
     }
 
-    // Lien
+    textTopEl.textContent = topLines.join('\n');
+
+    // Image du billet
+    var imgUrl = billet.ImageUrl || '';
+    if (!imgUrl && billet.ImageId) {
+        imgUrl = 'https://lh3.googleusercontent.com/d/' + billet.ImageId;
+    }
+    if (imgUrl) {
+        imgEl.src = imgUrl;
+        imgEl.style.display = '';
+    } else {
+        imgEl.style.display = 'none';
+        imgEl.src = '';
+    }
+
+    // Partie basse : lien
     var baseUrl = 'https://cyril25.github.io/BilletsTouristiques/billets.html';
-    lines.push('');
-    lines.push('👉 S\'inscrire : ' + baseUrl + '?billet=' + billetId);
+    textBottomEl.textContent = '👉 S\'inscrire : ' + baseUrl + '?billet=' + billetId;
 
-    var text = lines.join('\n');
-
-    shareTextEl.textContent = text;
     shareOverlay.style.display = '';
 
     // Reset bouton copie
@@ -2783,7 +2795,9 @@ function closeShareModal() {
 }
 
 function copyShareText() {
-    var text = document.getElementById('share-modal-text').textContent;
+    var top = document.getElementById('share-modal-text-top').textContent;
+    var bottom = document.getElementById('share-modal-text-bottom').textContent;
+    var text = top + '\n\n' + bottom;
     navigator.clipboard.writeText(text).then(function() {
         var btn = document.getElementById('share-copy-btn');
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Copié !';

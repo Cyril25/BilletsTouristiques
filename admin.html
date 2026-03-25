@@ -332,7 +332,11 @@
                 <h2 class="admin-modal-title" style="color: var(--color-primary);"><i class="fa-solid fa-share-nodes"></i> Partager</h2>
                 <button class="admin-modal-close-btn" onclick="closeShareModal()">&times;</button>
             </div>
-            <pre id="share-modal-text" class="share-modal-text"></pre>
+            <div id="share-modal-content" class="share-modal-content">
+                <pre id="share-modal-text-top" class="share-modal-text"></pre>
+                <img id="share-modal-image" class="share-modal-image" style="display:none" alt="Image du billet">
+                <pre id="share-modal-text-bottom" class="share-modal-text"></pre>
+            </div>
             <div class="admin-modal-actions">
                 <button type="button" id="share-copy-btn" class="admin-modal-btn admin-modal-btn-primary" onclick="copyShareText()">
                     <i class="fa-solid fa-copy"></i> Copier
