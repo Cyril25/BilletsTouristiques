@@ -229,7 +229,7 @@ function renderInscriptions() {
         if (statut === 'non_paye' && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte') {
             // Construire la note PayPal : Ref année-version "titre" - détail quantités = total
             var refPart = (billet.Reference || '') + ' ' + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '');
-            var noteparts = [refPart.trim(), '"' + (billet.NomBillet || '') + '"'];
+            var noteparts = [refPart.trim(), billet.NomBillet || ''];
             var detailParts = [];
             if (nbNormaux > 0) detailParts.push(prix.toFixed(2) + '€ x ' + nbNormaux);
             if (nbVariantes > 0) detailParts.push(prixVar.toFixed(2) + '€ x ' + nbVariantes + ' var.');
