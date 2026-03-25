@@ -1918,20 +1918,20 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
 
     var html = '<div class="paiement-total-attente">En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong></div>';
     var emails = Object.keys(groupes);
-    // Tri par prénom puis nom
+    // Tri par nom puis prénom
     emails.sort(function(a, b) {
         var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
-        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
-        if (pa < pb) return -1; if (pa > pb) return 1;
         var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
         if (na < nb) return -1; if (na > nb) return 1;
+        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
+        if (pa < pb) return -1; if (pa > pb) return 1;
         return 0;
     });
     for (var g = 0; g < emails.length; g++) {
         var email = emails[g];
         var groupe = groupes[email];
         var adr = groupe.adresse;
-        var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || email;
+        var nom = ((adr.nom || '') + ' ' + (adr.prenom || '')).trim() || email;
 
         var lignes = '';
         for (var l = 0; l < groupe.inscriptions.length; l++) {
