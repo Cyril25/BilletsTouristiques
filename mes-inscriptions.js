@@ -225,9 +225,10 @@ function renderInscriptions() {
         }
 
         var collecteur = collecteursMap[billet.Collecteur] || {};
-        var paypalLink = '';
+        var paypalNoteHtml = '';
+        var paypalBtnHtml = '';
         if (statut === 'non_paye' && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte') {
-            // Construire la note PayPal : Ref année-version "titre" - détail quantités = total
+            // Construire la note PayPal : Ref année-version titre - détail quantités = total
             var refPart = (billet.Reference || '') + ' ' + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '');
             var noteparts = [refPart.trim(), billet.NomBillet || ''];
             var detailParts = [];
@@ -243,8 +244,8 @@ function renderInscriptions() {
                 paypalUrl = 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteur.paypal_email);
             }
             if (paypalUrl) {
-                paypalLink = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer" onclick="navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.insertAdjacentHTML(\'afterend\',\'<span class=paypal-note-copied>Note copiée !</span>\')"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>'
-                    + '<span class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : <strong>' + escapeHtml(paypalNote) + '</strong></span>';
+                paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
+                paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
             }
         }
 
@@ -269,9 +270,10 @@ function renderInscriptions() {
             + badgePaiementMembre(statut, insc.id, billet.Categorie)
             + '<span class="badge-paiement ' + (insc.envoye ? 'badge-envoye' : 'badge-non-envoye') + '">' + (insc.envoye ? 'Envoy\u00E9' : 'Non envoy\u00E9') + '</span>'
             + '</div>'
+            + paypalNoteHtml
             + '<div class="inscription-card-footer">'
             + '<span class="inscription-date"><i class="fa-regular fa-calendar"></i> ' + dateInsc + '</span>'
-            + paypalLink
+            + paypalBtnHtml
             + '</div>'
             + '</div>';
     }
