@@ -210,7 +210,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=44")
+    fetch("menu.html?v=45")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -413,6 +413,32 @@ window.selectImpersonate = function(email) {
     // Recharger la page pour appliquer le changement
     window.location.reload();
 };
+
+// ── Masques de saisie nom / prénom ──────────────────────────
+// Nom → MAJUSCULES, Prénom → Première lettre de chaque mot en majuscule
+// Fonctionne sur tout input ayant la classe .input-uppercase ou .input-capitalize,
+// y compris ceux injectés dynamiquement (event delegation).
+function toUpperCaseValue(val) {
+    return val.toUpperCase();
+}
+function toCapitalizeValue(val) {
+    return val.replace(/(^|\s|-|')(\S)/g, function(match, sep, letter) {
+        return sep + letter.toUpperCase();
+    });
+}
+document.addEventListener('input', function(e) {
+    var el = e.target;
+    if (el.tagName !== 'INPUT') return;
+    if (el.classList.contains('input-uppercase')) {
+        var start = el.selectionStart, end = el.selectionEnd;
+        el.value = toUpperCaseValue(el.value);
+        el.setSelectionRange(start, end);
+    } else if (el.classList.contains('input-capitalize')) {
+        var start = el.selectionStart, end = el.selectionEnd;
+        el.value = toCapitalizeValue(el.value);
+        el.setSelectionRange(start, end);
+    }
+});
 
 window.stopImpersonate = function() {
     window.impersonatedEmail = '';

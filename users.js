@@ -383,15 +383,15 @@ function openUserEditModal(email) {
     html += '<div class="user-edit-modal-field"><label>Pseudo</label><input type="text" id="ue-pseudo" value="' + escapeAttr(user.pseudo || '') + '" placeholder="Pseudo"></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
-    html += '<div class="user-edit-modal-field"><label>Nom</label><input type="text" id="ue-nom" value="' + escapeAttr(user.nom || '') + '" placeholder="Nom"></div>';
-    html += '<div class="user-edit-modal-field"><label>Prénom</label><input type="text" id="ue-prenom" value="' + escapeAttr(user.prenom || '') + '" placeholder="Prénom"></div>';
+    html += '<div class="user-edit-modal-field"><label>Nom</label><input type="text" id="ue-nom" class="input-uppercase" value="' + escapeAttr(user.nom || '') + '" placeholder="Nom"></div>';
+    html += '<div class="user-edit-modal-field"><label>Prénom</label><input type="text" id="ue-prenom" class="input-capitalize" value="' + escapeAttr(user.prenom || '') + '" placeholder="Prénom"></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
     html += '<div class="user-edit-modal-field user-edit-modal-field-full"><label>Rue</label><input type="text" id="ue-rue" value="' + escapeAttr(user.rue || '') + '" placeholder="Adresse"></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
     html += '<div class="user-edit-modal-field"><label>Code postal</label><input type="text" id="ue-cp" value="' + escapeAttr(user.code_postal || '') + '" placeholder="Code postal"></div>';
-    html += '<div class="user-edit-modal-field"><label>Ville</label><input type="text" id="ue-ville" value="' + escapeAttr(user.ville || '') + '" placeholder="Ville"></div>';
+    html += '<div class="user-edit-modal-field"><label>Ville</label><input type="text" id="ue-ville" class="input-uppercase" value="' + escapeAttr(user.ville || '') + '" placeholder="Ville"></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
     html += '<div class="user-edit-modal-field"><label>Pays</label><input type="text" id="ue-pays" value="' + escapeAttr(user.pays || '') + '" placeholder="Pays"></div>';

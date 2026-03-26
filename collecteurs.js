@@ -138,11 +138,11 @@ function renderCollecteurs() {
                 '</div>' +
                 '<div class="user-edit-field">' +
                     '<label>Nom</label>' +
-                    '<input type="text" class="edit-nom" value="' + escapeAttr(nom) + '" placeholder="Nom">' +
+                    '<input type="text" class="edit-nom input-uppercase" value="' + escapeAttr(nom) + '" placeholder="Nom">' +
                 '</div>' +
                 '<div class="user-edit-field">' +
                     '<label>Prénom</label>' +
-                    '<input type="text" class="edit-prenom" value="' + escapeAttr(prenom) + '" placeholder="Prénom">' +
+                    '<input type="text" class="edit-prenom input-capitalize" value="' + escapeAttr(prenom) + '" placeholder="Prénom">' +
                 '</div>' +
                 '<div class="user-edit-field">' +
                     '<label>PayPal Email</label>' +
