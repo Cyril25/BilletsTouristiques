@@ -1343,6 +1343,10 @@ body.login-page {
     gap: 2px;
 }
 
+.admin-card-meta > span:first-child {
+    text-transform: uppercase;
+}
+
 .admin-card-ref {
     font-weight: 500;
     color: var(--color-primary);
@@ -4050,6 +4054,7 @@ body.login-page {
 .collecte-detail-ville {
     color: var(--color-text-muted);
     font-size: 0.9rem;
+    text-transform: uppercase;
 }
 
 .collecte-detail-ville i {
@@ -5195,6 +5200,7 @@ body.login-page {
 .inscription-ville {
     color: var(--color-text-muted);
     font-size: 0.85rem;
+    text-transform: uppercase;
 }
 
 .inscription-ville i {

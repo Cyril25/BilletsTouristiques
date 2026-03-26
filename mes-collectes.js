@@ -473,7 +473,11 @@ function renderCollecteDetail(billetId, inscriptions) {
             var montantAffiche = montantBillets.toFixed(2) + ' \u20AC' + (fdpMontantIns > 0 ? ' + ' + fdpMontantIns.toFixed(2) + ' \u20AC fdp' : '');
 
             html += '<tr>';
-            html += '<td data-label="Nom">' + escapeHtmlMC(nomPrenom) + '</td>';
+            var btnEditMembre = '';
+            if (window.userRole === 'admin' || window.userRole === 'superadmin') {
+                btnEditMembre = ' <button class="btn-edit-membre" onclick="openMembreEditModal(\'' + escapeAttrMC(ins.membre_email) + '\')" title="Modifier la fiche membre"><i class="fa-solid fa-user-pen"></i></button>';
+            }
+            html += '<td data-label="Nom">' + escapeHtmlMC(nomPrenom) + btnEditMembre + '</td>';
             html += '<td data-label="Adresse" class="td-adresse">' + escapeHtmlMC(adresse) + '</td>';
             if (vne) html += '<td data-label="Normaux">' + (ins.nb_normaux || 0) + '</td>';
             html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
@@ -518,7 +522,7 @@ function renderCollecteDetail(billetId, inscriptions) {
 function formatAdresse(snap) {
     var parts = [];
     if (snap.rue) parts.push(snap.rue);
-    if (snap.code_postal || snap.ville) parts.push(((snap.code_postal || '') + ' ' + (snap.ville || '')).trim());
+    if (snap.code_postal || snap.ville) parts.push(((snap.code_postal || '') + ' ' + (snap.ville || '').toUpperCase()).trim());
     if (snap.pays) parts.push(snap.pays);
     return parts.join(', ') || '—';
 }
@@ -1055,7 +1059,7 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
 
             var adr = enveloppesMeta[e].adr;
             var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || env.membre_email;
-            var adresseStr = [adr.rue, adr.code_postal, adr.ville, adr.pays].filter(Boolean).join(', ');
+            var adresseStr = [adr.rue, adr.code_postal, (adr.ville || '').toUpperCase() || null, adr.pays].filter(Boolean).join(', ');
 
             var demandeHtml = '';
             if (env.demande_envoi) {
@@ -1394,7 +1398,7 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
         }
     }
     var nom = ((adr.prenom || '') + ' ' + (adr.nom || '')).trim() || env.membre_email;
-    var adresseStr = [adr.rue, adr.code_postal, adr.ville, adr.pays].filter(Boolean).join(', ');
+    var adresseStr = [adr.rue, adr.code_postal, (adr.ville || '').toUpperCase() || null, adr.pays].filter(Boolean).join(', ');
 
     var html = '';
     html += '<button class="btn-retour-liste" onclick="retourEnveloppes()"><i class="fa-solid fa-arrow-left"></i> Retour aux enveloppes</button>';
@@ -2187,7 +2191,7 @@ function exporterCSV(billetId) {
             escapeCSV(adr.prenom),
             escapeCSV(adr.rue),
             escapeCSV(adr.code_postal),
-            escapeCSV(adr.ville),
+            escapeCSV((adr.ville || '').toUpperCase()),
             escapeCSV(adr.pays),
             escapeCSV(ins.mode_paiement),
             escapeCSV(ins.mode_envoi)

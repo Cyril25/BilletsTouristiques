@@ -425,7 +425,7 @@ function showMore() {
                 <div class="content">
                     <div class="description">
                         ${escapeHtml(item.Dep || '')} ${escapeHtml(item.Reference || '')} ${escapeHtml(item.Millesime || '')}-${escapeHtml(item.Version || '')}<br />
-                        ${escapeHtml(item.Cp || '')} ${escapeHtml(item.Ville || '')}<br />
+                        ${escapeHtml(item.Cp || '')} ${escapeHtml((item.Ville || '').toUpperCase())}<br />
                         ${escapeHtml(item.NomBillet || '')}
                     </div>
 
