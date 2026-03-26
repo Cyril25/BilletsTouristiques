@@ -2930,6 +2930,19 @@ function renderInscriptionsModalContent(billet) {
         html += '<p class="admin-insc-summary"><i class="fa-solid fa-chart-simple"></i> ' + summaryParts.join(' ') + '</p>';
     }
 
+    // Tri par nom puis prénom
+    if (adminMembresCache) {
+        adminCurrentInscriptions.sort(function(a, b) {
+            var ma = adminMembresCache.find(function(m) { return m.email === a.membre_email; }) || {};
+            var mb = adminMembresCache.find(function(m) { return m.email === b.membre_email; }) || {};
+            var na = (ma.nom || '').toLowerCase(), nb = (mb.nom || '').toLowerCase();
+            if (na < nb) return -1; if (na > nb) return 1;
+            var pa = (ma.prenom || '').toLowerCase(), pb = (mb.prenom || '').toLowerCase();
+            if (pa < pb) return -1; if (pa > pb) return 1;
+            return 0;
+        });
+    }
+
     if (adminCurrentInscriptions.length === 0) {
         html += '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);">Aucune inscription pour ce billet</p>';
     } else {
