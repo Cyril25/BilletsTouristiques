@@ -4429,6 +4429,12 @@ body.login-page {
     font-size: 1rem;
 }
 
+.paiement-groupe-total {
+    margin-left: auto;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .envoi-adresse {
     color: var(--color-text-muted);
     font-size: 0.85rem;

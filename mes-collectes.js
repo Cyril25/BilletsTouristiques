@@ -1946,12 +1946,15 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
         var nom = ((adr.nom || '') + ' ' + (adr.prenom || '')).trim() || email;
 
         var lignes = '';
+        var totalGroupe = 0;
         for (var l = 0; l < groupe.inscriptions.length; l++) {
             var insc = groupe.inscriptions[l];
             var billet = billetsMap[insc.billet_id] || {};
             var prix = parseFloat(billet.Prix || 0);
             var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
-            var montant = ((prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0))).toFixed(2);
+            var montantNum = (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
+            totalGroupe += montantNum;
+            var montant = montantNum.toFixed(2);
             var payRefParts = [];
             if (billet.Reference) payRefParts.push(billet.Reference);
             var payMilVersion = '';
@@ -1976,6 +1979,7 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
             + '<div class="envoi-groupe-header">'
             + '<strong>' + nom + '</strong>'
             + '<span class="envoi-count">' + groupe.inscriptions.length + ' billet(s)</span>'
+            + '<span class="paiement-groupe-total">' + totalGroupe.toFixed(2) + ' €</span>'
             + '</div>'
             + '<div class="envoi-groupe-lignes">' + lignes + '</div>'
             + '</div>';
