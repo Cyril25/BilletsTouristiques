@@ -113,6 +113,17 @@ function preInscRender() {
     // Zone formulaire (cachée par défaut)
     html += '<div id="preinsc-form-container" style="display:none;"></div>';
 
+    // Tri par nom puis prénom
+    preInscData.sort(function(a, b) {
+        var ma = preInscFindMembre(a.membre_email) || {};
+        var mb = preInscFindMembre(b.membre_email) || {};
+        var na = (ma.nom || '').toLowerCase(), nb = (mb.nom || '').toLowerCase();
+        if (na < nb) return -1; if (na > nb) return 1;
+        var pa = (ma.prenom || '').toLowerCase(), pb = (mb.prenom || '').toLowerCase();
+        if (pa < pb) return -1; if (pa > pb) return 1;
+        return 0;
+    });
+
     if (preInscData.length === 0) {
         html += '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Aucun paramétrage pour ' + preInscCurrentYear + '.</p>';
     } else {
