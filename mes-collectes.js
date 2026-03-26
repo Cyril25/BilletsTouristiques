@@ -458,7 +458,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             var ins = inscriptions[j];
             var snap = ins.adresse_snapshot || {};
             var membreIns = membresCache ? membresCache.find(function(mc) { return mc.email === ins.membre_email; }) : null;
-            var nomPrenom = membreIns ? ((membreIns.nom || '') + ' ' + (membreIns.prenom || '')).trim() || ins.membre_email : ins.membre_email;
+            var nomPrenom = ((snap.nom || '') + ' ' + (snap.prenom || '')).trim() || (membreIns ? ((membreIns.nom || '') + ' ' + (membreIns.prenom || '')).trim() : '') || ins.membre_email;
             var adresse = formatAdresse(membreIns || snap);
             var montantBillets = (prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0));
             var commentaire = ins.commentaire || '';
