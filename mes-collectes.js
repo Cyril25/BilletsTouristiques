@@ -19,6 +19,7 @@ var currentBilletId = null;
 var currentBillet = null;
 var currentInscriptions = [];
 var fraisPortCollecte = [];
+var verifPaiementData = null;
 
 function findFdpPriceCollecte(nbBillets, destination, typeEnvoi) {
     for (var i = 0; i < fraisPortCollecte.length; i++) {
@@ -1891,6 +1892,7 @@ function loadVerificationPaiement() {
                     });
                     var billetsMap = {};
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
+                    verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap };
                     renderVerificationPaiement(inscriptions, billetsMap);
                     // #12 — Compteur onglet paiements
                     var declares = inscriptions.filter(function(i) { return i.statut_paiement === 'declare'; });
@@ -1928,7 +1930,10 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
         totalEnAttente += (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
     });
 
-    var html = '<div class="paiement-total-attente">En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong></div>';
+    var html = '<div class="paiement-total-attente">'
+        + 'En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong>'
+        + ' <button onclick="ouvrirRelanceGlobale()" class="btn-relance" style="margin-left:12px;"><i class="fa-solid fa-envelope"></i> Relancer tous les impayés</button>'
+        + '</div>';
     var emails = Object.keys(groupes);
     // Tri par nom puis prénom
     emails.sort(function(a, b) {
@@ -2085,7 +2090,7 @@ function renderRelanceModal(billet, impayes) {
 
         var relVne = billet.VersionNormaleExiste !== false;
         var corps = 'Bonjour ' + prenom + ',\n\n'
-            + 'Je me permets de vous relancer concernant votre inscription à la collecte "' + (billet.NomBillet || '') + '".\n\n'
+            + 'Je me permets de te relancer concernant ton inscription à la collecte "' + (billet.NomBillet || '') + '".\n\n'
             + 'Détails :\n'
             + (relVne ? '- Billets normaux : ' + (insc.nb_normaux || 0) + '\n' : '')
             + (insc.nb_variantes > 0 ? '- Billets variantes : ' + insc.nb_variantes + '\n' : '')
@@ -2095,7 +2100,7 @@ function renderRelanceModal(billet, impayes) {
             + '\n';
 
         if (insc.mode_paiement === 'PayPal' && paypalInfo) {
-            corps += 'Vous pouvez effectuer le paiement via PayPal :\n' + paypalInfo + '/' + montant.toFixed(2) + '\n\n';
+            corps += 'Tu peux effectuer le paiement via PayPal :\n' + paypalInfo + '/' + montant.toFixed(2) + '\n\n';
         }
 
         corps += 'Merci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');
@@ -2159,6 +2164,122 @@ function fallbackCopy(textarea) {
 function fermerRelance() {
     var modal = document.getElementById('relance-modal');
     if (modal) modal.style.display = 'none';
+}
+
+// ---- Relance globale (tous les impayés d'un coup) ----
+
+function ouvrirRelanceGlobale() {
+    if (!verifPaiementData) {
+        showToast('Aucune donnée de paiement chargée', 'error');
+        return;
+    }
+    var inscriptions = verifPaiementData.inscriptions;
+    var billetsMap = verifPaiementData.billetsMap;
+    if (!inscriptions || inscriptions.length === 0) {
+        showToast('Aucun impayé à relancer');
+        return;
+    }
+
+    var paypalInfo = '';
+    if (monCollecteur.paypal_me) {
+        paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
+    } else if (monCollecteur.paypal_email) {
+        paypalInfo = monCollecteur.paypal_email;
+    }
+
+    // Grouper par membre
+    var groupes = {};
+    inscriptions.forEach(function(insc) {
+        var key = insc.membre_email;
+        if (!groupes[key]) {
+            groupes[key] = {
+                email: key,
+                adresse: insc.adresse_snapshot || {},
+                inscriptions: []
+            };
+        }
+        groupes[key].inscriptions.push(insc);
+    });
+
+    var emails = Object.keys(groupes);
+    emails.sort(function(a, b) {
+        var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
+        var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
+        if (na < nb) return -1; if (na > nb) return 1;
+        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
+        if (pa < pb) return -1; if (pa > pb) return 1;
+        return 0;
+    });
+
+    var messagesHtml = '';
+    for (var idx = 0; idx < emails.length; idx++) {
+        var groupe = groupes[emails[idx]];
+        var adr = groupe.adresse;
+        var prenom = adr.prenom || groupe.email;
+
+        var totalMembre = 0;
+        var detailsLignes = '';
+        for (var j = 0; j < groupe.inscriptions.length; j++) {
+            var insc = groupe.inscriptions[j];
+            var billet = billetsMap[insc.billet_id] || {};
+            var prix = parseFloat(billet.Prix || 0);
+            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
+            totalMembre += montant;
+
+            var relVne = billet.VersionNormaleExiste !== false;
+            detailsLignes += '\n• ' + (billet.NomBillet || '?');
+            if (relVne) detailsLignes += ' — ' + (insc.nb_normaux || 0) + ' normal(aux)';
+            if (insc.nb_variantes > 0) detailsLignes += ' — ' + insc.nb_variantes + ' variante(s)';
+            detailsLignes += ' — ' + montant.toFixed(2) + ' €';
+        }
+
+        var objet = 'Relance paiement — Tes collectes en attente';
+
+        var corps = 'Bonjour ' + prenom + ',\n\n'
+            + 'Je me permets de te relancer concernant tes inscriptions en attente de paiement.\n\n'
+            + 'Récapitulatif :' + detailsLignes + '\n\n'
+            + 'Total dû : ' + totalMembre.toFixed(2) + ' €\n';
+
+        if (paypalInfo) {
+            corps += '\nTu peux effectuer le paiement via PayPal :\n' + paypalInfo + '/' + totalMembre.toFixed(2) + '\n';
+        }
+
+        corps += '\nMerci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');
+
+        var mailto = 'mailto:' + groupe.email
+            + '?subject=' + encodeURIComponent(objet)
+            + '&body=' + encodeURIComponent(corps);
+
+        messagesHtml += '<div class="relance-message" id="relance-msg-' + idx + '">'
+            + '<div class="relance-header">'
+            + '<strong>' + prenom + '</strong> (' + groupe.email + ')'
+            + ' — ' + totalMembre.toFixed(2) + ' €'
+            + '</div>'
+            + '<textarea class="relance-texte" id="relance-texte-' + idx + '" rows="10" readonly>' + corps + '</textarea>'
+            + '<div class="relance-actions">'
+            + '<button onclick="copierRelance(' + idx + ')" class="btn-copier"><i class="fa-solid fa-copy"></i> Copier</button>'
+            + '<a href="' + mailto + '" class="btn-mailto"><i class="fa-solid fa-envelope"></i> Envoyer par email</a>'
+            + '</div>'
+            + '</div>';
+    }
+
+    var modal = document.getElementById('relance-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'relance-modal';
+        modal.className = 'relance-modal-overlay';
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML = '<div class="relance-modal-content">'
+        + '<div class="relance-modal-header">'
+        + '<h2><i class="fa-solid fa-envelope"></i> Relance globale — Tous les impayés</h2>'
+        + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
+        + '</div>'
+        + '<p class="relance-count">' + emails.length + ' membre(s) à relancer</p>'
+        + messagesHtml
+        + '</div>';
+    modal.style.display = '';
 }
 
 // ============================================================
