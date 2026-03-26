@@ -2750,10 +2750,6 @@ function openMembreEditModal(email) {
     _membreEditEmail = email;
 
     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone')
-        .then(function(res) {
-            if (!res.ok) throw new Error('Erreur HTTP ' + res.status); // F3
-            return res.json();
-        })
         .then(function(data) {
             if (!data.length) { // F5: membre inexistant
                 showToast('Membre introuvable', 'error');
@@ -2832,9 +2828,6 @@ function saveMembreEditModal(email) {
         method: 'PATCH',
         body: JSON.stringify(data)
     })
-        .then(function(res) {
-            if (!res.ok) throw new Error('Erreur HTTP ' + res.status); // F3
-        })
         .then(function() {
             // Mettre à jour les snapshots en mémoire pour ce membre
             for (var i = 0; i < currentInscriptions.length; i++) {
