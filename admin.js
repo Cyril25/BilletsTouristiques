@@ -1296,6 +1296,7 @@ function copyBillet(billetData) {
     if (categorieField) categorieField.value = CATEGORIE_DEFAULT;
     togglePrixFields();
     updateDateFieldsState(CATEGORIE_DEFAULT);
+    autoFillDateForStatus(CATEGORIE_DEFAULT);
 
     showToast('Billet dupliqué — modifiez puis sauvegardez', 'info');
 }
