@@ -1434,7 +1434,10 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
     html += '<div class="enveloppe-detail-header">';
     html += '<h2><i class="fa-solid fa-envelope"></i> ' + escapeHtmlMC(nom) + '</h2>';
     if (adresseLines.length > 1) {
+        html += '<div class="envoi-adresse-wrapper" onclick="copierAdresse(this)" title="Cliquer pour copier">';
         html += '<pre class="envoi-adresse-bloc">' + escapeHtmlMC(adresseStr) + '</pre>';
+        html += '<span class="envoi-adresse-copie"><i class="fa-solid fa-check"></i> Copié !</span>';
+        html += '</div>';
     } else {
         html += '<span class="envoi-adresse">Adresse non renseignée</span>';
     }
@@ -1545,6 +1548,15 @@ function retirerDeEnveloppe(inscriptionId) {
 }
 
 var _retourDepuisHistorique = false;
+
+function copierAdresse(wrapper) {
+    var pre = wrapper.querySelector('pre');
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.textContent).then(function() {
+        wrapper.classList.add('adresse-copiee');
+        setTimeout(function() { wrapper.classList.remove('adresse-copiee'); }, 2000);
+    });
+}
 
 function retourEnveloppes() {
     currentEnveloppeId = null;
