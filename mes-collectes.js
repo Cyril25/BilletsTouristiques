@@ -1423,14 +1423,21 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
         }
     }
     var nom = ((adr.nom || '') + ' ' + (adr.prenom || '')).trim() || env.membre_email;
-    var adresseStr = [adr.rue, adr.code_postal, (adr.ville || '').toUpperCase() || null, adr.pays].filter(Boolean).join(', ');
+    var cpVille = [adr.code_postal, (adr.ville || '').toUpperCase() || null].filter(Boolean).join(' ');
+    var paysLigne = (adr.pays && adr.pays.trim().toLowerCase() !== 'france') ? (adr.pays.trim().toUpperCase()) : '';
+    var adresseLines = [nom, adr.rue, cpVille, paysLigne].filter(Boolean);
+    var adresseStr = adresseLines.join('\n');
 
     var html = '';
     html += '<button class="btn-retour-liste" onclick="retourEnveloppes()"><i class="fa-solid fa-arrow-left"></i> Retour aux enveloppes</button>';
 
     html += '<div class="enveloppe-detail-header">';
     html += '<h2><i class="fa-solid fa-envelope"></i> ' + escapeHtmlMC(nom) + '</h2>';
-    html += '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>';
+    if (adresseLines.length > 1) {
+        html += '<pre class="envoi-adresse-bloc">' + escapeHtmlMC(adresseStr) + '</pre>';
+    } else {
+        html += '<span class="envoi-adresse">Adresse non renseignée</span>';
+    }
     if (env.demande_envoi) {
         var dateStr = env.date_demande_envoi ? new Date(env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
         var modeLabelDetail = { normal: 'Normal', suivi: 'Suivi', recommande_r1: 'Recommandé R1', recommande_r2: 'Recommandé R2', recommande_r3: 'Recommandé R3' }[env.mode_envoi] || '';
