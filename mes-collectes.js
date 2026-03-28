@@ -1381,7 +1381,23 @@ function openEnveloppeDetail(enveloppeId) {
                     inscriptions = inscriptions || [];
                     var billetsMap = {};
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
-                    renderEnveloppeDetail(inscriptions, billetsMap);
+                    // Enrichir adresse_snapshot depuis la table membres (comme dans loadEnveloppes)
+                    return supabaseFetch('/rest/v1/membres?email=eq.' + membreEmail + '&select=email,nom,prenom,rue,code_postal,ville,pays')
+                        .then(function(membres) {
+                            var membre = (membres && membres.length > 0) ? membres[0] : null;
+                            if (membre) {
+                                inscriptions.forEach(function(ins) {
+                                    if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                                    ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                                    ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                                    ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                                    ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                                    ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                                    ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
+                                });
+                            }
+                            renderEnveloppeDetail(inscriptions, billetsMap);
+                        });
                 });
         })
         .catch(function(error) {
