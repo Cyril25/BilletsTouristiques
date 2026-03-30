@@ -2113,7 +2113,7 @@ function reconcilierTypeChangement(billetId, billet, typeChange) {
             } else if (typeChange.supprimeNormale || typeChange.supprimeVariante) {
                 showToast('Inscriptions mises à jour après changement de type', 'info');
                 loadAdminInscriptionCounts().then(function() {
-                    if (adminCurrentBilletId === billetId) openInscriptionsModal(billetId);
+                    if (String(adminCurrentBilletId) === String(billetId)) openInscriptionsModal(adminCurrentBilletId);
                 });
             }
         })
@@ -2126,6 +2126,7 @@ function reconcilierTypeChangement(billetId, billet, typeChange) {
 // Recalcule les quantités des inscriptions existantes d'après les pré-inscriptions auto
 // Utilise merge-duplicates pour mettre à jour nb_normaux/nb_variantes sans toucher les autres champs
 function recalculerAutoInscriptions(billet) {
+    adminRecalculEnCoursBilletId = String(billet.id);
     var isFrance = !billet.Pays || billet.Pays === 'France';
     var annee = parseInt(billet.Millesime) || new Date().getFullYear();
     var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
@@ -2195,12 +2196,14 @@ function recalculerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, 
         headers: { 'Prefer': 'return=minimal, resolution=merge-duplicates' }
     })
     .then(function() {
+        adminRecalculEnCoursBilletId = null;
         showToast('Quantités recalculées d\'après les pré-inscriptions', 'info');
         loadAdminInscriptionCounts().then(function() {
-            if (adminCurrentBilletId === billet.id) openInscriptionsModal(billet.id);
+            if (String(adminCurrentBilletId) === String(billet.id)) openInscriptionsModal(adminCurrentBilletId);
         });
     })
     .catch(function(err) {
+        adminRecalculEnCoursBilletId = null;
         console.warn('Erreur recalculerAutoInscriptionsBatch:', err);
     });
 }
@@ -3083,6 +3086,7 @@ if (inscOverlayEl) {
 
 var adminCurrentInscriptions = [];
 var adminCurrentBilletId = null;
+var adminRecalculEnCoursBilletId = null; // billet dont le recalcul des inscriptions est en cours
 
 function openInscriptionsModal(billetId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
@@ -3096,9 +3100,17 @@ function openInscriptionsModal(billetId) {
     adminCurrentBilletId = billetId;
     titleEl.innerHTML =
         '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
+    overlayEl.style.display = '';
+
+    // Si un recalcul est en cours pour ce billet, attendre qu'il finisse
+    if (adminRecalculEnCoursBilletId && String(adminRecalculEnCoursBilletId) === String(billetId)) {
+        bodyEl.innerHTML =
+            '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Recalcul des inscriptions en cours…</p>';
+        return;
+    }
+
     bodyEl.innerHTML =
         '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
-    overlayEl.style.display = '';
 
     // Charger les inscriptions et les membres en parallèle
     Promise.all([
