@@ -2240,6 +2240,26 @@ function updateCardInList(docId, billetData) {
         badge.style.color = getTextColorForBg(color);
     }
 
+    // Mise a jour du badge inscriptions (libellé variante peut avoir changé)
+    var inscBadge = card.querySelector('.admin-card-inscriptions-badge');
+    if (inscBadge) {
+        var idata = adminInscriptionCounts[docId] || { count: 0, normaux: 0, variantes: 0 };
+        var icount = idata.count;
+        var idetail = '';
+        if (icount > 0) {
+            var iparts = [];
+            if (idata.normaux > 0) iparts.push(idata.normaux + ' billet' + (idata.normaux > 1 ? 's' : '') + ' normaux');
+            if (idata.variantes > 0) {
+                var varLabel = billetData.HasVariante || 'variante';
+                if (varLabel === 'anniversary') varLabel = 'anniv';
+                else if (varLabel === 'doré') varLabel = 'dorés';
+                iparts.push(idata.variantes + ' billet' + (idata.variantes > 1 ? 's' : '') + ' ' + varLabel);
+            }
+            if (iparts.length > 0) idetail = ' (' + iparts.join(', ') + ')';
+        }
+        inscBadge.innerHTML = '<i class="fa-solid fa-users"></i> ' + icount + ' inscription' + (icount !== 1 ? 's' : '') + idetail;
+    }
+
     // Mise a jour du bouton supprimer (nom du billet)
     var deleteBtn = card.querySelector('.admin-card-delete-btn');
     if (deleteBtn) {
