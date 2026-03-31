@@ -188,18 +188,6 @@ function renderInscriptions() {
     var totalDu = 0;
     var totalEnAttente = 0;
 
-    // #11 — Grouper par collecteur
-    var parCollecteur = {};
-    var ordreCollecteurs = [];
-    filteredInscriptions.forEach(function(insc) {
-        var billet = billetsMap[insc.billet_id] || {};
-        var collecteurAlias = billet.Collecteur || '\u2014';
-        if (!parCollecteur[collecteurAlias]) {
-            parCollecteur[collecteurAlias] = [];
-            ordreCollecteurs.push(collecteurAlias);
-        }
-        parCollecteur[collecteurAlias].push(insc);
-    });
 
     function renderInscriptionCard(insc) {
         var billet = billetsMap[insc.billet_id] || {};
@@ -278,29 +266,22 @@ function renderInscriptions() {
             + '</div>';
     }
 
-    // Priorité d'affichage : 0=Collecte non payée, 1=Pré-collecte, 2=Collecte payée
+    // Tri : collecte non payée → pré-collecte → collecte payée
     function inscPriorite(insc) {
         var billet = billetsMap[insc.billet_id] || {};
         var cat = billet.Categorie || 'Pré collecte';
         var statut = insc.statut_paiement || 'non_paye';
         if (cat === 'Collecte' && statut === 'non_paye') return 0;
         if (cat === 'Pré collecte') return 1;
-        return 2; // Collecte déclarée ou confirmée
+        return 2;
     }
 
-    // #11 — Rendu groupé par collecteur (header seulement si > 1 collecteur)
     var html = '';
-    var multiCollecteurs = ordreCollecteurs.length > 1;
-    ordreCollecteurs.forEach(function(alias) {
-        var inscs = parCollecteur[alias].slice().sort(function(a, b) {
-            return inscPriorite(a) - inscPriorite(b);
-        });
-        if (multiCollecteurs) {
-            html += '<div class="inscription-group-header"><i class="fa-solid fa-user"></i> ' + escapeHtml(alias) + ' <span class="inscription-group-count">(' + inscs.length + ')</span></div>';
-        }
-        inscs.forEach(function(insc) {
-            html += renderInscriptionCard(insc);
-        });
+    var sorted = filteredInscriptions.slice().sort(function(a, b) {
+        return inscPriorite(a) - inscPriorite(b);
+    });
+    sorted.forEach(function(insc) {
+        html += renderInscriptionCard(insc);
     });
 
     if (filteredInscriptions.length === 0 && mesInscriptions.length > 0) {
