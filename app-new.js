@@ -1085,6 +1085,7 @@ function confirmerInscription(billetId) {
             var form = document.getElementById('inscription-form-' + billetId);
             if (form) form.remove();
             loadMesInscriptions();
+            loadCompteursInscriptions();
             // Créer l'enveloppe en_cours si elle n'existe pas encore
             if (billet.Collecteur) {
                 creerEnveloppeSiAbsente(billet.Collecteur, email);
