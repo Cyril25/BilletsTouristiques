@@ -844,10 +844,9 @@ function fermerModalCloturer() {
 }
 
 function confirmerCloturer() {
-    fermerModalCloturer();
-    if (!pendingClotureId) return;
     var billetId = pendingClotureId;
-    pendingClotureId = null;
+    fermerModalCloturer();
+    if (!billetId) return;
 
     var today = new Date().toISOString().slice(0, 10);
     supabaseFetch('/rest/v1/billets?id=eq.' + billetId, {
