@@ -496,7 +496,13 @@ function preInscSave() {
         }
     })
     .then(function() {
-        preInscShowNotification('Paramétrage sauvegardé avec succès !', 'success');
+        // 5. Créer les inscriptions sur les pré-collectes et collectes ouvertes
+        return appliquerPreInscriptionsBilletsMembre(membreEmail, mainRecord, paysSelections);
+    })
+    .then(function(nbCrees) {
+        var msg = 'Paramétrage sauvegardé avec succès !';
+        if (nbCrees > 0) msg += ' ' + nbCrees + ' collecte' + (nbCrees > 1 ? 's inscrites' : ' inscrite') + '.';
+        preInscShowNotification(msg, 'success');
         preInscCancelForm();
         preInscLoadYear();
     })
@@ -512,7 +518,7 @@ function preInscDelete(membreEmail) {
     var membre = preInscFindMembre(membreEmail);
     var displayName = membre ? ((membre.nom || '') + ' ' + (membre.prenom || '')).trim() || membreEmail : membreEmail;
 
-    if (!confirm('Supprimer le paramétrage de ' + displayName + ' pour ' + preInscCurrentYear + ' ?\n\nLes inscriptions déjà créées ne seront pas supprimées.')) {
+    if (!confirm('Supprimer le paramétrage de ' + displayName + ' pour ' + preInscCurrentYear + ' ?\n\nLes inscriptions créées automatiquement (non modifiées par le membre) seront également supprimées.')) {
         return;
     }
 
@@ -526,12 +532,139 @@ function preInscDelete(membreEmail) {
         });
     })
     .then(function() {
-        preInscShowNotification('Paramétrage supprimé.', 'success');
+        // Supprimer les inscriptions pré-auto non modifiées par le membre
+        return supprimerPreInscriptionsMembre(membreEmail);
+    })
+    .then(function(nbSuppr) {
+        var msg = 'Paramétrage supprimé.';
+        if (nbSuppr > 0) msg += ' ' + nbSuppr + ' inscription' + (nbSuppr > 1 ? 's automatiques supprimées' : ' automatique supprimée') + '.';
+        preInscShowNotification(msg, 'success');
         preInscLoadYear();
     })
     .catch(function(err) {
         preInscShowNotification('Erreur : ' + (err.message || 'Erreur réseau'), 'error');
     });
+}
+
+// ============================================================
+// Helpers : appliquer / supprimer les inscriptions en cours
+// ============================================================
+
+/**
+ * Crée les inscriptions manquantes pour un membre sur toutes les pré-collectes
+ * et collectes ouvertes de l'année courante.
+ * Ignore les billets où le membre est déjà inscrit (ignore-duplicates).
+ * @returns {Promise<number>} Nombre d'inscriptions tentées (billets qualifiants)
+ */
+function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelections) {
+    var annee = preInscCurrentYear;
+
+    return Promise.all([
+        supabaseFetch('/rest/v1/billets?Millesime=eq.' + annee + '&select=id,Pays,HasVariante,VersionNormaleExiste,Categorie'),
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(membreEmail) + '&select=nom,prenom,rue,code_postal,ville,pays')
+    ])
+    .then(function(results) {
+        var billets = (results[0] || []).filter(function(b) {
+            return b.Categorie === 'Pré collecte' || b.Categorie === 'Collecte';
+        });
+        if (billets.length === 0) return 0;
+
+        var adresseSnapshot = {};
+        if (results[1] && results[1].length > 0) {
+            var m = results[1][0];
+            adresseSnapshot = {
+                nom: m.nom || '', prenom: m.prenom || '',
+                rue: m.rue || '', code_postal: m.code_postal || '',
+                ville: m.ville || '', pays: m.pays || ''
+            };
+        }
+
+        var inscriptions = [];
+        for (var i = 0; i < billets.length; i++) {
+            var billet = billets[i];
+            var isFrance = !billet.Pays || billet.Pays === 'France';
+            var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+            var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+            var nbNormaux = 0, nbVariantes = 0;
+
+            if (isFrance) {
+                if (!config.france) continue;
+                nbNormaux = hasNormale ? config.nb_normaux_fr : 0;
+                nbVariantes = hasVariante ? config.nb_variantes_fr : 0;
+            } else {
+                if (!config.etranger) continue;
+                if (paysSelections.length > 0) {
+                    // Mode sélection fine : chercher le pays spécifique
+                    var paysMatch = null;
+                    for (var j = 0; j < paysSelections.length; j++) {
+                        if (paysSelections[j].pays_nom === billet.Pays) { paysMatch = paysSelections[j]; break; }
+                    }
+                    if (!paysMatch) continue;
+                    nbNormaux = hasNormale ? paysMatch.nb_normaux : 0;
+                    nbVariantes = hasVariante ? paysMatch.nb_variantes : 0;
+                } else {
+                    // Mode global : tous les pays étrangers
+                    nbNormaux = hasNormale ? config.nb_normaux_etr_defaut : 0;
+                    nbVariantes = hasVariante ? config.nb_variantes_etr_defaut : 0;
+                }
+            }
+
+            if (nbNormaux + nbVariantes === 0) continue;
+
+            inscriptions.push({
+                billet_id: billet.id,
+                membre_email: membreEmail,
+                nb_normaux: nbNormaux,
+                nb_variantes: nbVariantes,
+                mode_paiement: config.mode_paiement,
+                mode_envoi: config.mode_envoi,
+                commentaire: '',
+                adresse_snapshot: adresseSnapshot,
+                statut_paiement: 'non_paye',
+                envoye: false,
+                fdp_regles: false,
+                pas_interesse: false,
+                changed_by: 'pré-inscription'
+            });
+        }
+
+        if (inscriptions.length === 0) return 0;
+
+        return supabaseFetch('/rest/v1/inscriptions?on_conflict=billet_id,membre_email', {
+            method: 'POST',
+            body: JSON.stringify(inscriptions),
+            headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
+        }).then(function() { return inscriptions.length; });
+    });
+}
+
+/**
+ * Supprime les inscriptions d'un membre pour l'année courante
+ * uniquement si elles ont changed_by = 'pré-inscription'
+ * (les inscriptions modifiées par le membre sont conservées).
+ * @returns {Promise<number>} Nombre d'inscriptions supprimées
+ */
+function supprimerPreInscriptionsMembre(membreEmail) {
+    var annee = preInscCurrentYear;
+
+    return supabaseFetch('/rest/v1/billets?Millesime=eq.' + annee + '&select=id')
+        .then(function(billets) {
+            if (!billets || billets.length === 0) return 0;
+
+            var billetIds = billets.map(function(b) { return b.id; }).join(',');
+            var filter = 'membre_email=eq.' + encodeURIComponent(membreEmail) +
+                         '&billet_id=in.(' + billetIds + ')' +
+                         '&changed_by=eq.' + encodeURIComponent('pré-inscription');
+
+            // Compter avant de supprimer pour pouvoir afficher le nombre
+            return supabaseFetch('/rest/v1/inscriptions?' + filter + '&select=id')
+                .then(function(rows) {
+                    var count = rows ? rows.length : 0;
+                    if (count === 0) return 0;
+                    return supabaseFetch('/rest/v1/inscriptions?' + filter, { method: 'DELETE' })
+                        .then(function() { return count; });
+                });
+        });
 }
 
 // ============================================================
