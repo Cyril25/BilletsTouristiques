@@ -488,7 +488,7 @@ function showMore() {
 
                     ${imgUrl ? `
                         <a href="${escapeAttr(downloadLink)}" target="_blank" rel="noopener" class="icon-btn ico-dl" title="Télécharger l'image HD">
-                            <i class="fa-solid fa-download"></i>
+                            <i class="fa-solid fa-image"></i>
                         </a>` : ''}
 
                     <span style='font-size:10px; color:#ccc; align-self:center;'>(n°${escapeHtml(item.Timestamp || '')})</span>

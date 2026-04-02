@@ -752,7 +752,7 @@ function showMore() {
                     ? '<a href="' + escapeAttr(sanitizeUrl(item.LinkFB)) + '" target="_blank" class="icon-btn ico-fb" title="Voir sur Facebook"><i class="fa-brands fa-facebook"></i></a>'
                     : '') +
                 (imgUrl
-                    ? '<a href="' + escapeAttr(downloadLink) + '" target="_blank" class="icon-btn ico-dl" title="Télécharger l\'image HD"><i class="fa-solid fa-download"></i></a>'
+                    ? '<a href="' + escapeAttr(downloadLink) + '" target="_blank" class="icon-btn ico-dl" title="Télécharger l\'image HD"><i class="fa-solid fa-image"></i></a>'
                     : '') +
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
