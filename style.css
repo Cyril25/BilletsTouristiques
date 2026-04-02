@@ -3806,6 +3806,47 @@ body.login-page {
     font-style: italic;
 }
 
+/* Double tri statut + collecteur — Mes Inscriptions */
+.insc-statut-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.insc-statut-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: var(--spacing-sm);
+}
+
+.insc-statut-count {
+    font-weight: normal;
+    opacity: 0.7;
+}
+
+.insc-collecteur-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.insc-collecteur-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    padding: var(--spacing-xs) var(--spacing-md);
+    background-color: var(--color-surface);
+    border-left: 3px solid var(--color-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
 .badge-paiement {
     padding: 2px 10px;
     border-radius: 12px;

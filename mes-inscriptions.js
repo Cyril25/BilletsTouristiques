@@ -154,9 +154,13 @@ function filterInscriptions(statut) {
     for (var i = 0; i < btns.length; i++) {
         btns[i].classList.remove('active');
     }
-    // Trouver le bouton correspondant
-    var filterMap = { 'tous': 0, 'non_paye': 1, 'declare': 2, 'confirme': 3 };
-    if (btns[filterMap[statut]]) btns[filterMap[statut]].classList.add('active');
+    // Trouver le bouton correspondant par son attribut onclick (résistant aux réordonnements)
+    for (var j = 0; j < btns.length; j++) {
+        if (btns[j].getAttribute('onclick') === "filterInscriptions('" + statut + "')") {
+            btns[j].classList.add('active');
+            break;
+        }
+    }
     renderInscriptions();
 }
 
@@ -180,7 +184,17 @@ function renderInscriptions() {
 
     // #9 — Filtrer par statut
     var filteredInscriptions = mesInscriptions;
-    if (currentInscFilter !== 'tous') {
+    if (currentInscFilter === 'prix_non_defini') {
+        filteredInscriptions = mesInscriptions.filter(function(insc) {
+            var billet = billetsMap[insc.billet_id] || {};
+            return billet.Categorie === 'Pré collecte';
+        });
+    } else if (currentInscFilter === 'non_paye') {
+        filteredInscriptions = mesInscriptions.filter(function(insc) {
+            var billet = billetsMap[insc.billet_id] || {};
+            return (insc.statut_paiement || 'non_paye') === 'non_paye' && billet.Categorie !== 'Pré collecte';
+        });
+    } else if (currentInscFilter !== 'tous') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
             return (insc.statut_paiement || 'non_paye') === currentInscFilter;
         });
@@ -249,7 +263,7 @@ function renderInscriptions() {
             + '<div class="inscription-card-details">'
             + '<span><i class="fa-solid fa-ticket"></i> ' + (billet.VersionNormaleExiste === false ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
             + (billet.Categorie === 'Pré collecte'
-                ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> En attente</span>'
+                ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> Prix non défini</span>'
                 : (fdpMontant > 0
                     ? '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC + fdp ' + fdpMontant.toFixed(2) + ' \u20AC, soit ' + montantAvecFdp.toFixed(2) + ' \u20AC</span>'
                     : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>'))
@@ -273,22 +287,59 @@ function renderInscriptions() {
             + '</div>';
     }
 
-    // Tri : collecte non payée → pré-collecte → collecte payée
-    function inscPriorite(insc) {
+    // Double tri : statut (priorité action) puis sous-groupes par collecteur
+    var statGroups = [
+        { key: 'non_paye',        label: 'À payer',                        icon: 'fa-circle-exclamation', items: [] },
+        { key: 'declare',         label: 'Validation paiement en attente', icon: 'fa-clock',              items: [] },
+        { key: 'confirme',        label: 'Payés',                          icon: 'fa-check-circle',       items: [] },
+        { key: 'prix_non_defini', label: 'Prix non défini',                icon: 'fa-tag',                items: [] }
+    ];
+
+    filteredInscriptions.forEach(function(insc) {
         var billet = billetsMap[insc.billet_id] || {};
-        var cat = billet.Categorie || 'Pré collecte';
-        var statut = insc.statut_paiement || 'non_paye';
-        if (cat === 'Collecte' && statut === 'non_paye') return 0;
-        if (cat === 'Pré collecte') return 1;
-        return 2;
-    }
+        if (billet.Categorie === 'Pré collecte') {
+            statGroups[3].items.push(insc);
+        } else {
+            var statut = insc.statut_paiement || 'non_paye';
+            if (statut === 'non_paye')     statGroups[0].items.push(insc);
+            else if (statut === 'declare') statGroups[1].items.push(insc);
+            else                           statGroups[2].items.push(insc);
+        }
+    });
 
     var html = '';
-    var sorted = filteredInscriptions.slice().sort(function(a, b) {
-        return inscPriorite(a) - inscPriorite(b);
-    });
-    sorted.forEach(function(insc) {
-        html += renderInscriptionCard(insc);
+    statGroups.forEach(function(group) {
+        if (group.items.length === 0) return;
+        html += '<div class="insc-statut-section">'
+            + '<div class="insc-statut-header" role="heading" aria-level="2">'
+            + '<i class="fa-solid ' + group.icon + '"></i> '
+            + group.label
+            + ' <span class="insc-statut-count">(' + group.items.length + ')</span>'
+            + '</div>';
+
+        if (group.key === 'prix_non_defini') {
+            // Pré-collectes : liste simple, pas de collecteur assigné
+            group.items.forEach(function(insc) { html += renderInscriptionCard(insc); });
+        } else {
+            // Sous-groupes par collecteur (ordre d'apparition)
+            var byCollecteur = {};
+            var colOrder = [];
+            group.items.forEach(function(insc) {
+                var billet = billetsMap[insc.billet_id] || {};
+                var col = billet.Collecteur || '(sans collecteur)';
+                if (!byCollecteur[col]) { byCollecteur[col] = []; colOrder.push(col); }
+                byCollecteur[col].push(insc);
+            });
+            colOrder.forEach(function(col) {
+                html += '<div class="insc-collecteur-group">'
+                    + '<div class="insc-collecteur-header" role="heading" aria-level="3">'
+                    + '<i class="fa-solid fa-user"></i> ' + escapeHtml(col)
+                    + '</div>';
+                byCollecteur[col].forEach(function(insc) { html += renderInscriptionCard(insc); });
+                html += '</div>';
+            });
+        }
+        html += '</div>';
     });
 
     if (filteredInscriptions.length === 0 && mesInscriptions.length > 0) {
