@@ -640,11 +640,16 @@ function loadMesEnvois() {
                 return;
             }
 
-            return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","PayerFDP","Collecteur"')
+            return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","PayerFDP","Collecteur","Categorie"')
                 .then(function(billets) {
                     var map = {};
                     (billets || []).forEach(function(b) { map[b.id] = b; });
                     envoisData.billetsEnvoisMap = map;
+                    // Exclure les pré-collectes de la section "En attente de préparation"
+                    envoisData.inscSansEnveloppe = envoisData.inscSansEnveloppe.filter(function(insc) {
+                        var b = map[insc.billet_id];
+                        return !(b && b.Categorie === 'Pré collecte');
+                    });
                     renderMesEnvois();
                 });
         })
@@ -676,7 +681,7 @@ function renderMesEnvois() {
     var sansEnvParCollecteur = {};
     inscSansEnveloppe.forEach(function(insc) {
         var b = billetsMap2[insc.billet_id];
-        var collecteur = b ? b.Collecteur : 'Inconnu';
+        var collecteur = (b && b.Collecteur) || '(sans collecteur)';
         if (!sansEnvParCollecteur[collecteur]) sansEnvParCollecteur[collecteur] = [];
         sansEnvParCollecteur[collecteur].push(insc);
     });
