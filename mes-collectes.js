@@ -20,6 +20,9 @@ var currentBillet = null;
 var currentInscriptions = [];
 var fraisPortCollecte = [];
 var verifPaiementData = null;
+var currentCollecteSupp = null;       // Story 12.5 — collecte supplémentaire en consultation
+var mesCollectesSupp = [];            // Story 12.5 — [{collecte, billet}, ...]
+var mesInscriptionsParCollecte = {};  // Story 12.5 — {collecte_id: {total, confirmes, envoyes}}
 
 function findFdpPriceCollecte(nbBillets, destination, typeEnvoi) {
     for (var i = 0; i < fraisPortCollecte.length; i++) {
@@ -99,7 +102,7 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,statut_paiement,envoye');
+            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,statut_paiement,envoye');
         })
         .then(function(inscriptions) {
             mesInscriptionsParBillet = {};
@@ -114,7 +117,7 @@ function loadMesCollectes() {
                     if (ins.envoye) mesInscriptionsParBillet[ins.billet_id].envoyes++;
                 }
             }
-            renderCollectesList();
+            loadMesCollectesSupplementaires();
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -185,7 +188,7 @@ function renderCollectesList() {
     var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
     if (tabs[0]) tabs[0].innerHTML = 'Mes collectes <span class="tab-badge">' + mesBillets.length + '</span>';
 
-    if (mesBillets.length === 0) {
+    if (mesBillets.length === 0 && mesCollectesSupp.length === 0) {
         container.innerHTML = onboardingHtml + '<p class="collectes-empty"><i class="fa-solid fa-inbox"></i> Aucune collecte assignée.</p>';
         return;
     }
@@ -259,6 +262,17 @@ function renderCollectesList() {
         html += '</div>';
     }
     html += '</div>';
+
+    // Story 12.5 — Collectes supplémentaires
+    if (mesCollectesSupp.length > 0) {
+        html += '<h3 class="collectes-supp-title"><i class="fa-solid fa-layer-group"></i> Collectes supplémentaires</h3>';
+        html += '<div class="collectes-cards">';
+        for (var k = 0; k < mesCollectesSupp.length; k++) {
+            html += renderCollecteSupplementaireCard(mesCollectesSupp[k].collecte, mesCollectesSupp[k].billet);
+        }
+        html += '</div>';
+    }
+
     container.innerHTML = onboardingHtml + html;
 }
 
@@ -266,6 +280,7 @@ function renderCollectesList() {
 // 5. VUE DETAILLEE D'UNE COLLECTE (Task 5)
 // ============================================================
 function openCollecteDetail(billetId) {
+    currentCollecteSupp = null;
     currentBilletId = billetId;
 
     // Find the billet in mesBillets
@@ -544,6 +559,7 @@ function retourListe() {
     currentBilletId = null;
     currentBillet = null;
     currentInscriptions = [];
+    currentCollecteSupp = null;
     loadMesCollectes();
 }
 
@@ -849,10 +865,19 @@ function confirmerCloturer() {
     if (!billetId) return;
 
     var today = new Date().toISOString().slice(0, 10);
-    supabaseFetch('/rest/v1/billets?id=eq.' + billetId, {
-        method: 'PATCH',
-        body: JSON.stringify({ Categorie: 'Terminé', DateFin: today })
-    })
+    var patchPromise;
+    if (currentCollecteSupp !== null) {
+        patchPromise = supabaseFetch('/rest/v1/collectes?id=eq.' + currentCollecteSupp.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ date_fin: today })
+        });
+    } else {
+        patchPromise = supabaseFetch('/rest/v1/billets?id=eq.' + billetId, {
+            method: 'PATCH',
+            body: JSON.stringify({ Categorie: 'Terminé', DateFin: today })
+        });
+    }
+    patchPromise
     .then(function() {
         showToast('Collecte clôturée');
         loadMesCollectes();
@@ -3210,4 +3235,149 @@ function closeMembreReassignModal() {
 
 function onReassignKeydown(e) {
     if (e.key === 'Escape') closeMembreReassignModal();
+}
+
+// ============================================================
+// Story 12.5 — COLLECTES SUPPLÉMENTAIRES (collecteur)
+// ============================================================
+function loadMesCollectesSupplementaires() {
+    supabaseFetch('/rest/v1/collectes?collecteur=eq.' + encodeURIComponent(monCollecteur.alias) + '&select=*')
+        .then(function(collectes) {
+            if (!collectes || collectes.length === 0) {
+                mesCollectesSupp = [];
+                mesInscriptionsParCollecte = {};
+                renderCollectesList();
+                return;
+            }
+            var refs = [];
+            collectes.forEach(function(c) {
+                if (refs.indexOf(c.billet_id) === -1) refs.push(c.billet_id);
+            });
+            return supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version","PayerFDP"&"Reference"=in.(' + refs.map(encodeURIComponent).join(',') + ')')
+                .then(function(billets) {
+                    var billetsMap = {};
+                    (billets || []).forEach(function(b) { billetsMap[b.Reference] = b; });
+                    var collecteIds = collectes.map(function(c) { return c.id; });
+                    return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + collecteIds.join(',') + ')&pas_interesse=eq.false&select=collecte_id,statut_paiement,envoye')
+                        .then(function(inscriptions) {
+                            mesInscriptionsParCollecte = {};
+                            (inscriptions || []).forEach(function(ins) {
+                                if (!mesInscriptionsParCollecte[ins.collecte_id]) {
+                                    mesInscriptionsParCollecte[ins.collecte_id] = { total: 0, confirmes: 0, envoyes: 0 };
+                                }
+                                mesInscriptionsParCollecte[ins.collecte_id].total++;
+                                if (ins.statut_paiement === 'confirme') mesInscriptionsParCollecte[ins.collecte_id].confirmes++;
+                                if (ins.envoye) mesInscriptionsParCollecte[ins.collecte_id].envoyes++;
+                            });
+                            mesCollectesSupp = collectes.map(function(c) {
+                                return { collecte: c, billet: billetsMap[c.billet_id] || null };
+                            });
+                            renderCollectesList();
+                        });
+                });
+        })
+        .catch(function(error) {
+            console.error('Erreur chargement collectes supplémentaires:', error);
+            mesCollectesSupp = [];
+            mesInscriptionsParCollecte = {};
+            renderCollectesList();
+        });
+}
+
+function renderCollecteSupplementaireCard(collecte, billet) {
+    if (!billet) return '';
+    var today = new Date().toISOString().slice(0, 10);
+    var isOpen = !collecte.date_fin || collecte.date_fin >= today;
+    var statusClass = isOpen ? 'collecte-status-open' : 'collecte-status-closed';
+    var statusLabel = isOpen ? 'En cours' : 'Terminée';
+    var stats = mesInscriptionsParCollecte[collecte.id] || { total: 0, confirmes: 0, envoyes: 0 };
+
+    var html = '<div class="collecte-card" onclick="openCollecteDetailSupp(\'' + escapeAttrMC(collecte.id) + '\')">';
+    html += '<div class="collecte-card-header">';
+    if (billet.Reference) html += '<span class="collecte-ref">' + escapeHtmlMC(billet.Reference) + '</span>';
+    html += '<h3>' + escapeHtmlMC(billet.NomBillet || '') + '</h3>';
+    html += '<span class="badge-nom-collecte">' + escapeHtmlMC(collecte.nom || '') + '</span>';
+    html += '<span class="collecte-status ' + statusClass + '">' + escapeHtmlMC(statusLabel) + '</span>';
+    html += '</div>';
+    html += '<div class="collecte-card-info">';
+    if (billet.Prix) html += '<span><i class="fa-solid fa-euro-sign"></i> ' + billet.Prix + '</span>';
+    if (collecte.date_coll) html += '<span><i class="fa-solid fa-calendar"></i> ' + collecte.date_coll + '</span>';
+    html += '</div>';
+    if (stats.total > 0) {
+        var allConfirmes = stats.confirmes === stats.total;
+        var allEnvoyes = stats.envoyes === stats.total;
+        html += '<div class="collecte-card-indicators">';
+        html += '<span class="indicator ' + (allConfirmes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allConfirmes ? 'check-circle' : 'clock') + '"></i> ' + stats.confirmes + '/' + stats.total + ' payés</span>';
+        html += '<span class="indicator ' + (allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + stats.envoyes + '/' + stats.total + ' envoyés</span>';
+        html += '</div>';
+    } else {
+        html += '<div class="collecte-card-indicators"><span class="indicator indicator-none">Aucun inscrit</span></div>';
+    }
+    html += '<div class="collecte-card-action"><i class="fa-solid fa-chevron-right"></i></div>';
+    html += '</div>';
+    return html;
+}
+
+function openCollecteDetailSupp(collecteId) {
+    var found = null;
+    for (var i = 0; i < mesCollectesSupp.length; i++) {
+        if (mesCollectesSupp[i].collecte.id === collecteId) {
+            found = mesCollectesSupp[i];
+            break;
+        }
+    }
+    if (!found) return;
+
+    currentCollecteSupp = found.collecte;
+    currentBilletId = found.billet ? found.billet.id : null;
+
+    var today = new Date().toISOString().slice(0, 10);
+    var isOpen = !currentCollecteSupp.date_fin || currentCollecteSupp.date_fin >= today;
+
+    // Build currentBillet with Categorie override so renderCollecteDetail shows correct open/closed state
+    currentBillet = found.billet ? JSON.parse(JSON.stringify(found.billet)) : {};
+    if (currentBillet) {
+        currentBillet.Categorie = isOpen ? 'Collecte' : 'Terminé';
+    }
+
+    var annee = new Date().getFullYear();
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&pas_interesse=eq.false&select=*&order=date_inscription.asc'),
+        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
+    ])
+        .then(function(results) {
+            currentInscriptions = results[0] || [];
+            fraisPortCollecte = results[1] || [];
+            var emails = [];
+            currentInscriptions.forEach(function(ins) {
+                if (ins.membre_email && emails.indexOf(ins.membre_email) === -1) emails.push(ins.membre_email);
+            });
+            if (emails.length === 0) {
+                renderCollecteDetail(currentBilletId, currentInscriptions);
+                return;
+            }
+            var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays')
+                .then(function(membres) {
+                    var membresMap = {};
+                    if (membres) membres.forEach(function(m) { membresMap[m.email] = m; });
+                    currentInscriptions.forEach(function(ins) {
+                        var membre = membresMap[ins.membre_email];
+                        if (membre) {
+                            if (!ins.adresse_snapshot) ins.adresse_snapshot = {};
+                            ins.adresse_snapshot.nom = membre.nom || ins.adresse_snapshot.nom || '';
+                            ins.adresse_snapshot.prenom = membre.prenom || ins.adresse_snapshot.prenom || '';
+                            ins.adresse_snapshot.rue = membre.rue || ins.adresse_snapshot.rue || '';
+                            ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
+                            ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
+                            ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
+                        }
+                    });
+                    renderCollecteDetail(currentBilletId, currentInscriptions);
+                });
+        })
+        .catch(function(error) {
+            console.error('Erreur chargement inscrits collecte supp:', error);
+            showToast('Erreur lors du chargement des inscrits', 'error');
+        });
 }

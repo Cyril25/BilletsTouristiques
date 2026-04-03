@@ -6,6 +6,7 @@
 var mesInscriptions = [];
 var billetsMap = {};
 var collecteursMap = {};
+var collectesMap = {}; // Story 12.6 — {collecte_id: nom} pour affichage badge
 var membrePays = '';
 var fraisPortData = [];
 var currentInscFilter = 'tous'; // #9 — filtre actif
@@ -105,11 +106,19 @@ function loadMesInscriptions() {
             }
 
             // Étape 3 : charger collecteurs, pays du membre, frais de port en parallèle
-            return Promise.all([
+            var promises = [
                 supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,email_membre'),
                 supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays'),
                 supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
-            ]);
+            ];
+            // Story 12.6 — charger noms des collectes supplémentaires si nécessaire
+            var collecteIds = mesInscriptions
+                .filter(function(i) { return i.collecte_id; })
+                .map(function(i) { return i.collecte_id; });
+            if (collecteIds.length > 0) {
+                promises.push(supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIds.join(',') + ')&select=id,nom'));
+            }
+            return Promise.all(promises);
         })
         .then(function(results) {
             if (!results) return;
@@ -123,6 +132,11 @@ function loadMesInscriptions() {
             }
             membrePays = (membres && membres[0]) ? (membres[0].pays || '') : '';
             fraisPortData = fraisPort || [];
+            // Story 12.6 — peupler collectesMap si la requête a été émise
+            collectesMap = {};
+            if (results[3]) {
+                results[3].forEach(function(c) { collectesMap[c.id] = c.nom; });
+            }
 
             renderInscriptions();
         })
@@ -266,6 +280,7 @@ function renderInscriptions() {
         return '<div class="inscription-card">'
             + '<div class="inscription-card-header">'
             + '<strong>' + escapeHtml(((billet.Reference ? billet.Reference + ' ' : '') + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '') + (billet.NomBillet ? ' - ' + billet.NomBillet : '')).trim() || 'Billet inconnu') + '</strong>'
+            + (insc.collecte_id && collectesMap[insc.collecte_id] ? '<span class="badge-nom-collecte-insc">' + escapeHtml(collectesMap[insc.collecte_id]) + '</span>' : '')
             + (billet.Collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(billet.Collecteur) + '</span>' : '')
             + '</div>'
             + '<div class="inscription-card-details">'

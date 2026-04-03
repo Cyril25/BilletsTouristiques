@@ -4196,6 +4196,17 @@ body.login-page {
     color: var(--color-accent);
 }
 
+/* Story 12.5 — Titre section collectes supplémentaires */
+.collectes-supp-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin: var(--spacing-lg) 0 var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
 /* --- Collecte atténuée --- */
 .collecte-card-attenuee {
     opacity: 0.45;
@@ -8285,4 +8296,53 @@ body.login-page {
     background: #fafafa;
     border-radius: 6px;
     border: 1px dashed var(--color-accent);
+}
+
+/* ============================================================
+   STORY 12.4 — Collectes supplémentaires (catalogue billets)
+   ============================================================ */
+
+.collecte-supplementaire-section {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-secondary);
+    border-radius: 0 6px 6px 0;
+}
+
+.collecte-supp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.badge-nom-collecte {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: var(--color-secondary);
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* Story 12.6 — Badge nom de collecte dans mes-inscriptions */
+.badge-nom-collecte-insc {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--color-secondary);
+    color: #fff;
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.collecte-supp-collecteur {
+    font-size: 0.78rem;
+    color: var(--color-text-light, #666);
 }

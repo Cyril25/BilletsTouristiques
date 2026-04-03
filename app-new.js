@@ -53,6 +53,7 @@ function dismissOnboardingCatalogue() {
 
 // Story 5.4 : Inscriptions du membre connecté et collecteurs
 var mesInscriptions = {};
+var collectesByBillet = {};
 var collecteursMap = {};
 
 // Frais de port dynamiques
@@ -144,6 +145,7 @@ if (typeof firebase !== 'undefined') {
             showCatalogueOnboarding();
             fetchData();
             loadMesInscriptions();
+            loadCollectesByBillet();
             loadCollecteursForCatalogue();
             loadCompteursInscriptions();
             loadFraisPortCatalogue(window.getActiveEmail());
@@ -538,7 +540,7 @@ function applyFilters(silent) {
         return txt && matchDate &&
             (!fPays.length || fPays.indexOf(item.Pays) !== -1) && (!fYear || item.Millesime == fYear) &&
             (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl) &&
-            (!masquerPasInteresse || !(mesInscriptions[item.id] && mesInscriptions[item.id].pas_interesse));
+            (!masquerPasInteresse || !(getInscription(item.id, null) && getInscription(item.id, null).pas_interesse));
     });
 
     renderBilletsStatusCounters(preFiltered);
@@ -668,7 +670,7 @@ function showMore() {
         } else {
             // RENDU MODE COLLECTE (par défaut)
             var inscriptionHtml = buildInscriptionHtml(item);
-            var pasInteresse = mesInscriptions[item.id] && mesInscriptions[item.id].pas_interesse;
+            var pasInteresse = getInscription(item.id, null) && getInscription(item.id, null).pas_interesse;
             html +=
                 '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleur + ';">' +
                 '<div class="header-container">' +
@@ -757,6 +759,7 @@ function showMore() {
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
                 inscriptionHtml +
+                buildCollectesSupplementairesHtml(item) +
                 '</div>';
         }
     });
@@ -840,17 +843,23 @@ function showToast(message, type) {
 function loadMesInscriptions() {
     var email = window.getActiveEmail();
     if (!email) return;
-    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,nb_normaux,nb_variantes,statut_paiement,envoye,pas_interesse,mode_paiement,mode_envoi')
+    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,pas_interesse,mode_paiement,mode_envoi')
         .then(function(data) {
             mesInscriptions = {};
             (data || []).forEach(function(insc) {
-                mesInscriptions[insc.billet_id] = insc;
+                var key = insc.billet_id + '|' + (insc.collecte_id || 'principal');
+                mesInscriptions[key] = insc;
             });
             applyFilters(false);
         })
         .catch(function(error) {
             console.warn('Erreur chargement inscriptions:', error);
         });
+}
+
+function getInscription(billetId, collecteId) {
+    var key = billetId + '|' + (collecteId || 'principal');
+    return mesInscriptions[key] || null;
 }
 
 // --- Chargement des collecteurs pour liens contact ---
@@ -1060,7 +1069,7 @@ function buildVersionBadgesHtml(item) {
 
 // --- Génération du HTML d'inscription pour une carte ---
 function buildInscriptionHtml(item) {
-    var inscription = mesInscriptions[item.id];
+    var inscription = getInscription(item.id, null);
     var collecteOuverte = (item.Categorie === 'Pré collecte' || item.Categorie === 'Collecte') &&
         !item.DateFin;
 
@@ -1290,7 +1299,7 @@ function marquerPasInteresse(billetId) {
 
 // --- Annulation "Pas intéressé" ---
 function annulerPasInteresse(billetId) {
-    var inscription = mesInscriptions[billetId];
+    var inscription = getInscription(billetId, null);
     if (!inscription) return;
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscription.id, {
         method: 'DELETE'
@@ -1355,8 +1364,178 @@ function handleDeepLinkBillet() {
     }, 300);
 
     // Nettoyer l'URL pour éviter de re-déclencher au refresh
-    if (window.history.replaceState) {
+    if (window.history && window.history.replaceState) {
         var cleanUrl = window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
+}
+
+// ============================================================
+// STORY 12.4 — COLLECTES SUPPLÉMENTAIRES (CATALOGUE)
+// ============================================================
+
+function loadCollectesByBillet() {
+    var today = new Date().toISOString().slice(0, 10);
+    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin&or=(date_fin.is.null,date_fin.gte.' + today + ')')
+        .then(function(data) {
+            collectesByBillet = {};
+            (data || []).forEach(function(c) {
+                if (!collectesByBillet[c.billet_id]) collectesByBillet[c.billet_id] = [];
+                collectesByBillet[c.billet_id].push(c);
+            });
+        })
+        .catch(function(error) {
+            console.warn('Erreur chargement collectes supplémentaires:', error);
+        });
+}
+
+function buildCollectesSupplementairesHtml(item) {
+    var collectes = collectesByBillet[item.Reference] || [];
+    if (collectes.length === 0) return '';
+    var html = '';
+    collectes.forEach(function(c) {
+        html += '<div class="collecte-supplementaire-section" data-collecte-id="' + escapeAttr(c.id) + '">'
+            + '<div class="collecte-supp-header">'
+            + '<span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span>'
+            + '<span class="collecte-supp-collecteur">Collecteur : ' + escapeHtml(c.collecteur || '—') + '</span>'
+            + '</div>'
+            + buildInscriptionHtmlForCollecte(item, c)
+            + '</div>';
+    });
+    return html;
+}
+
+function buildInscriptionHtmlForCollecte(item, collecte) {
+    var inscription = getInscription(item.id, collecte.id);
+    if (inscription && !inscription.pas_interesse) {
+        return '<div class="inscription-badges">'
+            + '<span class="badge-inscrit">Inscrit à cette collecte</span>'
+            + badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, item.Categorie)
+            + '</div>';
+    }
+    var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
+    if (isBlackliste) {
+        return '<div class="inscription-badges">'
+            + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-ban"></i> Inscription impossible</button>'
+            + '</div>';
+    }
+    return '<div class="inscription-badges">'
+        + '<button onclick="ouvrirInscriptionCollecte(' + item.id + ',\'' + escapeAttr(collecte.id) + '\')" class="btn-sinscrire">'
+        + '<i class="fa-solid fa-pen-to-square"></i> S\'inscrire à ' + escapeHtml(collecte.nom || 'cette collecte')
+        + '</button>'
+        + '</div>';
+}
+
+function ouvrirInscriptionCollecte(billetId, collecteId) {
+    isProfilComplet(function(complet) {
+        if (!complet) {
+            showToast('Complétez votre profil avant de vous inscrire', 'error');
+            setTimeout(function() {
+                window.location.href = 'profil.html?from=inscription&billet=' + billetId;
+            }, 1500);
+            return;
+        }
+        var billet = allData.find(function(b) { return b.id === billetId; });
+        if (!billet) return;
+
+        var collectes = collectesByBillet[billet.Reference] || [];
+        var collecte = null;
+        for (var i = 0; i < collectes.length; i++) {
+            if (collectes[i].id === collecteId) { collecte = collectes[i]; break; }
+        }
+        if (!collecte) return;
+
+        var scope = collecte.scope || 'les_deux';
+        var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
+        var versionNormaleExiste = billet.VersionNormaleExiste !== false;
+
+        var showNormaux = (scope === 'normal' || scope === 'les_deux') && (!varianteActive || versionNormaleExiste);
+        var showVariantes = (scope === 'variante' || scope === 'les_deux') && varianteActive;
+
+        var suffix = billetId + '-' + collecteId;
+        var champNormaux = showNormaux
+            ? '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + suffix + '" value="' + (showVariantes ? '0' : '1') + '" min="0"></div>'
+            : '';
+        var champVariantes = showVariantes
+            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + suffix + '" value="' + (!showNormaux ? '1' : '0') + '" min="' + (!showNormaux ? '1' : '0') + '"></div>'
+            : '';
+
+        var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + suffix + '">'
+            + champNormaux
+            + champVariantes
+            + '<div class="mini-form-field"><label>Paiement</label><select id="insc-paiement-' + suffix + '"><option value="PayPal">PayPal</option><option value="Chèque">Chèque</option></select></div>'
+            + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + suffix + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="R1">Recommandé R1</option><option value="R2">Recommandé R2</option><option value="R3">Recommandé R3</option></select></div>'
+            + '<div class="mini-form-field"><label>Commentaire</label><textarea id="insc-commentaire-' + suffix + '" rows="2"></textarea></div>'
+            + '<div class="mini-form-actions">'
+            + '<button onclick="confirmerInscriptionCollecte(' + billetId + ',\'' + escapeAttr(collecteId) + '\')" class="btn-confirmer-inscription">Confirmer</button>'
+            + '<button onclick="annulerInscriptionCollecte(\'' + escapeAttr(collecteId) + '\')" class="btn-annuler-inscription">Annuler</button>'
+            + '</div>'
+            + '</div>';
+
+        var section = document.querySelector('[data-collecte-id="' + collecteId + '"]');
+        if (!section) return;
+        var existingForm = section.querySelector('.mini-inscription-form');
+        if (existingForm) existingForm.remove();
+        section.insertAdjacentHTML('beforeend', formHtml);
+    });
+}
+
+function annulerInscriptionCollecte(collecteId) {
+    var section = document.querySelector('[data-collecte-id="' + collecteId + '"]');
+    if (!section) return;
+    var form = section.querySelector('.mini-inscription-form');
+    if (form) form.remove();
+}
+
+function confirmerInscriptionCollecte(billetId, collecteId) {
+    if (getInscription(billetId, collecteId)) {
+        showToast('Vous êtes déjà inscrit à cette collecte', 'error');
+        return;
+    }
+    var email = window.getActiveEmail();
+    var billet = allData.find(function(b) { return b.id === billetId; });
+    if (!billet) return;
+    var suffix = billetId + '-' + collecteId;
+    var normauxEl = document.getElementById('insc-nb-normaux-' + suffix);
+    var nbNormaux = normauxEl ? parseInt(normauxEl.value) || 0 : 0;
+    var variantesEl = document.getElementById('insc-nb-variantes-' + suffix);
+    var nbVariantes = variantesEl ? parseInt(variantesEl.value) || 0 : 0;
+    if (nbNormaux + nbVariantes === 0) {
+        showToast('Sélectionnez au moins un billet', 'error');
+        return;
+    }
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
+        .then(function(membreData) {
+            var adresse = membreData && membreData[0] ? membreData[0] : {};
+            var body = {
+                billet_id: billetId,
+                collecte_id: collecteId,
+                membre_email: email,
+                nb_normaux: nbNormaux,
+                nb_variantes: nbVariantes,
+                mode_paiement: document.getElementById('insc-paiement-' + suffix).value,
+                mode_envoi: document.getElementById('insc-envoi-' + suffix).value,
+                commentaire: (document.getElementById('insc-commentaire-' + suffix).value || '').trim(),
+                adresse_snapshot: adresse,
+                statut_paiement: 'non_paye',
+                envoye: false,
+                fdp_regles: false,
+                pas_interesse: false
+            };
+            return supabaseFetch('/rest/v1/inscriptions', {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        })
+        .then(function() {
+            showToast('Inscription confirmée !');
+            annulerInscriptionCollecte(collecteId);
+            loadMesInscriptions();
+            loadCompteursInscriptions();
+            if (billet.Collecteur) creerEnveloppeSiAbsente(billet.Collecteur, email);
+        })
+        .catch(function(error) {
+            console.error('Erreur inscription collecte supplémentaire:', error);
+            showToast('Erreur lors de l\'inscription', 'error');
+        });
 }
