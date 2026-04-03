@@ -4762,6 +4762,15 @@ body.login-page {
     white-space: nowrap;
 }
 
+.badge-beneficiaire {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: var(--color-secondary);
+    color: var(--color-text-inverse);
+    white-space: nowrap;
+}
+
 /* --- Bouton marquer envoye --- */
 .btn-marquer-envoye {
     background-color: var(--color-success);

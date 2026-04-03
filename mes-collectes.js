@@ -390,7 +390,7 @@ function renderCollecteDetail(billetId, inscriptions) {
 
     // Actions bar: close button + relance button
     var isClotured = !isOpen;
-    var impayes = inscriptions.filter(function(i) { return i.statut_paiement !== 'confirme'; });
+    var impayes = inscriptions.filter(function(i) { return i.statut_paiement !== 'confirme' && i.membre_email !== monCollecteur.email_membre; });
 
     html += '<div class="collecte-actions-bar">';
     if (isOpen) {
@@ -1936,7 +1936,7 @@ function loadVerificationPaiement() {
         return;
     }
     var billetIds = mesBillets.map(function(b) { return b.id; });
-    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&select=*&order=membre_email.asc')
+    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*&order=membre_email.asc')
         .then(function(inscriptions) {
             if (!inscriptions || inscriptions.length === 0) {
                 renderPaiementsVide();
@@ -2106,7 +2106,7 @@ function ouvrirRelance(billetId) {
     }
     if (!billet) return;
 
-    supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&statut_paiement=neq.confirme&pas_interesse=eq.false&select=*')
+    supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&statut_paiement=neq.confirme&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*')
         .then(function(impayes) {
             if (!impayes || impayes.length === 0) {
                 showToast('Aucun impayé à relancer');
