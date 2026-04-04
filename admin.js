@@ -1114,7 +1114,7 @@ function initPanel() {
         collectesList.addEventListener('click', function(e) {
             var btn = e.target.closest('.btn-cloturer-collecte');
             if (!btn) return;
-            cloturerCollecte(btn.dataset.collecteId, btn.dataset.billetRef);
+            cloturerCollecte(btn.dataset.collecteId, btn.dataset.billetId);
         });
     }
 
@@ -1124,10 +1124,10 @@ function initPanel() {
         btnAddCollecte.addEventListener('click', function() {
             var section = document.getElementById('admin-collectes-supplementaires');
             if (!section) return;
-            var billetRef = section.dataset.billetReference;
-            if (!billetRef) return;
+            var billetId = section.dataset.billetId;
+            if (!billetId) return;
             if (!validateCollecteForm()) return;
-            saveCollecte(billetRef);
+            saveCollecte(billetId);
         });
     }
 
@@ -1207,8 +1207,8 @@ function openBilletPanel(billetData, docId) {
         var sectionCollectes = document.getElementById('admin-collectes-supplementaires');
         if (sectionCollectes) {
             sectionCollectes.style.display = '';
-            sectionCollectes.dataset.billetReference = billetData.Reference || '';
-            loadCollectesForBillet(billetData.Reference || '');
+            sectionCollectes.dataset.billetId = billetData.id || '';
+            loadCollectesForBillet(billetData.id);
         }
         populateCollecteCollecteurSelect();
 
@@ -3578,13 +3578,13 @@ function confirmAdminDeleteInscription(inscriptionId) {
 // STORY 12.3 — GESTION DES COLLECTES SUPPLÉMENTAIRES
 // ============================================================
 
-function loadCollectesForBillet(billetReference) {
-    if (!billetReference) return;
+function loadCollectesForBillet(billetId) {
+    if (!billetId) return;
     var container = document.getElementById('collectes-list');
     if (container) container.innerHTML = '<p style="font-style:italic; color: var(--color-text-light, #666);">Chargement...</p>';
-    supabaseFetch('/rest/v1/collectes?billet_id=eq.' + encodeURIComponent(billetReference) + '&order=created_at.asc')
+    supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&order=created_at.asc')
         .then(function(data) {
-            renderCollectesList(data || [], billetReference);
+            renderCollectesList(data || [], billetId);
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -3593,7 +3593,7 @@ function loadCollectesForBillet(billetReference) {
         });
 }
 
-function renderCollectesList(collectes, billetReference) {
+function renderCollectesList(collectes, billetId) {
     var container = document.getElementById('collectes-list');
     if (!container) return;
     if (!collectes || collectes.length === 0) {
@@ -3609,7 +3609,7 @@ function renderCollectesList(collectes, billetReference) {
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
             '<span class="collecte-badge-status ' + statusClass + '">' + statusLabel + '</span>' +
             '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
-            (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-ref="' + (billetReference || '') + '">Clôturer</button>' : '') +
+            (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
             '</div>';
     }).join('');
     container.innerHTML = html;
@@ -3640,13 +3640,13 @@ function validateCollecteForm() {
     return valid;
 }
 
-function saveCollecte(billetReference) {
+function saveCollecte(billetId) {
     var getValue = function(id) {
         var el = document.getElementById(id);
         return el ? el.value.trim() : '';
     };
     var body = {
-        billet_id: billetReference,
+        billet_id: parseInt(billetId, 10),
         nom: getValue('field-collecte-nom'),
         scope: getValue('field-collecte-scope'),
         collecteur: getValue('field-collecte-collecteur') || null,
@@ -3666,7 +3666,7 @@ function saveCollecte(billetReference) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
-        loadCollectesForBillet(billetReference);
+        loadCollectesForBillet(billetId);
     })
     .catch(function(error) {
         console.error('Erreur ajout collecte:', error);
@@ -3674,14 +3674,14 @@ function saveCollecte(billetReference) {
     });
 }
 
-function cloturerCollecte(collecteId, billetReference) {
+function cloturerCollecte(collecteId, billetId) {
     supabaseFetch('/rest/v1/collectes?id=eq.' + collecteId, {
         method: 'PATCH',
         body: JSON.stringify({ date_fin: new Date().toISOString().slice(0, 10) })
     })
     .then(function() {
         showToast('Collecte clôturée', 'success');
-        loadCollectesForBillet(billetReference);
+        loadCollectesForBillet(billetId);
     })
     .catch(function(error) {
         console.error('Erreur clôture collecte:', error);

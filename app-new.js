@@ -174,7 +174,7 @@ function fetchData() {
         return;
     }
 
-    supabaseFetch('/rest/v1/billets?select=*&order=Date.desc.nullslast,Categorie.asc')
+    supabaseFetch('/rest/v1/billets?select=*&order=date_effective.desc.nullslast,Categorie.asc')
         .then(function(data) {
             console.log("Données Supabase reçues :", data.length);
             allData = data || [];
@@ -1390,7 +1390,7 @@ function loadCollectesByBillet() {
 }
 
 function buildCollectesSupplementairesHtml(item) {
-    var collectes = collectesByBillet[item.Reference] || [];
+    var collectes = collectesByBillet[item.id] || [];
     if (collectes.length === 0) return '';
     var html = '';
     collectes.forEach(function(c) {
@@ -1438,7 +1438,7 @@ function ouvrirInscriptionCollecte(billetId, collecteId) {
         var billet = allData.find(function(b) { return b.id === billetId; });
         if (!billet) return;
 
-        var collectes = collectesByBillet[billet.Reference] || [];
+        var collectes = collectesByBillet[billet.id] || [];
         var collecte = null;
         for (var i = 0; i < collectes.length; i++) {
             if (collectes[i].id === collecteId) { collecte = collectes[i]; break; }
