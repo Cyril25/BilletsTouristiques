@@ -32,6 +32,8 @@ function showToast(message, type) {
 // ============================================================
 var adminBillets = [];
 var adminInscriptionCounts = {};
+var adminCollectesByBillet = {};
+var adminCollecteInscriptionCounts = {};
 var adminMembresCache = null;
 
 // #14 — Onboarding admin
@@ -465,6 +467,7 @@ if (typeof firebase !== 'undefined') {
             showAdminOnboarding();
             loadAdminBillets();
             loadAdminInscriptionCounts();
+            loadAdminCollectes();
             loadPays();
             loadCollecteurs();
             initPanel();
@@ -506,6 +509,40 @@ function loadAdminBillets() {
 // ============================================================
 // 4a-bis. CHARGEMENT DES COMPTEURS D'INSCRIPTIONS
 // ============================================================
+function loadAdminCollectes() {
+    return supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,date_fin')
+        .then(function(data) {
+            adminCollectesByBillet = {};
+            adminCollecteInscriptionCounts = {};
+            var collectes = data || [];
+            collectes.forEach(function(c) {
+                if (!adminCollectesByBillet[c.billet_id]) adminCollectesByBillet[c.billet_id] = [];
+                adminCollectesByBillet[c.billet_id].push(c);
+            });
+            if (collectes.length === 0) {
+                if (adminBillets.length > 0) renderAdminCards();
+                return;
+            }
+            var ids = collectes.map(function(c) { return c.id; });
+            return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + ids.join(',') + ')&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+                .then(function(rows) {
+                    (rows || []).forEach(function(row) {
+                        if (!adminCollecteInscriptionCounts[row.collecte_id]) {
+                            adminCollecteInscriptionCounts[row.collecte_id] = { count: 0, normaux: 0, variantes: 0 };
+                        }
+                        var c = adminCollecteInscriptionCounts[row.collecte_id];
+                        c.count++;
+                        c.normaux += (row.nb_normaux || 0);
+                        c.variantes += (row.nb_variantes || 0);
+                    });
+                    if (adminBillets.length > 0) renderAdminCards();
+                });
+        })
+        .catch(function(error) {
+            console.warn('Erreur chargement collectes admin:', error);
+        });
+}
+
 function loadAdminInscriptionCounts() {
     return supabaseFetch('/rest/v1/inscriptions?select=billet_id,nb_normaux,nb_variantes&pas_interesse=eq.false')
         .then(function(data) {
@@ -742,6 +779,21 @@ function renderAdminCards() {
                 return '<button class="admin-card-inscriptions-badge" onclick="openInscriptionsModal(' + docId + ')" title="Voir les inscriptions">' +
                     '<i class="fa-solid fa-users"></i> ' + count + ' inscription' + (count !== 1 ? 's' : '') + detail +
                     '</button>';
+            })() +
+            // Badges collectes supplémentaires
+            (function() {
+                var collectes = adminCollectesByBillet[docId] || [];
+                if (collectes.length === 0) return '';
+                var today = new Date().toISOString().slice(0, 10);
+                return collectes.map(function(c) {
+                    var isOpen = !c.date_fin || c.date_fin >= today;
+                    var cData = adminCollecteInscriptionCounts[c.id] || { count: 0 };
+                    var statusIcon = isOpen ? 'fa-layer-group' : 'fa-circle-check';
+                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ')" title="Collecte supplémentaire : ' + escapeAttr(c.nom) + '">' +
+                        '<i class="fa-solid ' + statusIcon + '"></i> ' + escapeHtml(c.nom) + ' : ' + cData.count + ' inscription' + (cData.count !== 1 ? 's' : '') +
+                        (isOpen ? '' : ' <em>(clôturée)</em>') +
+                        '</button>';
+                }).join('');
             })() +
             // Story 2.3/2.4 — Boutons d'action
             '<div class="admin-card-actions">' +
@@ -3678,6 +3730,7 @@ function saveCollecte(billetId) {
         var selColl = document.getElementById('field-collecte-collecteur');
         if (selColl && defaultColl) selColl.value = defaultColl;
         loadCollectesForBillet(billetId);
+        loadAdminCollectes();
     })
     .catch(function(error) {
         console.error('Erreur ajout collecte:', error);
@@ -3693,6 +3746,7 @@ function cloturerCollecte(collecteId, billetId) {
     .then(function() {
         showToast('Collecte clôturée', 'success');
         loadCollectesForBillet(billetId);
+        loadAdminCollectes();
     })
     .catch(function(error) {
         console.error('Erreur clôture collecte:', error);
