@@ -2082,11 +2082,13 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
                 + '</div>';
         }
 
+        var groupeIds = groupe.inscriptions.map(function(i) { return i.id; });
         html += '<div class="envoi-groupe">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'
             + '<span class="envoi-count">' + groupe.inscriptions.length + ' billet(s)</span>'
             + '<span class="paiement-groupe-total">Total : ' + totalGroupe.toFixed(2) + ' €</span>'
+            + '<button onclick="validerTousPaiementsVue([' + groupeIds.join(',') + '])" class="btn-marquer-envoye" title="Confirmer tous les paiements de ce membre"><i class="fa-solid fa-check-double"></i> Tout valider</button>'
             + '</div>'
             + '<div class="envoi-groupe-lignes">' + lignes + '</div>'
             + '</div>';
@@ -2106,6 +2108,22 @@ function validerPaiementVue(inscriptionId) {
     })
     .catch(function(error) {
         console.error('Erreur confirmation paiement:', error);
+        showToast('Erreur', 'error');
+    });
+}
+
+function validerTousPaiementsVue(ids) {
+    if (!ids || ids.length === 0) return;
+    supabaseFetch('/rest/v1/inscriptions?id=in.(' + ids.join(',') + ')', {
+        method: 'PATCH',
+        body: JSON.stringify({ statut_paiement: 'confirme' })
+    })
+    .then(function() {
+        showToast(ids.length + ' paiement' + (ids.length > 1 ? 's' : '') + ' confirmé' + (ids.length > 1 ? 's' : ''));
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur confirmation paiements:', error);
         showToast('Erreur', 'error');
     });
 }
