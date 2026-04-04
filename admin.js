@@ -3606,9 +3606,9 @@ function renderCollectesList(collectes, billetReference) {
         var statusClass = isOpen ? 'ouverte' : 'cloturee';
         var statusLabel = isOpen ? 'Ouverte' : 'Clôturée';
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
-            '<span class="collecte-badge-nom collecte-scope-' + (c.scope || '') + '">' + (c.nom || '') + '</span>' +
+            '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
             '<span class="collecte-badge-status ' + statusClass + '">' + statusLabel + '</span>' +
-            '<span class="collecte-meta">' + (c.collecteur || '—') + '</span>' +
+            '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-ref="' + (billetReference || '') + '">Clôturer</button>' : '') +
             '</div>';
     }).join('');
