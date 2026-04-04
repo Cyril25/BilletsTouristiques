@@ -3249,14 +3249,14 @@ function loadMesCollectesSupplementaires() {
                 renderCollectesList();
                 return;
             }
-            var refs = [];
+            var ids = [];
             collectes.forEach(function(c) {
-                if (refs.indexOf(c.billet_id) === -1) refs.push(c.billet_id);
+                if (ids.indexOf(c.billet_id) === -1) ids.push(c.billet_id);
             });
-            return supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version","PayerFDP"&"Reference"=in.(' + refs.map(encodeURIComponent).join(',') + ')')
+            return supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version","PayerFDP"&id=in.(' + ids.join(',') + ')')
                 .then(function(billets) {
                     var billetsMap = {};
-                    (billets || []).forEach(function(b) { billetsMap[b.Reference] = b; });
+                    (billets || []).forEach(function(b) { billetsMap[b.id] = b; });
                     var collecteIds = collectes.map(function(c) { return c.id; });
                     return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + collecteIds.join(',') + ')&pas_interesse=eq.false&select=collecte_id,statut_paiement,envoye')
                         .then(function(inscriptions) {

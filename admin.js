@@ -1208,11 +1208,14 @@ function openBilletPanel(billetData, docId) {
         if (sectionCollectes) {
             sectionCollectes.style.display = '';
             sectionCollectes.dataset.billetId = billetData.id || '';
+            sectionCollectes.dataset.billetCollecteur = billetData.Collecteur || '';
             loadCollectesForBillet(billetData.id);
             var elDatePre = document.getElementById('field-collecte-date-pre');
             if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
         }
         populateCollecteCollecteurSelect();
+        var selectColl = document.getElementById('field-collecte-collecteur');
+        if (selectColl && billetData.Collecteur) selectColl.value = billetData.Collecteur;
 
         // Story 5.2 — Gestion des champs Google en mode edition
         var hasGoogleData = (billetData.LinkSheet && billetData.LinkSheet !== '') ||
@@ -3670,6 +3673,10 @@ function saveCollecte(billetId) {
         });
         var elDatePre = document.getElementById('field-collecte-date-pre');
         if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
+        var section = document.getElementById('admin-collectes-supplementaires');
+        var defaultColl = section ? section.dataset.billetCollecteur : '';
+        var selColl = document.getElementById('field-collecte-collecteur');
+        if (selColl && defaultColl) selColl.value = defaultColl;
         loadCollectesForBillet(billetId);
     })
     .catch(function(error) {
