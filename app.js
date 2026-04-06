@@ -22,9 +22,11 @@ function sanitizeUrl(url) {
 }
 
 // Resolution image — priorite ImageUrl (Cloudinary) > ImageId (Google Drive)
+// QR code overlay via Cloudinary fetch layer (bottom-right, semi-transparent)
+var QR_OVERLAY = 'l_fetch:aHR0cHM6Ly9hcGkucXJzZXJ2ZXIuY29tL3YxL2NyZWF0ZS1xci1jb2RlLz9zaXplPTE1MHgxNTAmZGF0YT1odHRwczovL2N5cmlsMjUuZ2l0aHViLmlvL0JpbGxldHNUb3VyaXN0aXF1ZXM=,w_80,g_south_east,x_10,y_10,o_70';
 function resolveImageUrl(item, size) {
     if (item.ImageUrl) {
-        return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/');
+        return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/');
     }
     if (item.ImageId) {
         var safeId = escapeAttr(item.ImageId);
@@ -396,14 +398,16 @@ function showMore() {
         const downloadLink = resolveDownloadUrl(item);
         const couleur = getCategorieColor(item.Categorie);
 
+        const billetPageUrl = 'billet.html?ref=' + encodeURIComponent(item.Reference || '');
+
         if (isGalleryMode) {
-            // RENDU MODE GALERIE
+            // RENDU MODE GALERIE — clic ouvre la fiche billet
             html += `
-            <div class="galerie-item" data-img-url="${escapeAttr(imgUrl)}">
+            <a class="galerie-item" href="${escapeAttr(billetPageUrl)}">
                 ${imgUrl ? `<img src="${escapeAttr(imgUrl)}" class="galerie-image" alt="${escapeAttr(item.NomBillet || 'Billet')}">` : `
                     <div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>${escapeHtml(item.Reference || '')}</div>
                 `}
-            </div>`;
+            </a>`;
 
         } else {
             // RENDU MODE COLLECTE (par défaut)
@@ -487,7 +491,7 @@ function showMore() {
                         </a>` : ''}
 
                     ${imgUrl ? `
-                        <a href="${escapeAttr(downloadLink)}" target="_blank" rel="noopener" class="icon-btn ico-dl" title="Télécharger l'image HD">
+                        <a href="${escapeAttr(billetPageUrl)}" class="icon-btn ico-dl" title="Voir la fiche du billet">
                             <i class="fa-solid fa-image"></i>
                         </a>` : ''}
 
@@ -501,15 +505,7 @@ function showMore() {
     displayedCount += batch.length;
     updateLoadMoreButton();
 
-    // SEC-02 — Event delegation pour les clics galerie (remplace onclick inline)
-    grid.querySelectorAll('.galerie-item[data-img-url]').forEach(function(el) {
-        if (!el._galerieHandlerBound) {
-            el.addEventListener('click', function() {
-                openModal(el.getAttribute('data-img-url'));
-            });
-            el._galerieHandlerBound = true;
-        }
-    });
+    // Galerie : les clics sont maintenant des liens <a> vers billet.html
 }
 
 
