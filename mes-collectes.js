@@ -1140,7 +1140,9 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
         return 0;
     });
 
-    var html = '';
+    // Séparer en deux groupes : à répartir vs en attente
+    var groupeARepartir = [];
+    var groupeEnAttente = [];
 
     for (var e = 0; e < enveloppesMeta.length; e++) {
             var env = enveloppesMeta[e].env;
@@ -1152,30 +1154,52 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             // Masquer les enveloppes vides (0 dans l'enveloppe et 0 à répartir)
             if (totalBillets === 0 && aRepartir.length === 0) continue;
 
-            var adr = enveloppesMeta[e].adr;
-            var nom = ((adr.nom || '') + ' ' + (adr.prenom || '')).trim() || env.membre_email;
-            var adresseStr = [adr.rue, adr.code_postal, (adr.ville || '').toUpperCase() || null, adr.pays].filter(Boolean).join(', ');
-
-            var demandeHtml = '';
-            if (env.demande_envoi) {
-                var dateStr = env.date_demande_envoi ? new Date(env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
-                var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande_r1: 'R1', recommande_r2: 'R2', recommande_r3: 'R3' }[env.mode_envoi] || '';
-                demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi le ' + dateStr + (modeLabel ? ' — ' + modeLabel : '') + '</span>';
+            var item = { env: env, adr: enveloppesMeta[e].adr, totalBillets: totalBillets, aRepartir: aRepartir.length };
+            if (aRepartir.length > 0) {
+                groupeARepartir.push(item);
+            } else {
+                groupeEnAttente.push(item);
             }
-
-            html += '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + env.id + ')" style="cursor:pointer">'
-                + '<div class="envoi-groupe-header">'
-                + '<strong>' + escapeHtmlMC(nom) + '</strong>'
-                + '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>'
-                + '<span class="envoi-count">' + totalBillets + ' dans l\'enveloppe, ' + aRepartir.length + ' à répartir</span>'
-                + demandeHtml
-                + '</div>'
-                + '</div>';
     }
 
-    if (html === '') {
+    if (groupeARepartir.length === 0 && groupeEnAttente.length === 0) {
         renderEnveloppesVide();
         return;
+    }
+
+    var html = '';
+
+    function renderEnveloppeCard(item) {
+        var nom = ((item.adr.nom || '') + ' ' + (item.adr.prenom || '')).trim() || item.env.membre_email;
+        var adresseStr = [item.adr.rue, item.adr.code_postal, (item.adr.ville || '').toUpperCase() || null, item.adr.pays].filter(Boolean).join(', ');
+        var demandeHtml = '';
+        if (item.env.demande_envoi) {
+            var dateStr = item.env.date_demande_envoi ? new Date(item.env.date_demande_envoi).toLocaleDateString('fr-FR') : '';
+            var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande_r1: 'R1', recommande_r2: 'R2', recommande_r3: 'R3' }[item.env.mode_envoi] || '';
+            demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi le ' + dateStr + (modeLabel ? ' — ' + modeLabel : '') + '</span>';
+        }
+        return '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + item.env.id + ')" style="cursor:pointer">'
+            + '<div class="envoi-groupe-header">'
+            + '<strong>' + escapeHtmlMC(nom) + '</strong>'
+            + '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>'
+            + '<span class="envoi-count">' + item.totalBillets + ' dans l\'enveloppe, ' + item.aRepartir + ' à répartir</span>'
+            + demandeHtml
+            + '</div>'
+            + '</div>';
+    }
+
+    if (groupeARepartir.length > 0) {
+        html += '<h3 class="envois-section-title"><i class="fa-solid fa-arrows-split-up-and-left"></i> À répartir (' + groupeARepartir.length + ')</h3>';
+        for (var i = 0; i < groupeARepartir.length; i++) {
+            html += renderEnveloppeCard(groupeARepartir[i]);
+        }
+    }
+
+    if (groupeEnAttente.length > 0) {
+        html += '<h3 class="envois-section-title"><i class="fa-solid fa-clock"></i> En attente (' + groupeEnAttente.length + ')</h3>';
+        for (var i = 0; i < groupeEnAttente.length; i++) {
+            html += renderEnveloppeCard(groupeEnAttente[i]);
+        }
     }
 
     container.innerHTML = html;

@@ -4631,6 +4631,20 @@ body.login-page {
     text-align: center;
 }
 
+/* --- Titres de section (À répartir / En attente) --- */
+.envois-section-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: var(--spacing-lg) 0 var(--spacing-sm) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+.envois-section-title:first-child {
+    margin-top: 0;
+}
+
 /* --- Groupes par membre --- */
 .envoi-groupe {
     background: var(--color-bg-white);
