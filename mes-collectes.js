@@ -403,7 +403,8 @@ function renderCollecteDetail(billetId, inscriptions) {
     html += '<div class="compteur-item">';
     html += '<span class="compteur-label">Billets</span>';
     var vne = billet && billet.VersionNormaleExiste !== false;
-    html += '<span class="compteur-value">' + (vne ? totalNormaux + ' normaux, ' : '') + totalVariantes + ' variantes' + '</span>';
+    var hasVar = billet && billet.HasVariante && billet.HasVariante !== 'N';
+    html += '<span class="compteur-value">' + (vne ? totalNormaux + ' normaux' : '') + (vne && hasVar ? ', ' : '') + (hasVar ? totalVariantes + ' variantes' : '') + '</span>';
     html += '</div>';
     html += '</div>';
 
@@ -480,7 +481,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         html += '<th>Nom / Prénom</th>';
         html += '<th>Adresse</th>';
         if (vne) html += '<th>Normaux</th>';
-        html += '<th>Variantes</th>';
+        if (hasVar) html += '<th>Variantes</th>';
         html += '<th>Paiement</th>';
         html += '<th>Envoi</th>';
         html += '<th>Montant</th>';
@@ -522,7 +523,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '<td data-label="Nom">' + escapeHtmlMC(nomPrenom) + btnEditMembre + '</td>';
             html += '<td data-label="Adresse" class="td-adresse">' + escapeHtmlMC(adresse) + '</td>';
             if (vne) html += '<td data-label="Normaux">' + (ins.nb_normaux || 0) + '</td>';
-            html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
+            if (hasVar) html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
             html += '<td data-label="Paiement">' + escapeHtmlMC(ins.mode_paiement || '') + '</td>';
             html += '<td data-label="Envoi">' + escapeHtmlMC(ins.mode_envoi || '') + '</td>';
             html += '<td data-label="Montant">' + montantAffiche + '</td>';
@@ -542,7 +543,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '</tr>';
 
             if (commentaire) {
-                var colCount = (vne ? 9 : 8) + (billet.PayerFDP === 'oui' ? 2 : 1);
+                var colCount = 7 + (vne ? 1 : 0) + (hasVar ? 1 : 0) + (billet.PayerFDP === 'oui' ? 2 : 1);
                 html += '<tr class="tr-commentaire"><td colspan="' + colCount + '"><i class="fa-solid fa-comment"></i> ' + escapeHtmlMC(commentaire) + '</td></tr>';
             }
         }
