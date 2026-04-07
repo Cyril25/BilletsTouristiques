@@ -8,8 +8,11 @@
     'use strict';
 
     var SITE_BASE = 'https://cyril25.github.io/BilletsTouristiques';
-    var QR_SIZE_RATIO = 0.12;  // QR = 12% de la largeur de l'image
-    var QR_MARGIN = 70;        // marge en pixels depuis le bord gauche
+    // Référence : sur billets.html, Cloudinary renvoie des images de 800px
+    // avec QR de 80px et marge gauche de 70px. On garde les mêmes proportions.
+    var QR_REF_WIDTH = 800;
+    var QR_REF_SIZE = 80;
+    var QR_REF_MARGIN = 70;
 
     // --- Helpers ---
     function escapeHtml(str) {
@@ -53,10 +56,12 @@
             // Dessiner l'image du billet
             ctx.drawImage(billetImg, 0, 0);
 
-            // Calculer la taille du QR proportionnelle à l'image
-            var qrSize = Math.max(60, Math.round(canvas.width * QR_SIZE_RATIO));
+            // Tailles proportionnelles à la référence billets.html (800px)
+            var ratio = canvas.width / QR_REF_WIDTH;
+            var qrSize = Math.round(QR_REF_SIZE * ratio);
+            var margin = Math.round(QR_REF_MARGIN * ratio);
             var padding = 6;
-            var x = QR_MARGIN;
+            var x = margin;
             var y = Math.round((canvas.height - qrSize) / 2);
 
             // Fond blanc avec arrondi derrière le QR
