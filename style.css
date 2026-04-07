@@ -8404,18 +8404,6 @@ body.login-page {
     margin: 0 auto;
 }
 
-.billet-fiche-qr {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    width: 90px;
-    height: 90px;
-    background: #fff;
-    padding: 4px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-}
-
 .billet-fiche-infos {
     margin-top: 24px;
 }
@@ -8450,12 +8438,6 @@ body.login-page {
 }
 
 @media (max-width: 600px) {
-    .billet-fiche-qr {
-        width: 64px;
-        height: 64px;
-        bottom: 8px;
-        right: 8px;
-    }
     .billet-fiche-infos h1 {
         font-size: 1.2em;
     }
