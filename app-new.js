@@ -659,7 +659,7 @@ function showMore() {
         var downloadLink = resolveDownloadUrl(item);
         var couleur = getCategorieColor(item.Categorie);
 
-        var billetPageUrl = 'billet.html?ref=' + encodeURIComponent(item.Reference || '');
+        var billetPageUrl = 'billet.html?id=' + encodeURIComponent(item.id || '');
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE — clic ouvre la fiche billet

@@ -30,8 +30,8 @@
         return '';
     }
 
-    function getQrUrl(ref) {
-        var pageUrl = SITE_BASE + '/billet.html?ref=' + encodeURIComponent(ref);
+    function getQrUrl(id) {
+        var pageUrl = SITE_BASE + '/billet.html?id=' + encodeURIComponent(id);
         return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pageUrl);
     }
 
@@ -95,21 +95,21 @@
     // --- Init ---
     function init() {
         var params = new URLSearchParams(window.location.search);
-        var ref = params.get('ref');
+        var id = params.get('id');
 
-        if (!ref) {
+        if (!id) {
             showError();
             return;
         }
 
         firebase.auth().onAuthStateChanged(function(user) {
             if (!user) return;
-            loadBillet(ref);
+            loadBillet(id);
         });
     }
 
-    function loadBillet(ref) {
-        supabaseFetch('/rest/v1/billets?Reference=eq.' + encodeURIComponent(ref) + '&select=*')
+    function loadBillet(id) {
+        supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(id) + '&select=*')
             .then(function(rows) {
                 if (!rows || rows.length === 0) {
                     showError();
@@ -130,7 +130,7 @@
         var imgUrl = resolveImageUrl(b, 1000);
         var imgEl = document.getElementById('billet-image');
         if (imgUrl) {
-            var qrUrl = getQrUrl(b.Reference);
+            var qrUrl = getQrUrl(b.id);
             burnQrIntoImage(imgEl, imgUrl, qrUrl);
             imgEl.alt = b.NomBillet || 'Billet';
         } else {

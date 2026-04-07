@@ -1607,7 +1607,7 @@
 
         // Image — clic ouvre la fiche billet
         if (imgUrl) {
-            var billetPageUrl = 'billet.html?ref=' + encodeURIComponent(billet.Reference || '');
+            var billetPageUrl = 'billet.html?id=' + encodeURIComponent(billet.id || '');
             html += '<div class="coll-modal-img"><a href="' + escapeAttr(billetPageUrl) + '"><img src="' + escapeAttr(imgUrl) + '" alt="' + escapeAttr(billet.NomBillet || '') + '"></a></div>';
         }
 

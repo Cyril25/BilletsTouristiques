@@ -398,7 +398,7 @@ function showMore() {
         const downloadLink = resolveDownloadUrl(item);
         const couleur = getCategorieColor(item.Categorie);
 
-        const billetPageUrl = 'billet.html?ref=' + encodeURIComponent(item.Reference || '');
+        const billetPageUrl = 'billet.html?id=' + encodeURIComponent(item.id || '');
 
         if (isGalleryMode) {
             // RENDU MODE GALERIE — clic ouvre la fiche billet
