@@ -9,7 +9,7 @@
 
     var SITE_BASE = 'https://cyril25.github.io/BilletsTouristiques';
     var QR_SIZE_RATIO = 0.12;  // QR = 12% de la largeur de l'image
-    var QR_MARGIN = 20;        // marge en pixels depuis le bord
+    var QR_MARGIN = 50;        // marge en pixels depuis le bord gauche
 
     // --- Helpers ---
     function escapeHtml(str) {
@@ -56,7 +56,7 @@
             // Calculer la taille du QR proportionnelle à l'image
             var qrSize = Math.max(60, Math.round(canvas.width * QR_SIZE_RATIO));
             var padding = 6;
-            var x = canvas.width - qrSize - QR_MARGIN;
+            var x = QR_MARGIN;
             var y = Math.round((canvas.height - qrSize) / 2);
 
             // Fond blanc avec arrondi derrière le QR
