@@ -25,7 +25,10 @@
             return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 1000) + '/');
         }
         if (item.ImageId) {
-            return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 1000);
+            // Cloudinary fetch : récupère l'image Drive et applique f_auto/q_auto
+            // (le QR sera ensuite gravé via Canvas comme pour Cloudinary natif)
+            var driveUrl = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 1000);
+            return 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_' + (size || 1000) + '/' + encodeURIComponent(driveUrl);
         }
         return '';
     }

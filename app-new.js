@@ -116,7 +116,8 @@ function resolveImageUrl(item, size) {
         return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/');
     }
     if (item.ImageId) {
-        return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 800);
+        var driveUrl = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 800);
+        return 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/' + encodeURIComponent(driveUrl);
     }
     return '';
 }

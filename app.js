@@ -30,7 +30,8 @@ function resolveImageUrl(item, size) {
     }
     if (item.ImageId) {
         var safeId = escapeAttr(item.ImageId);
-        return 'https://drive.google.com/thumbnail?id=' + safeId + '&sz=w' + (size || 800);
+        var driveUrl = 'https://drive.google.com/thumbnail?id=' + safeId + '&sz=w' + (size || 800);
+        return 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/' + encodeURIComponent(driveUrl);
     }
     return '';
 }
