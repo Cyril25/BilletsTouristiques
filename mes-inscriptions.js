@@ -97,13 +97,22 @@ function loadMesInscriptions() {
                 return;
             }
             var idsParam = 'id=in.(' + billetIds.join(',') + ')';
-            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante","Categorie","PayerFDP","Reference","Millesime","Version"');
+            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante","Categorie","PayerFDP","Reference","Millesime","Version","HasVariante"');
         })
         .then(function(billets) {
             if (billets) {
                 billetsMap = {};
                 billets.forEach(function(b) { billetsMap[b.id] = b; });
             }
+
+            // Si le billet n'a pas de variante (HasVariante absent ou 'N'),
+            // ignorer toute valeur résiduelle de nb_variantes côté affichage/totaux
+            mesInscriptions.forEach(function(insc) {
+                var b = billetsMap[insc.billet_id];
+                if (b && (!b.HasVariante || b.HasVariante === 'N')) {
+                    insc.nb_variantes = 0;
+                }
+            });
 
             // Étape 3 : charger collecteurs, pays du membre, frais de port en parallèle
             var promises = [

@@ -300,6 +300,10 @@ function openCollecteDetail(billetId) {
         .then(function(results) {
             currentInscriptions = results[0] || [];
             fraisPortCollecte = results[1] || [];
+            // Si le billet n'a pas de variante, ignorer toute valeur résiduelle de nb_variantes
+            if (currentBillet && (!currentBillet.HasVariante || currentBillet.HasVariante === 'N')) {
+                currentInscriptions.forEach(function(ins) { ins.nb_variantes = 0; });
+            }
             // Enrichir les snapshots avec les noms actuels des membres
             var emails = [];
             currentInscriptions.forEach(function(ins) {
@@ -3485,6 +3489,10 @@ function openCollecteDetailSupp(collecteId) {
         .then(function(results) {
             currentInscriptions = results[0] || [];
             fraisPortCollecte = results[1] || [];
+            // Si le billet n'a pas de variante, ignorer toute valeur résiduelle de nb_variantes
+            if (currentBillet && (!currentBillet.HasVariante || currentBillet.HasVariante === 'N')) {
+                currentInscriptions.forEach(function(ins) { ins.nb_variantes = 0; });
+            }
             var emails = [];
             currentInscriptions.forEach(function(ins) {
                 if (ins.membre_email && emails.indexOf(ins.membre_email) === -1) emails.push(ins.membre_email);
