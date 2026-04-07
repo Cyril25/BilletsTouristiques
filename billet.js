@@ -77,7 +77,7 @@
             ctx.drawImage(qrImg, x, y, qrSize, qrSize);
 
             // 4 textes autour du QR
-            var fontSize = Math.round(qrSize * 0.18);
+            var fontSize = Math.round(qrSize * 0.13);
             ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
             ctx.fillStyle = '#5D3A7E';
             ctx.textAlign = 'center';
