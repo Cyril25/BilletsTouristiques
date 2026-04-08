@@ -2548,7 +2548,15 @@ function ouvrirRecapPaiementGlobal() {
             var prix = parseFloat(billet.Prix || 0);
             var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
             totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
-            billetsSet[billet.NomBillet || '?'] = true;
+            var libParts = [];
+            if (billet.Reference) libParts.push(billet.Reference);
+            var milVer = '';
+            if (billet.Millesime) milVer += billet.Millesime;
+            if (billet.Version) milVer += '-' + billet.Version;
+            if (milVer) libParts.push(milVer);
+            if (billet.NomBillet) libParts.push(billet.NomBillet);
+            var libBillet = libParts.join(' ') || '?';
+            billetsSet[libBillet] = true;
         }
         totalGlobal += totalMembre;
 
