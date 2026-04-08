@@ -235,7 +235,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=101")
+    fetch("menu.html?v=102")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -243,6 +243,11 @@ function loadMenu() {
 
             // 2. On gère le lien actif
             highlightActiveLink();
+
+            // PWA — Afficher le bouton "Installer" si pertinent (iOS ou prompt déjà capturé)
+            if (typeof window.__showInstallButtonIfRelevant === 'function') {
+                window.__showInstallButtonIfRelevant();
+            }
 
             // 3. ON AFFICHE L'EMAIL
             var user = firebase.auth().currentUser;
@@ -363,6 +368,96 @@ if ('serviceWorker' in navigator) {
             .catch(function(err) { console.warn('Service Worker non enregistré :', err); });
     });
 }
+
+// ============================================================
+// 6b. PWA — Installation sur l'écran d'accueil
+// ============================================================
+// Injection du manifest et des meta PWA sur toutes les pages (évite de modifier chaque HTML)
+(function injectPwaMeta() {
+    var head = document.head || document.getElementsByTagName('head')[0];
+    if (!head) return;
+    function add(tag, attrs) {
+        var el = document.createElement(tag);
+        for (var k in attrs) el.setAttribute(k, attrs[k]);
+        head.appendChild(el);
+    }
+    if (!document.querySelector('link[rel="manifest"]')) add('link', { rel: 'manifest', href: 'manifest.json' });
+    if (!document.querySelector('meta[name="theme-color"]')) add('meta', { name: 'theme-color', content: '#5D3A7E' });
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) add('link', { rel: 'apple-touch-icon', href: 'icon.svg' });
+    if (!document.querySelector('meta[name="apple-mobile-web-app-capable"]')) add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+    if (!document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')) add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
+    if (!document.querySelector('meta[name="apple-mobile-web-app-title"]')) add('meta', { name: 'apple-mobile-web-app-title', content: 'Billets T.' });
+})();
+
+// Détection iOS (Safari ne supporte pas beforeinstallprompt)
+window.__isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+// Détection mode standalone (déjà installée)
+window.__isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+
+window.__deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window.__deferredInstallPrompt = e;
+    var btn = document.getElementById('btn-install-pwa');
+    if (btn) btn.style.display = '';
+});
+window.addEventListener('appinstalled', function() {
+    window.__deferredInstallPrompt = null;
+    var btn = document.getElementById('btn-install-pwa');
+    if (btn) btn.style.display = 'none';
+});
+
+// Affiche le bouton sur iOS (pas de prompt natif → instructions manuelles)
+window.__showInstallButtonIfRelevant = function() {
+    var btn = document.getElementById('btn-install-pwa');
+    if (!btn) return;
+    if (window.__isStandalone) { btn.style.display = 'none'; return; }
+    if (window.__isIos || window.__deferredInstallPrompt) {
+        btn.style.display = '';
+    }
+};
+
+window.installPwa = function() {
+    // Cas iOS : afficher les instructions
+    if (window.__isIos) {
+        window.showIosInstallInstructions();
+        return;
+    }
+    var p = window.__deferredInstallPrompt;
+    if (!p) {
+        alert("L'installation n'est pas disponible sur ce navigateur. Essayez Chrome ou Edge, ou utilisez le menu du navigateur \u00ab Installer l'application \u00bb.");
+        return;
+    }
+    p.prompt();
+    p.userChoice.then(function(res) {
+        if (res && res.outcome === 'accepted') {
+            var btn = document.getElementById('btn-install-pwa');
+            if (btn) btn.style.display = 'none';
+        }
+        window.__deferredInstallPrompt = null;
+    });
+};
+
+window.showIosInstallInstructions = function() {
+    if (document.getElementById('ios-install-overlay')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'ios-install-overlay';
+    overlay.className = 'ios-install-overlay';
+    overlay.onclick = function() { overlay.remove(); };
+    overlay.innerHTML =
+        '<div class="ios-install-modal" onclick="event.stopPropagation()">' +
+            '<button class="ios-install-close" onclick="document.getElementById(\'ios-install-overlay\').remove()" aria-label="Fermer">&times;</button>' +
+            '<h3><i class="fa-solid fa-mobile-screen"></i> Installer sur l\'écran d\'accueil</h3>' +
+            '<p>Sur iPhone / iPad (Safari) :</p>' +
+            '<ol>' +
+                '<li>Touchez l\'icône <strong>Partager</strong> <i class="fa-solid fa-arrow-up-from-bracket"></i> en bas de l\'écran.</li>' +
+                '<li>Faites défiler puis choisissez <strong>« Sur l\'écran d\'accueil »</strong> <i class="fa-regular fa-square-plus"></i>.</li>' +
+                '<li>Touchez <strong>« Ajouter »</strong> en haut à droite.</li>' +
+            '</ol>' +
+            '<p class="ios-install-note">L\'icône Billets Touristiques apparaîtra sur votre écran d\'accueil.</p>' +
+        '</div>';
+    document.body.appendChild(overlay);
+};
 
 // ============================================================
 // 7. IMPERSONATION GLOBALE (superadmin uniquement)

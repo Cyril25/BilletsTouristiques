@@ -1,0 +1,20 @@
+{
+  "name": "Billets Touristiques",
+  "short_name": "Billets T.",
+  "description": "Espace membres de l'association Billets et Jetons Touristiques",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#5D3A7E",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
