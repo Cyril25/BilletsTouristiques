@@ -2533,32 +2533,37 @@ function ouvrirRecapPaiementGlobal() {
     });
 
     var totalGlobal = 0;
-    var lignesHtml = '';
-    var lignesTexte = '';
+    var billetsSet = {};
+    var lignesMembresHtml = '';
+    var lignesMembresTexte = '';
     for (var idx = 0; idx < emails.length; idx++) {
         var groupe = groupes[emails[idx]];
         var adr = groupe.adresse;
         var nomComplet = ((adr.nom || '').toUpperCase() + ' ' + (adr.prenom || '')).trim() || groupe.email;
 
         var totalMembre = 0;
-        var nomsBillets = [];
         for (var j = 0; j < groupe.inscriptions.length; j++) {
             var insc = groupe.inscriptions[j];
             var billet = billetsMap[insc.billet_id] || {};
             var prix = parseFloat(billet.Prix || 0);
             var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
             totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
-            nomsBillets.push(billet.NomBillet || '?');
+            billetsSet[billet.NomBillet || '?'] = true;
         }
         totalGlobal += totalMembre;
 
-        lignesHtml += '<tr>'
-            + '<td>' + nomsBillets.join(', ') + '</td>'
-            + '<td><strong>' + nomComplet + '</strong></td>'
-            + '<td style="text-align:right;white-space:nowrap;"><strong>' + totalMembre.toFixed(2) + ' €</strong></td>'
-            + '</tr>';
-        lignesTexte += nomsBillets.join(', ') + '\t' + nomComplet + '\t' + totalMembre.toFixed(2) + ' €\n';
+        lignesMembresHtml += '<li><strong>' + nomComplet + '</strong> &rarr; ' + totalMembre.toFixed(2) + ' €</li>';
+        lignesMembresTexte += nomComplet + ' -> ' + totalMembre.toFixed(2) + ' €\n';
     }
+
+    var nomsBillets = Object.keys(billetsSet).sort();
+    var billetsHtml = '<ul class="recap-billets-list">';
+    for (var b = 0; b < nomsBillets.length; b++) {
+        billetsHtml += '<li>' + nomsBillets[b] + '</li>';
+    }
+    billetsHtml += '</ul>';
+    var billetsTexte = nomsBillets.map(function(n) { return '- ' + n; }).join('\n');
+    var texteComplet = 'Billets à payer :\n' + billetsTexte + '\n\nMembres :\n' + lignesMembresTexte;
 
     var modal = document.getElementById('relance-modal');
     if (!modal) {
@@ -2573,20 +2578,14 @@ function ouvrirRecapPaiementGlobal() {
         + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
         + '</div>'
         + '<p class="relance-count">' + emails.length + ' membre(s) — Total : <strong>' + totalGlobal.toFixed(2) + ' €</strong></p>'
-        + '<div style="overflow-x:auto;">'
-        + '<table class="recap-paiement-table" style="width:100%;border-collapse:collapse;">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Billets à payer</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">NOM Prénom</th>'
-        + '<th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Montant</th>'
-        + '</tr></thead>'
-        + '<tbody>' + lignesHtml + '</tbody>'
-        + '</table>'
-        + '</div>'
+        + '<h3 style="margin-top:8px;">Billets à payer</h3>'
+        + billetsHtml
+        + '<h3 style="margin-top:16px;">Montant par membre</h3>'
+        + '<ul class="recap-membres-list">' + lignesMembresHtml + '</ul>'
         + '<div class="relance-actions" style="margin-top:12px;">'
         + '<button onclick="copierRecapPaiement()" class="btn-copier"><i class="fa-solid fa-copy"></i> Copier</button>'
         + '</div>'
-        + '<textarea id="recap-paiement-texte" style="position:absolute;left:-9999px;" readonly>' + lignesTexte + '</textarea>'
+        + '<textarea id="recap-paiement-texte" style="position:absolute;left:-9999px;" readonly>' + texteComplet + '</textarea>'
         + '</div>';
     modal.style.display = '';
 }
