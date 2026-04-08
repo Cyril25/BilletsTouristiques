@@ -2128,7 +2128,8 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
 
     var html = '<div class="paiement-total-attente">'
         + 'En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong>'
-        + ' <button onclick="ouvrirRelanceGlobale()" class="btn-relance" style="margin-left:12px;"><i class="fa-solid fa-envelope"></i> Relancer tous les impayés</button>'
+        + ' <button onclick="ouvrirRecapPaiementGlobal()" class="btn-relance" style="margin-left:12px;"><i class="fa-solid fa-list"></i> Récapitulatif global</button>'
+        + ' <button onclick="ouvrirRelanceGlobale()" class="btn-relance" style="margin-left:8px;"><i class="fa-solid fa-envelope"></i> Relancer individuellement</button>'
         + '</div>';
     var emails = Object.keys(groupes);
     // Tri par nom puis prénom
@@ -2495,6 +2496,109 @@ function ouvrirRelanceGlobale() {
         + messagesHtml
         + '</div>';
     modal.style.display = '';
+}
+
+// ---- Récapitulatif de paiement global (vue d'ensemble) ----
+
+function ouvrirRecapPaiementGlobal() {
+    if (!verifPaiementData) {
+        showToast('Aucune donnée de paiement chargée', 'error');
+        return;
+    }
+    var inscriptions = verifPaiementData.inscriptions;
+    var billetsMap = verifPaiementData.billetsMap;
+    if (!inscriptions || inscriptions.length === 0) {
+        showToast('Aucun impayé');
+        return;
+    }
+
+    // Grouper par membre
+    var groupes = {};
+    inscriptions.forEach(function(insc) {
+        var key = insc.membre_email;
+        if (!groupes[key]) {
+            groupes[key] = { email: key, adresse: insc.adresse_snapshot || {}, inscriptions: [] };
+        }
+        groupes[key].inscriptions.push(insc);
+    });
+
+    var emails = Object.keys(groupes);
+    emails.sort(function(a, b) {
+        var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
+        var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
+        if (na < nb) return -1; if (na > nb) return 1;
+        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
+        if (pa < pb) return -1; if (pa > pb) return 1;
+        return 0;
+    });
+
+    var totalGlobal = 0;
+    var lignesHtml = '';
+    var lignesTexte = '';
+    for (var idx = 0; idx < emails.length; idx++) {
+        var groupe = groupes[emails[idx]];
+        var adr = groupe.adresse;
+        var nomComplet = ((adr.nom || '').toUpperCase() + ' ' + (adr.prenom || '')).trim() || groupe.email;
+
+        var totalMembre = 0;
+        var nomsBillets = [];
+        for (var j = 0; j < groupe.inscriptions.length; j++) {
+            var insc = groupe.inscriptions[j];
+            var billet = billetsMap[insc.billet_id] || {};
+            var prix = parseFloat(billet.Prix || 0);
+            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
+            nomsBillets.push(billet.NomBillet || '?');
+        }
+        totalGlobal += totalMembre;
+
+        lignesHtml += '<tr>'
+            + '<td>' + nomsBillets.join(', ') + '</td>'
+            + '<td><strong>' + nomComplet + '</strong></td>'
+            + '<td style="text-align:right;white-space:nowrap;"><strong>' + totalMembre.toFixed(2) + ' €</strong></td>'
+            + '</tr>';
+        lignesTexte += nomsBillets.join(', ') + '\t' + nomComplet + '\t' + totalMembre.toFixed(2) + ' €\n';
+    }
+
+    var modal = document.getElementById('relance-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'relance-modal';
+        modal.className = 'relance-modal-overlay';
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML = '<div class="relance-modal-content">'
+        + '<div class="relance-modal-header">'
+        + '<h2><i class="fa-solid fa-list"></i> Récapitulatif de paiement global</h2>'
+        + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
+        + '</div>'
+        + '<p class="relance-count">' + emails.length + ' membre(s) — Total : <strong>' + totalGlobal.toFixed(2) + ' €</strong></p>'
+        + '<div style="overflow-x:auto;">'
+        + '<table class="recap-paiement-table" style="width:100%;border-collapse:collapse;">'
+        + '<thead><tr>'
+        + '<th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Billets à payer</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">NOM Prénom</th>'
+        + '<th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Montant</th>'
+        + '</tr></thead>'
+        + '<tbody>' + lignesHtml + '</tbody>'
+        + '</table>'
+        + '</div>'
+        + '<div class="relance-actions" style="margin-top:12px;">'
+        + '<button onclick="copierRecapPaiement()" class="btn-copier"><i class="fa-solid fa-copy"></i> Copier</button>'
+        + '</div>'
+        + '<textarea id="recap-paiement-texte" style="position:absolute;left:-9999px;" readonly>' + lignesTexte + '</textarea>'
+        + '</div>';
+    modal.style.display = '';
+}
+
+function copierRecapPaiement() {
+    var ta = document.getElementById('recap-paiement-texte');
+    if (!ta) return;
+    ta.style.position = 'static';
+    ta.select();
+    try { document.execCommand('copy'); showToast('Récapitulatif copié !'); }
+    catch (e) { showToast('Impossible de copier', 'error'); }
+    ta.style.position = 'absolute';
 }
 
 // ============================================================
