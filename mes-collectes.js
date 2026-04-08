@@ -1309,7 +1309,14 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
             var envVne = billet.VersionNormaleExiste !== false;
             var envHasVar = billet.HasVariante && billet.HasVariante !== 'N';
             var envNbVar = envHasVar ? (insc.nb_variantes || 0) : 0;
-            var envQty = envVne ? 'N:' + (insc.nb_normaux || 0) + (envNbVar > 0 ? ' V:' + envNbVar : '') : 'V:' + envNbVar;
+            var envQty;
+    if (!envHasVar) {
+        envQty = String(insc.nb_normaux || 0);
+    } else if (!envVne) {
+        envQty = 'V:' + envNbVar;
+    } else {
+        envQty = 'N:' + (insc.nb_normaux || 0) + (envNbVar > 0 ? ' V:' + envNbVar : '');
+    }
             var envRefParts = [];
             if (billet.Reference) envRefParts.push(billet.Reference);
             var envMilVersion = '';
@@ -1623,7 +1630,14 @@ function renderEnveloppeLigne(insc, billet, action) {
     var envVne = billet.VersionNormaleExiste !== false;
     var envHasVar = billet.HasVariante && billet.HasVariante !== 'N';
     var envNbVar = envHasVar ? (insc.nb_variantes || 0) : 0;
-    var envQty = envVne ? 'N:' + (insc.nb_normaux || 0) + (envNbVar > 0 ? ' V:' + envNbVar : '') : 'V:' + envNbVar;
+    var envQty;
+    if (!envHasVar) {
+        envQty = String(insc.nb_normaux || 0);
+    } else if (!envVne) {
+        envQty = 'V:' + envNbVar;
+    } else {
+        envQty = 'N:' + (insc.nb_normaux || 0) + (envNbVar > 0 ? ' V:' + envNbVar : '');
+    }
     var envRefParts = [];
     if (billet.Reference) envRefParts.push(billet.Reference);
     var envMilVersion = '';

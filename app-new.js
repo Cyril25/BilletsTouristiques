@@ -961,8 +961,8 @@ function getCompteurBT(item) {
         if (c.normaux > 0) {
             parts.push(c.normaux + ' billet' + (c.normaux > 1 ? 's' : ''));
         }
-        if (c.variantes > 0) {
-            var nomVariante = item.HasVariante || 'variante';
+        if (c.variantes > 0 && item.HasVariante && item.HasVariante !== 'N') {
+            var nomVariante = item.HasVariante;
             parts.push(c.variantes + ' billet' + (c.variantes > 1 ? 's' : '') + ' ' + nomVariante);
         }
         return parts.join(' + ') || '';
