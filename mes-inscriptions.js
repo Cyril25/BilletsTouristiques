@@ -319,6 +319,59 @@ function renderInscriptions() {
             + '</div>';
     }
 
+    // Récap global par collecteur (uniquement section "À payer")
+    function buildCollecteurRecapHtml(collecteurNom, inscList) {
+        var totalGlobal = 0;
+        var ids = [];
+        var paypalParts = [];
+        var totalPaypal = 0;
+        var collecteurObj = collecteursMap[collecteurNom] || {};
+
+        inscList.forEach(function(insc) {
+            var billet = billetsMap[insc.billet_id] || {};
+            var prix = parseFloat(billet.Prix || 0);
+            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var nbN = insc.nb_normaux || 0;
+            var nbV = insc.nb_variantes || 0;
+            var montant = (prix * nbN) + (prixVar * nbV);
+            var fdp = 0;
+            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+                var dest = (membrePays === 'France') ? 'france' : 'international';
+                fdp = findFdpPrice(nbN + nbV, dest, (insc.mode_envoi || 'Normal').toLowerCase());
+            }
+            var total = montant + fdp;
+            totalGlobal += total;
+            ids.push(insc.id);
+
+            if (insc.mode_paiement === 'PayPal') {
+                var refCompact = ((billet.Reference || '') + ' ' + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '')).trim();
+                paypalParts.push(refCompact + ' ' + total.toFixed(2) + '\u20AC');
+                totalPaypal += total;
+            }
+        });
+
+        if (inscList.length < 2) return ''; // pas la peine pour 1 seule inscription
+
+        var btnPaye = '<button class="btn-jai-paye btn-jai-paye-groupe" onclick="declarerPaiementGroupe(\'' + ids.join(',') + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé (' + totalGlobal.toFixed(2) + '\u20AC)</button>';
+
+        var paypalHtml = '';
+        if (paypalParts.length > 0 && (collecteurObj.paypal_me || collecteurObj.paypal_email)) {
+            var note = paypalParts.join(', ') + ' = ' + totalPaypal.toFixed(2) + '\u20AC';
+            var noteJs = note.replace(/'/g, "\\'");
+            var paypalUrl = collecteurObj.paypal_me
+                ? 'https://paypal.me/' + encodeURIComponent(collecteurObj.paypal_me) + '/' + totalPaypal.toFixed(2)
+                : 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteurObj.paypal_email);
+            paypalHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note)
+                + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>'
+                + '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer ' + totalPaypal.toFixed(2) + '\u20AC via PayPal</a>';
+        }
+
+        return '<div class="insc-collecteur-recap">'
+            + '<div class="insc-collecteur-recap-total"><i class="fa-solid fa-coins"></i> Total dû : <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong> (' + inscList.length + ' inscriptions)</div>'
+            + '<div class="insc-collecteur-recap-actions">' + btnPaye + paypalHtml + '</div>'
+            + '</div>';
+    }
+
     // Double tri : statut (priorité action) puis sous-groupes par collecteur
     var statGroups = [
         { key: 'non_paye',        label: 'À payer',                        icon: 'fa-circle-exclamation', items: [] },
@@ -366,9 +419,14 @@ function renderInscriptions() {
                 byCollecteur[col].push(insc);
             });
             colOrder.forEach(function(col) {
+                var headerExtra = '';
+                if (group.key === 'non_paye') {
+                    headerExtra = buildCollecteurRecapHtml(col, byCollecteur[col]);
+                }
                 html += '<div class="insc-collecteur-group">'
                     + '<div class="insc-collecteur-header" role="heading" aria-level="3">'
-                    + '<i class="fa-solid fa-user"></i> ' + escapeHtml(col)
+                    + '<div class="insc-collecteur-header-title"><i class="fa-solid fa-user"></i> ' + escapeHtml(col) + '</div>'
+                    + headerExtra
                     + '</div>';
                 byCollecteur[col].forEach(function(insc) { html += renderInscriptionCard(insc); });
                 html += '</div>';
@@ -456,6 +514,42 @@ function badgePaiementMembre(statut, inscriptionId, categorie, isBeneficiaire) {
 
 // QW-3 — Confirmation avant déclaration de paiement
 var pendingDeclarationId = null;
+var pendingDeclarationIds = null; // mode groupé
+
+function declarerPaiementGroupe(idsCsv) {
+    var ids = String(idsCsv || '').split(',').map(function(s) { return parseInt(s, 10); }).filter(function(n) { return !isNaN(n); });
+    if (ids.length === 0) return;
+    var totalGlobal = 0;
+    var collecteur = '';
+    ids.forEach(function(id) {
+        for (var i = 0; i < mesInscriptions.length; i++) {
+            if (mesInscriptions[i].id !== id) continue;
+            var insc = mesInscriptions[i];
+            var billet = billetsMap[insc.billet_id] || {};
+            if (!collecteur) collecteur = billet.Collecteur || '';
+            var prix = parseFloat(billet.Prix || 0);
+            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var m = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
+            var fdp = 0;
+            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+                var dest = (membrePays === 'France') ? 'france' : 'international';
+                fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), dest, (insc.mode_envoi || 'Normal').toLowerCase());
+            }
+            totalGlobal += m + fdp;
+            break;
+        }
+    });
+    pendingDeclarationIds = ids;
+    pendingDeclarationId = null;
+    var modal = document.getElementById('confirm-paiement-modal');
+    var msgEl = document.getElementById('confirm-paiement-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Confirmez-vous avoir payé <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong>'
+            + (collecteur ? ' à <strong>' + escapeHtml(collecteur) + '</strong>' : '')
+            + ' pour <strong>' + ids.length + ' inscriptions</strong> ?';
+    }
+    if (modal) modal.style.display = 'flex';
+}
 
 function declarerPaiement(inscriptionId) {
     // Trouver le billet associé pour afficher le montant
@@ -482,23 +576,30 @@ function declarerPaiement(inscriptionId) {
 function confirmerDeclarationPaiement() {
     var modal = document.getElementById('confirm-paiement-modal');
     if (modal) modal.style.display = 'none';
-    if (!pendingDeclarationId) return;
-    var inscriptionId = pendingDeclarationId;
-    pendingDeclarationId = null;
 
-    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+    var ids = [];
+    if (pendingDeclarationIds && pendingDeclarationIds.length > 0) {
+        ids = pendingDeclarationIds.slice();
+    } else if (pendingDeclarationId) {
+        ids = [pendingDeclarationId];
+    }
+    pendingDeclarationId = null;
+    pendingDeclarationIds = null;
+    if (ids.length === 0) return;
+
+    var query = ids.length === 1 ? 'id=eq.' + ids[0] : 'id=in.(' + ids.join(',') + ')';
+    supabaseFetch('/rest/v1/inscriptions?' + query, {
         method: 'PATCH',
         body: JSON.stringify({ statut_paiement: 'declare' })
     })
     .then(function() {
         for (var i = 0; i < mesInscriptions.length; i++) {
-            if (mesInscriptions[i].id === inscriptionId) {
+            if (ids.indexOf(mesInscriptions[i].id) !== -1) {
                 mesInscriptions[i].statut_paiement = 'declare';
-                break;
             }
         }
         renderInscriptions();
-        showToast('Paiement déclaré — le collecteur sera notifié');
+        showToast(ids.length > 1 ? (ids.length + ' paiements déclarés — le collecteur sera notifié') : 'Paiement déclaré — le collecteur sera notifié');
     })
     .catch(function(error) {
         console.error('Erreur déclaration paiement:', error);
@@ -510,6 +611,7 @@ function annulerDeclarationPaiement() {
     var modal = document.getElementById('confirm-paiement-modal');
     if (modal) modal.style.display = 'none';
     pendingDeclarationId = null;
+    pendingDeclarationIds = null;
 }
 
 // ============================================================
