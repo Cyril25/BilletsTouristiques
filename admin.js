@@ -1337,11 +1337,14 @@ function openBilletPanel(billetData, docId) {
         // Story 5.2 — Gel du collecteur + type de billet si des inscriptions existent
         var collecteurSelect = document.getElementById('field-collecteur');
         var collecteurValue = billetData.Collecteur || '';
+        var statutCourant = billetData.Categorie || '';
+        // En pré-collecte (ou avant), le collecteur reste modifiable même s'il existe des inscriptions
+        var collecteurGelable = (statutCourant === 'Collecte' || statutCourant === 'Terminé');
         if (docId) {
             hasInscriptions(docId).then(function(frozen) {
                 if (frozen) {
-                    // Gel du collecteur
-                    if (collecteurSelect && collecteurValue) {
+                    // Gel du collecteur (uniquement à partir de Collecte)
+                    if (collecteurGelable && collecteurSelect && collecteurValue) {
                         collecteurSelect.disabled = true;
                         collecteurSelect.classList.add('admin-field-frozen');
                         var hint = document.createElement('small');
