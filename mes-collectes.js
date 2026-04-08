@@ -1035,6 +1035,14 @@ function loadEnveloppes() {
                 .then(function(inscriptions) {
                     inscriptions = inscriptions || [];
 
+                    // Ignorer nb_variantes pour les billets sans variante
+                    var bMapEnv = {};
+                    mesBillets.forEach(function(b) { bMapEnv[b.id] = b; });
+                    inscriptions.forEach(function(ins) {
+                        var b = bMapEnv[ins.billet_id];
+                        if (b && (!b.HasVariante || b.HasVariante === 'N')) ins.nb_variantes = 0;
+                    });
+
                     // Créer les enveloppes manquantes pour les membres avec des inscriptions à répartir
                     var enveloppeEmails = enveloppes.map(function(e) { return e.membre_email; });
                     var membresaSansEnveloppe = [];
