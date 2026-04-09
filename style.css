@@ -3879,6 +3879,10 @@ body.login-page {
     align-items: center;
     gap: var(--spacing-sm);
 }
+.insc-collecteur-header:has(.insc-collecteur-recap) {
+    background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    border-left-width: 5px;
+}
 .insc-collecteur-recap {
     display: flex;
     flex-direction: column;
@@ -3893,11 +3897,9 @@ body.login-page {
 .insc-collecteur-recap-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
     align-items: center;
-}
-.insc-collecteur-recap .paypal-note-hint {
-    flex: 1 1 100%;
+    justify-content: flex-end;
 }
 
 .badge-paiement {

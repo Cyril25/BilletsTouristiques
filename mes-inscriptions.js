@@ -354,21 +354,23 @@ function renderInscriptions() {
 
         var btnPaye = '<button class="btn-jai-paye btn-jai-paye-groupe" onclick="declarerPaiementGroupe(\'' + ids.join(',') + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé (' + totalGlobal.toFixed(2) + '\u20AC)</button>';
 
-        var paypalHtml = '';
+        var paypalNoteHtml = '';
+        var paypalBtnHtml = '';
         if (paypalParts.length > 0 && (collecteurObj.paypal_me || collecteurObj.paypal_email)) {
             var note = paypalParts.join(', ') + ' = ' + totalPaypal.toFixed(2) + '\u20AC';
             var noteJs = note.replace(/'/g, "\\'");
             var paypalUrl = collecteurObj.paypal_me
                 ? 'https://paypal.me/' + encodeURIComponent(collecteurObj.paypal_me) + '/' + totalPaypal.toFixed(2)
                 : 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteurObj.paypal_email);
-            paypalHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note)
-                + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>'
-                + '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer ' + totalPaypal.toFixed(2) + '\u20AC via PayPal</a>';
+            paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note)
+                + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
+            paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer ' + totalPaypal.toFixed(2) + '\u20AC via PayPal</a>';
         }
 
         return '<div class="insc-collecteur-recap">'
             + '<div class="insc-collecteur-recap-total"><i class="fa-solid fa-coins"></i> Total dû : <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong> (' + inscList.length + ' inscriptions)</div>'
-            + '<div class="insc-collecteur-recap-actions">' + btnPaye + paypalHtml + '</div>'
+            + paypalNoteHtml
+            + '<div class="insc-collecteur-recap-actions">' + paypalBtnHtml + btnPaye + '</div>'
             + '</div>';
     }
 
