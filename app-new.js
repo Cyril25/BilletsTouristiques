@@ -181,7 +181,7 @@ function fetchData() {
         return;
     }
 
-    supabaseFetch('/rest/v1/billets?select=*&order=date_effective.desc.nullslast,Categorie.asc&limit=10000')
+    fetchAllPaginated('/rest/v1/billets?select=*&order=date_effective.desc.nullslast,Categorie.asc')
         .then(function(data) {
             console.log("Données Supabase reçues :", data.length);
             allData = data || [];
@@ -1375,6 +1375,26 @@ function handleDeepLinkBillet() {
 }
 
 // ============================================================
+// Helper : récupère toutes les lignes d'un endpoint PostgREST
+// en paginant (contourne la limite max-rows du serveur)
+// ============================================================
+function fetchAllPaginated(basePath, pageSize) {
+    pageSize = pageSize || 1000;
+    var sep = basePath.indexOf('?') === -1 ? '?' : '&';
+    var all = [];
+    function fetchPage(offset) {
+        return supabaseFetch(basePath + sep + 'limit=' + pageSize + '&offset=' + offset)
+            .then(function(rows) {
+                rows = rows || [];
+                all = all.concat(rows);
+                if (rows.length === pageSize) return fetchPage(offset + pageSize);
+                return all;
+            });
+    }
+    return fetchPage(0);
+}
+
+// ============================================================
 // STORY 12.4 — COLLECTES SUPPLÉMENTAIRES (CATALOGUE)
 // ============================================================
 
@@ -1382,7 +1402,7 @@ function loadCollectesByBillet() {
     // Charge TOUTES les collectes (y compris terminées) car le bloc mauve
     // porte désormais les infos prix/dates/collecteur/compteur, nécessaires
     // aussi pour les billets dont la collecte est terminée.
-    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin,prix,prix_variante,payer_fdp,fdp_com&limit=10000')
+    fetchAllPaginated('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin,prix,prix_variante,payer_fdp,fdp_com')
         .then(function(data) {
             collectesByBillet = {};
             (data || []).forEach(function(c) {
