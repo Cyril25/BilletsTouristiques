@@ -75,6 +75,9 @@ var billetsSort = 'date';
 // Préférence masquer les billets "pas intéressé"
 var masquerPasInteresse = false;
 
+// Map billet_id -> true pour les billets marqués "pas intéressé" (depuis table collection)
+var pasIntereseMap = {};
+
 // Catégories dans l'ordre d'affichage
 var BILLETS_CATEGORIES = [
     'Pré collecte',
@@ -148,6 +151,7 @@ if (typeof firebase !== 'undefined') {
             showCatalogueOnboarding();
             fetchData();
             loadMesInscriptions();
+            loadPasIntereseMap();
             loadCollectesByBillet();
             loadCollecteursForCatalogue();
             loadCompteursInscriptions();
@@ -543,7 +547,7 @@ function applyFilters(silent) {
         return txt && matchDate &&
             (!fPays.length || fPays.indexOf(item.Pays) !== -1) && (!fYear || item.Millesime == fYear) &&
             (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl) &&
-            (!masquerPasInteresse || !(getInscription(item.id, null) && getInscription(item.id, null).pas_interesse));
+            (!masquerPasInteresse || !isBilletPasInteresse(item.id));
     });
 
     renderBilletsStatusCounters(preFiltered);
@@ -674,7 +678,7 @@ function showMore() {
 
         } else {
             // RENDU MODE COLLECTE (par défaut)
-            var pasInteresse = getInscription(item.id, null) && getInscription(item.id, null).pas_interesse;
+            var pasInteresse = isBilletPasInteresse(item.id);
             html +=
                 '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleur + ';">' +
                 '<div class="header-container">' +
@@ -804,7 +808,7 @@ function showToast(message, type) {
 function loadMesInscriptions() {
     var email = window.getActiveEmail();
     if (!email) return;
-    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,pas_interesse,mode_paiement,mode_envoi')
+    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,mode_paiement,mode_envoi')
         .then(function(data) {
             mesInscriptions = {};
             (data || []).forEach(function(insc) {
@@ -816,6 +820,26 @@ function loadMesInscriptions() {
         .catch(function(error) {
             console.warn('Erreur chargement inscriptions:', error);
         });
+}
+
+function loadPasIntereseMap() {
+    var email = window.getActiveEmail();
+    if (!email) return;
+    supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.true&select=billet_id')
+        .then(function(data) {
+            pasIntereseMap = {};
+            (data || []).forEach(function(row) {
+                pasIntereseMap[row.billet_id] = true;
+            });
+            applyFilters(false);
+        })
+        .catch(function(error) {
+            console.warn('Erreur chargement pas_interesse:', error);
+        });
+}
+
+function isBilletPasInteresse(billetId) {
+    return !!pasIntereseMap[billetId];
 }
 
 function getInscription(billetId, collecteId) {
@@ -1040,9 +1064,15 @@ function buildInscriptionHtml(item) {
     var inscription = getInscription(item.id, null);
     var collecteOuverte = (item.Categorie === 'Pré collecte' || item.Categorie === 'Collecte') &&
         !item.DateFin;
+    var pasInteresse = isBilletPasInteresse(item.id);
 
     var html = '';
-    if (inscription && !inscription.pas_interesse) {
+    if (pasInteresse) {
+        html = '<div class="inscription-badges">'
+            + '<span class="badge-pas-interesse">Pas intéressé</span>'
+            + '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse">Annuler</button>'
+            + '</div>';
+    } else if (inscription) {
         // Inscrit — badges + contact collecteur
         var prixNormal = parseFloat(item.Prix || 0);
         var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
@@ -1094,12 +1124,6 @@ function buildInscriptionHtml(item) {
         if (contactEmail) {
             html += '<a href="mailto:' + escapeAttr(contactEmail) + '" class="btn-contacter-collecteur">Contacter le collecteur</a>';
         }
-    } else if (inscription && inscription.pas_interesse) {
-        // Pas intéressé
-        html = '<div class="inscription-badges">'
-            + '<span class="badge-pas-interesse">Pas intéressé</span>'
-            + '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse">Annuler</button>'
-            + '</div>';
     } else if (collecteOuverte) {
         // Non inscrit, collecte ouverte
         var isInscriptionSite = !item.LinkSheet && !item.Sondage;
@@ -1206,8 +1230,7 @@ function confirmerInscription(billetId) {
                 adresse_snapshot: adresse,
                 statut_paiement: 'non_paye',
                 envoye: false,
-                fdp_regles: false,
-                pas_interesse: false
+                fdp_regles: false
             };
             return supabaseFetch('/rest/v1/inscriptions', {
                 method: 'POST',
@@ -1249,24 +1272,23 @@ function creerEnveloppeSiAbsente(collecteurAlias, membreEmail) {
         });
 }
 
-// --- Marquage "Pas intéressé" ---
+// --- Marquage "Pas intéressé" (écrit dans collection, pas inscriptions) ---
 function marquerPasInteresse(billetId) {
     var email = window.getActiveEmail();
-    var billet = allData.find(function(b) { return b.id === billetId; });
-    var body = {
-        billet_id: billetId,
-        membre_email: email,
-        pas_interesse: true,
-        nb_normaux: 0,
-        nb_variantes: 0
-    };
-    supabaseFetch('/rest/v1/inscriptions', {
+    // Upsert dans collection : on-conflict sur (membre_email, billet_id)
+    supabaseFetch('/rest/v1/collection', {
         method: 'POST',
-        body: JSON.stringify(body)
+        headers: { 'Prefer': 'return=minimal,resolution=merge-duplicates' },
+        body: JSON.stringify({
+            billet_id: billetId,
+            membre_email: email,
+            pas_interesse: true
+        })
     })
     .then(function() {
+        pasIntereseMap[billetId] = true;
         showToast('Billet marqué "Pas intéressé"');
-        loadMesInscriptions();
+        applyFilters(false);
     })
     .catch(function(error) {
         console.error('Erreur marquage:', error);
@@ -1276,14 +1298,16 @@ function marquerPasInteresse(billetId) {
 
 // --- Annulation "Pas intéressé" ---
 function annulerPasInteresse(billetId) {
-    var inscription = getInscription(billetId, null);
-    if (!inscription) return;
-    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscription.id, {
-        method: 'DELETE'
+    var email = window.getActiveEmail();
+    supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ pas_interesse: false })
     })
     .then(function() {
+        delete pasIntereseMap[billetId];
         showToast('Marquage annulé');
-        loadMesInscriptions();
+        applyFilters(false);
     })
     .catch(function(error) {
         console.error('Erreur annulation:', error);
@@ -1437,8 +1461,14 @@ function buildCollectesSupplementairesHtml(item) {
 }
 
 function buildInscriptionHtmlForCollecte(item, collecte) {
+    if (isBilletPasInteresse(item.id)) {
+        return '<div class="inscription-badges">'
+            + '<span class="badge-pas-interesse">Pas intéressé</span>'
+            + '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse">Annuler</button>'
+            + '</div>';
+    }
     var inscription = getInscription(item.id, collecte.id);
-    if (inscription && !inscription.pas_interesse) {
+    if (inscription) {
         return '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit à cette collecte</span>'
             + badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, item.Categorie)
@@ -1454,6 +1484,7 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
         + '<button onclick="ouvrirInscriptionCollecte(' + item.id + ',\'' + escapeAttr(collecte.id) + '\')" class="btn-sinscrire">'
         + '<i class="fa-solid fa-pen-to-square"></i> S\'inscrire à ' + escapeHtml(collecte.nom || 'cette collecte')
         + '</button>'
+        + '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse">Pas intéressé</button>'
         + '</div>';
 }
 
@@ -1519,8 +1550,7 @@ function annulerInscriptionCollecte(collecteId) {
 }
 
 function confirmerInscriptionCollecte(billetId, collecteId) {
-    var existante = getInscription(billetId, collecteId);
-    if (existante && !existante.pas_interesse) {
+    if (getInscription(billetId, collecteId)) {
         showToast('Vous êtes déjà inscrit à cette collecte', 'error');
         return;
     }
@@ -1551,27 +1581,8 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
                 adresse_snapshot: adresse,
                 statut_paiement: 'non_paye',
                 envoye: false,
-                fdp_regles: false,
-                pas_interesse: false
+                fdp_regles: false
             };
-            if (existante && existante.pas_interesse) {
-                // Réactivation d'une inscription "pas intéressé" existante
-                return supabaseFetch('/rest/v1/inscriptions?id=eq.' + existante.id, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        nb_normaux: body.nb_normaux,
-                        nb_variantes: body.nb_variantes,
-                        mode_paiement: body.mode_paiement,
-                        mode_envoi: body.mode_envoi,
-                        commentaire: body.commentaire,
-                        adresse_snapshot: body.adresse_snapshot,
-                        statut_paiement: 'non_paye',
-                        envoye: false,
-                        fdp_regles: false,
-                        pas_interesse: false
-                    })
-                });
-            }
             return supabaseFetch('/rest/v1/inscriptions', {
                 method: 'POST',
                 body: JSON.stringify(body)
