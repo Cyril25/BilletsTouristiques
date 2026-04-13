@@ -1416,20 +1416,17 @@ function loadCollectesByBillet() {
     // Charge TOUTES les collectes (y compris terminées) car le bloc mauve
     // porte désormais les infos prix/dates/collecteur/compteur, nécessaires
     // aussi pour les billets dont la collecte est terminée.
-    fetchAllPaginated('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin,prix,prix_variante,payer_fdp,fdp_com')
+    fetchAllPaginated('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin,prix,prix_variante,payer_fdp,fdp_com,created_at&order=created_at.asc')
         .then(function(data) {
             collectesByBillet = {};
             (data || []).forEach(function(c) {
                 if (!collectesByBillet[c.billet_id]) collectesByBillet[c.billet_id] = [];
                 collectesByBillet[c.billet_id].push(c);
             });
-            // Tri : "Collecte principale" en premier, puis par date_pre croissante
+            // Tri : la collecte initiale (created_at le plus ancien) en premier
             Object.keys(collectesByBillet).forEach(function(bid) {
                 collectesByBillet[bid].sort(function(a, b) {
-                    var aPrin = (a.nom === 'Collecte principale') ? 0 : 1;
-                    var bPrin = (b.nom === 'Collecte principale') ? 0 : 1;
-                    if (aPrin !== bPrin) return aPrin - bPrin;
-                    return (a.date_pre || '').localeCompare(b.date_pre || '');
+                    return (a.created_at || '').localeCompare(b.created_at || '');
                 });
             });
         })
