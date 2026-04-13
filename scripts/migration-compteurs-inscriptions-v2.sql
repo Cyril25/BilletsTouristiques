@@ -3,6 +3,8 @@
 -- Évite la limite 1000 lignes de Supabase REST sur staging/prod
 -- =============================================================
 
+DROP FUNCTION IF EXISTS compteurs_inscriptions();
+
 CREATE OR REPLACE FUNCTION compteurs_inscriptions()
 RETURNS TABLE(
     billet_id INTEGER,
