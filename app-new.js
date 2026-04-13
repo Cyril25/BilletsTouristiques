@@ -1554,6 +1554,24 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
                 fdp_regles: false,
                 pas_interesse: false
             };
+            if (existante && existante.pas_interesse) {
+                // Réactivation d'une inscription "pas intéressé" existante
+                return supabaseFetch('/rest/v1/inscriptions?id=eq.' + existante.id, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        nb_normaux: body.nb_normaux,
+                        nb_variantes: body.nb_variantes,
+                        mode_paiement: body.mode_paiement,
+                        mode_envoi: body.mode_envoi,
+                        commentaire: body.commentaire,
+                        adresse_snapshot: body.adresse_snapshot,
+                        statut_paiement: 'non_paye',
+                        envoye: false,
+                        fdp_regles: false,
+                        pas_interesse: false
+                    })
+                });
+            }
             return supabaseFetch('/rest/v1/inscriptions', {
                 method: 'POST',
                 body: JSON.stringify(body)
