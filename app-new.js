@@ -1423,6 +1423,15 @@ function loadCollectesByBillet() {
                 if (!collectesByBillet[c.billet_id]) collectesByBillet[c.billet_id] = [];
                 collectesByBillet[c.billet_id].push(c);
             });
+            // Tri : "Collecte principale" en premier, puis par date_pre croissante
+            Object.keys(collectesByBillet).forEach(function(bid) {
+                collectesByBillet[bid].sort(function(a, b) {
+                    var aPrin = (a.nom === 'Collecte principale') ? 0 : 1;
+                    var bPrin = (b.nom === 'Collecte principale') ? 0 : 1;
+                    if (aPrin !== bPrin) return aPrin - bPrin;
+                    return (a.date_pre || '').localeCompare(b.date_pre || '');
+                });
+            });
         })
         .catch(function(error) {
             console.warn('Erreur chargement collectes supplémentaires:', error);
