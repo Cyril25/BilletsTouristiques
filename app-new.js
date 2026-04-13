@@ -1054,7 +1054,7 @@ function buildVersionBadgesHtml(item) {
         html += '<span class="version-badge version-badge--warning"><i class="fa-solid fa-triangle-exclamation"></i> Pas de version normale</span>';
     }
     if (varianteActive) {
-        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + escapeHtml(varianteVal) + '</span>';
+        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + escapeHtml(varianteLabel(varianteVal)) + '</span>';
     } else if (varianteVal === 'N') {
         html += '<span class="version-badge version-badge--no-variante">Pas de variante</span>';
     }
@@ -1437,10 +1437,11 @@ function buildCollectesSupplementairesHtml(item) {
             if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
         }
 
+        var varianteLong = varianteLabel(varianteVal);
         if (!versionNormaleExiste && varianteActive && prixVar) {
-            prixParts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + varianteVal);
+            prixParts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + varianteLong);
         } else if (versionNormaleExiste && varianteActive && prixNormal) {
-            prixParts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros version ' + varianteVal + fdpInfo);
+            prixParts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros version ' + varianteLong + fdpInfo);
         } else if (prixNormal) {
             prixParts.push('au prix de ' + prixNormal.toFixed(2) + ' euros' + fdpInfo);
         }

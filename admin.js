@@ -763,7 +763,7 @@ function renderAdminCards() {
                     var parts = [];
                     if (data.normaux > 0) parts.push(data.normaux + ' billet' + (data.normaux > 1 ? 's' : '') + ' normaux');
                     if (data.variantes > 0 && hasVarianteActive(billet.HasVariante)) {
-                        var varLabel = varianteLabelShort(billet.HasVariante);
+                        var varLabel = varianteLabel(billet.HasVariante);
                         parts.push(data.variantes + ' billet' + (data.variantes > 1 ? 's' : '') + ' ' + varLabel);
                     }
                     if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
@@ -786,12 +786,12 @@ function renderAdminCards() {
                         var parts = [];
                         if (cData.normaux > 0) parts.push(cData.normaux + ' billet' + (cData.normaux > 1 ? 's' : '') + ' normaux');
                         if (cData.variantes > 0 && hasVarianteActive(billet.HasVariante)) {
-                            var varLabel = varianteLabelShort(billet.HasVariante);
+                            var varLabel = varianteLabel(billet.HasVariante);
                             parts.push(cData.variantes + ' billet' + (cData.variantes > 1 ? 's' : '') + ' ' + varLabel);
                         }
                         if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
                     }
-                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ')" title="Collecte supplémentaire : ' + escapeAttr(c.nom) + '">' +
+                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ', \'' + escapeAttr(c.id) + '\')" title="Collecte supplémentaire : ' + escapeAttr(c.nom) + '">' +
                         '<i class="fa-solid ' + statusIcon + '"></i> ' + escapeHtml(c.nom) + ' : ' + cData.count + ' inscription' + (cData.count !== 1 ? 's' : '') + detail +
                         (isOpen ? '' : ' <em>(clôturée)</em>') +
                         '</button>';
@@ -2281,7 +2281,7 @@ function reconcilierTypeChangement(billetId, billet, typeChange) {
             } else if (typeChange.supprimeNormale || typeChange.supprimeVariante) {
                 showToast('Inscriptions mises à jour après changement de type', 'info');
                 loadAdminInscriptionCounts().then(function() {
-                    if (String(adminCurrentBilletId) === String(billetId)) openInscriptionsModal(adminCurrentBilletId);
+                    if (String(adminCurrentBilletId) === String(billetId)) openInscriptionsModal(adminCurrentBilletId, adminCurrentCollecteId);
                 });
             }
         })
@@ -2324,7 +2324,7 @@ function recalculerAutoInscriptions(billet) {
                         adminRecalculEnCoursBilletId = null;
                         showToast('Quantités recalculées d\'après les pré-inscriptions', 'info');
                         loadAdminInscriptionCounts().then(function() {
-                            if (String(adminCurrentBilletId) === String(billet.id)) openInscriptionsModal(adminCurrentBilletId);
+                            if (String(adminCurrentBilletId) === String(billet.id)) openInscriptionsModal(adminCurrentBilletId, adminCurrentCollecteId);
                         });
                     })
                     .catch(function(err) {
@@ -2435,7 +2435,7 @@ function updateCardInList(docId, billetData) {
             var iparts = [];
             if (idata.normaux > 0) iparts.push(idata.normaux + ' billet' + (idata.normaux > 1 ? 's' : '') + ' normaux');
             if (idata.variantes > 0 && hasVarianteActive(billetData.HasVariante)) {
-                var varLabel = varianteLabelShort(billetData.HasVariante);
+                var varLabel = varianteLabel(billetData.HasVariante);
                 iparts.push(idata.variantes + ' billet' + (idata.variantes > 1 ? 's' : '') + ' ' + varLabel);
             }
             if (iparts.length > 0) idetail = ' (' + iparts.join(', ') + ')';
@@ -3294,9 +3294,10 @@ if (inscOverlayEl) {
 
 var adminCurrentInscriptions = [];
 var adminCurrentBilletId = null;
+var adminCurrentCollecteId = null;
 var adminRecalculEnCoursBilletId = null; // billet dont le recalcul des inscriptions est en cours
 
-function openInscriptionsModal(billetId) {
+function openInscriptionsModal(billetId, collecteId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
 
@@ -3306,8 +3307,13 @@ function openInscriptionsModal(billetId) {
     if (!titleEl || !bodyEl || !overlayEl) return;
 
     adminCurrentBilletId = billetId;
+    adminCurrentCollecteId = collecteId || null;
+    var collecteObj = collecteId
+        ? (adminCollectesByBillet[billetId] || []).find(function(c) { return String(c.id) === String(collecteId); })
+        : null;
+    var titreSuffixe = collecteObj ? ' — ' + escapeHtml(collecteObj.nom || '') : '';
     titleEl.innerHTML =
-        '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
+        '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom') + titreSuffixe;
     overlayEl.style.display = '';
 
     // Si un recalcul est en cours pour ce billet, attendre qu'il finisse
@@ -3320,9 +3326,13 @@ function openInscriptionsModal(billetId) {
     bodyEl.innerHTML =
         '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
 
+    var inscQuery = '/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false';
+    if (collecteId) inscQuery += '&collecte_id=eq.' + encodeURIComponent(collecteId);
+    inscQuery += '&select=*&order=date_inscription.desc';
+
     // Charger les inscriptions et les membres en parallèle
     Promise.all([
-        supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.desc'),
+        supabaseFetch(inscQuery),
         chargerAdminMembres()
     ])
         .then(function(results) {
@@ -3341,6 +3351,7 @@ function closeInscriptionsModal() {
     var overlay = document.getElementById('inscriptions-modal-overlay');
     if (overlay) overlay.style.display = 'none';
     adminCurrentBilletId = null;
+    adminCurrentCollecteId = null;
     adminCurrentInscriptions = [];
 }
 
@@ -3650,7 +3661,7 @@ function submitAdminAddInscription() {
         // Recharger les compteurs depuis l'API (le cache stocke des objets, pas des nombres)
         loadAdminInscriptionCounts();
         // Recharger la liste des inscriptions dans la modale
-        openInscriptionsModal(adminCurrentBilletId);
+        openInscriptionsModal(adminCurrentBilletId, adminCurrentCollecteId);
     })
     .catch(function(error) {
         console.error('Erreur inscription:', error);
@@ -3688,7 +3699,7 @@ function submitAdminEditInscription(inscriptionId) {
     .then(function() {
         showToast('Inscription modifiée !', 'success');
         cancelAdminInscriptionForm();
-        openInscriptionsModal(adminCurrentBilletId);
+        openInscriptionsModal(adminCurrentBilletId, adminCurrentCollecteId);
     })
     .catch(function(error) {
         console.error('Erreur modification inscription:', error);
@@ -3706,7 +3717,7 @@ function confirmAdminDeleteInscription(inscriptionId) {
         showToast('Inscription supprimée', 'success');
         // Recharger les compteurs depuis l'API (le cache stocke des objets, pas des nombres)
         loadAdminInscriptionCounts();
-        openInscriptionsModal(adminCurrentBilletId);
+        openInscriptionsModal(adminCurrentBilletId, adminCurrentCollecteId);
     })
     .catch(function(error) {
         console.error('Erreur suppression inscription:', error);
