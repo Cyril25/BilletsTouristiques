@@ -1433,7 +1433,7 @@ function buildCollectesSupplementairesHtml(item) {
     var collectes = collectesByBillet[item.id] || [];
     if (collectes.length === 0) return '';
     var html = '';
-    collectes.forEach(function(c) {
+    collectes.forEach(function(c, idx) {
         // --- Prix / collecteur ---
         var prixParts = [];
         if (c.collecteur) prixParts.push('Par ' + escapeHtml(c.collecteur));
@@ -1488,10 +1488,11 @@ function buildCollectesSupplementairesHtml(item) {
             if (cParts.length > 0) compteurHtml = '<div class="collecte-supp-compteur">' + cParts.join(' + ') + '</div>';
         }
 
+        var headerHtml = idx === 0
+            ? ''
+            : '<div class="collecte-supp-header"><span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span></div>';
         html += '<div class="collecte-supplementaire-section" data-collecte-id="' + escapeAttr(c.id) + '">'
-            + '<div class="collecte-supp-header">'
-            + '<span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span>'
-            + '</div>'
+            + headerHtml
             + prixLine
             + '<div class="collecte-supp-details"><center>' + datesHtml + compteurHtml + '</center></div>'
             + buildInscriptionHtmlForCollecte(item, c)
