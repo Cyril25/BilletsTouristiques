@@ -21,10 +21,26 @@ if (typeof firebase === 'undefined') {
 }
 
 // ============================================================
-// 1b. CONFIGURATION SUPABASE
+// 1b. CONFIGURATION SUPABASE (dual-env : staging vs prod)
 // ============================================================
-var SUPABASE_URL = 'https://lhwcoybugdsggcclhtgb.supabase.co';
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
+// Whitelist stricte — seuls ces hostnames sont autorisés.
+// Évite qu'un sous-domaine contenant "staging" bascule accidentellement.
+var STAGING_HOSTNAMES = ['billetstouristiques.netlify.app'];
+var PROD_HOSTNAMES = ['samcyr.github.io'];
+var _host = window.location.hostname;
+var IS_STAGING = STAGING_HOSTNAMES.indexOf(_host) !== -1;
+var IS_PROD = PROD_HOSTNAMES.indexOf(_host) !== -1;
+var IS_LOCAL = (_host === 'localhost' || _host === '127.0.0.1');
+if (!IS_STAGING && !IS_PROD && !IS_LOCAL) {
+    console.warn('Hostname non whitelisté : ' + _host + ' — fallback prod');
+}
+
+var SUPABASE_URL = IS_STAGING
+    ? 'https://ijxajtxnhbczgiarkefo.supabase.co'
+    : 'https://lhwcoybugdsggcclhtgb.supabase.co';
+var SUPABASE_ANON_KEY = IS_STAGING
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqeGFqdHhuaGJjemdpYXJrZWZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjY0MTMsImV4cCI6MjA5MTY0MjQxM30.5t-P56E4QfJpDooveaYp6zEW1vqMsmnD3ejQ9ZhU8rg'
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
 
 // --- Impersonation globale (superadmin uniquement) ---
 window.impersonatedEmail = sessionStorage.getItem('impersonatedEmail') || '';
