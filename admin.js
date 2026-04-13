@@ -523,17 +523,15 @@ function loadAdminCollectes() {
                 if (adminBillets.length > 0) renderAdminCards();
                 return;
             }
-            var ids = collectes.map(function(c) { return c.id; });
-            return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + ids.join(',') + ')&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+            // Utilise la RPC agrégée côté SQL (évite la limite 1000 lignes)
+            return supabaseFetch('/rest/v1/rpc/compteurs_inscriptions_par_collecte')
                 .then(function(rows) {
                     (rows || []).forEach(function(row) {
-                        if (!adminCollecteInscriptionCounts[row.collecte_id]) {
-                            adminCollecteInscriptionCounts[row.collecte_id] = { count: 0, normaux: 0, variantes: 0 };
-                        }
-                        var c = adminCollecteInscriptionCounts[row.collecte_id];
-                        c.count++;
-                        c.normaux += (row.nb_normaux || 0);
-                        c.variantes += (row.nb_variantes || 0);
+                        adminCollecteInscriptionCounts[row.collecte_id] = {
+                            count: row.total_count || 0,
+                            normaux: row.total_normaux || 0,
+                            variantes: row.total_variantes || 0
+                        };
                     });
                     if (adminBillets.length > 0) renderAdminCards();
                 });
@@ -544,19 +542,18 @@ function loadAdminCollectes() {
 }
 
 function loadAdminInscriptionCounts() {
-    return supabaseFetch('/rest/v1/inscriptions?select=billet_id,nb_normaux,nb_variantes&pas_interesse=eq.false')
+    // Utilise la RPC compteurs_inscriptions (agrégation côté SQL)
+    // pour éviter la limite 1000 lignes de Supabase REST
+    return supabaseFetch('/rest/v1/rpc/compteurs_inscriptions')
         .then(function(data) {
             adminInscriptionCounts = {};
             (data || []).forEach(function(row) {
-                if (!adminInscriptionCounts[row.billet_id]) {
-                    adminInscriptionCounts[row.billet_id] = { count: 0, normaux: 0, variantes: 0 };
-                }
-                var c = adminInscriptionCounts[row.billet_id];
-                c.count++;
-                c.normaux += (row.nb_normaux || 0);
-                c.variantes += (row.nb_variantes || 0);
+                adminInscriptionCounts[row.billet_id] = {
+                    count: row.total_count || 0,
+                    normaux: row.total_normaux || 0,
+                    variantes: row.total_variantes || 0
+                };
             });
-            // Re-render si les billets sont déjà chargés
             if (adminBillets.length > 0) renderAdminCards();
         })
         .catch(function(error) {
