@@ -1973,8 +1973,39 @@ function saveBillet(billetData) {
             showToast('Billet ajoute avec succes', 'success');
             closeBilletPanel();
             loadAdminBillets();
-            // Epic 13 — hook auto-inscription retiré de saveBillet, relocalisé dans saveCollecte (B1)
-            // if (newBillet && newBillet.id) { creerAutoInscriptions(newBillet); }
+            // Epic 13 — création automatique de la collecte par défaut
+            if (newBillet && newBillet.id) {
+                var today = new Date().toISOString().slice(0, 10);
+                var scope = 'normal';
+                if (newBillet.HasVariante === 'A' || newBillet.HasVariante === 'D') scope = 'les_deux';
+                var collecteData = {
+                    billet_id: newBillet.id,
+                    nom: 'Collecte principale',
+                    scope: scope,
+                    collecteur: newBillet.Collecteur || null,
+                    date_pre: today,
+                    date_coll: null,
+                    date_fin: null,
+                    categorie: newBillet.Categorie || 'Pré collecte',
+                    prix: newBillet.Prix || null,
+                    prix_variante: newBillet.PrixVariante || null,
+                    payer_fdp: '',
+                    fdp_com: ''
+                };
+                supabaseFetch('/rest/v1/collectes', {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=representation' },
+                    body: JSON.stringify(collecteData)
+                }).then(function(cData) {
+                    var newCollecte = Array.isArray(cData) ? cData[0] : cData;
+                    if (newCollecte && newCollecte.id) {
+                        creerAutoInscriptions(newCollecte);
+                    }
+                    loadAdminCollectes();
+                }).catch(function(err) {
+                    console.error('Erreur création collecte par défaut:', err);
+                });
+            }
         })
         .catch(function(error) {
             showToast('Erreur lors de l\'ajout : ' + error.message, 'error');
