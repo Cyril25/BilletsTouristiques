@@ -26,7 +26,7 @@ if (typeof firebase === 'undefined') {
 // Whitelist stricte — seuls ces hostnames sont autorisés.
 // Évite qu'un sous-domaine contenant "staging" bascule accidentellement.
 var STAGING_HOSTNAMES = ['billetstouristiques.netlify.app'];
-var PROD_HOSTNAMES = ['samcyr.github.io'];
+var PROD_HOSTNAMES = ['cyril25.github.io'];
 var _host = window.location.hostname;
 var IS_STAGING = STAGING_HOSTNAMES.indexOf(_host) !== -1;
 var IS_PROD = PROD_HOSTNAMES.indexOf(_host) !== -1;
