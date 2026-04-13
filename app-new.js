@@ -704,6 +704,7 @@ function showMore() {
                     ? '<div style="margin-top:15px;">Commentaire : ' + escapeHtml(item.Commentaire) + '</div>'
                     : '') +
                 '</div>' +
+                buildCollectesSupplementairesHtml(item) +
                 '<div class="more action-icons">' +
                 (function() {
                     // Masquer les liens Google pour les collectes terminées et les billets non actifs
@@ -722,9 +723,11 @@ function showMore() {
                 (imgUrl
                     ? '<a href="' + escapeAttr(billetPageUrl) + '" class="icon-btn ico-dl" title="Voir la fiche du billet"><i class="fa-solid fa-image"></i></a>'
                     : '') +
+                (pasInteresse
+                    ? '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse" title="Annuler le marquage"><i class="fa-solid fa-rotate-left"></i> Pas intéressé</button>'
+                    : '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse" title="Marquer comme pas intéressé"><i class="fa-regular fa-thumbs-down"></i> Pas intéressé</button>') +
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
-                buildCollectesSupplementairesHtml(item) +
                 '</div>';
         }
     });
@@ -1461,12 +1464,6 @@ function buildCollectesSupplementairesHtml(item) {
 }
 
 function buildInscriptionHtmlForCollecte(item, collecte) {
-    if (isBilletPasInteresse(item.id)) {
-        return '<div class="inscription-badges">'
-            + '<span class="badge-pas-interesse">Pas intéressé</span>'
-            + '<button onclick="annulerPasInteresse(' + item.id + ')" class="btn-annuler-pas-interesse">Annuler</button>'
-            + '</div>';
-    }
     var inscription = getInscription(item.id, collecte.id);
     if (inscription) {
         return '<div class="inscription-badges">'
@@ -1484,7 +1481,6 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
         + '<button onclick="ouvrirInscriptionCollecte(' + item.id + ',\'' + escapeAttr(collecte.id) + '\')" class="btn-sinscrire">'
         + '<i class="fa-solid fa-pen-to-square"></i> S\'inscrire à ' + escapeHtml(collecte.nom || 'cette collecte')
         + '</button>'
-        + '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse">Pas intéressé</button>'
         + '</div>';
 }
 
