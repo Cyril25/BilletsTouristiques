@@ -674,7 +674,6 @@ function showMore() {
 
         } else {
             // RENDU MODE COLLECTE (par défaut)
-            var inscriptionHtml = buildInscriptionHtml(item);
             var pasInteresse = getInscription(item.id, null) && getInscription(item.id, null).pas_interesse;
             html +=
                 '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleur + ';">' +
@@ -697,54 +696,9 @@ function showMore() {
                 escapeHtml(item.NomBillet || '') +
                 '</div>' +
                 buildVersionBadgesHtml(item) +
-                (function() {
-                    var parts = [];
-                    if (item.Collecteur) parts.push('Par ' + escapeHtml(item.Collecteur));
-
-                    var versionNormaleExiste = item.VersionNormaleExiste !== false;
-                    var varianteVal = item.HasVariante || '';
-                    var varianteActive = varianteVal && varianteVal !== 'N';
-
-                    var prixNormal = item.Prix ? parseFloat(item.Prix) : 0;
-                    var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
-
-                    // Calcul FDP si demandé
-                    var fdpInfo = '';
-                    if (item.PayerFDP === 'oui' && membrePaysCatalogue) {
-                        var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
-                        var fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
-                        if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
-                    }
-
-                    if (!versionNormaleExiste && varianteActive && prixVar) {
-                        // Uniquement variante
-                        parts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + varianteVal);
-                    } else if (versionNormaleExiste && varianteActive && prixNormal) {
-                        // Normale + variante
-                        parts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros version ' + varianteVal + fdpInfo);
-                    } else if (prixNormal) {
-                        // Normale seule
-                        parts.push('au prix de ' + prixNormal.toFixed(2) + ' euros' + fdpInfo);
-                    }
-
-                    if (parts.length === 0) return '';
-                    return '<div>' + parts.join(' ') + ' ' + escapeHtml(item.FDP_Com || '') + '</div>';
-                })() +
                 '<div style="margin-top:15px;">' +
                 'Commentaire : ' + escapeHtml(item.Commentaire || '') +
                 '</div>' +
-                '</div>' +
-                '<div class="more">' +
-                '<center>' +
-                '<table class="dates">' +
-                '<tr><td>Pré Collecte :</td><td><b>' + escapeHtml(item.DatePre || '') + '</b></td></tr>' +
-                '<tr><td>Collecte :</td><td><b>' + escapeHtml(item.DateColl || '') + '</b></td></tr>' +
-                '<tr><td>Terminé :</td><td><b>' + escapeHtml(item.DateFin || '') + '</b></td></tr>' +
-                '</table>' +
-                '</center>' +
-                '</div>' +
-                '<div class="more">' +
-                '<center>' + getCompteurBT(item) + '</center>' +
                 '</div>' +
                 '<div class="more action-icons">' +
                 (function() {
@@ -766,7 +720,6 @@ function showMore() {
                     : '') +
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
-                inscriptionHtml +
                 buildCollectesSupplementairesHtml(item) +
                 '</div>';
         }
@@ -1418,11 +1371,65 @@ function buildCollectesSupplementairesHtml(item) {
     if (collectes.length === 0) return '';
     var html = '';
     collectes.forEach(function(c) {
+        // --- Prix / collecteur ---
+        var prixParts = [];
+        if (c.collecteur) prixParts.push('Par ' + escapeHtml(c.collecteur));
+
+        var versionNormaleExiste = item.VersionNormaleExiste !== false;
+        var varianteVal = item.HasVariante || '';
+        var varianteActive = varianteVal && varianteVal !== 'N';
+        var prixNormal = c.prix ? parseFloat(c.prix) : 0;
+        var prixVar = (c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '') ? parseFloat(c.prix_variante) : prixNormal;
+
+        var fdpInfo = '';
+        if (c.payer_fdp === 'oui' && membrePaysCatalogue) {
+            var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
+            var fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
+            if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
+        }
+
+        if (!versionNormaleExiste && varianteActive && prixVar) {
+            prixParts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + varianteVal);
+        } else if (versionNormaleExiste && varianteActive && prixNormal) {
+            prixParts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros version ' + varianteVal + fdpInfo);
+        } else if (prixNormal) {
+            prixParts.push('au prix de ' + prixNormal.toFixed(2) + ' euros' + fdpInfo);
+        }
+
+        var prixLine = prixParts.length > 0
+            ? '<div class="collecte-supp-prix">' + prixParts.join(' ') + ' ' + escapeHtml(c.fdp_com || '') + '</div>'
+            : '';
+
+        // --- Dates (yyyy-mm-dd → dd/mm/yyyy) ---
+        function fmtDate(d) {
+            if (!d) return '';
+            var p = d.split('-');
+            return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+        }
+        var datesHtml = '<table class="dates collecte-dates">'
+            + '<tr><td>Pré Collecte :</td><td><b>' + escapeHtml(fmtDate(c.date_pre)) + '</b></td></tr>'
+            + '<tr><td>Collecte :</td><td><b>' + escapeHtml(fmtDate(c.date_coll)) + '</b></td></tr>'
+            + '<tr><td>Terminé :</td><td><b>' + escapeHtml(fmtDate(c.date_fin)) + '</b></td></tr>'
+            + '</table>';
+
+        // --- Compteur billets ---
+        var compteurHtml = '';
+        var compteur = compteurInscriptionsMap[item.id];
+        if (compteur) {
+            var cParts = [];
+            if (compteur.normaux > 0) cParts.push(compteur.normaux + ' billet' + (compteur.normaux > 1 ? 's' : ''));
+            if (compteur.variantes > 0 && hasVarianteActive(item.HasVariante)) {
+                cParts.push(compteur.variantes + ' billet' + (compteur.variantes > 1 ? 's' : '') + ' ' + varianteLabelShort(item.HasVariante));
+            }
+            if (cParts.length > 0) compteurHtml = '<div class="collecte-supp-compteur">' + cParts.join(' + ') + '</div>';
+        }
+
         html += '<div class="collecte-supplementaire-section" data-collecte-id="' + escapeAttr(c.id) + '">'
             + '<div class="collecte-supp-header">'
             + '<span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span>'
-            + '<span class="collecte-supp-collecteur">Collecteur : ' + escapeHtml(c.collecteur || '—') + '</span>'
             + '</div>'
+            + prixLine
+            + '<div class="collecte-supp-details"><center>' + datesHtml + compteurHtml + '</center></div>'
             + buildInscriptionHtmlForCollecte(item, c)
             + '</div>';
     });
