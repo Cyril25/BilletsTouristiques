@@ -1490,9 +1490,7 @@ function prefillForm(data) {
         'field-categorie': 'Categorie',
         'field-theme': 'Theme',
         'field-collecteur': 'Collecteur',
-        'field-prix': 'Prix',
-        'field-prix-variante': 'PrixVariante',
-        'field-fdp-com': 'FDP_Com',
+        // Epic 13 : Prix/FDP gérés dans le formulaire collecte
         'field-date-pre': 'DatePre',
         'field-date-coll': 'DateColl',
         'field-date-fin': 'DateFin',

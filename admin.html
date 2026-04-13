@@ -234,33 +234,7 @@
                         <span class="admin-form-error" id="error-collecteur"></span>
                     </div>
 
-                    <div class="admin-form-group">
-                        <label for="field-prix">Prix</label>
-                        <input type="number" id="field-prix" name="Prix" step="0.01" min="0" placeholder="2.00">
-                        <span class="admin-form-error" id="error-prix"></span>
-                    </div>
-
-                    <div class="admin-form-group" id="group-prix-variante" style="display:none;">
-                        <label for="field-prix-variante">Prix variante (€)</label>
-                        <input type="number" id="field-prix-variante" name="PrixVariante" step="0.01" min="0" placeholder="Laisser vide = même prix">
-                        <span class="admin-form-error" id="error-prix-variante"></span>
-                    </div>
-
-                    <small id="prix-precollecte-msg" class="field-hint-warning" style="display:none;">
-                        Le prix ne peut être défini qu'à partir du statut Collecte
-                    </small>
-
-                    <div class="admin-form-group admin-form-group-checkbox">
-                        <label for="field-payer-fdp">
-                            <input type="checkbox" id="field-payer-fdp" name="PayerFDP">
-                            Payer les frais de port
-                        </label>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label for="field-fdp-com">FDP commentaire</label>
-                        <input type="text" id="field-fdp-com" name="FDP_Com" autocomplete="off">
-                    </div>
+                    <!-- Epic 13 : Prix/FDP gérés dans le formulaire collecte -->
                 </fieldset>
 
                 <!-- Section 7 : Liens -->
