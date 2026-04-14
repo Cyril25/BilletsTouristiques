@@ -1002,10 +1002,15 @@ function showTab(tabName) {
     }
 }
 
-function countBillets(inscs) {
+function countBillets(inscs, billetsMap) {
     var total = 0;
     for (var i = 0; i < inscs.length; i++) {
-        total += (inscs[i].nb_normaux || 0) + (inscs[i].nb_variantes || 0);
+        var ins = inscs[i];
+        var b = billetsMap ? billetsMap[ins.billet_id] : null;
+        var vne = !b || b.VersionNormaleExiste !== false;
+        var hasVar = b && b.HasVariante && b.HasVariante !== 'N';
+        if (vne) total += (ins.nb_normaux || 0);
+        if (hasVar) total += (ins.nb_variantes || 0);
     }
     return total;
 }
@@ -1170,8 +1175,8 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             var membreInscs = inscByMembre[env.membre_email] || [];
             var dansEnveloppe = membreInscs.filter(function(i) { return i.statut_livraison === 'pret_a_envoyer' && i.enveloppe_id === env.id; });
             var aRepartir = membreInscs.filter(function(i) { return i.statut_livraison === 'non_reparti' || i.statut_livraison === null; });
-            var totalBillets = countBillets(dansEnveloppe);
-            var totalARepartir = countBillets(aRepartir);
+            var totalBillets = countBillets(dansEnveloppe, billetsMap);
+            var totalARepartir = countBillets(aRepartir, billetsMap);
 
             // Masquer les enveloppes vides (0 dans l'enveloppe et 0 à répartir)
             if (totalBillets === 0 && totalARepartir === 0) continue;
@@ -1305,7 +1310,7 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     html += '</div>';
 
     // Liste des billets dans l'enveloppe
-    var nbBilletsHist = countBillets(inscriptions);
+    var nbBilletsHist = countBillets(inscriptions, billetsMap);
     html += '<div class="enveloppe-section">';
     html += '<h3><i class="fa-solid fa-box"></i> Contenu de l\'enveloppe (' + nbBilletsHist + ' billet(s))</h3>';
     if (inscriptions.length === 0) {
@@ -1591,7 +1596,7 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
     html += '</div>';
 
     // Section : Dans l'enveloppe (prêts à envoyer)
-    var nbBilletsDansEnv = countBillets(dansEnveloppe);
+    var nbBilletsDansEnv = countBillets(dansEnveloppe, billetsMap);
     html += '<div class="enveloppe-section">';
     html += '<h3><i class="fa-solid fa-box"></i> Dans l\'enveloppe (' + nbBilletsDansEnv + ')</h3>';
     if (dansEnveloppe.length === 0) {
@@ -1614,7 +1619,7 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
 
     // Section : À répartir (non répartis)
     if (aRepartir.length > 0) {
-        var nbBilletsARepartir = countBillets(aRepartir);
+        var nbBilletsARepartir = countBillets(aRepartir, billetsMap);
         html += '<div class="enveloppe-section">';
         html += '<h3><i class="fa-solid fa-inbox"></i> À répartir (' + nbBilletsARepartir + ')</h3>';
         for (var r = 0; r < aRepartir.length; r++) {
