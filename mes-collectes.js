@@ -102,7 +102,7 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,statut_paiement,envoye');
+            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,statut_paiement,envoye,nb_normaux,nb_variantes');
         })
         .then(function(inscriptions) {
             mesInscriptionsParBillet = {};
@@ -110,11 +110,23 @@ function loadMesCollectes() {
                 for (var i = 0; i < inscriptions.length; i++) {
                     var ins = inscriptions[i];
                     if (!mesInscriptionsParBillet[ins.billet_id]) {
-                        mesInscriptionsParBillet[ins.billet_id] = { total: 0, confirmes: 0, envoyes: 0 };
+                        mesInscriptionsParBillet[ins.billet_id] = {
+                            total: 0, confirmes: 0,
+                            billetsTotal: { normaux: 0, variantes: 0 },
+                            billetsEnvoyes: { normaux: 0, variantes: 0 }
+                        };
                     }
-                    mesInscriptionsParBillet[ins.billet_id].total++;
-                    if (ins.statut_paiement === 'confirme') mesInscriptionsParBillet[ins.billet_id].confirmes++;
-                    if (ins.envoye) mesInscriptionsParBillet[ins.billet_id].envoyes++;
+                    var st = mesInscriptionsParBillet[ins.billet_id];
+                    st.total++;
+                    if (ins.statut_paiement === 'confirme') st.confirmes++;
+                    var nn = ins.nb_normaux || 0;
+                    var nv = ins.nb_variantes || 0;
+                    st.billetsTotal.normaux += nn;
+                    st.billetsTotal.variantes += nv;
+                    if (ins.envoye) {
+                        st.billetsEnvoyes.normaux += nn;
+                        st.billetsEnvoyes.variantes += nv;
+                    }
                 }
             }
             loadMesCollectesSupplementaires();
@@ -248,13 +260,13 @@ function renderCollectesList() {
         }
         if (b.DateColl) h += '<span><i class="fa-solid fa-calendar"></i> ' + b.DateColl + '</span>';
         h += '</div>';
-        var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, envoyes: 0 };
+        var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, billetsTotal: { normaux: 0, variantes: 0 }, billetsEnvoyes: { normaux: 0, variantes: 0 } };
         if (stats.total > 0) {
             var allConfirmes = stats.confirmes === stats.total;
-            var allEnvoyes = stats.envoyes === stats.total;
+            var envInfo = formatEnvoyesBillets(stats, bVne, bVarActive);
             h += '<div class="collecte-card-indicators">';
             h += '<span class="indicator ' + (allConfirmes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allConfirmes ? 'check-circle' : 'clock') + '"></i> ' + stats.confirmes + '/' + stats.total + ' payés</span>';
-            h += '<span class="indicator ' + (allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + stats.envoyes + '/' + stats.total + ' envoyés</span>';
+            h += '<span class="indicator ' + (envInfo.allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (envInfo.allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + envInfo.text + '</span>';
             h += '</div>';
         } else {
             h += '<div class="collecte-card-indicators"><span class="indicator indicator-none">Aucun inscrit</span></div>';
@@ -1000,6 +1012,27 @@ function showTab(tabName) {
         if (collectesView) collectesView.style.display = '';
         if (tabs[0]) tabs[0].classList.add('active');
     }
+}
+
+// Compteur "envoyés" en nombre de billets (pas inscriptions).
+// Respecte la version collectée : affiche split si les deux existent.
+function formatEnvoyesBillets(stats, wantNormaux, wantVariantes) {
+    var e = stats.billetsEnvoyes || { normaux: 0, variantes: 0 };
+    var t = stats.billetsTotal || { normaux: 0, variantes: 0 };
+    var parts = [];
+    var totE = 0, totT = 0;
+    if (wantNormaux) { parts.push({ e: e.normaux, t: t.normaux }); totE += e.normaux; totT += t.normaux; }
+    if (wantVariantes) { parts.push({ e: e.variantes, t: t.variantes }); totE += e.variantes; totT += t.variantes; }
+    var allEnvoyes = totT > 0 && totE === totT;
+    var text;
+    if (parts.length === 2) {
+        text = 'N: ' + parts[0].e + '/' + parts[0].t + ' — V: ' + parts[1].e + '/' + parts[1].t + ' envoyés';
+    } else if (parts.length === 1) {
+        text = parts[0].e + '/' + parts[0].t + ' envoyés';
+    } else {
+        text = totE + '/' + totT + ' envoyés';
+    }
+    return { text: text, allEnvoyes: allEnvoyes, totT: totT };
 }
 
 function countBillets(inscs, billetsMap) {
@@ -3543,16 +3576,28 @@ function loadMesCollectesSupplementaires() {
                     var billetsMap = {};
                     (billets || []).forEach(function(b) { billetsMap[b.id] = b; });
                     var collecteIds = collectes.map(function(c) { return c.id; });
-                    return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + collecteIds.join(',') + ')&pas_interesse=eq.false&select=collecte_id,statut_paiement,envoye')
+                    return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + collecteIds.join(',') + ')&pas_interesse=eq.false&select=collecte_id,statut_paiement,envoye,nb_normaux,nb_variantes')
                         .then(function(inscriptions) {
                             mesInscriptionsParCollecte = {};
                             (inscriptions || []).forEach(function(ins) {
                                 if (!mesInscriptionsParCollecte[ins.collecte_id]) {
-                                    mesInscriptionsParCollecte[ins.collecte_id] = { total: 0, confirmes: 0, envoyes: 0 };
+                                    mesInscriptionsParCollecte[ins.collecte_id] = {
+                                        total: 0, confirmes: 0,
+                                        billetsTotal: { normaux: 0, variantes: 0 },
+                                        billetsEnvoyes: { normaux: 0, variantes: 0 }
+                                    };
                                 }
-                                mesInscriptionsParCollecte[ins.collecte_id].total++;
-                                if (ins.statut_paiement === 'confirme') mesInscriptionsParCollecte[ins.collecte_id].confirmes++;
-                                if (ins.envoye) mesInscriptionsParCollecte[ins.collecte_id].envoyes++;
+                                var stC = mesInscriptionsParCollecte[ins.collecte_id];
+                                stC.total++;
+                                if (ins.statut_paiement === 'confirme') stC.confirmes++;
+                                var nnC = ins.nb_normaux || 0;
+                                var nvC = ins.nb_variantes || 0;
+                                stC.billetsTotal.normaux += nnC;
+                                stC.billetsTotal.variantes += nvC;
+                                if (ins.envoye) {
+                                    stC.billetsEnvoyes.normaux += nnC;
+                                    stC.billetsEnvoyes.variantes += nvC;
+                                }
                             });
                             mesCollectesSupp = collectes.map(function(c) {
                                 return { collecte: c, billet: billetsMap[c.billet_id] || null };
@@ -3575,7 +3620,7 @@ function renderCollecteSupplementaireCard(collecte, billet) {
     var isOpen = !collecte.date_fin || collecte.date_fin > today;
     var statusClass = isOpen ? 'collecte-status-open' : 'collecte-status-closed';
     var statusLabel = isOpen ? 'En cours' : 'Terminée';
-    var stats = mesInscriptionsParCollecte[collecte.id] || { total: 0, confirmes: 0, envoyes: 0 };
+    var stats = mesInscriptionsParCollecte[collecte.id] || { total: 0, confirmes: 0, billetsTotal: { normaux: 0, variantes: 0 }, billetsEnvoyes: { normaux: 0, variantes: 0 } };
 
     var html = '<div class="collecte-card" onclick="openCollecteDetailSupp(\'' + escapeAttrMC(collecte.id) + '\')">';
     html += '<div class="collecte-card-header">';
@@ -3596,10 +3641,13 @@ function renderCollecteSupplementaireCard(collecte, billet) {
     html += '</div>';
     if (stats.total > 0) {
         var allConfirmes = stats.confirmes === stats.total;
-        var allEnvoyes = stats.envoyes === stats.total;
+        var wantN = billet.VersionNormaleExiste !== false;
+        var wantV = billet.HasVariante && billet.HasVariante !== 'N';
+        if (!wantN && !wantV) { wantN = true; }
+        var envInfoC = formatEnvoyesBillets(stats, wantN, wantV);
         html += '<div class="collecte-card-indicators">';
         html += '<span class="indicator ' + (allConfirmes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allConfirmes ? 'check-circle' : 'clock') + '"></i> ' + stats.confirmes + '/' + stats.total + ' payés</span>';
-        html += '<span class="indicator ' + (allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + stats.envoyes + '/' + stats.total + ' envoyés</span>';
+        html += '<span class="indicator ' + (envInfoC.allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (envInfoC.allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + envInfoC.text + '</span>';
         html += '</div>';
     } else {
         html += '<div class="collecte-card-indicators"><span class="indicator indicator-none">Aucun inscrit</span></div>';
