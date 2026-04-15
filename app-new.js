@@ -751,10 +751,12 @@ function showMore() {
                     // Masquer les liens Google pour les collectes terminées et les billets non actifs
                     var cat = item.Categorie || '';
                     var hideGoogle = (cat === 'Terminé' || cat === 'Non defini' || cat === 'Jamais édité, projet' || cat === 'Pas de collecte');
+                    var currentEmail = (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+                    var canSeeLegacySheet = (currentEmail.toLowerCase() === 'emhe@sfr.fr');
                     return ((!hideGoogle && sanitizeUrl(item.Sondage))
                         ? '<a href="' + escapeAttr(sanitizeUrl(item.Sondage)) + '" target="_blank" class="icon-btn ico-form" title="Répondre au sondage"><i class="fa-solid fa-clipboard-question"></i></a>'
                         : '') +
-                    ((!hideGoogle && sanitizeUrl(item.LinkSheet))
+                    ((canSeeLegacySheet && sanitizeUrl(item.LinkSheet))
                         ? '<a href="' + escapeAttr(sanitizeUrl(item.LinkSheet)) + '" target="_blank" class="icon-btn ico-sheet" title="Voir le fichier Excel"><i class="fa-solid fa-file-csv"></i></a>'
                         : '');
                 })() +
