@@ -235,9 +235,9 @@
                     </div>
                 </fieldset>
 
-                <!-- Section 9 : Collectes supplémentaires (Story 12.3) -->
+                <!-- Section 9 : Collectes -->
                 <div id="admin-collectes-supplementaires" style="display:none" class="admin-collectes-section">
-                    <h4 class="admin-collectes-title">Collectes supplémentaires</h4>
+                    <h4 class="admin-collectes-title">Collectes</h4>
                     <div id="collectes-list"></div>
                     <div id="collecte-add-form" class="collecte-add-form">
                         <div class="admin-form-group">
@@ -254,6 +254,15 @@
                                 <option value="les_deux">Les deux</option>
                             </select>
                             <span class="admin-form-error" id="error-collecte-scope"></span>
+                        </div>
+                        <div class="admin-form-group">
+                            <label for="field-collecte-categorie">Catégorie *</label>
+                            <select id="field-collecte-categorie" class="admin-form-select">
+                                <option value="Pré collecte">Pré collecte</option>
+                                <option value="Collecte">Collecte</option>
+                                <option value="Terminé">Terminé</option>
+                            </select>
+                            <span class="admin-form-error" id="error-collecte-categorie"></span>
                         </div>
                         <div class="admin-form-group">
                             <label for="field-collecte-collecteur">Collecteur</label>
@@ -292,6 +301,9 @@
                         </div>
                         <button type="button" id="btn-add-collecte" class="btn-admin-secondary">
                             <i class="fa-solid fa-plus"></i> Ajouter cette collecte
+                        </button>
+                        <button type="button" id="btn-cancel-edit-collecte" class="btn-admin-secondary" style="display:none; margin-left:8px;">
+                            Annuler
                         </button>
                     </div>
                 </div>

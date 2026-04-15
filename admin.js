@@ -715,15 +715,30 @@ function renderAdminCards() {
         html += '<div class="admin-card-billet" data-doc-id="' + docId + '">' +
             '<div class="admin-card-header">' +
                 '<h3 class="admin-card-title">' + escapeHtml(nom) + ' <span style="font-size:10px; color:#ccc; font-weight:normal;">(n\u00b0' + docId + ')</span></h3>' +
-                '<div class="card-badge-wrapper">' +
-                    '<span class="admin-badge-status clickable" ' +
-                        'data-doc-id="' + docId + '" ' +
-                        'data-current-status="' + escapeAttr(statut) + '" ' +
-                        'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
-                        escapeHtml(statusLabel) +
-                    '</span>' +
-                    // Epic 13 : chips retirées — statut dérivé des collectes
-                '</div>' +
+                (function() {
+                    var collectes = adminCollectesByBillet[docId] || [];
+                    if (collectes.length === 0) {
+                        // Aucune collecte : fallback sur le statut manuel du billet
+                        return '<div class="card-badge-wrapper">' +
+                            '<span class="admin-badge-status clickable" ' +
+                                'data-doc-id="' + docId + '" ' +
+                                'data-current-status="' + escapeAttr(statut) + '" ' +
+                                'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
+                                escapeHtml(statusLabel) +
+                            '</span>' +
+                        '</div>';
+                    }
+                    var chips = collectes.map(function(c) {
+                        var cat = c.categorie || 'Non défini';
+                        var color = getStatusColor(cat);
+                        return '<span class="admin-badge-status" ' +
+                            'title="' + escapeAttr(c.nom || '') + '" ' +
+                            'style="background-color: ' + color + '; color: ' + getTextColorForBg(color) + ';">' +
+                            escapeHtml(cat) +
+                        '</span>';
+                    }).join('');
+                    return '<div class="card-badge-wrapper">' + chips + '</div>';
+                })() +
             '</div>' +
             '<div class="admin-card-meta">' +
                 '<span>' + escapeHtml(billet.Ville || '') + '</span>' +
@@ -786,7 +801,7 @@ function renderAdminCards() {
                         }
                         if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
                     }
-                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ', \'' + escapeAttr(c.id) + '\')" title="Collecte supplémentaire : ' + escapeAttr(c.nom) + '">' +
+                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ', \'' + escapeAttr(c.id) + '\')" title="Collecte : ' + escapeAttr(c.nom) + '">' +
                         '<i class="fa-solid ' + statusIcon + '"></i> ' + escapeHtml(c.nom) + ' : ' + cData.count + ' inscription' + (cData.count !== 1 ? 's' : '') + detail +
                         (isOpen ? '' : ' <em>(clôturée)</em>') +
                         '</button>';
@@ -1128,14 +1143,21 @@ function initPanel() {
         }
     });
 
-    // Story 12.3 — Délégation sur la liste des collectes (clôture)
+    // Délégation sur la liste des collectes (édition / clôture / suppression)
     var collectesList = document.getElementById('collectes-list');
     if (collectesList) {
         collectesList.addEventListener('click', function(e) {
-            var btn = e.target.closest('.btn-cloturer-collecte');
-            if (!btn) return;
-            cloturerCollecte(btn.dataset.collecteId, btn.dataset.billetId);
+            var btnEdit = e.target.closest('.btn-edit-collecte');
+            if (btnEdit) { startEditCollecte(btnEdit.dataset.collecteId, btnEdit.dataset.billetId); return; }
+            var btnClot = e.target.closest('.btn-cloturer-collecte');
+            if (btnClot) { cloturerCollecte(btnClot.dataset.collecteId, btnClot.dataset.billetId); return; }
+            var btnDel = e.target.closest('.btn-delete-collecte');
+            if (btnDel && !btnDel.disabled) { deleteCollecte(btnDel.dataset.collecteId, btnDel.dataset.billetId); return; }
         });
+    }
+    var btnCancelEdit = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancelEdit) {
+        btnCancelEdit.addEventListener('click', cancelEditCollecte);
     }
 
     // Story 12.3 — Bouton ajouter une collecte
@@ -1229,6 +1251,7 @@ function openBilletPanel(billetData, docId) {
             sectionCollectes.style.display = '';
             sectionCollectes.dataset.billetId = billetData.id || '';
             sectionCollectes.dataset.billetCollecteur = billetData.Collecteur || '';
+            cancelEditCollecte();
             loadCollectesForBillet(billetData.id);
             var elDatePre = document.getElementById('field-collecte-date-pre');
             if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
@@ -3589,13 +3612,16 @@ function confirmAdminDeleteInscription(inscriptionId) {
 // STORY 12.3 — GESTION DES COLLECTES SUPPLÉMENTAIRES
 // ============================================================
 
+var currentCollectesForBillet = [];
+
 function loadCollectesForBillet(billetId) {
     if (!billetId) return;
     var container = document.getElementById('collectes-list');
     if (container) container.innerHTML = '<p style="font-style:italic; color: var(--color-text-light, #666);">Chargement...</p>';
     supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&order=created_at.asc')
         .then(function(data) {
-            renderCollectesList(data || [], billetId);
+            currentCollectesForBillet = data || [];
+            renderCollectesList(currentCollectesForBillet, billetId);
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -3608,7 +3634,7 @@ function renderCollectesList(collectes, billetId) {
     var container = document.getElementById('collectes-list');
     if (!container) return;
     if (!collectes || collectes.length === 0) {
-        container.innerHTML = '<p class="collectes-empty">Aucune collecte supplémentaire.</p>';
+        container.innerHTML = '<p class="collectes-empty">Aucune collecte.</p>';
         return;
     }
     var today = new Date().toISOString().slice(0, 10);
@@ -3616,14 +3642,82 @@ function renderCollectesList(collectes, billetId) {
         var isOpen = !c.date_fin || c.date_fin > today;
         var statusClass = isOpen ? 'ouverte' : 'cloturee';
         var statusLabel = isOpen ? 'Ouverte' : 'Clôturée';
+        var inscCount = (adminCollecteInscriptionCounts[c.id] && adminCollecteInscriptionCounts[c.id].count) || 0;
+        var canDelete = inscCount === 0;
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
             '<span class="collecte-badge-status ' + statusClass + '">' + statusLabel + '</span>' +
-            '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
+            '<span class="collecte-meta">' + escapeHtml(c.categorie || '—') + ' · ' + escapeHtml(c.collecteur || '—') + '</span>' +
+            '<button type="button" class="btn-edit-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Éditer</button>' +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
+            (canDelete
+                ? '<button type="button" class="btn-delete-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Supprimer</button>'
+                : '<button type="button" class="btn-delete-collecte" disabled title="Impossible : ' + inscCount + ' inscription(s)">Supprimer</button>') +
             '</div>';
     }).join('');
     container.innerHTML = html;
+}
+
+function startEditCollecte(collecteId, billetId) {
+    var c = currentCollectesForBillet.find(function(x) { return String(x.id) === String(collecteId); });
+    if (!c) return;
+    var section = document.getElementById('admin-collectes-supplementaires');
+    if (section) section.dataset.editingCollecteId = collecteId;
+
+    var setVal = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+    setVal('field-collecte-nom', c.nom);
+    setVal('field-collecte-scope', c.scope);
+    setVal('field-collecte-categorie', c.categorie || 'Pré collecte');
+    setVal('field-collecte-collecteur', c.collecteur);
+    setVal('field-collecte-date-pre', c.date_pre);
+    setVal('field-collecte-date-coll', c.date_coll);
+    setVal('field-collecte-date-fin', c.date_fin);
+    setVal('field-collecte-prix', c.prix);
+    setVal('field-collecte-prix-variante', c.prix_variante);
+    setVal('field-collecte-fdp-com', c.fdp_com);
+    var payer = document.getElementById('field-collecte-payer-fdp');
+    if (payer) payer.checked = String(c.payer_fdp || '').toLowerCase() === 'oui';
+
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer les modifications';
+    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancel) btnCancel.style.display = '';
+
+    var form = document.getElementById('collecte-add-form');
+    if (form && form.scrollIntoView) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cancelEditCollecte() {
+    var section = document.getElementById('admin-collectes-supplementaires');
+    if (section) delete section.dataset.editingCollecteId;
+    var ids = ['field-collecte-nom', 'field-collecte-scope', 'field-collecte-collecteur',
+               'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin',
+               'field-collecte-prix', 'field-collecte-prix-variante', 'field-collecte-fdp-com'];
+    ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    var elCat = document.getElementById('field-collecte-categorie');
+    if (elCat) elCat.value = 'Pré collecte';
+    var payer = document.getElementById('field-collecte-payer-fdp');
+    if (payer) payer.checked = false;
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter cette collecte';
+    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancel) btnCancel.style.display = 'none';
+}
+
+function deleteCollecte(collecteId, billetId) {
+    var c = currentCollectesForBillet.find(function(x) { return String(x.id) === String(collecteId); });
+    var label = c ? (c.nom || '(sans nom)') : '';
+    if (!confirm('Supprimer définitivement la collecte « ' + label + ' » ?')) return;
+    supabaseFetch('/rest/v1/collectes?id=eq.' + collecteId, { method: 'DELETE' })
+        .then(function() {
+            showToast('Collecte supprimée', 'success');
+            loadCollectesForBillet(billetId);
+            loadAdminCollectes();
+        })
+        .catch(function(error) {
+            console.error('Erreur suppression collecte:', error);
+            showToast('Erreur lors de la suppression', 'error');
+        });
 }
 
 function validateCollecteForm() {
@@ -3656,12 +3750,11 @@ function saveCollecte(billetId) {
         var el = document.getElementById(id);
         return el ? el.value.trim() : '';
     };
-    // Epic 13 (B4) — Champs prix/FDP ajoutés au formulaire collecte
     var payerFdpCollecteEl = document.getElementById('field-collecte-payer-fdp');
     var body = {
-        billet_id: parseInt(billetId, 10),
         nom: getValue('field-collecte-nom'),
         scope: getValue('field-collecte-scope'),
+        categorie: getValue('field-collecte-categorie') || 'Pré collecte',
         collecteur: getValue('field-collecte-collecteur') || null,
         date_pre: getValue('field-collecte-date-pre') || null,
         date_coll: getValue('field-collecte-date-coll') || null,
@@ -3671,6 +3764,29 @@ function saveCollecte(billetId) {
         payer_fdp: payerFdpCollecteEl && payerFdpCollecteEl.checked ? 'oui' : '',
         fdp_com: getValue('field-collecte-fdp-com')
     };
+
+    var section = document.getElementById('admin-collectes-supplementaires');
+    var editingId = section ? section.dataset.editingCollecteId : '';
+
+    if (editingId) {
+        supabaseFetch('/rest/v1/collectes?id=eq.' + editingId, {
+            method: 'PATCH',
+            body: JSON.stringify(body)
+        })
+        .then(function() {
+            showToast('Collecte modifiée', 'success');
+            cancelEditCollecte();
+            loadCollectesForBillet(billetId);
+            loadAdminCollectes();
+        })
+        .catch(function(error) {
+            console.error('Erreur modification collecte:', error);
+            showToast('Erreur lors de la modification', 'error');
+        });
+        return;
+    }
+
+    body.billet_id = parseInt(billetId, 10);
     supabaseFetch('/rest/v1/collectes', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
@@ -3679,22 +3795,12 @@ function saveCollecte(billetId) {
     .then(function(data) {
         var newCollecte = Array.isArray(data) ? data[0] : data;
         showToast('Collecte ajoutée', 'success');
-        // Epic 13 (B1) — Déclencher les auto-inscriptions sur la nouvelle collecte
         if (newCollecte && newCollecte.id) {
             creerAutoInscriptions(newCollecte);
         }
-        var ids = ['field-collecte-nom', 'field-collecte-scope', 'field-collecte-collecteur',
-                   'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin',
-                   'field-collecte-prix', 'field-collecte-prix-variante', 'field-collecte-fdp-com'];
-        ids.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.value = '';
-        });
+        cancelEditCollecte();
         var elDatePre = document.getElementById('field-collecte-date-pre');
         if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
-        var elPayerFdp = document.getElementById('field-collecte-payer-fdp');
-        if (elPayerFdp) elPayerFdp.checked = false;
-        var section = document.getElementById('admin-collectes-supplementaires');
         var defaultColl = section ? section.dataset.billetCollecteur : '';
         var selColl = document.getElementById('field-collecte-collecteur');
         if (selColl && defaultColl) selColl.value = defaultColl;

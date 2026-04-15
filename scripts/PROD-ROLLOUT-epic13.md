@@ -52,6 +52,10 @@ SELECT COUNT(*) FROM compteurs_inscriptions_par_collecte(); -- > 0
 ```
 
 ### 4. `migration-epic13-billet-derived.sql` — Triggers auto catégorie + date_effective
+
+(voir ci-dessous, suivi de `migration-epic13-categorie-manuelle.sql`)
+
+
 **Objectif** :
 - Trigger `trg_collectes_recalc_billet_categorie` : synchronise `billets."Categorie"` selon la collecte la plus ouverte (priorité Pré collecte > Collecte > Terminé).
 - Remplace `sync_billet_date_effective()` : ne regarde plus `billets."Date"`, uniquement `MAX(date_pre, date_coll, date_fin)` des collectes.
@@ -65,6 +69,23 @@ FROM billets b JOIN collectes c ON c.billet_id = b.id
 GROUP BY b.id, b."Categorie"
 HAVING b."Categorie" IS DISTINCT FROM MIN(c.categorie) -- simple sanity check
 LIMIT 20;
+```
+
+### 5. `migration-epic13-categorie-manuelle.sql` — Catégorie manuelle si 0 collecte
+**Objectif** : la fonction `recalc_billet_categorie` efface `billets."Categorie"` (→ NULL) quand le billet n'a plus aucune collecte, au lieu de laisser la valeur dérivée périmée. Permet à l'UI d'afficher un badge cliquable pour saisir un statut manuel (Projet, Masqué, Pas de collecte).
+
+**Idempotent** : oui (CREATE OR REPLACE FUNCTION).
+
+**Vérif** :
+```sql
+-- Aucun billet sans collecte ne doit garder une valeur dérivée
+SELECT b.id, b."Categorie"
+FROM billets b
+LEFT JOIN collectes c ON c.billet_id = b.id
+WHERE c.id IS NULL
+  AND b."Categorie" IN ('Pré collecte', 'Collecte', 'Terminé')
+LIMIT 20;
+-- Attendu : 0 ligne (ou valeurs manuelles uniquement : Projet, Masqué, etc.)
 ```
 
 ## Post-rollout
