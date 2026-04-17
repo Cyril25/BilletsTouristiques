@@ -57,19 +57,17 @@ function preInscLoadPays() {
 function preInscPopulateYearSelect() {
     var select = document.getElementById('preinsc-year-select');
     var currentYear = new Date().getFullYear();
-    var nextYear = currentYear + 1;
 
     select.innerHTML = '';
 
-    var optCurrent = document.createElement('option');
-    optCurrent.value = currentYear;
-    optCurrent.textContent = currentYear;
-    select.appendChild(optCurrent);
-
-    var optNext = document.createElement('option');
-    optNext.value = nextYear;
-    optNext.textContent = nextYear;
-    select.appendChild(optNext);
+    // De 2024 jusqu'à année suivante
+    for (var y = 2024; y <= currentYear + 1; y++) {
+        var opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        select.appendChild(opt);
+    }
 }
 
 // ============================================================
