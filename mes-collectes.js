@@ -2087,7 +2087,7 @@ function loadVerificationPaiement() {
         return;
     }
     var billetIds = mesBillets.map(function(b) { return b.id; });
-    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*&order=membre_email.asc')
+    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*&order=membre_email.asc,billet_id.asc,id.asc')
         .then(function(inscriptions) {
             if (!inscriptions || inscriptions.length === 0) {
                 renderPaiementsVide();
@@ -2185,6 +2185,14 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
         var adr = groupe.adresse;
         var nom = ((adr.nom || '') + ' ' + (adr.prenom || '')).trim() || email;
         if (adr.pseudo) nom += ' (' + adr.pseudo + ')';
+
+        // Tri stable des inscriptions au sein du groupe (par nom billet puis id)
+        groupe.inscriptions.sort(function(a, b) {
+            var ba = billetsMap[a.billet_id] || {}, bb = billetsMap[b.billet_id] || {};
+            var na = (ba.NomBillet || '').toLowerCase(), nb = (bb.NomBillet || '').toLowerCase();
+            if (na < nb) return -1; if (na > nb) return 1;
+            return (a.id || 0) - (b.id || 0);
+        });
 
         var lignes = '';
         var totalGroupe = 0;
