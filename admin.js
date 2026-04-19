@@ -632,7 +632,7 @@ function populateMillesimeSelect(mode) {
 // 4d. CHARGEMENT DES COLLECTEURS (Story 4.6)
 // ============================================================
 function loadCollecteurs() {
-    supabaseFetch('/rest/v1/collecteurs?select=id,alias,masque&order=alias.asc')
+    supabaseFetch('/rest/v1/collecteurs?select=id,alias,masque,paypal_email&order=alias.asc')
         .then(function(data) {
             collecteursList = (data || []).filter(function(c) { return !c.masque; });
             populateCollecteurSelect();
@@ -3127,6 +3127,10 @@ function openShareModal(billetId) {
     var statutLine = '📌 Statut : ' + statut;
     if (statut === 'Collecte' && billet.Collecteur) {
         statutLine += ' | Collecteur : ' + billet.Collecteur;
+        var collecteurObj = collecteursList.find(function(c) { return c.alias === billet.Collecteur; });
+        if (collecteurObj && collecteurObj.paypal_email) {
+            statutLine += ' (' + collecteurObj.paypal_email + ')';
+        }
     }
     topLines.push(statutLine);
 
