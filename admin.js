@@ -766,7 +766,7 @@ function renderAdminCards() {
                     var parts = [];
                     if (data.normaux > 0) parts.push(data.normaux + ' billet' + (data.normaux > 1 ? 's' : '') + ' normaux');
                     if (data.variantes > 0 && hasVarianteActive(billet.HasVariante)) {
-                        var varLabel = varianteLabelShort(billet.HasVariante);
+                        var varLabel = varianteLabel(billet.HasVariante);
                         parts.push(data.variantes + ' billet' + (data.variantes > 1 ? 's' : '') + ' ' + varLabel);
                     }
                     if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
@@ -789,7 +789,7 @@ function renderAdminCards() {
                         var parts = [];
                         if (cData.normaux > 0) parts.push(cData.normaux + ' billet' + (cData.normaux > 1 ? 's' : '') + ' normaux');
                         if (cData.variantes > 0 && hasVarianteActive(billet.HasVariante)) {
-                            var varLabel = varianteLabelShort(billet.HasVariante);
+                            var varLabel = varianteLabel(billet.HasVariante);
                             parts.push(cData.variantes + ' billet' + (cData.variantes > 1 ? 's' : '') + ' ' + varLabel);
                         }
                         if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
@@ -2382,7 +2382,7 @@ function updateCardInList(docId, billetData) {
             var iparts = [];
             if (idata.normaux > 0) iparts.push(idata.normaux + ' billet' + (idata.normaux > 1 ? 's' : '') + ' normaux');
             if (idata.variantes > 0 && hasVarianteActive(billetData.HasVariante)) {
-                var varLabel = varianteLabelShort(billetData.HasVariante);
+                var varLabel = varianteLabel(billetData.HasVariante);
                 iparts.push(idata.variantes + ' billet' + (idata.variantes > 1 ? 's' : '') + ' ' + varLabel);
             }
             if (iparts.length > 0) idetail = ' (' + iparts.join(', ') + ')';
