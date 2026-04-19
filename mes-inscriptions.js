@@ -275,7 +275,7 @@ function renderInscriptions() {
             if (collecteur.paypal_me) {
                 paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteur.paypal_me) + '/' + montantAvecFdp.toFixed(2);
             } else if (collecteur.paypal_email) {
-                paypalUrl = 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteur.paypal_email);
+                paypalUrl = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteur.paypal_email) + '&amount=' + montantAvecFdp.toFixed(2) + '&currency_code=EUR';
             }
             if (paypalUrl) {
                 paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
@@ -361,7 +361,7 @@ function renderInscriptions() {
             var noteJs = note.replace(/'/g, "\\'");
             var paypalUrl = collecteurObj.paypal_me
                 ? 'https://paypal.me/' + encodeURIComponent(collecteurObj.paypal_me) + '/' + totalPaypal.toFixed(2)
-                : 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteurObj.paypal_email);
+                : 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteurObj.paypal_email) + '&amount=' + totalPaypal.toFixed(2) + '&currency_code=EUR';
             paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note)
                 + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
             paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer ' + totalPaypal.toFixed(2) + '\u20AC via PayPal</a>';

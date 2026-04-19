@@ -1068,7 +1068,7 @@ function buildVersionBadgesHtml(item) {
         html += '<span class="version-badge version-badge--warning"><i class="fa-solid fa-triangle-exclamation"></i> Pas de version normale</span>';
     }
     if (varianteActive) {
-        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + escapeHtml(varianteVal) + '</span>';
+        html += '<span class="version-badge version-badge--variante"><i class="fa-solid fa-star"></i> ' + escapeHtml(varianteLabel(varianteVal)) + '</span>';
     } else if (varianteVal === 'N') {
         html += '<span class="version-badge version-badge--no-variante">Pas de variante</span>';
     }
@@ -1122,7 +1122,7 @@ function buildInscriptionHtml(item) {
             if (collecteurInfo.paypal_me) {
                 paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteurInfo.paypal_me) + '/' + montantAvecFdp.toFixed(2);
             } else if (collecteurInfo.paypal_email) {
-                paypalUrl = 'https://www.paypal.com/paypalme/' + encodeURIComponent(collecteurInfo.paypal_email);
+                paypalUrl = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteurInfo.paypal_email) + '&amount=' + montantAvecFdp.toFixed(2) + '&currency_code=EUR';
             }
             if (paypalUrl) {
                 html += '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';

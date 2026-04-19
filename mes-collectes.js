@@ -2341,7 +2341,7 @@ function renderRelanceModal(billet, impayes) {
     if (monCollecteur.paypal_me) {
         paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
     } else if (monCollecteur.paypal_email) {
-        paypalInfo = monCollecteur.paypal_email;
+        paypalInfo = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(monCollecteur.paypal_email) + '&currency_code=EUR';
     }
 
     var messagesHtml = impayes.map(function(insc, idx) {
@@ -2362,7 +2362,10 @@ function renderRelanceModal(billet, impayes) {
             + '\n';
 
         if (insc.mode_paiement === 'PayPal' && paypalInfo) {
-            corps += 'Tu peux effectuer le paiement via PayPal :\n' + paypalInfo + '/' + montant.toFixed(2) + '\n\n';
+            var paypalLink = monCollecteur.paypal_me
+                ? paypalInfo + '/' + montant.toFixed(2)
+                : paypalInfo + '&amount=' + montant.toFixed(2);
+            corps += 'Tu peux effectuer le paiement via PayPal :\n' + paypalLink + '\n\n';
         }
 
         corps += 'Merci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');
@@ -2446,7 +2449,7 @@ function ouvrirRelanceGlobale() {
     if (monCollecteur.paypal_me) {
         paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
     } else if (monCollecteur.paypal_email) {
-        paypalInfo = monCollecteur.paypal_email;
+        paypalInfo = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(monCollecteur.paypal_email) + '&currency_code=EUR';
     }
 
     // Grouper par membre
@@ -2504,7 +2507,10 @@ function ouvrirRelanceGlobale() {
             + 'Total dû : ' + totalMembre.toFixed(2) + ' €\n';
 
         if (paypalInfo) {
-            corps += '\nTu peux effectuer le paiement via PayPal :\n' + paypalInfo + '/' + totalMembre.toFixed(2) + '\n';
+            var paypalLink = monCollecteur.paypal_me
+                ? paypalInfo + '/' + totalMembre.toFixed(2)
+                : paypalInfo + '&amount=' + totalMembre.toFixed(2);
+            corps += '\nTu peux effectuer le paiement via PayPal :\n' + paypalLink + '\n';
         }
 
         corps += '\nMerci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');
