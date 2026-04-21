@@ -278,6 +278,10 @@ function preInscOpenForm(membreEmail) {
 
     // Mode sélection fine par pays
     html += '<div id="preinsc-etr-fine" style="' + (hasFineSelection ? '' : 'display:none;') + '">';
+    html += '<div class="preinsc-country-actions">';
+    html += '<button type="button" class="btn-admin-secondary preinsc-country-actions-btn" onclick="preInscSelectAllPays(true)"><i class="fa-solid fa-check-double"></i> Tout sélectionner</button>';
+    html += '<button type="button" class="btn-admin-secondary preinsc-country-actions-btn" onclick="preInscSelectAllPays(false)"><i class="fa-solid fa-xmark"></i> Tout désélectionner</button>';
+    html += '</div>';
     html += '<div class="preinsc-country-grid">';
     for (var p = 0; p < preInscPaysListe.length; p++) {
         var paysNom = preInscPaysListe[p];
@@ -346,6 +350,16 @@ function preInscTogglePays(cb) {
     var qteDiv = cb.parentElement.nextElementSibling;
     if (qteDiv) {
         qteDiv.style.display = cb.checked ? '' : 'none';
+    }
+}
+
+function preInscSelectAllPays(checked) {
+    var checkboxes = document.querySelectorAll('.preinsc-pays-cb');
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked !== checked) {
+            checkboxes[i].checked = checked;
+            preInscTogglePays(checkboxes[i]);
+        }
     }
 }
 

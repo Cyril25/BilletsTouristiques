@@ -6791,6 +6791,18 @@ body.login-page {
     cursor: pointer;
 }
 
+.preinsc-country-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-sm);
+}
+
+.preinsc-country-actions-btn {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+}
+
 .preinsc-country-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, 340px);
