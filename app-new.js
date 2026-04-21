@@ -872,9 +872,16 @@ function getInscription(billetId, collecteId) {
     return mesInscriptions[key] || null;
 }
 
+function estBeneficiaireCatalogue(item) {
+    var email = window.getActiveEmail && window.getActiveEmail();
+    if (!email || !item || !item.Collecteur) return false;
+    var col = collecteursMap[item.Collecteur];
+    return !!(col && col.email_membre && col.email_membre === email);
+}
+
 // --- Chargement des collecteurs pour liens contact ---
 function loadCollecteursForCatalogue() {
-    supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me')
+    supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,email_membre')
         .then(function(data) {
             (data || []).forEach(function(c) {
                 collecteursMap[c.alias] = c;
@@ -1085,6 +1092,7 @@ function buildInscriptionHtml(item) {
     var html = '';
     if (inscription && !inscription.pas_interesse) {
         // Inscrit — badges + contact collecteur
+        var isBeneficiaire = estBeneficiaireCatalogue(item);
         var prixNormal = parseFloat(item.Prix || 0);
         var prixVar = (item.PrixVariante !== null && item.PrixVariante !== undefined && item.PrixVariante !== '') ? parseFloat(item.PrixVariante) : prixNormal;
         var nbNormaux = inscription.nb_normaux || 0;
@@ -1101,15 +1109,18 @@ function buildInscriptionHtml(item) {
         }
         var montantAvecFdp = montant + fdpMontant;
 
+        var badgeStatut = isBeneficiaire
+            ? '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>'
+            : badgePaiementCatalogue(inscription.statut_paiement, montantAvecFdp, inscription.id, item.Categorie);
         html = '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit</span>'
-            + badgePaiementCatalogue(inscription.statut_paiement, montantAvecFdp, inscription.id, item.Categorie)
+            + badgeStatut
             + '</div>';
 
-        // Lien PayPal si non payé et mode_paiement = PayPal
+        // Lien PayPal si non payé et mode_paiement = PayPal (jamais pour le bénéficiaire)
         var statut = inscription.statut_paiement || 'non_paye';
         var collecteurInfo = collecteursMap[item.Collecteur] || {};
-        if (statut === 'non_paye' && inscription.mode_paiement === 'PayPal' && item.Categorie !== 'Pré collecte') {
+        if (!isBeneficiaire && statut === 'non_paye' && inscription.mode_paiement === 'PayPal' && item.Categorie !== 'Pré collecte') {
             var refPart = (item.Reference || '') + ' ' + (item.Millesime || '') + (item.Version ? '-' + item.Version : '');
             var noteparts = [refPart.trim(), item.NomBillet || ''];
             var detailParts = [];
@@ -1130,9 +1141,9 @@ function buildInscriptionHtml(item) {
             }
         }
 
-        // Bouton contacter le collecteur
+        // Bouton contacter le collecteur (jamais pour le bénéficiaire lui-même)
         var contactEmail = collecteurInfo.paypal_email || '';
-        if (contactEmail) {
+        if (!isBeneficiaire && contactEmail) {
             html += '<a href="mailto:' + escapeAttr(contactEmail) + '" class="btn-contacter-collecteur">Contacter le collecteur</a>';
         }
     } else if (inscription && inscription.pas_interesse) {
@@ -1417,9 +1428,13 @@ function buildCollectesSupplementairesHtml(item) {
 function buildInscriptionHtmlForCollecte(item, collecte) {
     var inscription = getInscription(item.id, collecte.id);
     if (inscription && !inscription.pas_interesse) {
+        var isBeneficiaire = estBeneficiaireCatalogue(item);
+        var badgeStatut = isBeneficiaire
+            ? '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>'
+            : badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, item.Categorie);
         return '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit à cette collecte</span>'
-            + badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, item.Categorie)
+            + badgeStatut
             + '</div>';
     }
     var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
