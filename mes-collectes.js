@@ -743,6 +743,8 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
         + '</select>'
         + '<span class="expedition-form-label">N° suivi :</span>'
         + '<input type="text" id="exp-direct-suivi" placeholder="Optionnel" style="width:160px">'
+        + '<span class="expedition-form-label">Prix (€) :</span>'
+        + '<input type="number" id="exp-direct-prix" step="0.01" min="0" placeholder="Ex: 4.95" style="width:90px">'
         + '<button onclick="confirmerExpeditionDirecte(' + inscriptionId + ')" class="btn-confirmer-expedition"><i class="fa-solid fa-check"></i> Confirmer</button>'
         + '<button onclick="annulerExpeditionDirecte()" class="btn-secondary">Annuler</button>'
         + '</div>'
@@ -753,9 +755,12 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
 function confirmerExpeditionDirecte(inscriptionId) {
     var modeEnvoiEl = document.getElementById('exp-direct-mode');
     var numeroSuiviEl = document.getElementById('exp-direct-suivi');
+    var prixEl = document.getElementById('exp-direct-prix');
     if (!modeEnvoiEl || !numeroSuiviEl) return;
     var modeEnvoi = modeEnvoiEl.value;
     var numeroSuivi = numeroSuiviEl.value.trim() || null;
+    var prixEnvoi = prixEl && prixEl.value !== '' ? parseFloat(prixEl.value) : null;
+    if (prixEnvoi !== null && (isNaN(prixEnvoi) || prixEnvoi < 0)) prixEnvoi = null;
 
     // Trouver l'inscription pour son membre_email
     var inscription = null;
@@ -816,6 +821,7 @@ function confirmerExpeditionDirecte(inscriptionId) {
                     statut: 'expediee',
                     mode_envoi_reel: modeEnvoi,
                     numero_suivi: numeroSuivi,
+                    prix_envoi_reel: prixEnvoi,
                     date_expedition: new Date().toISOString()
                 })
             }).then(function(created) {
@@ -1308,6 +1314,36 @@ function openEnveloppePassee(enveloppeId) {
         });
 }
 
+// Progression visuelle : Envoyé → Distribué → Confirmé
+function buildEnveloppeProgression(env) {
+    var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '';
+    var dateDist = env.date_distribution ? new Date(env.date_distribution).toLocaleDateString('fr-FR') : '';
+    var dateRec = env.date_reception ? new Date(env.date_reception).toLocaleDateString('fr-FR') : '';
+    var envoyeOK = env.statut === 'expediee' || env.statut === 'distribuee' || env.statut === 'recue';
+    var distribueOK = env.statut === 'distribuee' || env.statut === 'recue';
+    var recueOK = env.statut === 'recue';
+    var h = '<div class="envoi-progression">';
+    h += '<div class="progression-etape ' + (envoyeOK ? 'etape-ok' : '') + '">'
+        + '<i class="fa-solid fa-paper-plane"></i>'
+        + '<span class="progression-libelle">Envoyée</span>'
+        + (dateExp ? '<span class="progression-date">' + dateExp + '</span>' : '')
+        + '</div>';
+    h += '<div class="progression-lien ' + (distribueOK ? 'lien-ok' : '') + '"></div>';
+    h += '<div class="progression-etape ' + (distribueOK ? 'etape-ok' : '') + '">'
+        + '<i class="fa-solid fa-truck-ramp-box"></i>'
+        + '<span class="progression-libelle">Distribuée</span>'
+        + (dateDist ? '<span class="progression-date">' + dateDist + '</span>' : '')
+        + '</div>';
+    h += '<div class="progression-lien ' + (recueOK ? 'lien-ok' : '') + '"></div>';
+    h += '<div class="progression-etape ' + (recueOK ? 'etape-ok' : '') + '">'
+        + '<i class="fa-solid fa-circle-check"></i>'
+        + '<span class="progression-libelle">Confirmée</span>'
+        + (dateRec ? '<span class="progression-date">' + dateRec + '</span>' : '')
+        + '</div>';
+    h += '</div>';
+    return h;
+}
+
 function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     var container = _retourDepuisHistorique ? document.getElementById('historique-view') : document.getElementById('envois-view');
     if (!container) container = document.getElementById('envois-view');
@@ -1327,19 +1363,31 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     if (env.numero_suivi) {
         html += '<span><i class="fa-solid fa-barcode"></i> N° suivi : ' + escapeHtmlMC(env.numero_suivi) + '</span>';
     }
-    if (env.statut === 'recue') {
-        var dateRec = env.date_reception ? new Date(env.date_reception).toLocaleDateString('fr-FR') : '';
-        html += '<span class="badge-recue"><i class="fa-solid fa-circle-check"></i> Reçue le ' + dateRec + '</span>';
-    } else {
-        html += '<span class="badge-pas-retour">Pas de retour</span>';
+    var prixLabel = (env.prix_envoi_reel !== null && env.prix_envoi_reel !== undefined)
+        ? Number(env.prix_envoi_reel).toFixed(2) + ' €'
+        : '—';
+    html += '<span class="envoi-prix-wrapper"><i class="fa-solid fa-euro-sign"></i> Prix payé : ' + prixLabel
+        + ' <button class="btn-editer-prix" onclick="ouvrirEditionPrixEnvoi(' + env.id + ', ' + (env.prix_envoi_reel !== null && env.prix_envoi_reel !== undefined ? Number(env.prix_envoi_reel) : 'null') + ')" title="Modifier le prix"><i class="fa-solid fa-pen"></i></button></span>';
+    html += '</div>';
+
+    // Progression 3 étapes : Envoyé → Distribué → Confirmé par le collectionneur
+    html += buildEnveloppeProgression(env);
+
+    // Actions (avancer le statut / annuler)
+    html += '<div class="envoi-actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
+    if (env.statut === 'expediee') {
+        html += '<button class="btn-marquer-distribuee" onclick="marquerEnveloppeDistribuee(' + env.id + ')"><i class="fa-solid fa-truck-ramp-box"></i> Marquer comme distribuée</button>';
+    }
+    if (env.statut === 'expediee' || env.statut === 'distribuee') {
+        html += '<button class="btn-marquer-recue" onclick="marquerEnveloppeRecueCollecteur(' + env.id + ')"><i class="fa-solid fa-circle-check"></i> Marquer comme reçue par le collectionneur</button>';
+    }
+    if (env.statut === 'distribuee' || env.statut === 'recue') {
+        html += '<button class="btn-revenir-statut" onclick="revenirStatutEnveloppe(' + env.id + ', \'' + env.statut + '\')"><i class="fa-solid fa-rotate-left"></i> Revenir en arrière</button>';
+    }
+    if (env.statut !== 'recue') {
+        html += '<button class="btn-annuler-envoi" onclick="annulerEnvoi(' + env.id + ')"><i class="fa-solid fa-xmark"></i> Annuler cet envoi</button>';
     }
     html += '</div>';
-    // Bouton annuler l'envoi (seulement si pas encore reçue)
-    if (env.statut !== 'recue') {
-        html += '<div style="margin-top:10px">';
-        html += '<button class="btn-annuler-envoi" onclick="annulerEnvoi(' + env.id + ')"><i class="fa-solid fa-rotate-left"></i> Annuler cet envoi</button>';
-        html += '</div>';
-    }
     html += '</div>';
 
     // Liste des billets dans l'enveloppe
@@ -1401,7 +1449,7 @@ function loadHistoriqueGlobal() {
         return;
     }
     var alias = encodeURIComponent(monCollecteur.alias);
-    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&statut=in.(expediee,recue)&select=*&order=date_expedition.desc')
+    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&statut=in.(expediee,distribuee,recue)&select=*&order=date_expedition.desc')
         .then(function(envPassees) {
             envPassees = envPassees || [];
             if (envPassees.length === 0) {
@@ -1447,7 +1495,16 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
         + '<button class="btn-export-csv" onclick="exportHistoriqueCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>'
         + '</div>';
 
-    html += '<h3 class="enveloppes-section-titre"><i class="fa-solid fa-clock-rotate-left"></i> Historique des envois (<span id="historique-count">' + envPassees.length + '</span>)</h3>';
+    var totalPrix = 0;
+    for (var tp = 0; tp < envPassees.length; tp++) {
+        var pTp = envPassees[tp].prix_envoi_reel;
+        if (pTp !== null && pTp !== undefined) totalPrix += Number(pTp);
+    }
+    html += '<h3 class="enveloppes-section-titre"><i class="fa-solid fa-clock-rotate-left"></i> Historique des envois (<span id="historique-count">' + envPassees.length + '</span>)';
+    if (totalPrix > 0) {
+        html += ' <span class="historique-total-prix">— Total payé : ' + totalPrix.toFixed(2) + ' €</span>';
+    }
+    html += '</h3>';
     html += '<div id="historique-cards">';
     html += buildHistoriqueCards(envPassees, membresMap, '');
     html += '</div>';
@@ -1470,7 +1527,8 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
 
         // Filtre recherche
         if (q) {
-            var haystack = (nomH + ' ' + dateExp + ' ' + modeLabel + ' ' + (envH.numero_suivi || '') + ' ' + envH.statut).toLowerCase();
+            var statutLib = { expediee: 'envoyée envoyee expédiée expediee', distribuee: 'distribuée distribuee', recue: 'reçue recue confirmée confirmee' }[envH.statut] || '';
+            var haystack = (nomH + ' ' + dateExp + ' ' + modeLabel + ' ' + (envH.numero_suivi || '') + ' ' + envH.statut + ' ' + statutLib).toLowerCase();
             if (haystack.indexOf(q) === -1) continue;
         }
         count++;
@@ -1479,16 +1537,21 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
         if (envH.statut === 'recue') {
             var dateRec = envH.date_reception ? new Date(envH.date_reception).toLocaleDateString('fr-FR') : '';
             statutHtml = '<span class="badge-recue"><i class="fa-solid fa-circle-check"></i> Reçue ' + dateRec + '</span>';
+        } else if (envH.statut === 'distribuee') {
+            var dateDist = envH.date_distribution ? new Date(envH.date_distribution).toLocaleDateString('fr-FR') : '';
+            statutHtml = '<span class="badge-distribuee"><i class="fa-solid fa-truck-ramp-box"></i> Distribuée ' + dateDist + '</span>';
         } else {
             statutHtml = '<span class="badge-pas-retour">Pas de retour</span>';
         }
 
+        var prixH = (envH.prix_envoi_reel !== null && envH.prix_envoi_reel !== undefined) ? Number(envH.prix_envoi_reel).toFixed(2) + ' €' : '';
         html += '<div class="envoi-groupe historique-envoi-card" onclick="_retourDepuisHistorique=true;openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nomH) + '</strong>'
             + '<span class="envoi-date"><i class="fa-solid fa-calendar"></i> ' + dateExp + '</span>'
             + '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>'
             + (envH.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + escapeHtmlMC(envH.numero_suivi) + '</span>' : '')
+            + (prixH ? '<span><i class="fa-solid fa-euro-sign"></i> ' + prixH + '</span>' : '')
             + statutHtml
             + '</div>'
             + '</div>';
@@ -1521,16 +1584,19 @@ function clearHistoriqueSearch() {
 function exportHistoriqueCSV() {
     if (!_historiqueEnvois || _historiqueEnvois.length === 0) return;
     var sep = ';';
-    var lines = ['Membre' + sep + 'Email' + sep + 'Date expédition' + sep + 'Mode envoi' + sep + 'N° suivi' + sep + 'Statut' + sep + 'Date réception'];
+    var lines = ['Membre' + sep + 'Email' + sep + 'Date expédition' + sep + 'Mode envoi' + sep + 'N° suivi' + sep + 'Prix payé (€)' + sep + 'Statut' + sep + 'Date distribution' + sep + 'Date réception'];
+    var statutsLabels = { expediee: 'Envoyée', distribuee: 'Distribuée', recue: 'Reçue' };
     for (var i = 0; i < _historiqueEnvois.length; i++) {
         var e = _historiqueEnvois[i];
         var m = _historiqueMembresMap[e.membre_email];
         var nom = m ? ((m.nom || '') + ' ' + (m.prenom || '')).trim() : '';
         var dateExp = e.date_expedition ? new Date(e.date_expedition).toLocaleDateString('fr-FR') : '';
         var modeLabel = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' }[e.mode_envoi_reel] || e.mode_envoi_reel || '';
-        var statut = e.statut === 'recue' ? 'Reçue' : 'Expédiée';
+        var statut = statutsLabels[e.statut] || e.statut || '';
+        var dateDist = e.date_distribution ? new Date(e.date_distribution).toLocaleDateString('fr-FR') : '';
         var dateRec = e.date_reception ? new Date(e.date_reception).toLocaleDateString('fr-FR') : '';
-        lines.push([nom, e.membre_email || '', dateExp, modeLabel, e.numero_suivi || '', statut, dateRec].join(sep));
+        var prix = (e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined) ? Number(e.prix_envoi_reel).toFixed(2).replace('.', ',') : '';
+        lines.push([nom, e.membre_email || '', dateExp, modeLabel, e.numero_suivi || '', prix, statut, dateDist, dateRec].join(sep));
     }
     var csvContent = '\uFEFF' + lines.join('\n');
     var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1764,7 +1830,7 @@ function loadHistoriqueEnveloppes() {
     if (!currentEnveloppeData) return;
     var alias = encodeURIComponent(currentEnveloppeData.collecteur_alias);
     var email = encodeURIComponent(currentEnveloppeData.membre_email);
-    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&membre_email=eq.' + email + '&statut=in.(expediee,recue)&select=*&order=date_expedition.desc')
+    supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&membre_email=eq.' + email + '&statut=in.(expediee,distribuee,recue)&select=*&order=date_expedition.desc')
         .then(function(enveloppes) {
             var histContainer = document.getElementById('historique-enveloppes');
             if (!histContainer) return;
@@ -1804,6 +1870,9 @@ function renderHistoriqueEnveloppes(enveloppes, inscByEnv, billetsMap, container
         if (env.statut === 'recue') {
             var dateRec = env.date_reception ? new Date(env.date_reception).toLocaleDateString('fr-FR') : '';
             statutHtml = '<span class="badge-recue"><i class="fa-solid fa-circle-check"></i> Reçue ✓ ' + dateRec + '</span>';
+        } else if (env.statut === 'distribuee') {
+            var dateDist = env.date_distribution ? new Date(env.date_distribution).toLocaleDateString('fr-FR') : '';
+            statutHtml = '<span class="badge-distribuee"><i class="fa-solid fa-truck-ramp-box"></i> Distribuée ' + dateDist + '</span>';
         } else {
             statutHtml = '<span class="badge-pas-retour">Pas de retour</span>';
         }
@@ -1871,6 +1940,8 @@ function ouvrirFormulaireExpedition(enveloppeId) {
                 + '</select></div>'
                 + '<div class="insc-form-field"><label>Numéro de suivi (optionnel)</label>'
                 + '<input type="text" id="numero-suivi" placeholder="Ex: 1Z999AA..."></div>'
+                + '<div class="insc-form-field"><label>Prix payé (€)</label>'
+                + '<input type="number" id="prix-envoi-reel" step="0.01" min="0" placeholder="Ex: 4.95"></div>'
                 + '<div class="expedition-actions">'
                 + '<button onclick="annulerExpedition()" class="btn-secondary">Annuler</button>'
                 + '<button onclick="confirmerExpedition(' + enveloppeId + ')" class="btn-confirmer-expedition"><i class="fa-solid fa-check"></i> Confirmer l\'expédition</button>'
@@ -1895,9 +1966,12 @@ function annulerExpedition() {
 function confirmerExpedition(enveloppeId) {
     var modeEnvoiEl = document.getElementById('mode-envoi-reel');
     var numeroSuiviEl = document.getElementById('numero-suivi');
+    var prixEl = document.getElementById('prix-envoi-reel');
     if (!modeEnvoiEl || !numeroSuiviEl) return;
     var modeEnvoi = modeEnvoiEl.value;
     var numeroSuivi = numeroSuiviEl.value.trim() || null;
+    var prixEnvoi = prixEl && prixEl.value !== '' ? parseFloat(prixEl.value) : null;
+    if (prixEnvoi !== null && (isNaN(prixEnvoi) || prixEnvoi < 0)) prixEnvoi = null;
 
     // 1. Mettre à jour l'enveloppe → expédiée
     supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
@@ -1906,6 +1980,7 @@ function confirmerExpedition(enveloppeId) {
             statut: 'expediee',
             mode_envoi_reel: modeEnvoi,
             numero_suivi: numeroSuivi,
+            prix_envoi_reel: prixEnvoi,
             date_expedition: new Date().toISOString()
         })
     })
@@ -1950,6 +2025,98 @@ function creerNouvelleEnveloppe(ancienneEnveloppeId) {
 
 // QW-6 — Modale custom pour annuler un envoi
 var pendingAnnulationEnvoiId = null;
+
+// Saisie/édition du prix payé pour l'envoi (a posteriori)
+function ouvrirEditionPrixEnvoi(enveloppeId, prixActuel) {
+    var defaut = (prixActuel !== null && prixActuel !== undefined) ? String(prixActuel) : '';
+    var saisie = window.prompt('Prix payé pour cet envoi (en €) — laisser vide pour supprimer :', defaut);
+    if (saisie === null) return; // annulé
+    saisie = saisie.trim().replace(',', '.');
+    var nouveauPrix;
+    if (saisie === '') {
+        nouveauPrix = null;
+    } else {
+        nouveauPrix = parseFloat(saisie);
+        if (isNaN(nouveauPrix) || nouveauPrix < 0) {
+            showToast('Prix invalide', 'error');
+            return;
+        }
+    }
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify({ prix_envoi_reel: nouveauPrix })
+    })
+    .then(function() {
+        showToast('Prix enregistré');
+        openEnveloppePassee(enveloppeId);
+    })
+    .catch(function(error) {
+        console.error('Erreur enregistrement prix:', error);
+        showToast('Erreur lors de l\'enregistrement', 'error');
+    });
+}
+
+// Faire avancer le statut de l'enveloppe : expediee → distribuee
+function marquerEnveloppeDistribuee(enveloppeId) {
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify({
+            statut: 'distribuee',
+            date_distribution: new Date().toISOString()
+        })
+    })
+    .then(function() {
+        showToast('Enveloppe marquée comme distribuée');
+        openEnveloppePassee(enveloppeId);
+    })
+    .catch(function(error) {
+        console.error('Erreur marquage distribuée:', error);
+        showToast('Erreur lors du marquage', 'error');
+    });
+}
+
+// Faire avancer le statut jusqu'à recue (côté collecteur, confirmation manuelle)
+function marquerEnveloppeRecueCollecteur(enveloppeId) {
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify({
+            statut: 'recue',
+            date_reception: new Date().toISOString()
+        })
+    })
+    .then(function() {
+        showToast('Réception confirmée côté collectionneur');
+        openEnveloppePassee(enveloppeId);
+    })
+    .catch(function(error) {
+        console.error('Erreur confirmation réception:', error);
+        showToast('Erreur lors de la confirmation', 'error');
+    });
+}
+
+// Revenir à l'étape précédente (distribuee → expediee, ou recue → distribuee)
+function revenirStatutEnveloppe(enveloppeId, statutActuel) {
+    var patch;
+    if (statutActuel === 'recue') {
+        patch = { statut: 'distribuee', date_reception: null };
+    } else if (statutActuel === 'distribuee') {
+        patch = { statut: 'expediee', date_distribution: null };
+    } else {
+        return;
+    }
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify(patch)
+    })
+    .then(function() {
+        showToast('Statut mis à jour');
+        openEnveloppePassee(enveloppeId);
+    })
+    .catch(function(error) {
+        console.error('Erreur retour statut:', error);
+        showToast('Erreur lors du changement de statut', 'error');
+    });
+}
 
 function annulerEnvoi(enveloppeId) {
     pendingAnnulationEnvoiId = enveloppeId;

@@ -8567,3 +8567,47 @@ body.login-page {
 .ios-install-close:hover {
     color: #333;
 }
+
+/* =========================================
+   PAGE PARTAGER (QR code à partager)
+   ========================================= */
+.partager-qr-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+}
+
+.partager-canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(93, 58, 126, 0.15);
+}
+
+.partager-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.partager-actions .btn-mode {
+    font-size: 1rem;
+    padding: 10px 20px;
+}
+
+.partager-hint {
+    margin-top: 24px;
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+}
+
+.partager-hint i {
+    color: var(--color-warning);
+    margin-right: 6px;
+}

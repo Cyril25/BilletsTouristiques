@@ -808,7 +808,7 @@ function renderMesEnvois() {
     var inscSansEnveloppe = envoisData.inscSansEnveloppe;
 
     var enCours = enveloppes.filter(function(e) { return e.statut === 'en_cours'; });
-    var expediees = enveloppes.filter(function(e) { return e.statut === 'expediee'; });
+    var expediees = enveloppes.filter(function(e) { return e.statut === 'expediee' || e.statut === 'distribuee'; });
     var recues = enveloppes.filter(function(e) { return e.statut === 'recue'; });
 
     // Enveloppes en cours avec billets prêts
@@ -971,6 +971,11 @@ function renderEnvoiCarteExpediee(env, inscByEnv, billetsMap2, estRecue) {
 
     if (env.numero_suivi) {
         html += '<span><i class="fa-solid fa-barcode"></i> N° suivi : ' + escapeHtml(env.numero_suivi) + '</span>';
+    }
+
+    if (env.statut === 'distribuee') {
+        var dateDist = env.date_distribution ? new Date(env.date_distribution).toLocaleDateString('fr-FR') : '';
+        html += '<span class="badge-distribuee"><i class="fa-solid fa-truck-ramp-box"></i> Distribuée' + (dateDist ? ' le ' + dateDist : '') + '</span>';
     }
 
     html += '</div>';
