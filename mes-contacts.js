@@ -43,6 +43,24 @@ document.addEventListener('DOMContentLoaded', function() {
         chargerContacts();
         chargerBilletRefs();
     });
+
+    // Fermeture de la modale au clic sur l'overlay — mais uniquement si
+    // le mousedown ET le mouseup ont lieu sur l'overlay lui-meme. Evite
+    // la fermeture intempestive lors d'une selection de texte qui
+    // deborde hors de la popup (copier/coller).
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (overlay) {
+        var mouseDownSurOverlay = false;
+        overlay.addEventListener('mousedown', function(e) {
+            mouseDownSurOverlay = (e.target === overlay);
+        });
+        overlay.addEventListener('mouseup', function(e) {
+            if (mouseDownSurOverlay && e.target === overlay) {
+                fermerContactModal();
+            }
+            mouseDownSurOverlay = false;
+        });
+    }
 });
 
 // ============================================================
