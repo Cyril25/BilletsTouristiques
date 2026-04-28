@@ -5179,7 +5179,131 @@ body.login-page {
 
 .badge-pas-retour {
     color: var(--color-text-disabled);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+}
+
+.badge-distribuee {
+    color: var(--color-warning);
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+/* Progression 3 étapes : Envoyée → Distribuée → Confirmée */
+.envoi-progression {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.progression-etape {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 90px;
+    min-width: 80px;
+    padding: 6px 4px;
+    color: var(--color-text-disabled);
+    font-size: 0.85rem;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.progression-etape i {
+    font-size: 1.1rem;
+}
+
+.progression-etape.etape-ok {
+    color: var(--color-success);
+}
+
+.progression-libelle {
+    font-weight: 500;
+}
+
+.progression-date {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.progression-lien {
+    flex: 0 1 40px;
+    height: 2px;
+    background: var(--color-border, #ccc);
+    align-self: center;
+    min-width: 20px;
+}
+
+.progression-lien.lien-ok {
+    background: var(--color-success);
+}
+
+/* Boutons d'action sur l'historique d'un envoi */
+.btn-marquer-distribuee,
+.btn-marquer-recue,
+.btn-revenir-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text-inverse);
+}
+
+.btn-marquer-distribuee {
+    background: var(--color-warning);
+}
+
+.btn-marquer-recue {
+    background: var(--color-success);
+}
+
+.btn-revenir-statut {
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+
+.btn-marquer-distribuee:hover,
+.btn-marquer-recue:hover,
+.btn-revenir-statut:hover {
+    opacity: 0.85;
+}
+
+/* Prix payé : libellé + bouton crayon */
+.envoi-prix-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-editer-prix {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    margin-left: 2px;
+}
+
+.btn-editer-prix:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.historique-total-prix {
+    font-size: 0.85rem;
+    color: var(--color-success);
+    font-weight: 500;
 }
 
 /* --- Story 5.9 : Formulaire d'expédition --- */
