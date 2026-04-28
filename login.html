@@ -187,7 +187,10 @@ function showView(name) {
     document.getElementById('view-status').style.display  = (name === 'status') ? '' : 'none';
 }
 
+var signupUser = null; // user Firebase capturé à l'affichage du formulaire
+
 function showSignupForm(email) {
+    signupUser = firebase.auth().currentUser; // capture l'instance pour s'en servir au submit
     document.getElementById('signup-email').textContent = email;
     showView('signup');
 }
@@ -234,7 +237,8 @@ function signOutAndReload() {
 
 function submitSignup(e) {
     e.preventDefault();
-    var user = firebase.auth().currentUser;
+    // On privilégie le user capturé à l'affichage du formulaire ; sinon fallback sur currentUser.
+    var user = signupUser || firebase.auth().currentUser;
     if (!user) { alert('Session expirée, reconnectez-vous.'); signOutAndReload(); return false; }
 
     var prenom    = document.getElementById('signup-prenom').value.trim();
