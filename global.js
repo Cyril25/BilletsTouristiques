@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function() {
             firebase.auth().currentUser.getIdToken(false)
             .then(function(token) {
                 return fetch(
-                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=role',
+                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=role,statut,demande_at,refuse_motif',
                     {
                         headers: {
                             'apikey': SUPABASE_ANON_KEY,
@@ -119,6 +119,22 @@ document.addEventListener("DOMContentLoaded", function() {
                 return response.json();
             })
             .then(function(rows) {
+                // --- Statut non-actif : en_attente ou refuse ---
+                if (rows && rows.length > 0 && rows[0].statut && rows[0].statut !== 'actif') {
+                    var statut = rows[0].statut;
+                    console.warn('Accès non actif (statut=' + statut + ') pour : ' + user.email);
+                    if (isLoginPage) {
+                        if (statut === 'en_attente' && typeof window.showStatusPending === 'function') {
+                            window.showStatusPending(rows[0].demande_at);
+                        } else if (statut === 'refuse' && typeof window.showStatusRefused === 'function') {
+                            window.showStatusRefused(rows[0].refuse_motif);
+                        }
+                    } else {
+                        // Sur les autres pages : rediriger vers login pour voir le statut
+                        window.location.href = 'login.html';
+                    }
+                    return;
+                }
                 if (rows && rows.length > 0) {
                     // --- AUTORISÉ : l'email est dans la table membres ---
                     console.log("Accès autorisé pour : " + user.email);
@@ -167,7 +183,16 @@ document.addEventListener("DOMContentLoaded", function() {
                         if (appContent) appContent.style.display = 'block';
                     }
                 } else {
-                    // --- REFUSÉ : email inconnu ---
+                    // --- Email inconnu de la table membres ---
+                    // Si on est sur login.html ET que l'utilisateur a cliqué "Demander un accès"
+                    // → afficher le formulaire d'inscription (il reste connecté à Firebase).
+                    var wantsSignup = sessionStorage.getItem('wantsSignup') === '1';
+                    if (isLoginPage && wantsSignup && typeof window.showSignupForm === 'function') {
+                        console.log('Email inconnu + demande d\'accès → affichage formulaire inscription.');
+                        window.showSignupForm(user.email);
+                        return;
+                    }
+                    // Sinon : comportement historique (refus + redirection)
                     console.warn("Accès REFUSÉ. Email inconnu dans la table membres.");
                     auth.signOut().then(function() {
                         window.location.href = 'login.html?error=unauthorized';
@@ -281,7 +306,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=143")
+    fetch("menu.html?v=144")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -352,9 +377,132 @@ function loadMenu() {
                         }
                     })
                     .catch(function() {});
+
+                // Notifications (admin uniquement pour l'instant)
+                if (effectiveRole === 'admin' || effectiveRole === 'superadmin') {
+                    refreshNotifications();
+                }
             });
         })
         .catch(function(err) { console.error("Menu introuvable :", err); });
+}
+
+// ============================================================
+// 4b. NOTIFICATIONS (cloche du menu)
+// ============================================================
+// Modèle générique : chaque source peut pousser des items dans window.__notifs.
+// Pour l'instant seule source : demandes d'inscription en attente (admin).
+window.__notifs = [];
+
+function refreshNotifications() {
+    window.__notifs = [];
+    var pendingPromise = supabaseFetch('/rest/v1/membres?statut=eq.en_attente&select=email,prenom,nom,demande_at&order=demande_at.desc')
+        .then(function(rows) {
+            (rows || []).forEach(function(r) {
+                window.__notifs.push({
+                    type: 'signup_request',
+                    title: 'Demande d\'inscription',
+                    subtitle: ((r.prenom || '') + ' ' + (r.nom || '')).trim() + ' (' + r.email + ')',
+                    date: r.demande_at,
+                    href: 'admin-inscriptions.html'
+                });
+            });
+        })
+        .catch(function(e) { console.warn('Notifs inscription : échec chargement', e); });
+
+    Promise.all([pendingPromise]).then(renderNotifications);
+}
+
+function renderNotifications() {
+    var badge = document.getElementById('notif-bell-badge');
+    var btn = document.getElementById('notif-bell-btn');
+    var body = document.getElementById('notif-dropdown-body');
+    if (!badge || !btn || !body) return;
+
+    var count = window.__notifs.length;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.style.display = '';
+        btn.classList.add('has-notifs');
+    } else {
+        badge.style.display = 'none';
+        btn.classList.remove('has-notifs');
+    }
+
+    if (count === 0) {
+        body.innerHTML = '<p class="notif-empty">Aucune notification.</p>';
+        var existingFooter = document.getElementById('notif-dropdown-footer');
+        if (existingFooter) existingFooter.remove();
+        return;
+    }
+
+    // Grouper par href (pour l'instant = toutes vers admin-inscriptions)
+    var signupItems = window.__notifs.filter(function(n) { return n.type === 'signup_request'; });
+    var html = '';
+    // Afficher max 5 items, lien "voir tout" s'il y en a plus
+    var shown = signupItems.slice(0, 5);
+    shown.forEach(function(n) {
+        var dateStr = '';
+        if (n.date) {
+            try { dateStr = new Date(n.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }); } catch(e) {}
+        }
+        html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '">' +
+                '<div class="notif-item-title">' + notifEscHtml(n.title) + '</div>' +
+                '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +
+                '</a>';
+    });
+    body.innerHTML = html;
+
+    var dropdown = document.getElementById('notif-dropdown');
+    var oldFooter = document.getElementById('notif-dropdown-footer');
+    if (oldFooter) oldFooter.remove();
+    if (signupItems.length > 5 && dropdown) {
+        var footer = document.createElement('div');
+        footer.id = 'notif-dropdown-footer';
+        footer.className = 'notif-dropdown-footer';
+        footer.innerHTML = '<a href="admin-inscriptions.html">Voir les ' + signupItems.length + ' demandes</a>';
+        dropdown.appendChild(footer);
+    } else if (dropdown) {
+        var footer2 = document.createElement('div');
+        footer2.id = 'notif-dropdown-footer';
+        footer2.className = 'notif-dropdown-footer';
+        footer2.innerHTML = '<a href="admin-inscriptions.html">Gérer les demandes</a>';
+        dropdown.appendChild(footer2);
+    }
+}
+
+function toggleNotifDropdown(e) {
+    if (e) e.stopPropagation();
+    var dd = document.getElementById('notif-dropdown');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    dd.style.display = isOpen ? 'none' : 'block';
+
+    if (!isOpen) {
+        // Fermer au prochain clic hors dropdown
+        setTimeout(function() {
+            document.addEventListener('click', closeNotifDropdownOnce, { once: true });
+        }, 0);
+    }
+}
+
+function closeNotifDropdownOnce(e) {
+    var dd = document.getElementById('notif-dropdown');
+    var btn = document.getElementById('notif-bell-btn');
+    if (!dd) return;
+    if (btn && btn.contains(e.target)) return;
+    if (dd.contains(e.target)) {
+        // Clic sur un lien de la dropdown : laisser la navigation se faire
+        return;
+    }
+    dd.style.display = 'none';
+}
+
+function notifEscHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+        return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+    });
 }
 
 function highlightActiveLink() {

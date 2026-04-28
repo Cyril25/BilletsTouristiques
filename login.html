@@ -18,23 +18,110 @@
         <i class="fa-solid fa-users-viewfinder logo-icon"></i>
 
         <h1>Espace Membres</h1>
-        <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes de l'association.</p>
 
-        <div id="webview-warning" style="display:none; background:#FFF3CD; border:1px solid #FFCC02; border-radius:8px; padding:16px; margin-bottom:20px; text-align:center;">
-            <p style="margin:0 0 10px 0; color:#664D03; font-size:0.95rem; line-height:1.5;">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                La connexion Google ne fonctionne pas depuis Messenger ou Facebook. Ouvrez cette page dans votre navigateur :
+        <!-- VUE 1 : écran de connexion initial -->
+        <div id="view-login">
+            <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes de l'association.</p>
+
+            <div id="webview-warning" style="display:none; background:#FFF3CD; border:1px solid #FFCC02; border-radius:8px; padding:16px; margin-bottom:20px; text-align:center;">
+                <p style="margin:0 0 10px 0; color:#664D03; font-size:0.95rem; line-height:1.5;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    La connexion Google ne fonctionne pas depuis Messenger ou Facebook. Ouvrez cette page dans votre navigateur :
+                </p>
+                <a id="webview-open-btn" href="#" style="display:inline-block; background:var(--color-primary); color:#fff; padding:10px 24px; border-radius:6px; text-decoration:none; font-weight:500;">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir dans le navigateur
+                </a>
+            </div>
+
+            <button id="btn-google-login" class="btn-google" onclick="loginWithGoogle()">
+                <i class="fa-brands fa-google"></i> Se connecter avec Google
+            </button>
+
+            <div id="error-msg"></div>
+
+            <p class="login-signup-hint">
+                Pas encore membre ?
+                <a href="#" id="btn-request-access" onclick="showSignupIntent(event)">Demander un accès</a>
             </p>
-            <a id="webview-open-btn" href="#" style="display:inline-block; background:var(--color-primary); color:#fff; padding:10px 24px; border-radius:6px; text-decoration:none; font-weight:500;">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir dans le navigateur
-            </a>
         </div>
 
-        <button id="btn-google-login" class="btn-google" onclick="loginWithGoogle()">
-            <i class="fa-brands fa-google"></i> Se connecter avec Google
-        </button>
+        <!-- VUE 2 : formulaire d'inscription (affiché après auth Google si email inconnu) -->
+        <div id="view-signup" style="display:none;">
+            <p>Bienvenue <strong id="signup-email"></strong> !</p>
+            <p class="login-signup-intro">
+                Votre compte Google n'est pas encore membre de l'association.
+                Pour demander l'accès, merci de remplir ce court formulaire.
+            </p>
 
-        <div id="error-msg"></div>
+            <form id="signup-form" onsubmit="return submitSignup(event)">
+                <div class="admin-form-group">
+                    <label for="signup-prenom">Prénom <span class="required">*</span></label>
+                    <input type="text" id="signup-prenom" required maxlength="60" autocomplete="given-name">
+                </div>
+                <div class="admin-form-group">
+                    <label for="signup-nom">Nom <span class="required">*</span></label>
+                    <input type="text" id="signup-nom" required maxlength="60" autocomplete="family-name">
+                </div>
+                <div class="admin-form-group">
+                    <label for="signup-motivation">Quelques mots sur vous <span class="required">*</span></label>
+                    <textarea id="signup-motivation" required minlength="20" maxlength="500" rows="4"
+                              placeholder="Comment avez-vous connu l'association ? Depuis quand collectionnez-vous ? Etc."></textarea>
+                    <small class="form-hint">Minimum 20 caractères — ces informations aident les admins à valider votre demande.</small>
+                </div>
+
+                <div class="signup-rules">
+                    <strong><i class="fa-solid fa-circle-info"></i> Règles essentielles</strong>
+                    <ul>
+                        <li>Respect et bienveillance envers les autres collectionneurs</li>
+                        <li>Honnêteté dans les échanges et paiements</li>
+                        <li>Les contacts des autres membres sont confidentiels</li>
+                        <li>Pas de revente commerciale des billets collectés</li>
+                    </ul>
+                    <p class="rules-link">
+                        Le <a href="reglement.html" target="_blank">règlement complet</a> s'applique aux membres validés.
+                    </p>
+                </div>
+
+                <div class="admin-form-group-checkbox">
+                    <label>
+                        <input type="checkbox" id="signup-reglement" required>
+                        J'ai lu et j'accepte les règles ci-dessus
+                    </label>
+                </div>
+
+                <div id="signup-error" class="signup-error" style="display:none;"></div>
+
+                <div class="signup-actions">
+                    <button type="button" class="btn-secondary" onclick="cancelSignup()">
+                        <i class="fa-solid fa-arrow-left"></i> Annuler
+                    </button>
+                    <button type="submit" id="signup-submit-btn" class="btn-google">
+                        <i class="fa-solid fa-paper-plane"></i> Envoyer la demande
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VUE 3 : écran de statut (en attente ou refusée) -->
+        <div id="view-status" style="display:none;">
+            <div id="status-pending" style="display:none;">
+                <i class="fa-solid fa-hourglass-half logo-icon" style="color:#D4A437;"></i>
+                <h2>Demande en cours d'examen</h2>
+                <p>Votre demande d'accès a bien été enregistrée le <span id="status-pending-date"></span>.</p>
+                <p>Un administrateur va l'étudier prochainement. Vous pourrez vous connecter dès qu'elle sera validée.</p>
+            </div>
+            <div id="status-refused" style="display:none;">
+                <i class="fa-solid fa-circle-xmark logo-icon" style="color:#CC4444;"></i>
+                <h2>Demande non retenue</h2>
+                <p>Votre demande d'accès n'a pas été validée.</p>
+                <p id="status-refused-motif" style="display:none; background:#FFF3CD; border-left:3px solid #FFCC02; padding:12px; text-align:left; margin:16px 0;"></p>
+                <p>Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.</p>
+            </div>
+            <button onclick="signOutAndReload()" class="btn-secondary" style="margin-top:20px;">
+                <i class="fa-solid fa-power-off"></i> Se déconnecter
+            </button>
+        </div>
+
     </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
@@ -70,7 +157,7 @@
     }
 })();
 
-// STORY 1.2 — Afficher le message d'erreur si paramètre ?error=unauthorized
+// Affichage des erreurs URL historiques
 var urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('error') === 'unauthorized') {
     var errorMsg = document.getElementById('error-msg');
@@ -78,6 +165,136 @@ if (urlParams.get('error') === 'unauthorized') {
         errorMsg.textContent = "Accès refusé. Votre email n'est pas dans la liste des membres autorisés.";
         errorMsg.style.display = 'block';
     }
+}
+
+// --- Flux inscription publique ---
+// `wantsSignup` = l'utilisateur a cliqué "Demander un accès" avant de se connecter.
+// Dans ce cas, si l'auth Google réussit et qu'il n'est pas dans membres → formulaire.
+// Sinon (login normal) → message d'erreur "email inconnu".
+var wantsSignup = sessionStorage.getItem('wantsSignup') === '1';
+
+function showSignupIntent(e) {
+    if (e) e.preventDefault();
+    sessionStorage.setItem('wantsSignup', '1');
+    wantsSignup = true;
+    // Déclencher directement le login Google
+    if (typeof loginWithGoogle === 'function') loginWithGoogle();
+}
+
+function showView(name) {
+    document.getElementById('view-login').style.display   = (name === 'login')  ? '' : 'none';
+    document.getElementById('view-signup').style.display  = (name === 'signup') ? '' : 'none';
+    document.getElementById('view-status').style.display  = (name === 'status') ? '' : 'none';
+}
+
+function showSignupForm(email) {
+    document.getElementById('signup-email').textContent = email;
+    showView('signup');
+}
+
+function showStatusPending(demandeAt) {
+    document.getElementById('status-pending').style.display = '';
+    document.getElementById('status-refused').style.display = 'none';
+    if (demandeAt) {
+        try {
+            var d = new Date(demandeAt);
+            document.getElementById('status-pending-date').textContent = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+        } catch(e) {}
+    }
+    showView('status');
+}
+
+function showStatusRefused(motif) {
+    document.getElementById('status-pending').style.display = 'none';
+    document.getElementById('status-refused').style.display = '';
+    if (motif) {
+        var el = document.getElementById('status-refused-motif');
+        el.textContent = 'Motif : ' + motif;
+        el.style.display = 'block';
+    }
+    showView('status');
+}
+
+function cancelSignup() {
+    sessionStorage.removeItem('wantsSignup');
+    wantsSignup = false;
+    signOutAndReload();
+}
+
+function signOutAndReload() {
+    sessionStorage.removeItem('wantsSignup');
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().signOut().then(function() {
+            window.location.href = 'login.html';
+        });
+    } else {
+        window.location.href = 'login.html';
+    }
+}
+
+function submitSignup(e) {
+    e.preventDefault();
+    var user = firebase.auth().currentUser;
+    if (!user) { alert('Session expirée, reconnectez-vous.'); signOutAndReload(); return false; }
+
+    var prenom    = document.getElementById('signup-prenom').value.trim();
+    var nom       = document.getElementById('signup-nom').value.trim();
+    var motiv     = document.getElementById('signup-motivation').value.trim();
+    var reglement = document.getElementById('signup-reglement').checked;
+    var errBox    = document.getElementById('signup-error');
+    errBox.style.display = 'none';
+
+    if (!prenom || !nom) { errBox.textContent = 'Nom et prénom sont requis.'; errBox.style.display = 'block'; return false; }
+    if (motiv.length < 20) { errBox.textContent = 'Merci de rédiger au moins 20 caractères de présentation.'; errBox.style.display = 'block'; return false; }
+    if (!reglement) { errBox.textContent = 'Vous devez accepter les règles pour demander l\'accès.'; errBox.style.display = 'block'; return false; }
+
+    var btn = document.getElementById('signup-submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Envoi...';
+
+    var nowIso = new Date().toISOString();
+    var payload = {
+        email: user.email,
+        role: 'member',
+        statut: 'en_attente',
+        prenom: prenom,
+        nom: nom,
+        motivation: motiv,
+        reglement_accepte_at: nowIso,
+        demande_at: nowIso
+    };
+
+    user.getIdToken(false).then(function(token) {
+        return fetch(SUPABASE_URL + '/rest/v1/membres', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(payload)
+        });
+    })
+    .then(function(res) {
+        if (!res.ok) {
+            return res.text().then(function(txt) {
+                var msg = 'Erreur ' + res.status;
+                try { msg = JSON.parse(txt).message || msg; } catch(e) {}
+                throw new Error(msg);
+            });
+        }
+        sessionStorage.removeItem('wantsSignup');
+        showStatusPending(nowIso);
+    })
+    .catch(function(err) {
+        console.error('Erreur inscription :', err);
+        errBox.textContent = 'Erreur lors de l\'envoi : ' + err.message;
+        errBox.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Envoyer la demande';
+    });
+    return false;
 }
 </script>
 
