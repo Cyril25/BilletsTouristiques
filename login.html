@@ -69,6 +69,40 @@
                     <small class="form-hint">Minimum 20 caractères — ces informations aident les admins à valider votre demande.</small>
                 </div>
 
+                <div class="signup-questions">
+                    <strong><i class="fa-solid fa-circle-question"></i> Petites vérifications</strong>
+                    <p class="signup-questions-intro">Pour confirmer votre intérêt pour la collection de billets touristiques :</p>
+
+                    <div class="admin-form-group">
+                        <label for="signup-q1">Quelle est la valeur monétaire (en euros) d'un billet touristique ? <span class="required">*</span></label>
+                        <input type="text" id="signup-q1" required maxlength="40" autocomplete="off">
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label for="signup-q4">Citez un lieu touristique français qui émet des billets <span class="required">*</span></label>
+                        <input type="text" id="signup-q4" required minlength="3" maxlength="80" autocomplete="off"
+                               list="signup-q4-suggestions" placeholder="Ex: Puy du Fou, Mont Saint-Michel...">
+                        <datalist id="signup-q4-suggestions">
+                            <option value="Puy du Fou"></option>
+                            <option value="Mont Saint-Michel"></option>
+                            <option value="Disneyland Paris"></option>
+                            <option value="Parc Astérix"></option>
+                            <option value="Futuroscope"></option>
+                            <option value="Vulcania"></option>
+                            <option value="Château de Versailles"></option>
+                            <option value="Tour Eiffel"></option>
+                            <option value="Zoo de Beauval"></option>
+                            <option value="Marineland"></option>
+                            <option value="Grotte de Lascaux"></option>
+                            <option value="Notre-Dame de Paris"></option>
+                            <option value="Arc de Triomphe"></option>
+                            <option value="Le Louvre"></option>
+                            <option value="Mémorial de Caen"></option>
+                        </datalist>
+                        <small class="form-hint">Une suggestion vous est proposée, mais vous pouvez écrire librement.</small>
+                    </div>
+                </div>
+
                 <div class="signup-rules">
                     <strong><i class="fa-solid fa-circle-info"></i> Règles essentielles</strong>
                     <ul>
@@ -244,12 +278,27 @@ function submitSignup(e) {
     var prenom    = document.getElementById('signup-prenom').value.trim();
     var nom       = document.getElementById('signup-nom').value.trim();
     var motiv     = document.getElementById('signup-motivation').value.trim();
+    var q1Raw     = document.getElementById('signup-q1').value.trim();
+    var q4Raw     = document.getElementById('signup-q4').value.trim();
     var reglement = document.getElementById('signup-reglement').checked;
     var errBox    = document.getElementById('signup-error');
     errBox.style.display = 'none';
 
     if (!prenom || !nom) { errBox.textContent = 'Nom et prénom sont requis.'; errBox.style.display = 'block'; return false; }
     if (motiv.length < 20) { errBox.textContent = 'Merci de rédiger au moins 20 caractères de présentation.'; errBox.style.display = 'block'; return false; }
+
+    // Q1 et Q4 : on exige juste que ce soit rempli, l'admin tranche au vu des réponses.
+    if (!q1Raw) {
+        errBox.textContent = 'Merci de répondre à la première question.';
+        errBox.style.display = 'block';
+        return false;
+    }
+    if (q4Raw.length < 3) {
+        errBox.textContent = 'Merci de citer un lieu touristique pour la deuxième question.';
+        errBox.style.display = 'block';
+        return false;
+    }
+
     if (!reglement) { errBox.textContent = 'Vous devez accepter les règles pour demander l\'accès.'; errBox.style.display = 'block'; return false; }
 
     var btn = document.getElementById('signup-submit-btn');
@@ -264,6 +313,8 @@ function submitSignup(e) {
         prenom: prenom,
         nom: nom,
         motivation: motiv,
+        q1_reponse: q1Raw,
+        q4_reponse: q4Raw,
         reglement_accepte_at: nowIso,
         demande_at: nowIso
     };

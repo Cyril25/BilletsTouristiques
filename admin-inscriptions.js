@@ -48,10 +48,10 @@ function adminInscLoad() {
     var path;
     if (adminInscCurrentTab === 'actif') {
         // Valides récents : ceux qui ont été validés (validated_at non null), triés desc, max 30
-        path = '/rest/v1/membres?statut=eq.actif&validated_at=not.is.null&select=email,prenom,nom,motivation,demande_at,validated_at,validated_by&order=validated_at.desc&limit=30';
+        path = '/rest/v1/membres?statut=eq.actif&validated_at=not.is.null&select=email,prenom,nom,motivation,q1_reponse,q4_reponse,reglement_accepte_at,demande_at,validated_at,validated_by&order=validated_at.desc&limit=30';
     } else {
         path = '/rest/v1/membres?statut=eq.' + adminInscCurrentTab +
-               '&select=email,prenom,nom,motivation,reglement_accepte_at,demande_at,validated_at,validated_by,refuse_motif' +
+               '&select=email,prenom,nom,motivation,q1_reponse,q4_reponse,reglement_accepte_at,demande_at,validated_at,validated_by,refuse_motif' +
                '&order=demande_at.desc';
     }
 
@@ -128,6 +128,7 @@ function renderCard(m) {
             '<div class="admin-insc-date"><i class="fa-solid fa-clock"></i> ' + demandeAt + '</div>' +
         '</div>' +
         (m.motivation ? '<div class="admin-insc-motivation">' + adminInscEsc(m.motivation) + '</div>' : '') +
+        renderQuestions(m) +
         refuseMotifHtml +
         '<div class="admin-insc-footer">' +
             (reglementOk
@@ -187,6 +188,13 @@ function adminInscRefuse(email) {
     .catch(function(err) {
         alert('Erreur : ' + (err.message || 'impossible de refuser'));
     });
+}
+
+function renderQuestions(m) {
+    if (!m.q1_reponse && !m.q4_reponse) return '';
+    var q1 = m.q1_reponse ? '<dt>Valeur monétaire d\'un billet</dt><dd>' + adminInscEsc(m.q1_reponse) + '</dd>' : '';
+    var q4 = m.q4_reponse ? '<dt>Lieu touristique cité</dt><dd>' + adminInscEsc(m.q4_reponse) + '</dd>' : '';
+    return '<dl class="admin-insc-questions">' + q1 + q4 + '</dl>';
 }
 
 function adminInscEsc(s) {
