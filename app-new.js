@@ -1130,13 +1130,17 @@ function buildInscriptionHtml(item) {
             var paypalNoteJs = paypalNote.replace(/'/g, "\\'");
 
             var paypalUrl = '';
+            var paypalManualHtml = '';
             if (collecteurInfo.paypal_me) {
                 paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteurInfo.paypal_me) + '/' + montantAvecFdp.toFixed(2);
             } else if (collecteurInfo.paypal_email) {
-                paypalUrl = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteurInfo.paypal_email) + '&amount=' + montantAvecFdp.toFixed(2) + '&currency_code=EUR';
+                paypalUrl = 'https://www.paypal.com/myaccount/transfer/homepage/pay';
+                var emailJs = collecteurInfo.paypal_email.replace(/'/g, "\\'");
+                paypalManualHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-circle-info"></i> Envoyer <strong>' + montantAvecFdp.toFixed(2) + '€</strong> à <code>' + escapeHtml(collecteurInfo.paypal_email) + '</code> <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + emailJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier email\'},2000)"><i class="fa-solid fa-copy"></i> Copier email</button> — cocher <strong>«&nbsp;Entre proches&nbsp;»</strong></div>';
             }
             if (paypalUrl) {
                 html += '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
+                html += paypalManualHtml;
                 html += '<a href="' + paypalUrl + '" target="_blank" class="btn-payer" onclick="event.stopPropagation()"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
             }
         }

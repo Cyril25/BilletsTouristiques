@@ -2504,12 +2504,7 @@ function ouvrirRelance(billetId) {
 function renderRelanceModal(billet, impayes) {
     var prix = parseFloat(billet.Prix || 0);
     var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
-    var paypalInfo = '';
-    if (monCollecteur.paypal_me) {
-        paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
-    } else if (monCollecteur.paypal_email) {
-        paypalInfo = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(monCollecteur.paypal_email) + '&currency_code=EUR';
-    }
+    var hasPaypal = !!(monCollecteur.paypal_me || monCollecteur.paypal_email);
 
     var messagesHtml = impayes.map(function(insc, idx) {
         var adr = insc.adresse_snapshot || {};
@@ -2528,11 +2523,16 @@ function renderRelanceModal(billet, impayes) {
             + (insc.mode_envoi && insc.mode_envoi !== 'Normal' ? '- Des frais de port supplémentaires peuvent s\'appliquer.\n' : '')
             + '\n';
 
-        if (insc.mode_paiement === 'PayPal' && paypalInfo) {
-            var paypalLink = monCollecteur.paypal_me
-                ? paypalInfo + '/' + montant.toFixed(2)
-                : paypalInfo + '&amount=' + montant.toFixed(2);
-            corps += 'Tu peux effectuer le paiement via PayPal :\n' + paypalLink + '\n\n';
+        if (insc.mode_paiement === 'PayPal' && hasPaypal) {
+            if (monCollecteur.paypal_me) {
+                corps += 'Tu peux effectuer le paiement via PayPal :\n'
+                    + 'https://paypal.me/' + monCollecteur.paypal_me + '/' + montant.toFixed(2) + '\n\n';
+            } else {
+                corps += 'Tu peux effectuer le paiement via PayPal (envoi entre proches, sans frais) :\n'
+                    + '1. Ouvre https://www.paypal.com/myaccount/transfer/homepage/pay\n'
+                    + '2. Envoie ' + montant.toFixed(2) + ' EUR à : ' + monCollecteur.paypal_email + '\n'
+                    + '3. Coche bien "Entre proches" (sinon des frais s\'appliqueront)\n\n';
+            }
         }
 
         corps += 'Merci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');
@@ -2612,12 +2612,7 @@ function ouvrirRelanceGlobale() {
         return;
     }
 
-    var paypalInfo = '';
-    if (monCollecteur.paypal_me) {
-        paypalInfo = 'https://paypal.me/' + monCollecteur.paypal_me;
-    } else if (monCollecteur.paypal_email) {
-        paypalInfo = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(monCollecteur.paypal_email) + '&currency_code=EUR';
-    }
+    var hasPaypal = !!(monCollecteur.paypal_me || monCollecteur.paypal_email);
 
     // Grouper par membre
     var groupes = {};
@@ -2673,11 +2668,16 @@ function ouvrirRelanceGlobale() {
             + 'Récapitulatif :' + detailsLignes + '\n\n'
             + 'Total dû : ' + totalMembre.toFixed(2) + ' €\n';
 
-        if (paypalInfo) {
-            var paypalLink = monCollecteur.paypal_me
-                ? paypalInfo + '/' + totalMembre.toFixed(2)
-                : paypalInfo + '&amount=' + totalMembre.toFixed(2);
-            corps += '\nTu peux effectuer le paiement via PayPal :\n' + paypalLink + '\n';
+        if (hasPaypal) {
+            if (monCollecteur.paypal_me) {
+                corps += '\nTu peux effectuer le paiement via PayPal :\n'
+                    + 'https://paypal.me/' + monCollecteur.paypal_me + '/' + totalMembre.toFixed(2) + '\n';
+            } else {
+                corps += '\nTu peux effectuer le paiement via PayPal (envoi entre proches, sans frais) :\n'
+                    + '1. Ouvre https://www.paypal.com/myaccount/transfer/homepage/pay\n'
+                    + '2. Envoie ' + totalMembre.toFixed(2) + ' EUR à : ' + monCollecteur.paypal_email + '\n'
+                    + '3. Coche bien "Entre proches" (sinon des frais s\'appliqueront)\n';
+            }
         }
 
         corps += '\nMerci d\'avance,\n' + (monCollecteur.alias || 'Le collecteur');

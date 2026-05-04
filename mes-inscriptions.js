@@ -272,13 +272,16 @@ function renderInscriptions() {
             var paypalNoteJs = paypalNote.replace(/'/g, "\\'");
 
             var paypalUrl = '';
+            var paypalManualHint = '';
             if (collecteur.paypal_me) {
                 paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteur.paypal_me) + '/' + montantAvecFdp.toFixed(2);
             } else if (collecteur.paypal_email) {
-                paypalUrl = 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteur.paypal_email) + '&amount=' + montantAvecFdp.toFixed(2) + '&currency_code=EUR';
+                paypalUrl = 'https://www.paypal.com/myaccount/transfer/homepage/pay';
+                var emailJs = collecteur.paypal_email.replace(/'/g, "\\'");
+                paypalManualHint = '<div class="paypal-note-hint"><i class="fa-solid fa-circle-info"></i> Envoyer <strong>' + montantAvecFdp.toFixed(2) + '€</strong> à <code>' + escapeHtml(collecteur.paypal_email) + '</code> <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + emailJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier email\'},2000)"><i class="fa-solid fa-copy"></i> Copier email</button> — cocher <strong>«&nbsp;Entre proches&nbsp;»</strong></div>';
             }
             if (paypalUrl) {
-                paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
+                paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(paypalNote) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + paypalNoteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>' + paypalManualHint;
                 paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
             }
         }
@@ -359,11 +362,17 @@ function renderInscriptions() {
         if (paypalParts.length > 0 && (collecteurObj.paypal_me || collecteurObj.paypal_email)) {
             var note = paypalParts.join(', ') + ' = ' + totalPaypal.toFixed(2) + '\u20AC';
             var noteJs = note.replace(/'/g, "\\'");
-            var paypalUrl = collecteurObj.paypal_me
-                ? 'https://paypal.me/' + encodeURIComponent(collecteurObj.paypal_me) + '/' + totalPaypal.toFixed(2)
-                : 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + encodeURIComponent(collecteurObj.paypal_email) + '&amount=' + totalPaypal.toFixed(2) + '&currency_code=EUR';
+            var paypalUrl;
+            var paypalManualHint = '';
+            if (collecteurObj.paypal_me) {
+                paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteurObj.paypal_me) + '/' + totalPaypal.toFixed(2);
+            } else {
+                paypalUrl = 'https://www.paypal.com/myaccount/transfer/homepage/pay';
+                var emailJs = collecteurObj.paypal_email.replace(/'/g, "\\'");
+                paypalManualHint = '<div class="paypal-note-hint"><i class="fa-solid fa-circle-info"></i> Envoyer <strong>' + totalPaypal.toFixed(2) + '€</strong> à <code>' + escapeHtml(collecteurObj.paypal_email) + '</code> <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + emailJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier email\'},2000)"><i class="fa-solid fa-copy"></i> Copier email</button> — cocher <strong>« Entre proches »</strong></div>';
+            }
             paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note)
-                + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>';
+                + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>' + paypalManualHint;
             paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer ' + totalPaypal.toFixed(2) + '\u20AC via PayPal</a>';
         }
 
