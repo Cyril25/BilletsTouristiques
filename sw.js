@@ -7,7 +7,7 @@
 //   - Network Only  : API données (supabase, workers.dev, google)
 // ============================================================
 
-const CACHE_NAME = 'billets-v207';
+const CACHE_NAME = 'billets-v208';
 
 const STATIC_ASSETS = [
     './',
@@ -111,8 +111,11 @@ self.addEventListener('fetch', event => {
     });
 
     if (isSiteAsset) {
+        // cache: 'no-cache' — bypasse le HTTP cache du navigateur pour garantir
+        // qu'on récupère bien la dernière version (sinon GitHub Pages peut renvoyer
+        // une réponse stale jusqu'à 10 min via max-age=600).
         event.respondWith(
-            fetch(event.request).then(function(response) {
+            fetch(event.request, { cache: 'no-cache' }).then(function(response) {
                 if (event.request.method === 'GET' && response && response.status === 200) {
                     var toCache = response.clone();
                     caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, toCache); });
