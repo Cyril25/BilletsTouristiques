@@ -1205,9 +1205,10 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
         return 0;
     });
 
-    // Séparer en deux groupes : à répartir vs en attente
+    // Séparer en trois groupes : à répartir (tout payé) / en attente de paiement / en attente d'envoi
     var groupeARepartir = [];
-    var groupeEnAttente = [];
+    var groupeEnAttentePaiement = [];
+    var groupeEnAttenteEnvoi = [];
 
     for (var e = 0; e < enveloppesMeta.length; e++) {
             var env = enveloppesMeta[e].env;
@@ -1220,15 +1221,25 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             // Masquer les enveloppes vides (0 dans l'enveloppe et 0 à répartir)
             if (totalBillets === 0 && totalARepartir === 0) continue;
 
-            var item = { env: env, adr: enveloppesMeta[e].adr, totalBillets: totalBillets, aRepartir: totalARepartir, hasARepartir: aRepartir.length > 0 };
+            // Inscriptions à répartir non payées (en excluant le collecteur lui-même quand il est bénéficiaire)
+            var aRepartirImpayes = aRepartir.filter(function(i) {
+                return i.statut_paiement !== 'confirme' && i.membre_email !== monCollecteur.email_membre;
+            });
+            var nbImpayes = countBillets(aRepartirImpayes, billetsMap);
+
+            var item = { env: env, adr: enveloppesMeta[e].adr, totalBillets: totalBillets, aRepartir: totalARepartir, nbImpayes: nbImpayes, hasARepartir: aRepartir.length > 0 };
             if (item.hasARepartir) {
-                groupeARepartir.push(item);
+                if (aRepartirImpayes.length === 0) {
+                    groupeARepartir.push(item);
+                } else {
+                    groupeEnAttentePaiement.push(item);
+                }
             } else {
-                groupeEnAttente.push(item);
+                groupeEnAttenteEnvoi.push(item);
             }
     }
 
-    if (groupeARepartir.length === 0 && groupeEnAttente.length === 0) {
+    if (groupeARepartir.length === 0 && groupeEnAttentePaiement.length === 0 && groupeEnAttenteEnvoi.length === 0) {
         renderEnveloppesVide();
         return;
     }
@@ -1244,11 +1255,12 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             var modeLabel = { normal: 'Normal', suivi: 'Suivi', recommande_r1: 'R1', recommande_r2: 'R2', recommande_r3: 'R3' }[item.env.mode_envoi] || '';
             demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi le ' + dateStr + (modeLabel ? ' — ' + modeLabel : '') + '</span>';
         }
+        var impayesHtml = item.nbImpayes > 0 ? ' — <strong>' + item.nbImpayes + ' impayé(s)</strong>' : '';
         return '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + item.env.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'
             + '<span class="envoi-adresse">' + escapeHtmlMC(adresseStr || 'Adresse non renseignée') + '</span>'
-            + '<span class="envoi-count">' + item.totalBillets + ' billet(s) dans l\'enveloppe, ' + item.aRepartir + ' billet(s) à répartir</span>'
+            + '<span class="envoi-count">' + item.totalBillets + ' billet(s) dans l\'enveloppe, ' + item.aRepartir + ' billet(s) à répartir' + impayesHtml + '</span>'
             + demandeHtml
             + '</div>'
             + '</div>';
@@ -1261,10 +1273,17 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
         }
     }
 
-    if (groupeEnAttente.length > 0) {
-        html += '<h3 class="envois-section-title"><i class="fa-solid fa-clock"></i> En attente (' + groupeEnAttente.length + ')</h3>';
-        for (var i = 0; i < groupeEnAttente.length; i++) {
-            html += renderEnveloppeCard(groupeEnAttente[i]);
+    if (groupeEnAttentePaiement.length > 0) {
+        html += '<h3 class="envois-section-title"><i class="fa-solid fa-hourglass-half"></i> En attente de paiement (' + groupeEnAttentePaiement.length + ')</h3>';
+        for (var i = 0; i < groupeEnAttentePaiement.length; i++) {
+            html += renderEnveloppeCard(groupeEnAttentePaiement[i]);
+        }
+    }
+
+    if (groupeEnAttenteEnvoi.length > 0) {
+        html += '<h3 class="envois-section-title"><i class="fa-solid fa-clock"></i> En attente d\'envoi (' + groupeEnAttenteEnvoi.length + ')</h3>';
+        for (var i = 0; i < groupeEnAttenteEnvoi.length; i++) {
+            html += renderEnveloppeCard(groupeEnAttenteEnvoi[i]);
         }
     }
 
