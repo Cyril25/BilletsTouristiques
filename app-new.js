@@ -737,9 +737,9 @@ function showMore() {
                 '<div class="more">' +
                 '<center>' +
                 '<table class="dates">' +
-                '<tr><td>Pré Collecte :</td><td><b>' + escapeHtml(item.DatePre || '') + '</b></td></tr>' +
-                '<tr><td>Collecte :</td><td><b>' + escapeHtml(item.DateColl || '') + '</b></td></tr>' +
-                '<tr><td>Terminé :</td><td><b>' + escapeHtml(item.DateFin || '') + '</b></td></tr>' +
+                '<tr><td>Pré Collecte :</td><td><b>' + escapeHtml(window.formatDateFr(item.DatePre)) + '</b></td></tr>' +
+                '<tr><td>Collecte :</td><td><b>' + escapeHtml(window.formatDateFr(item.DateColl)) + '</b></td></tr>' +
+                '<tr><td>Terminé :</td><td><b>' + escapeHtml(window.formatDateFr(item.DateFin)) + '</b></td></tr>' +
                 '</table>' +
                 '</center>' +
                 '</div>' +

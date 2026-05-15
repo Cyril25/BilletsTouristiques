@@ -258,7 +258,7 @@ function renderCollectesList() {
         } else if (b.Prix) {
             h += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + '</span>';
         }
-        if (b.DateColl) h += '<span><i class="fa-solid fa-calendar"></i> ' + b.DateColl + '</span>';
+        if (b.DateColl) h += '<span><i class="fa-solid fa-calendar"></i> ' + window.formatDateFr(b.DateColl) + '</span>';
         h += '</div>';
         var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, billetsTotal: { normaux: 0, variantes: 0 }, billetsEnvoyes: { normaux: 0, variantes: 0 } };
         if (stats.total > 0) {

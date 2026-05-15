@@ -299,6 +299,19 @@ function varianteLabelAnyShort(code) {
     return window.VARIANTE_LABELS_ALL_SHORT[code] || code;
 }
 
+// Formate une date stockée (AAAA-MM-JJ ou ISO) au format français JJ/MM/AAAA.
+// Renvoie '' si vide/invalide. Sans dépendance au fuseau horaire (parse direct).
+window.formatDateFr = function(str) {
+    if (!str) return '';
+    var s = String(str).trim();
+    // Format ISO / AAAA-MM-JJ (éventuellement suivi d'une heure)
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return m[3] + '/' + m[2] + '/' + m[1];
+    // Déjà au format JJ/MM/AAAA
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0, 10);
+    return s;
+};
+
 // ============================================================
 // 4. MENU (Mise à jour)
 // ============================================================
@@ -306,7 +319,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=148")
+    fetch("menu.html?v=149")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
