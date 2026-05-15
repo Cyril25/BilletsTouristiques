@@ -96,7 +96,7 @@
             }
 
             // Haut (lecture normale)
-            drawLabel('Association', cx, y - gap, 0);
+            drawLabel('Groupe', cx, y - gap, 0);
             // Bas (lecture normale)
             drawLabel('Billets Touristiques', cx, y + qrSize + gap, 0);
             // Gauche (rotation -90°, suit le QR)

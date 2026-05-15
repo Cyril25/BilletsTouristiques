@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Connexion à l'espace membres de l'association Billets et Jetons Touristiques.">
-    <title>Connexion - Association Billet Touristique</title>
+    <meta name="description" content="Connexion à l'espace membres du groupe Billets et Jetons Touristiques.">
+    <title>Connexion - Groupe Billet Touristique</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
@@ -21,7 +21,7 @@
 
         <!-- VUE 1 : écran de connexion initial -->
         <div id="view-login">
-            <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes de l'association.</p>
+            <p>Veuillez vous identifier avec votre compte Google pour accéder à l'annuaire et aux collectes du groupe.</p>
 
             <div id="webview-warning" style="display:none; background:#FFF3CD; border:1px solid #FFCC02; border-radius:8px; padding:16px; margin-bottom:20px; text-align:center;">
                 <p style="margin:0 0 10px 0; color:#664D03; font-size:0.95rem; line-height:1.5;">
@@ -49,7 +49,7 @@
         <div id="view-signup" style="display:none;">
             <p>Bienvenue <strong id="signup-email"></strong> !</p>
             <p class="login-signup-intro">
-                Votre compte Google n'est pas encore membre de l'association.
+                Votre compte Google n'est pas encore membre du groupe.
                 Pour demander l'accès, merci de remplir ce court formulaire.
             </p>
 
@@ -65,7 +65,7 @@
                 <div class="admin-form-group">
                     <label for="signup-motivation">Quelques mots sur vous <span class="required">*</span></label>
                     <textarea id="signup-motivation" required minlength="20" maxlength="500" rows="4"
-                              placeholder="Comment avez-vous connu l'association ? Depuis quand collectionnez-vous ? Etc."></textarea>
+                              placeholder="Comment avez-vous connu le groupe ? Depuis quand collectionnez-vous ? Etc."></textarea>
                     <small class="form-hint">Minimum 20 caractères — ces informations aident les admins à valider votre demande.</small>
                 </div>
 

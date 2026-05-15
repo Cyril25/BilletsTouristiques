@@ -1,7 +1,7 @@
 {
   "name": "Billets Touristiques",
   "short_name": "Billets T.",
-  "description": "Espace membres de l'association Billets et Jetons Touristiques",
+  "description": "Espace membres du groupe Billets et Jetons Touristiques",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

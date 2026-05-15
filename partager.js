@@ -56,12 +56,12 @@
         roundRect(ctx, 16, 16, LOGICAL_W - 32, LOGICAL_H - 32, 20);
         ctx.stroke();
 
-        // Titre "Association"
+        // Titre "Groupe"
         ctx.fillStyle = COLOR_SECONDARY;
         ctx.font = '300 26px Roboto, Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText('Association', LOGICAL_W / 2, 74);
+        ctx.fillText('Groupe', LOGICAL_W / 2, 74);
 
         // Titre "Billets Touristiques"
         ctx.fillStyle = COLOR_PRIMARY;

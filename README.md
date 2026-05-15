@@ -1,6 +1,6 @@
 # BilletsTouristiques
 
-Application web privée pour la gestion de la collection de billets et jetons touristiques de l'association **Billets et Jetons Touristiques** (groupe Facebook éponyme).
+Application web privée pour la gestion de la collection de billets et jetons touristiques du groupe **Billets et Jetons Touristiques** (groupe Facebook éponyme).
 
 ## Fonctionnalités
 
@@ -32,7 +32,7 @@ Application web privée pour la gestion de la collection de billets et jetons to
 
 ## Accès et sécurité
 
-L'accès est restreint aux membres de l'association :
+L'accès est restreint aux membres du groupe :
 1. Connexion via compte Google
 2. L'email est vérifié dans la whitelist Firestore
 3. L'API de données exige un token Firebase valide (`Authorization: Bearer`)
