@@ -366,6 +366,17 @@ body {
     }
 
     .dropbtn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 15px 0;
+        font-weight: 600;
+        color: var(--color-text-inverse);
+    }
+
+    /* Le menu est toujours déplié sur mobile : le chevron n'a pas de sens */
+    .dropbtn .fa-caret-down {
         display: none;
     }
 
