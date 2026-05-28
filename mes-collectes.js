@@ -102,7 +102,7 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,statut_paiement,envoye,nb_normaux,nb_variantes');
+            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,nb_normaux,nb_variantes');
         })
         .then(function(inscriptions) {
             mesInscriptionsParBillet = {};
@@ -117,8 +117,11 @@ function loadMesCollectes() {
                         };
                     }
                     var st = mesInscriptionsParBillet[ins.billet_id];
-                    st.total++;
-                    if (ins.statut_paiement === 'confirme') st.confirmes++;
+                    var isBenef = monCollecteur && ins.membre_email === monCollecteur.email_membre;
+                    if (!isBenef) {
+                        st.total++;
+                        if (ins.statut_paiement === 'confirme') st.confirmes++;
+                    }
                     var nn = ins.nb_normaux || 0;
                     var nv = ins.nb_variantes || 0;
                     st.billetsTotal.normaux += nn;
@@ -367,15 +370,20 @@ function renderCollecteDetail(billetId, inscriptions) {
     var prix = parseFloat((billet && billet.Prix) || 0);
     var prixVariante = (billet && billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
 
-    // Compute counters
-    var totalInscrits = inscriptions.length;
+    // Compute counters — exclure le bénéficiaire (collecteur inscrit à sa propre collecte) des compteurs de paiement
+    var totalInscrits = 0;
     var totalConfirmes = 0;
     var totalNormaux = 0;
     var totalVariantes = 0;
     for (var i = 0; i < inscriptions.length; i++) {
-        if (inscriptions[i].statut_paiement === 'confirme') totalConfirmes++;
-        totalNormaux += (inscriptions[i].nb_normaux || 0);
-        totalVariantes += (inscriptions[i].nb_variantes || 0);
+        var insI = inscriptions[i];
+        var isBenefI = monCollecteur && insI.membre_email === monCollecteur.email_membre;
+        if (!isBenefI) {
+            totalInscrits++;
+            if (insI.statut_paiement === 'confirme') totalConfirmes++;
+        }
+        totalNormaux += (insI.nb_normaux || 0);
+        totalVariantes += (insI.nb_variantes || 0);
     }
     var progressPct = totalInscrits > 0 ? Math.round((totalConfirmes / totalInscrits) * 100) : 0;
 
@@ -864,14 +872,19 @@ function annulerExpeditionDirecte() {
 }
 
 function updateCompteurs() {
-    var totalInscrits = currentInscriptions.length;
+    var totalInscrits = 0;
     var totalConfirmes = 0;
     var totalNormaux = 0;
     var totalVariantes = 0;
     for (var i = 0; i < currentInscriptions.length; i++) {
-        if (currentInscriptions[i].statut_paiement === 'confirme') totalConfirmes++;
-        totalNormaux += (currentInscriptions[i].nb_normaux || 0);
-        totalVariantes += (currentInscriptions[i].nb_variantes || 0);
+        var insI = currentInscriptions[i];
+        var isBenefI = monCollecteur && insI.membre_email === monCollecteur.email_membre;
+        if (!isBenefI) {
+            totalInscrits++;
+            if (insI.statut_paiement === 'confirme') totalConfirmes++;
+        }
+        totalNormaux += (insI.nb_normaux || 0);
+        totalVariantes += (insI.nb_variantes || 0);
     }
     var progressPct = totalInscrits > 0 ? Math.round((totalConfirmes / totalInscrits) * 100) : 0;
 
@@ -2205,6 +2218,9 @@ function executerAnnulationEnvoi(enveloppeId) {
 // ============================================================
 
 function badgePaiementCollecteur(ins) {
+    if (monCollecteur && ins.membre_email === monCollecteur.email_membre) {
+        return '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>';
+    }
     var statut = ins.statut_paiement || 'non_paye';
     if (statut === 'confirme') {
         return '<div class="paiement-cell"><span class="badge-paye badge-paiement-collecteur">Payé</span>'
