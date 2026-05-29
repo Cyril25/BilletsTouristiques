@@ -200,9 +200,19 @@ function renderUserCards(searchQuery) {
                 '<span class="user-card-last-active"><i class="fa-solid fa-clock"></i> ' + formatLastActive(lastActive) + '</span>' +
                 (function() {
                     var hasAddr = user.rue || user.code_postal || user.ville;
-                    return '<a href="#" class="user-addr-indicator' + (hasAddr ? ' user-addr-ok' : ' user-addr-missing') + '" data-doc-id="' + escapeAttr(email) + '" onclick="event.preventDefault(); openUserEditModal(\'' + escapeAttr(email).replace(/'/g, "\\'") + '\')">' +
-                        '<i class="fa-solid fa-location-dot"></i> ' + (hasAddr ? 'Adresse renseignée' : 'Adresse non renseignée') +
-                    '</a>';
+                    if (!hasAddr) {
+                        return '<a href="#" class="user-addr-indicator user-addr-missing" data-doc-id="' + escapeAttr(email) + '" onclick="event.preventDefault(); openUserEditModal(\'' + escapeAttr(email).replace(/'/g, "\\'") + '\')">' +
+                            '<i class="fa-solid fa-location-dot"></i> Adresse non renseignée' +
+                        '</a>';
+                    }
+                    var nomAdr = ((nom || '') + ' ' + (prenom || '')).trim();
+                    var cpVille = [user.code_postal, (user.ville || '').toUpperCase() || null].filter(Boolean).join(' ');
+                    var paysLigne = (user.pays && user.pays.trim().toLowerCase() !== 'france') ? user.pays.trim().toUpperCase() : '';
+                    var adresseLines = [nomAdr, user.rue, cpVille, paysLigne].filter(Boolean);
+                    return '<div class="envoi-adresse-wrapper" onclick="copierAdresse(this, event)" title="Cliquer pour copier l\'adresse">' +
+                        '<pre class="envoi-adresse-bloc">' + escapeHtml(adresseLines.join('\n')) + '</pre>' +
+                        '<span class="envoi-adresse-copie"><i class="fa-solid fa-check"></i> Copié !</span>' +
+                    '</div>';
                 })() +
             '</div>' +
             '<div class="user-card-actions">' +

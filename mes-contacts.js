@@ -146,11 +146,20 @@ function renderContacts() {
         var meta = [];
         if (c.email) meta.push('<span><i class="fa-solid fa-envelope"></i> ' + escapeHtml(c.email) + '</span>');
         if (c.telephone) meta.push('<span><i class="fa-solid fa-phone"></i> ' + escapeHtml(c.telephone) + '</span>');
+        var adresseBloc = '';
+        if (c.adresse && c.adresse.trim()) {
+            var adresseLines = [nomComplet, c.adresse.trim()].filter(function(s) { return s; });
+            adresseBloc = '<div class="envoi-adresse-wrapper" onclick="copierAdresse(this, event)" title="Cliquer pour copier l\'adresse">' +
+                '<pre class="envoi-adresse-bloc">' + escapeHtml(adresseLines.join('\n')) + '</pre>' +
+                '<span class="envoi-adresse-copie"><i class="fa-solid fa-check"></i> Copié !</span>' +
+                '</div>';
+        }
         return '<div class="contact-card" data-id="' + c.id + '" onclick="ouvrirContactModal(' + c.id + ')">' +
             '<div class="contact-card-title"><i class="fa-solid fa-lock" title="Privé"></i> ' + escapeHtml(titre) + '</div>' +
             (nomComplet && c.titre ? '<div class="contact-card-name">' + escapeHtml(nomComplet) + '</div>' : '') +
             (c.societe ? '<div class="contact-card-societe">' + escapeHtml(c.societe) + '</div>' : '') +
             (meta.length ? '<div class="contact-card-meta">' + meta.join('') + '</div>' : '') +
+            adresseBloc +
             (c.references_billets ? '<div class="contact-card-refs"><i class="fa-solid fa-ticket"></i> ' + escapeHtml(c.references_billets) + '</div>' : '') +
             '</div>';
     }).join('');

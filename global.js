@@ -312,6 +312,19 @@ window.formatDateFr = function(str) {
     return s;
 };
 
+// Copie en presse-papier le texte d'un bloc adresse cliquable. Le wrapper
+// doit contenir un <pre> dont textContent sera copié. Confirmation visuelle
+// pendant 2s via la classe .adresse-copiee.
+window.copierAdresse = function(wrapper, event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    var pre = wrapper.querySelector('pre');
+    if (!pre || !navigator.clipboard) return;
+    navigator.clipboard.writeText(pre.textContent).then(function() {
+        wrapper.classList.add('adresse-copiee');
+        setTimeout(function() { wrapper.classList.remove('adresse-copiee'); }, 2000);
+    });
+};
+
 // ============================================================
 // 4. MENU (Mise à jour)
 // ============================================================
@@ -319,7 +332,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=149")
+    fetch("menu.html?v=150")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
