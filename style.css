@@ -3833,12 +3833,20 @@ body.login-page {
     background-color: var(--color-badge-inscrit-bg);
     color: var(--color-badge-inscrit-text);
 }
+.badge-collecte-pas {
+    background-color: #FFE6E6;
+    color: #B71C1C;
+}
 
 /* Story 9.8 — Badge prix non défini et montant en attente */
 .badge-prix-indefini {
     background-color: var(--color-bg-disabled);
     color: var(--color-text-hint);
     font-style: italic;
+}
+.badge-pas-de-collecte {
+    background-color: #B71C1C;
+    color: #fff;
 }
 .montant-indefini {
     color: var(--color-text-disabled);

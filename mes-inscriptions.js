@@ -218,14 +218,20 @@ function renderInscriptions() {
             var billet = billetsMap[insc.billet_id] || {};
             return billet.Categorie === 'Pré collecte';
         });
+    } else if (currentInscFilter === 'pas_de_collecte') {
+        filteredInscriptions = mesInscriptions.filter(function(insc) {
+            var billet = billetsMap[insc.billet_id] || {};
+            return billet.Categorie === 'Pas de collecte';
+        });
     } else if (currentInscFilter === 'non_paye') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
             var billet = billetsMap[insc.billet_id] || {};
-            return (insc.statut_paiement || 'non_paye') === 'non_paye' && billet.Categorie !== 'Pré collecte';
+            return (insc.statut_paiement || 'non_paye') === 'non_paye' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte';
         });
     } else if (currentInscFilter !== 'tous') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
-            return (insc.statut_paiement || 'non_paye') === currentInscFilter;
+            var billet = billetsMap[insc.billet_id] || {};
+            return (insc.statut_paiement || 'non_paye') === currentInscFilter && billet.Categorie !== 'Pas de collecte';
         });
     }
 
@@ -245,7 +251,7 @@ function renderInscriptions() {
         var isBenef = estBeneficiaire(insc, activeEmail);
 
         var fdpMontant = 0;
-        if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+        if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
             var nbTotal = nbNormaux + nbVariantes;
             var dest = (membrePays === 'France') ? 'france' : 'international';
             var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
@@ -253,7 +259,7 @@ function renderInscriptions() {
         }
         var montantAvecFdp = montant + fdpMontant;
 
-        if (billet.Categorie !== 'Pré collecte') {
+        if (billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
             if (statut === 'non_paye' && !isBenef) totalDu += montantAvecFdp;
             else if (statut === 'declare' && !isBenef) totalEnAttente += montantAvecFdp;
         }
@@ -261,7 +267,7 @@ function renderInscriptions() {
         var collecteur = collecteursMap[billet.Collecteur] || {};
         var paypalNoteHtml = '';
         var paypalBtnHtml = '';
-        if (statut === 'non_paye' && !isBenef && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte') {
+        if (statut === 'non_paye' && !isBenef && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
             // Construire la note PayPal : Ref année-version titre - détail quantités = total
             var refPart = (billet.Reference || '') + ' ' + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '');
             var noteparts = [refPart.trim(), billet.NomBillet || ''];
@@ -299,6 +305,8 @@ function renderInscriptions() {
             + '<span><i class="fa-solid fa-ticket"></i> ' + (billet.VersionNormaleExiste === false ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
             + (billet.Categorie === 'Pré collecte'
                 ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> Prix non défini</span>'
+                : billet.Categorie === 'Pas de collecte'
+                ? '<span class="montant-indefini"><i class="fa-solid fa-ban"></i> Pas de collecte — billet non distribué</span>'
                 : (fdpMontant > 0
                     ? '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC + fdp ' + fdpMontant.toFixed(2) + ' \u20AC, soit ' + montantAvecFdp.toFixed(2) + ' \u20AC</span>'
                     : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>'))
@@ -338,7 +346,7 @@ function renderInscriptions() {
             var nbV = insc.nb_variantes || 0;
             var montant = (prix * nbN) + (prixVar * nbV);
             var fdp = 0;
-            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
                 var dest = (membrePays === 'France') ? 'france' : 'international';
                 fdp = findFdpPrice(nbN + nbV, dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
@@ -389,6 +397,7 @@ function renderInscriptions() {
         { key: 'declare',         label: 'Validation paiement en attente', icon: 'fa-clock',              items: [] },
         { key: 'confirme',        label: 'Payés',                          icon: 'fa-check-circle',       items: [] },
         { key: 'prix_non_defini', label: 'Prix non défini',                icon: 'fa-tag',                items: [] },
+        { key: 'pas_de_collecte', label: 'Pas de collecte',                icon: 'fa-ban',                items: [] },
         { key: 'beneficiaire',    label: 'Bénéficiaire',                   icon: 'fa-star',               items: [] }
     ];
 
@@ -396,8 +405,10 @@ function renderInscriptions() {
         var billet = billetsMap[insc.billet_id] || {};
         if (billet.Categorie === 'Pré collecte') {
             statGroups[3].items.push(insc);
-        } else if (estBeneficiaire(insc, activeEmail)) {
+        } else if (billet.Categorie === 'Pas de collecte') {
             statGroups[4].items.push(insc);
+        } else if (estBeneficiaire(insc, activeEmail)) {
+            statGroups[5].items.push(insc);
         } else {
             var statut = insc.statut_paiement || 'non_paye';
             if (statut === 'non_paye')     statGroups[0].items.push(insc);
@@ -416,8 +427,8 @@ function renderInscriptions() {
             + ' <span class="insc-statut-count">(' + group.items.length + ')</span>'
             + '</div>';
 
-        if (group.key === 'prix_non_defini') {
-            // Pré-collectes : liste simple, pas de collecteur assigné
+        if (group.key === 'prix_non_defini' || group.key === 'pas_de_collecte') {
+            // Pré-collectes / Pas de collecte : liste simple, pas de regroupement par collecteur
             group.items.forEach(function(insc) { html += renderInscriptionCard(insc); });
         } else {
             // Sous-groupes par collecteur (ordre d'apparition)
@@ -461,13 +472,13 @@ function renderInscriptions() {
         var pv = (b.PrixVariante !== null && b.PrixVariante !== undefined && b.PrixVariante !== '') ? parseFloat(b.PrixVariante) : p;
         var m = (p * (insc.nb_normaux || 0)) + (pv * (insc.nb_variantes || 0));
         var fdp = 0;
-        if (b.PayerFDP === 'oui' && b.Categorie !== 'Pré collecte') {
+        if (b.PayerFDP === 'oui' && b.Categorie !== 'Pré collecte' && b.Categorie !== 'Pas de collecte') {
             var d = (membrePays === 'France') ? 'france' : 'international';
             fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), d, (insc.mode_envoi || 'Normal').toLowerCase());
         }
         var total = m + fdp;
         var s = insc.statut_paiement || 'non_paye';
-        if (b.Categorie !== 'Pré collecte' && !estBeneficiaire(insc, activeEmail)) {
+        if (b.Categorie !== 'Pré collecte' && b.Categorie !== 'Pas de collecte' && !estBeneficiaire(insc, activeEmail)) {
             if (s === 'non_paye') totalDuGlobal += total;
             else if (s === 'declare') totalEnAttenteGlobal += total;
         }
@@ -503,11 +514,18 @@ function badgeCollecte(categorie) {
     if (cat === 'Collecte') {
         return '<span class="badge-collecte badge-collecte-en-cours">Collecte en cours</span>';
     }
+    if (cat === 'Pas de collecte') {
+        return '<span class="badge-collecte badge-collecte-pas">Pas de collecte</span>';
+    }
     // Pré collecte (défaut)
     return '<span class="badge-collecte badge-collecte-pre">Pré-collecte</span>';
 }
 
 function badgePaiementMembre(statut, inscriptionId, categorie, isBeneficiaire) {
+    // Pas de collecte : le billet ne sera pas distribué — prime sur le statut paiement
+    if (categorie === 'Pas de collecte') {
+        return '<span class="badge-paiement badge-pas-de-collecte" title="La collecte n\'aura pas lieu : ce billet ne sera pas distribué">Pas de collecte</span>';
+    }
     if (isBeneficiaire) return '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>';
     if (statut === 'confirme') {
         return '<span class="badge-paiement badge-paye">Payé</span>';
@@ -542,7 +560,7 @@ function declarerPaiementGroupe(idsCsv) {
             var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
             var m = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
             var fdp = 0;
-            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte') {
+            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
                 var dest = (membrePays === 'France') ? 'france' : 'international';
                 fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
