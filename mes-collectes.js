@@ -2044,14 +2044,9 @@ function creerNouvelleEnveloppe(ancienneEnveloppeId) {
         .then(function(enveloppes) {
             if (!enveloppes || enveloppes.length === 0) return;
             var env = enveloppes[0];
-            return supabaseFetch('/rest/v1/enveloppes', {
-                method: 'POST',
-                body: JSON.stringify({
-                    collecteur_alias: env.collecteur_alias,
-                    membre_email: env.membre_email,
-                    statut: 'en_cours'
-                })
-            });
+            // Idempotent : ne crée l'enveloppe en_cours que si aucune n'existe déjà
+            // (évite une violation de l'index unique enveloppes_unique_en_cours → 409)
+            return creerEnveloppeSiAbsente(env.collecteur_alias, env.membre_email);
         });
 }
 
