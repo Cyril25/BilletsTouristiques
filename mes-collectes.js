@@ -2163,10 +2163,10 @@ function fermerModalAnnulerEnvoi() {
 }
 
 function confirmerAnnulationEnvoi() {
-    fermerModalAnnulerEnvoi();
-    if (!pendingAnnulationEnvoiId) return;
+    // Capturer l'id AVANT de fermer la modale (fermerModalAnnulerEnvoi remet pendingAnnulationEnvoiId à null)
     var enveloppeId = pendingAnnulationEnvoiId;
-    pendingAnnulationEnvoiId = null;
+    fermerModalAnnulerEnvoi();
+    if (!enveloppeId) return;
     executerAnnulationEnvoi(enveloppeId);
 }
 
@@ -2188,7 +2188,7 @@ function executerAnnulationEnvoi(enveloppeId) {
         })
         .then(function(enCours) {
             if (!enCours || enCours.length === 0) {
-                showToastMC('Erreur : enveloppe cible introuvable', 'error');
+                showToast('Erreur : enveloppe cible introuvable', 'error');
                 return Promise.reject('enveloppe cible introuvable');
             }
             var cibleId = enCours[0].id;
