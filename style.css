@@ -127,13 +127,20 @@ body {
     height: 60px;
     border-radius: 8px;
     margin-bottom: 20px;
-    /* Bandeau figé : la navigation reste accessible quand on descend dans la page.
-       On garde un léger retrait pour conserver l'effet "carte flottante" du site. */
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.25s ease;
+}
+
+/* Bandeau figé : la navigation reste accessible quand on descend dans la page.
+   Le sticky est porté par #menu-placeholder (et non .navbar) car un élément
+   sticky ne tient que dans les limites de son parent : .navbar est injecté
+   seul dans #menu-placeholder, dont le parent #app-content, lui, est haut.
+   On garde un léger retrait pour conserver l'effet "carte flottante" du site. */
+#menu-placeholder {
     position: sticky;
     top: 10px;
     z-index: 900;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.25s ease;
 }
 
 /* État "collé" (ajouté par global.js au scroll) : ombre plus marquée
@@ -143,7 +150,7 @@ body {
 }
 
 /* En mode "vue en tant que" (superadmin), on décale le bandeau sous la bannière. */
-body.has-impersonate-banner .navbar {
+body.has-impersonate-banner #menu-placeholder {
     top: 42px;
 }
 
@@ -2130,7 +2137,8 @@ body.login-page {
 
     .user-role-toggle-btn,
     .user-delete-btn,
-    .user-edit-toggle-btn {
+    .user-edit-toggle-btn,
+    .user-block-toggle-btn {
         width: 100%;
         min-height: 44px;
     }
@@ -2253,6 +2261,55 @@ body.login-page {
 
 .user-role-toggle-btn.demote:hover {
     background-color: var(--color-danger);
+}
+
+/* --- Blocage d'inscription (admin) --- */
+.user-badge-bloque {
+    background-color: var(--color-danger);
+    color: var(--color-text-inverse);
+}
+
+.user-card-bloque {
+    border-color: var(--color-danger);
+}
+
+.user-card-blocage-motif {
+    font-size: 0.8125rem;
+    color: var(--color-danger);
+    background: var(--color-danger-bg, rgba(220, 53, 69, 0.08));
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin: var(--spacing-xs) 0;
+    word-break: break-word;
+}
+
+.user-block-toggle-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px;
+    background: transparent;
+    color: var(--color-danger);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    font-family: 'Roboto', sans-serif;
+}
+
+.user-block-toggle-btn.block:hover {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+}
+
+.user-block-toggle-btn.unblock {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.user-block-toggle-btn.unblock:hover {
+    background: var(--color-success);
+    color: var(--color-text-inverse);
 }
 
 /* --- Story 3.2 : Self-demotion modal --- */
@@ -2410,14 +2467,19 @@ body.login-page {
     color: var(--color-text-secondary);
     font-weight: 500;
 }
-.user-edit-modal-field input {
+.user-edit-modal-field input,
+.user-edit-modal-field textarea {
     padding: var(--spacing-xs) var(--spacing-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
     font-family: 'Roboto', sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
 }
-.user-edit-modal-field input:focus {
+.user-edit-modal-field input:focus,
+.user-edit-modal-field textarea:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb, 0,0,0), 0.15);
