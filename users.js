@@ -166,6 +166,8 @@ function renderUserCards(searchQuery) {
         filtered = filtered.filter(function(user) { return user.role === 'admin' || user.role === 'superadmin'; });
     } else if (activeRoleFilter === 'member') {
         filtered = filtered.filter(function(user) { return user.role !== 'admin' && user.role !== 'superadmin'; });
+    } else if (activeRoleFilter === 'bloque') {
+        filtered = filtered.filter(function(user) { return user._bloque; });
     }
     if (query) {
         filtered = filtered.filter(function(user) {
