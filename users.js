@@ -83,10 +83,22 @@ function loadUsers() {
     var grid = document.getElementById('user-cards-grid');
     if (!grid) return;
 
-    supabaseFetch('/rest/v1/membres?select=email,role,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' })
-        .then(function(rows) {
+    Promise.all([
+        supabaseFetch('/rest/v1/membres?select=email,role,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
+        supabaseFetch('/rest/v1/membre_blocages?select=membre_email,motif,bloque_at', { method: 'GET' })
+            .catch(function() { return []; })
+    ])
+        .then(function(results) {
+            var rows = results[0] || [];
+            var blocages = results[1] || [];
+            var blocagesMap = {};
+            blocages.forEach(function(b) { blocagesMap[b.membre_email] = b; });
+
             usersList = rows.map(function(row) {
                 row._id = row.email;
+                var b = blocagesMap[row.email];
+                row._bloque = !!b;
+                row._blocageMotif = b ? (b.motif || '') : '';
                 return row;
             });
 
@@ -188,10 +200,12 @@ function renderUserCards(searchQuery) {
         var btnClass = isAdmin ? 'user-role-toggle-btn demote' : 'user-role-toggle-btn promote';
         var btnIcon = isAdmin ? 'fa-solid fa-user-minus' : 'fa-solid fa-user-plus';
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
+        var isBloque = !!user._bloque;
 
-        html += '<div class="user-card" data-doc-id="' + escapeAttr(email) + '">' +
+        html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
                 '<span class="user-card-name">' + escapeHtml(displayName) + '</span>' +
+                (isBloque ? '<span class="user-badge-role user-badge-bloque" title="' + escapeAttr(user._blocageMotif || 'Bloqué pour les inscriptions') + '"><i class="fa-solid fa-ban"></i> Bloqué</span>' : '') +
                 '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +
             '<div class="user-card-details">' +
@@ -215,11 +229,17 @@ function renderUserCards(searchQuery) {
                     '</div>';
                 })() +
             '</div>' +
+            (isBloque ? '<div class="user-card-blocage-motif"><i class="fa-solid fa-circle-info"></i> ' + (user._blocageMotif ? escapeHtml(user._blocageMotif) : 'Bloqué pour les inscriptions (aucun motif renseigné)') + '</div>' : '') +
             '<div class="user-card-actions">' +
                 '<button class="user-edit-toggle-btn" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'title="Modifier la fiche">' +
                     '<i class="fa-solid fa-pen"></i> Modifier la fiche' +
+                '</button>' +
+                '<button class="user-block-toggle-btn ' + (isBloque ? 'unblock' : 'block') + '" ' +
+                    'data-doc-id="' + escapeAttr(email) + '" ' +
+                    'title="' + (isBloque ? 'Débloquer les inscriptions' : 'Bloquer les inscriptions') + '">' +
+                    '<i class="fa-solid ' + (isBloque ? 'fa-lock-open' : 'fa-ban') + '"></i> ' + (isBloque ? 'Débloquer' : 'Bloquer') +
                 '</button>' +
                 (role === 'superadmin' ? '' :
                 '<button class="' + btnClass + '" ' +
@@ -269,6 +289,18 @@ function initUserEvents() {
                 event.stopPropagation();
                 var email = editToggle.getAttribute('data-doc-id');
                 openUserEditModal(email);
+                return;
+            }
+
+            var blockBtn = event.target.closest('.user-block-toggle-btn');
+            if (blockBtn) {
+                event.stopPropagation();
+                var email = blockBtn.getAttribute('data-doc-id');
+                if (blockBtn.classList.contains('unblock')) {
+                    debloquerMembre(email);
+                } else {
+                    openBlocageModal(email);
+                }
                 return;
             }
 
@@ -537,6 +569,105 @@ function onDeleteUserKeydown(e) {
 
 function onDeleteUserOverlayClick(e) {
     if (e.target.id === 'delete-user-modal-overlay') closeDeleteUserModal();
+}
+
+// ============================================================
+// 7d. BLOCAGE / DEBLOCAGE D'INSCRIPTION (admin uniquement)
+// Empêche un membre de s'inscrire à toute nouvelle collecte
+// (tous collecteurs, y compris pré-collecte). N'efface pas ses
+// inscriptions existantes.
+// ============================================================
+function openBlocageModal(email) {
+    var user = null;
+    for (var i = 0; i < usersList.length; i++) {
+        if (usersList[i]._id === email) { user = usersList[i]; break; }
+    }
+    if (!user) return;
+
+    var existing = document.getElementById('blocage-modal-overlay');
+    if (existing) existing.remove();
+
+    var displayName = ((user.nom || '') + ' ' + (user.prenom || '')).trim() || user.pseudo || email;
+
+    var html = '<div id="blocage-modal-overlay" class="user-modal-overlay" onclick="if(event.target===this)closeBlocageModal()">';
+    html += '<div class="user-modal" role="dialog" aria-modal="true">';
+    html += '<h2 class="user-modal-title"><i class="fa-solid fa-ban"></i> Bloquer les inscriptions</h2>';
+    html += '<p class="user-modal-desc">Vous allez empêcher <strong>' + escapeHtml(displayName) + '</strong> de s\'inscrire à toute nouvelle collecte (tous collecteurs, pré-collectes comprises). Ses inscriptions existantes ne sont pas supprimées.</p>';
+    html += '<div class="user-edit-modal-field user-edit-modal-field-full" style="margin-bottom:16px;">';
+    html += '<label>Motif (visible par les admins et le membre concerné)</label>';
+    html += '<textarea id="blocage-motif" rows="3" placeholder="Ex. : litige de paiement, blocage temporaire jusqu\'à régularisation…"></textarea>';
+    html += '</div>';
+    html += '<div class="user-modal-actions">';
+    html += '<button type="button" class="user-modal-btn" onclick="closeBlocageModal()">Annuler</button>';
+    html += '<button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmBlocage(\'' + escapeAttr(email).replace(/'/g, "\\'") + '\')"><i class="fa-solid fa-ban"></i> Bloquer</button>';
+    html += '</div>';
+    html += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var ta = document.getElementById('blocage-motif');
+    if (ta) setTimeout(function() { ta.focus(); }, 100);
+    document.addEventListener('keydown', onBlocageKeydown);
+}
+
+function closeBlocageModal() {
+    var overlay = document.getElementById('blocage-modal-overlay');
+    if (overlay) overlay.remove();
+    document.removeEventListener('keydown', onBlocageKeydown);
+}
+
+function onBlocageKeydown(e) {
+    if (e.key === 'Escape') closeBlocageModal();
+}
+
+function confirmBlocage(email) {
+    var ta = document.getElementById('blocage-motif');
+    var motif = ta ? ta.value.trim() : '';
+    var bloquePar = (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+
+    supabaseFetch('/rest/v1/membre_blocages?on_conflict=membre_email', {
+        method: 'POST',
+        body: JSON.stringify({ membre_email: email, motif: motif, bloque_by: bloquePar }),
+        headers: { 'Prefer': 'resolution=merge-duplicates, return=minimal' }
+    })
+        .then(function() {
+            for (var i = 0; i < usersList.length; i++) {
+                if (usersList[i]._id === email) {
+                    usersList[i]._bloque = true;
+                    usersList[i]._blocageMotif = motif;
+                    break;
+                }
+            }
+            showToast('Membre bloqué pour les inscriptions', 'success');
+            closeBlocageModal();
+            var searchInput = document.getElementById('user-search-input');
+            renderUserCards(searchInput ? searchInput.value.trim() : '');
+        })
+        .catch(function(error) {
+            showToast('Erreur lors du blocage : ' + error.message, 'error');
+            console.error('Erreur blocage membre:', error);
+        });
+}
+
+function debloquerMembre(email) {
+    supabaseFetch('/rest/v1/membre_blocages?membre_email=eq.' + encodeURIComponent(email), {
+        method: 'DELETE'
+    })
+        .then(function() {
+            for (var i = 0; i < usersList.length; i++) {
+                if (usersList[i]._id === email) {
+                    usersList[i]._bloque = false;
+                    usersList[i]._blocageMotif = '';
+                    break;
+                }
+            }
+            showToast('Membre débloqué', 'success');
+            var searchInput = document.getElementById('user-search-input');
+            renderUserCards(searchInput ? searchInput.value.trim() : '');
+        })
+        .catch(function(error) {
+            showToast('Erreur lors du déblocage : ' + error.message, 'error');
+            console.error('Erreur déblocage membre:', error);
+        });
 }
 
 // ============================================================

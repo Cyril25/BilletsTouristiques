@@ -153,6 +153,7 @@ if (typeof firebase !== 'undefined') {
             loadCompteursInscriptions();
             loadFraisPortCatalogue(window.getActiveEmail());
             loadBlacklistMembre(window.getActiveEmail());
+            loadBlocageMembre(window.getActiveEmail());
         }
     });
 }
@@ -909,6 +910,33 @@ function loadBlacklistMembre(email) {
         });
 }
 
+// --- Chargement du blocage d'inscription (decide par un admin) ---
+// Un membre bloque ne peut s'inscrire a aucune nouvelle collecte.
+var membreBloqueInscription = false;
+var membreBlocageMotif = '';
+
+function loadBlocageMembre(email) {
+    supabaseFetch('/rest/v1/membre_blocages?membre_email=eq.' + encodeURIComponent(email) + '&select=motif')
+        .then(function(data) {
+            membreBloqueInscription = !!(data && data.length > 0);
+            membreBlocageMotif = membreBloqueInscription ? (data[0].motif || '') : '';
+        })
+        .catch(function(error) {
+            console.warn('Erreur chargement blocage membre:', error);
+        });
+}
+
+// HTML du badge "Inscription impossible" quand le membre est bloque
+function buildBlocageInscriptionHtml(withBadgeNonInscrit) {
+    var titre = membreBlocageMotif
+        ? 'Vous êtes bloqué pour les inscriptions : ' + membreBlocageMotif
+        : 'Vous êtes bloqué pour les inscriptions. Contactez un administrateur.';
+    return '<div class="inscription-badges">'
+        + (withBadgeNonInscrit ? '<span class="badge-non-inscrit">Non inscrit</span>' : '')
+        + '<button class="btn-inscription-impossible" disabled title="' + escapeAttr(titre) + '"><i class="fa-solid fa-ban"></i> Inscription impossible</button>'
+        + '</div>';
+}
+
 // --- Story 5.12 : Compteurs BT automatiques ---
 function loadCompteursInscriptions() {
     supabaseFetch('/rest/v1/rpc/compteurs_inscriptions')
@@ -1160,9 +1188,11 @@ function buildInscriptionHtml(item) {
         // Non inscrit, collecte ouverte
         var isInscriptionSite = !item.LinkSheet && !item.Sondage;
         if (isInscriptionSite) {
-            // Vérifier si le membre est blacklisté par le collecteur de ce billet
+            // Bloqué par un admin (toutes collectes) ou blacklisté par le collecteur de ce billet
             var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
-            if (isBlackliste) {
+            if (membreBloqueInscription) {
+                html = buildBlocageInscriptionHtml(true);
+            } else if (isBlackliste) {
                 html = '<div class="inscription-badges">'
                     + '<span class="badge-non-inscrit">Non inscrit</span>'
                     + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-ban"></i> Inscription impossible</button>'
@@ -1181,6 +1211,10 @@ function buildInscriptionHtml(item) {
 
 // --- Ouverture du mini-formulaire inline ---
 function ouvrirInscription(billetId) {
+    if (membreBloqueInscription) {
+        showToast('Vous êtes bloqué pour les inscriptions. Contactez un administrateur.', 'error');
+        return;
+    }
     isProfilComplet(function(complet) {
         if (!complet) {
             showToast('Complétez votre profil avant de vous inscrire', 'error');
@@ -1441,6 +1475,9 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
             + badgeStatut
             + '</div>';
     }
+    if (membreBloqueInscription) {
+        return buildBlocageInscriptionHtml(false);
+    }
     var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
     if (isBlackliste) {
         return '<div class="inscription-badges">'
@@ -1455,6 +1492,10 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
 }
 
 function ouvrirInscriptionCollecte(billetId, collecteId) {
+    if (membreBloqueInscription) {
+        showToast('Vous êtes bloqué pour les inscriptions. Contactez un administrateur.', 'error');
+        return;
+    }
     isProfilComplet(function(complet) {
         if (!complet) {
             showToast('Complétez votre profil avant de vous inscrire', 'error');

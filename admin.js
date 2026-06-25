@@ -1993,23 +1993,43 @@ function saveBillet(billetData) {
 // 11b. AUTO-INSCRIPTIONS À LA CRÉATION D'UN BILLET
 // ============================================================
 
+// Charge la liste des emails bloqués par un admin (membre_blocages).
+// Ces membres sont exclus des auto-inscriptions (y compris pré-collecte).
+function chargerEmailsBloques() {
+    return supabaseFetch('/rest/v1/membre_blocages?select=membre_email')
+        .then(function(data) {
+            var map = {};
+            (data || []).forEach(function(b) { map[b.membre_email] = true; });
+            return map;
+        })
+        .catch(function(err) {
+            console.warn('Erreur chargement membres bloqués:', err);
+            return {};
+        });
+}
+
 function creerAutoInscriptions(billet) {
     var isFrance = !billet.Pays || billet.Pays === 'France';
     var annee = parseInt(billet.Millesime) || new Date().getFullYear();
     var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
     var hasVariante = !!billet.HasVariante;
 
-    // Charger les paramétrages pour cette année
-    supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*')
-        .then(function(autoData) {
+    // Charger les paramétrages pour cette année + les membres bloqués
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
+        chargerEmailsBloques()
+    ])
+        .then(function(res) {
+            var autoData = res[0];
+            var emailsBloques = res[1] || {};
             if (!autoData || autoData.length === 0) return;
 
-            // Filtrer selon type de billet
+            // Filtrer selon type de billet, en excluant les membres bloqués
             var qualifies;
             if (isFrance) {
-                qualifies = autoData.filter(function(a) { return a.france; });
+                qualifies = autoData.filter(function(a) { return a.france && !emailsBloques[a.membre_email]; });
             } else {
-                qualifies = autoData.filter(function(a) { return a.etranger; });
+                qualifies = autoData.filter(function(a) { return a.etranger && !emailsBloques[a.membre_email]; });
             }
 
             if (qualifies.length === 0) return;
@@ -2264,10 +2284,15 @@ function recalculerAutoInscriptions(billet) {
     var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
     var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
 
-    supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*')
-        .then(function(autoData) {
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
+        chargerEmailsBloques()
+    ])
+        .then(function(res) {
+            var autoData = res[0];
+            var emailsBloques = res[1] || {};
             if (!autoData || autoData.length === 0) return;
-            var qualifies = autoData.filter(function(a) { return isFrance ? a.france : a.etranger; });
+            var qualifies = autoData.filter(function(a) { return (isFrance ? a.france : a.etranger) && !emailsBloques[a.membre_email]; });
             if (qualifies.length === 0) return;
 
             if (isFrance) {
