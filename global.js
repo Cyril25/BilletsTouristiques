@@ -328,6 +328,22 @@ window.copierAdresse = function(wrapper, event) {
 // ============================================================
 // 4. MENU (Mise à jour)
 // ============================================================
+
+// Ajoute/retire la classe .is-stuck sur la navbar selon le défilement,
+// pour renforcer l'ombre et coller proprement le bandeau en haut de l'écran.
+function setupStickyNavbar() {
+    var navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    function onScroll() {
+        // Au-delà de quelques pixels, le bandeau est considéré "collé".
+        navbar.classList.toggle('is-stuck', window.scrollY > 8);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // état initial (utile si la page est déjà défilée)
+}
+
 function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
@@ -340,6 +356,9 @@ function loadMenu() {
 
             // 2. On gère le lien actif
             highlightActiveLink();
+
+            // 2bis. Bandeau figé : ombre + coins droits dès qu'on scrolle
+            setupStickyNavbar();
 
             // PWA — Afficher le bouton "Installer" si pertinent (iOS ou prompt déjà capturé)
             if (typeof window.__showInstallButtonIfRelevant === 'function') {
@@ -696,8 +715,10 @@ function renderImpersonateBanner() {
         banner.innerHTML = '<i class="fa-solid fa-user-secret"></i> Vue en tant que <strong>' + window.impersonatedEmail + '</strong> ' +
             '<button class="btn-link" onclick="window.stopImpersonate()"><i class="fa-solid fa-xmark"></i> Revenir à mon compte</button>';
         banner.style.display = '';
+        document.body.classList.add('has-impersonate-banner');
     } else if (banner) {
         banner.style.display = 'none';
+        document.body.classList.remove('has-impersonate-banner');
     }
 }
 

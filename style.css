@@ -127,8 +127,24 @@ body {
     height: 60px;
     border-radius: 8px;
     margin-bottom: 20px;
-    position: relative;
+    /* Bandeau figé : la navigation reste accessible quand on descend dans la page.
+       On garde un léger retrait pour conserver l'effet "carte flottante" du site. */
+    position: sticky;
+    top: 10px;
+    z-index: 900;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.25s ease;
+}
+
+/* État "collé" (ajouté par global.js au scroll) : ombre plus marquée
+   pour bien détacher le bandeau du contenu qui défile en dessous. */
+.navbar.is-stuck {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20);
+}
+
+/* En mode "vue en tant que" (superadmin), on décale le bandeau sous la bannière. */
+body.has-impersonate-banner .navbar {
+    top: 42px;
 }
 
 .nav-brand {
