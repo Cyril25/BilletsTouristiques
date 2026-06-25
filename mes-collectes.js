@@ -2289,9 +2289,19 @@ function loadVerificationPaiement() {
         return;
     }
     var billetIds = mesBillets.map(function(b) { return b.id; });
-    supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*&order=membre_email.asc,billet_id.asc,id.asc')
-        .then(function(inscriptions) {
-            if (!inscriptions || inscriptions.length === 0) {
+    var alias = encodeURIComponent(monCollecteur.alias);
+    var emailColl = encodeURIComponent(monCollecteur.email_membre);
+    // Inscriptions billets non soldées + enveloppes avec frais de port dus (prix saisi, non confirmé)
+    var pInscriptions = supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,billet_id.asc,id.asc');
+    var pEnveloppesPort = supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,date_expedition.asc');
+    Promise.all([pInscriptions, pEnveloppesPort])
+        .then(function(results) {
+            var inscriptions = results[0] || [];
+            // Ne garder que les frais de port réellement dus (prix > 0)
+            var enveloppesPort = (results[1] || []).filter(function(e) {
+                return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
+            });
+            if (inscriptions.length === 0 && enveloppesPort.length === 0) {
                 renderPaiementsVide();
                 return;
             }
@@ -2305,6 +2315,9 @@ function loadVerificationPaiement() {
             var emails = [];
             inscriptions.forEach(function(ins) {
                 if (ins.membre_email && emails.indexOf(ins.membre_email) === -1) emails.push(ins.membre_email);
+            });
+            enveloppesPort.forEach(function(e) {
+                if (e.membre_email && emails.indexOf(e.membre_email) === -1) emails.push(e.membre_email);
             });
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
             return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,pseudo,rue,code_postal,ville,pays')
@@ -2328,12 +2341,13 @@ function loadVerificationPaiement() {
                     });
                     var billetsMap = {};
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
-                    verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap };
-                    renderVerificationPaiement(inscriptions, billetsMap);
-                    // #12 — Compteur onglet paiements
-                    var declares = inscriptions.filter(function(i) { return i.statut_paiement === 'declare'; });
+                    verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap, enveloppesPort: enveloppesPort, membresMap: membresMap };
+                    renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap);
+                    // #12 — Compteur onglet paiements (billets déclarés + frais de port déclarés)
+                    var declares = inscriptions.filter(function(i) { return i.statut_paiement === 'declare'; }).length
+                        + enveloppesPort.filter(function(e) { return e.statut_paiement_port === 'declare'; }).length;
                     var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
-                    if (tabs[1]) tabs[1].innerHTML = 'Vérification paiement' + (declares.length > 0 ? ' <span class="tab-badge tab-badge-warning">' + declares.length + '</span>' : '');
+                    if (tabs[1]) tabs[1].innerHTML = 'Vérification paiement' + (declares > 0 ? ' <span class="tab-badge tab-badge-warning">' + declares + '</span>' : '');
                 });
         })
         .catch(function(error) {
@@ -2341,18 +2355,27 @@ function loadVerificationPaiement() {
         });
 }
 
-function renderVerificationPaiement(inscriptions, billetsMap) {
+function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap) {
+    enveloppesPort = enveloppesPort || [];
+    membresMap = membresMap || {};
     var groupes = {};
-    inscriptions.forEach(function(insc) {
-        var key = insc.membre_email;
-        if (!groupes[key]) {
-            groupes[key] = {
-                email: key,
-                adresse: insc.adresse_snapshot || {},
-                inscriptions: []
-            };
+    function ensureGroupe(email) {
+        if (!groupes[email]) {
+            groupes[email] = { email: email, adresse: null, inscriptions: [], port: [] };
         }
-        groupes[key].inscriptions.push(insc);
+        return groupes[email];
+    }
+    inscriptions.forEach(function(insc) {
+        var g = ensureGroupe(insc.membre_email);
+        if (!g.adresse) g.adresse = insc.adresse_snapshot || null;
+        g.inscriptions.push(insc);
+    });
+    enveloppesPort.forEach(function(env) {
+        ensureGroupe(env.membre_email).port.push(env);
+    });
+    // Adresse de repli (membre sans inscription en attente mais avec frais de port)
+    Object.keys(groupes).forEach(function(email) {
+        if (!groupes[email].adresse) groupes[email].adresse = membresMap[email] || {};
     });
 
     var container = document.getElementById('paiements-view');
@@ -2364,6 +2387,9 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
         var prix = parseFloat(billet.Prix || 0);
         var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
         totalEnAttente += (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
+    });
+    enveloppesPort.forEach(function(env) {
+        totalEnAttente += parseFloat(env.prix_envoi_reel || 0);
     });
 
     var html = '<div class="paiement-total-attente">'
@@ -2426,13 +2452,34 @@ function renderVerificationPaiement(inscriptions, billetsMap) {
                 + '</div>';
         }
 
+        // Frais de port dus (avancés par le collecteur) — distincts des billets
+        for (var p = 0; p < groupe.port.length; p++) {
+            var env = groupe.port[p];
+            var montantPort = parseFloat(env.prix_envoi_reel || 0);
+            totalGroupe += montantPort;
+            var portDateStr = '';
+            if (env.date_expedition) {
+                portDateStr = ' (' + new Date(env.date_expedition).toLocaleDateString('fr-FR') + ')';
+            }
+            lignes += '<div class="envoi-ligne envoi-ligne-port">'
+                + '<span class="envoi-billet"><i class="fa-solid fa-truck-fast"></i> Frais d\'envoi' + escapeHtmlMC(portDateStr) + '</span>'
+                + '<span class="envoi-montant">' + montantPort.toFixed(2) + ' €</span>'
+                + badgePaiementEnvoi(env.statut_paiement_port)
+                + '<button onclick="validerPaiementPort(' + env.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement des frais de port"><i class="fa-solid fa-check"></i></button>'
+                + '</div>';
+        }
+
         var groupeIds = groupe.inscriptions.map(function(i) { return i.id; });
+        var portIds = groupe.port.map(function(e) { return e.id; });
+        var countParts = [];
+        if (groupe.inscriptions.length > 0) countParts.push(groupe.inscriptions.length + ' billet(s)');
+        if (groupe.port.length > 0) countParts.push(groupe.port.length + ' frais d\'envoi');
         html += '<div class="envoi-groupe">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'
-            + '<span class="envoi-count">' + groupe.inscriptions.length + ' billet(s)</span>'
+            + '<span class="envoi-count">' + countParts.join(' + ') + '</span>'
             + '<span class="paiement-groupe-total">Total : ' + totalGroupe.toFixed(2) + ' €</span>'
-            + '<button onclick="validerTousPaiementsVue([' + groupeIds.join(',') + '])" class="btn-marquer-envoye" title="Confirmer tous les paiements de ce membre"><i class="fa-solid fa-check-double"></i></button>'
+            + '<button onclick="validerTousPaiementsVue([' + groupeIds.join(',') + '],[' + portIds.join(',') + '])" class="btn-marquer-envoye" title="Confirmer tous les paiements de ce membre"><i class="fa-solid fa-check-double"></i></button>'
             + '</div>'
             + '<div class="envoi-groupe-lignes">' + lignes + '</div>'
             + '</div>';
@@ -2456,20 +2503,49 @@ function validerPaiementVue(inscriptionId) {
     });
 }
 
-function validerTousPaiementsVue(ids) {
-    if (!ids || ids.length === 0) return;
-    supabaseFetch('/rest/v1/inscriptions?id=in.(' + ids.join(',') + ')', {
+// Confirmer le paiement des frais de port d'une enveloppe
+function validerPaiementPort(enveloppeId) {
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
         method: 'PATCH',
-        body: JSON.stringify({ statut_paiement: 'confirme' })
+        body: JSON.stringify({ statut_paiement_port: 'confirme' })
     })
     .then(function() {
-        showToast(ids.length + ' paiement' + (ids.length > 1 ? 's' : '') + ' confirmé' + (ids.length > 1 ? 's' : ''));
+        showToast('Frais de port confirmés');
         loadVerificationPaiement();
     })
     .catch(function(error) {
-        console.error('Erreur confirmation paiements:', error);
+        console.error('Erreur confirmation frais de port:', error);
         showToast('Erreur', 'error');
     });
+}
+
+function validerTousPaiementsVue(ids, portIds) {
+    ids = ids || [];
+    portIds = portIds || [];
+    if (ids.length === 0 && portIds.length === 0) return;
+    var tasks = [];
+    if (ids.length > 0) {
+        tasks.push(supabaseFetch('/rest/v1/inscriptions?id=in.(' + ids.join(',') + ')', {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_paiement: 'confirme' })
+        }));
+    }
+    if (portIds.length > 0) {
+        tasks.push(supabaseFetch('/rest/v1/enveloppes?id=in.(' + portIds.join(',') + ')', {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_paiement_port: 'confirme' })
+        }));
+    }
+    Promise.all(tasks)
+        .then(function() {
+            var n = ids.length + portIds.length;
+            showToast(n + ' paiement' + (n > 1 ? 's' : '') + ' confirmé' + (n > 1 ? 's' : ''));
+            loadVerificationPaiement();
+        })
+        .catch(function(error) {
+            console.error('Erreur confirmation paiements:', error);
+            showToast('Erreur', 'error');
+        });
 }
 
 function renderPaiementsVide() {

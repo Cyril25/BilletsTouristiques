@@ -5733,6 +5733,45 @@ body.login-page {
     border-top: 1px solid var(--color-bg-disabled);
 }
 
+/* --- Frais de port dus (distincts d'un billet) --- */
+.inscription-card-port {
+    border-left: 4px solid var(--color-secondary);
+}
+
+.inscription-card-port .inscription-card-header {
+    background-color: var(--color-surface);
+}
+
+.inscription-card-port .inscription-card-header strong i {
+    color: var(--color-secondary);
+    margin-right: 6px;
+}
+
+.badge-frais-port {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: var(--color-secondary);
+    color: var(--color-text-inverse);
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.frais-port-info {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+/* Côté collecteur : ligne frais de port dans la vérification paiement */
+.envoi-ligne-port .envoi-billet {
+    color: var(--color-secondary);
+}
+
+.envoi-ligne-port .envoi-billet i {
+    margin-right: 4px;
+}
+
 .btn-modifier-insc,
 .btn-desinscrire {
     display: inline-flex;

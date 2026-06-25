@@ -9,6 +9,7 @@ var collecteursMap = {};
 var collectesMap = {}; // Story 12.6 — {collecte_id: nom} pour affichage badge
 var membrePays = '';
 var fraisPortData = [];
+var mesFraisPort = []; // Frais de port dus (enveloppes expédiées avec prix saisi, non confirmés)
 var currentInscFilter = 'tous'; // #9 — filtre actif
 var modifierInscCurrent = null; // Inscription en cours de modification (pré-collecte)
 
@@ -114,11 +115,13 @@ function loadMesInscriptions() {
                 }
             });
 
-            // Étape 3 : charger collecteurs, pays du membre, frais de port en parallèle
+            // Étape 3 : charger collecteurs, pays du membre, frais de port, enveloppes dues en parallèle
             var promises = [
                 supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,email_membre'),
                 supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays'),
-                supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
+                supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
+                // Frais de port dus : enveloppes avec prix saisi, non encore confirmé payé
+                supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc')
             ];
             // Story 12.6 — charger noms des collectes supplémentaires si nécessaire
             var collecteIds = mesInscriptions
@@ -134,6 +137,7 @@ function loadMesInscriptions() {
             var collecteurs = results[0];
             var membres = results[1];
             var fraisPort = results[2];
+            var enveloppesPort = results[3] || [];
 
             if (collecteurs) {
                 collecteursMap = {};
@@ -141,10 +145,14 @@ function loadMesInscriptions() {
             }
             membrePays = (membres && membres[0]) ? (membres[0].pays || '') : '';
             fraisPortData = fraisPort || [];
-            // Story 12.6 — peupler collectesMap si la requête a été émise
+            // Ne garder que les frais de port réellement dus (prix > 0)
+            mesFraisPort = enveloppesPort.filter(function(e) {
+                return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
+            });
+            // Story 12.6 — peupler collectesMap si la requête a été émise (index 4)
             collectesMap = {};
-            if (results[3]) {
-                results[3].forEach(function(c) { collectesMap[c.id] = c.nom; });
+            if (results[4]) {
+                results[4].forEach(function(c) { collectesMap[c.id] = c.nom; });
             }
 
             renderInscriptions();
@@ -191,6 +199,77 @@ function estBeneficiaire(insc, activeEmail) {
     var b = billetsMap[insc.billet_id] || {};
     var col = collecteursMap[b.Collecteur];
     return !!(col && col.email_membre && col.email_membre === activeEmail);
+}
+
+// Le membre est-il le collecteur (bénéficiaire) de cette enveloppe ? → pas de frais à payer
+function estBeneficiairePort(env, activeEmail) {
+    var col = collecteursMap[env.collecteur_alias];
+    return !!(col && col.email_membre && col.email_membre === activeEmail);
+}
+
+// Construit un "pseudo-item" frais de port pour traverser le même regroupement que les inscriptions
+function makePortItem(env) {
+    return {
+        _isPort: true,
+        env: env,
+        collecteur: env.collecteur_alias || '(sans collecteur)',
+        statut: env.statut_paiement_port || 'non_paye',
+        montant: parseFloat(env.prix_envoi_reel || 0)
+    };
+}
+
+// Badge / bouton de paiement des frais de port (côté membre)
+function badgePaiementPortMembre(statut, enveloppeId) {
+    if (statut === 'confirme') return '<span class="badge-paiement badge-paye">Payé</span>';
+    if (statut === 'declare') return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>';
+    return '<button class="btn-jai-paye" title="Cliquez pour déclarer le paiement des frais de port" onclick="declarerPaiementPort(' + enveloppeId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
+}
+
+// Carte dédiée pour des frais de port dus (distincte d'une carte billet)
+function renderPortCard(item) {
+    var env = item.env;
+    var statut = item.statut;
+    var montant = item.montant;
+    var collecteur = collecteursMap[item.collecteur] || {};
+    var dateExp = env.date_expedition ? new Date(env.date_expedition).toLocaleDateString('fr-FR') : '';
+
+    var paypalNoteHtml = '';
+    var paypalBtnHtml = '';
+    if (statut === 'non_paye' && (collecteur.paypal_me || collecteur.paypal_email)) {
+        var note = 'Frais d\'envoi ' + item.collecteur + ' = ' + montant.toFixed(2) + '€';
+        var noteJs = note.replace(/'/g, "\\'");
+        var paypalUrl = '';
+        var paypalManualHint = '';
+        if (collecteur.paypal_me) {
+            paypalUrl = 'https://paypal.me/' + encodeURIComponent(collecteur.paypal_me) + '/' + montant.toFixed(2);
+        } else if (collecteur.paypal_email) {
+            paypalUrl = 'https://www.paypal.com/myaccount/transfer/homepage/pay';
+            var emailJs = collecteur.paypal_email.replace(/'/g, "\\'");
+            paypalManualHint = '<div class="paypal-note-hint"><i class="fa-solid fa-circle-info"></i> Envoyer <strong>' + montant.toFixed(2) + '€</strong> à <code>' + escapeHtml(collecteur.paypal_email) + '</code> <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + emailJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier email\'},2000)"><i class="fa-solid fa-copy"></i> Copier email</button> — cocher <strong>«&nbsp;Entre proches&nbsp;»</strong></div>';
+        }
+        if (paypalUrl) {
+            paypalNoteHtml = '<div class="paypal-note-hint"><i class="fa-solid fa-paste"></i> Note à coller : ' + escapeHtml(note) + ' <button type="button" class="btn-copier-note" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + noteJs + '\');this.innerHTML=\'<i class=fa-solid fa-check></i> Copié !\';var b=this;setTimeout(function(){b.innerHTML=\'<i class=fa-solid fa-copy></i> Copier\'},2000)"><i class="fa-solid fa-copy"></i> Copier</button></div>' + paypalManualHint;
+            paypalBtnHtml = '<a href="' + paypalUrl + '" target="_blank" class="btn-payer"><i class="fa-brands fa-paypal"></i> Payer via PayPal</a>';
+        }
+    }
+
+    var montantClass = statut === 'confirme' ? 'montant-paye' : 'montant-non-paye';
+    return '<div class="inscription-card inscription-card-port">'
+        + '<div class="inscription-card-header">'
+        + '<strong><i class="fa-solid fa-truck-fast"></i> Frais d\'envoi</strong>'
+        + '<span class="badge-frais-port">Frais de port</span>'
+        + (item.collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(item.collecteur) + '</span>' : '')
+        + '</div>'
+        + '<div class="inscription-card-details">'
+        + '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' €</span>'
+        + '<span class="frais-port-info"><i class="fa-solid fa-circle-info"></i> Avancés par le collecteur pour votre envoi' + (dateExp ? ' du ' + dateExp : '') + '</span>'
+        + '</div>'
+        + '<div class="inscription-card-statuts">'
+        + badgePaiementPortMembre(statut, env.id)
+        + '</div>'
+        + paypalNoteHtml
+        + (paypalBtnHtml ? '<div class="inscription-card-footer">' + paypalBtnHtml + '</div>' : '')
+        + '</div>';
 }
 
 function renderInscriptions() {
@@ -334,11 +413,24 @@ function renderInscriptions() {
     function buildCollecteurRecapHtml(collecteurNom, inscList) {
         var totalGlobal = 0;
         var ids = [];
+        var portIds = [];
         var paypalParts = [];
         var totalPaypal = 0;
         var collecteurObj = collecteursMap[collecteurNom] || {};
+        var collecteurAPaypal = !!(collecteurObj.paypal_me || collecteurObj.paypal_email);
 
         inscList.forEach(function(insc) {
+            if (insc._isPort) {
+                var totalPort = insc.montant;
+                totalGlobal += totalPort;
+                portIds.push(insc.env.id);
+                // Les frais de port sont payables via PayPal dès que le collecteur en a un
+                if (collecteurAPaypal) {
+                    paypalParts.push('Frais d\'envoi ' + totalPort.toFixed(2) + '€');
+                    totalPaypal += totalPort;
+                }
+                return;
+            }
             var billet = billetsMap[insc.billet_id] || {};
             var prix = parseFloat(billet.Prix || 0);
             var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
@@ -363,7 +455,7 @@ function renderInscriptions() {
 
         if (inscList.length < 2) return ''; // pas la peine pour 1 seule inscription
 
-        var btnPaye = '<button class="btn-jai-paye btn-jai-paye-groupe" onclick="declarerPaiementGroupe(\'' + ids.join(',') + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé (' + totalGlobal.toFixed(2) + '\u20AC)</button>';
+        var btnPaye = '<button class="btn-jai-paye btn-jai-paye-groupe" onclick="declarerPaiementGroupe(\'' + ids.join(',') + '\',\'' + portIds.join(',') + '\')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé (' + totalGlobal.toFixed(2) + '\u20AC)</button>';
 
         var paypalNoteHtml = '';
         var paypalBtnHtml = '';
@@ -385,7 +477,7 @@ function renderInscriptions() {
         }
 
         return '<div class="insc-collecteur-recap">'
-            + '<div class="insc-collecteur-recap-total"><i class="fa-solid fa-coins"></i> Total dû : <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong> (' + inscList.length + ' inscriptions)</div>'
+            + '<div class="insc-collecteur-recap-total"><i class="fa-solid fa-coins"></i> Total dû : <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong> (' + ids.length + ' inscription' + (ids.length > 1 ? 's' : '') + (portIds.length > 0 ? ' + frais de port' : '') + ')</div>'
             + paypalNoteHtml
             + '<div class="insc-collecteur-recap-actions">' + btnPaye + paypalBtnHtml + '</div>'
             + '</div>';
@@ -417,6 +509,21 @@ function renderInscriptions() {
         }
     });
 
+    // Frais de port dus : même filtrage par statut (non chargés si déjà confirmés)
+    var filteredPort = mesFraisPort.filter(function(env) {
+        if (estBeneficiairePort(env, activeEmail)) return false;
+        var s = env.statut_paiement_port || 'non_paye';
+        if (currentInscFilter === 'prix_non_defini' || currentInscFilter === 'pas_de_collecte') return false;
+        if (currentInscFilter === 'tous') return true;
+        return s === currentInscFilter;
+    });
+    filteredPort.forEach(function(env) {
+        var item = makePortItem(env);
+        if (item.statut === 'declare')      statGroups[1].items.push(item);
+        else if (item.statut === 'confirme') statGroups[2].items.push(item);
+        else                                 statGroups[0].items.push(item);
+    });
+
     var html = '';
     statGroups.forEach(function(group) {
         if (group.items.length === 0) return;
@@ -435,8 +542,7 @@ function renderInscriptions() {
             var byCollecteur = {};
             var colOrder = [];
             group.items.forEach(function(insc) {
-                var billet = billetsMap[insc.billet_id] || {};
-                var col = billet.Collecteur || '(sans collecteur)';
+                var col = insc._isPort ? insc.collecteur : ((billetsMap[insc.billet_id] || {}).Collecteur || '(sans collecteur)');
                 if (!byCollecteur[col]) { byCollecteur[col] = []; colOrder.push(col); }
                 byCollecteur[col].push(insc);
             });
@@ -450,14 +556,16 @@ function renderInscriptions() {
                     + '<div class="insc-collecteur-header-title"><i class="fa-solid fa-user"></i> ' + escapeHtml(col) + '</div>'
                     + headerExtra
                     + '</div>';
-                byCollecteur[col].forEach(function(insc) { html += renderInscriptionCard(insc); });
+                byCollecteur[col].forEach(function(insc) {
+                    html += insc._isPort ? renderPortCard(insc) : renderInscriptionCard(insc);
+                });
                 html += '</div>';
             });
         }
         html += '</div>';
     });
 
-    if (filteredInscriptions.length === 0 && mesInscriptions.length > 0) {
+    if (html === '' && (mesInscriptions.length > 0 || mesFraisPort.length > 0)) {
         html = '<div class="inscriptions-empty-state"><i class="fa-solid fa-filter"></i><p>Aucune inscription avec ce filtre.</p></div>';
     }
 
@@ -482,6 +590,14 @@ function renderInscriptions() {
             if (s === 'non_paye') totalDuGlobal += total;
             else if (s === 'declare') totalEnAttenteGlobal += total;
         }
+    });
+    // Inclure les frais de port dus dans le total
+    mesFraisPort.forEach(function(env) {
+        if (estBeneficiairePort(env, activeEmail)) return;
+        var s = env.statut_paiement_port || 'non_paye';
+        var m = parseFloat(env.prix_envoi_reel || 0);
+        if (s === 'non_paye') totalDuGlobal += m;
+        else if (s === 'declare') totalEnAttenteGlobal += m;
     });
 
     if (summary) {
@@ -544,10 +660,12 @@ function badgePaiementMembre(statut, inscriptionId, categorie, isBeneficiaire) {
 // QW-3 — Confirmation avant déclaration de paiement
 var pendingDeclarationId = null;
 var pendingDeclarationIds = null; // mode groupé
+var pendingDeclarationPortIds = null; // frais de port (enveloppes)
 
-function declarerPaiementGroupe(idsCsv) {
+function declarerPaiementGroupe(idsCsv, portIdsCsv) {
     var ids = String(idsCsv || '').split(',').map(function(s) { return parseInt(s, 10); }).filter(function(n) { return !isNaN(n); });
-    if (ids.length === 0) return;
+    var portIds = String(portIdsCsv || '').split(',').map(function(s) { return parseInt(s, 10); }).filter(function(n) { return !isNaN(n); });
+    if (ids.length === 0 && portIds.length === 0) return;
     var totalGlobal = 0;
     var collecteur = '';
     ids.forEach(function(id) {
@@ -568,14 +686,46 @@ function declarerPaiementGroupe(idsCsv) {
             break;
         }
     });
+    portIds.forEach(function(id) {
+        for (var i = 0; i < mesFraisPort.length; i++) {
+            if (mesFraisPort[i].id !== id) continue;
+            if (!collecteur) collecteur = mesFraisPort[i].collecteur_alias || '';
+            totalGlobal += parseFloat(mesFraisPort[i].prix_envoi_reel || 0);
+            break;
+        }
+    });
     pendingDeclarationIds = ids;
+    pendingDeclarationPortIds = portIds;
     pendingDeclarationId = null;
     var modal = document.getElementById('confirm-paiement-modal');
     var msgEl = document.getElementById('confirm-paiement-msg');
     if (msgEl) {
         msgEl.innerHTML = 'Confirmez-vous avoir payé <strong>' + totalGlobal.toFixed(2) + ' \u20AC</strong>'
             + (collecteur ? ' à <strong>' + escapeHtml(collecteur) + '</strong>' : '')
-            + ' pour <strong>' + ids.length + ' inscriptions</strong> ?';
+            + ' pour <strong>' + (ids.length + portIds.length) + ' élément' + ((ids.length + portIds.length) > 1 ? 's' : '') + '</strong>'
+            + (portIds.length > 0 ? ' (dont frais de port)' : '') + ' ?';
+    }
+    if (modal) modal.style.display = 'flex';
+}
+
+// Déclaration du paiement des frais de port (enveloppe) — bouton individuel
+function declarerPaiementPort(enveloppeId) {
+    var env = null;
+    for (var i = 0; i < mesFraisPort.length; i++) {
+        if (mesFraisPort[i].id === enveloppeId) { env = mesFraisPort[i]; break; }
+    }
+    if (!env) return;
+    var montant = parseFloat(env.prix_envoi_reel || 0);
+    var collecteur = env.collecteur_alias || '';
+
+    pendingDeclarationPortIds = [enveloppeId];
+    pendingDeclarationIds = null;
+    pendingDeclarationId = null;
+    var modal = document.getElementById('confirm-paiement-modal');
+    var msgEl = document.getElementById('confirm-paiement-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Confirmez-vous avoir payé <strong>' + montant.toFixed(2) + ' €</strong> de frais d\'envoi'
+            + (collecteur ? ' à <strong>' + escapeHtml(collecteur) + '</strong>' : '') + ' ?';
     }
     if (modal) modal.style.display = 'flex';
 }
@@ -612,23 +762,43 @@ function confirmerDeclarationPaiement() {
     } else if (pendingDeclarationId) {
         ids = [pendingDeclarationId];
     }
+    var portIds = (pendingDeclarationPortIds && pendingDeclarationPortIds.length > 0) ? pendingDeclarationPortIds.slice() : [];
     pendingDeclarationId = null;
     pendingDeclarationIds = null;
-    if (ids.length === 0) return;
+    pendingDeclarationPortIds = null;
+    if (ids.length === 0 && portIds.length === 0) return;
 
-    var query = ids.length === 1 ? 'id=eq.' + ids[0] : 'id=in.(' + ids.join(',') + ')';
-    supabaseFetch('/rest/v1/inscriptions?' + query, {
-        method: 'PATCH',
-        body: JSON.stringify({ statut_paiement: 'declare' })
-    })
+    var tasks = [];
+    if (ids.length > 0) {
+        var query = ids.length === 1 ? 'id=eq.' + ids[0] : 'id=in.(' + ids.join(',') + ')';
+        tasks.push(supabaseFetch('/rest/v1/inscriptions?' + query, {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_paiement: 'declare' })
+        }));
+    }
+    if (portIds.length > 0) {
+        var portQuery = portIds.length === 1 ? 'id=eq.' + portIds[0] : 'id=in.(' + portIds.join(',') + ')';
+        tasks.push(supabaseFetch('/rest/v1/enveloppes?' + portQuery, {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_paiement_port: 'declare' })
+        }));
+    }
+
+    Promise.all(tasks)
     .then(function() {
         for (var i = 0; i < mesInscriptions.length; i++) {
             if (ids.indexOf(mesInscriptions[i].id) !== -1) {
                 mesInscriptions[i].statut_paiement = 'declare';
             }
         }
+        for (var j = 0; j < mesFraisPort.length; j++) {
+            if (portIds.indexOf(mesFraisPort[j].id) !== -1) {
+                mesFraisPort[j].statut_paiement_port = 'declare';
+            }
+        }
         renderInscriptions();
-        showToast(ids.length > 1 ? (ids.length + ' paiements déclarés — le collecteur sera notifié') : 'Paiement déclaré — le collecteur sera notifié');
+        var n = ids.length + portIds.length;
+        showToast(n > 1 ? (n + ' paiements déclarés — le collecteur sera notifié') : 'Paiement déclaré — le collecteur sera notifié');
     })
     .catch(function(error) {
         console.error('Erreur déclaration paiement:', error);
@@ -641,6 +811,7 @@ function annulerDeclarationPaiement() {
     if (modal) modal.style.display = 'none';
     pendingDeclarationId = null;
     pendingDeclarationIds = null;
+    pendingDeclarationPortIds = null;
 }
 
 // ============================================================
