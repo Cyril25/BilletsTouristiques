@@ -2439,8 +2439,21 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
                 var payDate = new Date(insc.date_inscription);
                 payDateStr = ' (' + payDate.toLocaleDateString('fr-FR') + ')';
             }
+            // Détail des quantités (pour savoir à quoi correspond le montant)
+            var payNbN = insc.nb_normaux || 0;
+            var payNbV = insc.nb_variantes || 0;
+            var payDetailParts = [];
+            if (billet.VersionNormaleExiste !== false && payNbN > 0) {
+                payDetailParts.push(payNbN + ' normal' + (payNbN > 1 ? 'aux' : '') + ' × ' + prix.toFixed(2) + ' €');
+            }
+            if (payNbV > 0) {
+                payDetailParts.push(payNbV + ' variante' + (payNbV > 1 ? 's' : '') + ' × ' + prixVariante.toFixed(2) + ' €');
+            }
+            var payDetailStr = payDetailParts.join(' + ');
             lignes += '<div class="envoi-ligne">'
-                + '<span class="envoi-billet">' + escapeHtmlMC(payRefPrefix + (billet.NomBillet || '?') + payDateStr) + '</span>'
+                + '<span class="envoi-billet">' + escapeHtmlMC(payRefPrefix + (billet.NomBillet || '?') + payDateStr)
+                + (payDetailStr ? '<br><span class="envoi-qty">' + escapeHtmlMC(payDetailStr) + '</span>' : '')
+                + '</span>'
                 + '<span class="envoi-montant">' + montant + ' €</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<button onclick="validerPaiementVue(' + insc.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement"><i class="fa-solid fa-check"></i></button>'
