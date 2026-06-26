@@ -2444,7 +2444,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
             var payNbV = insc.nb_variantes || 0;
             var payDetailParts = [];
             if (billet.VersionNormaleExiste !== false && payNbN > 0) {
-                payDetailParts.push(payNbN + ' normal' + (payNbN > 1 ? 'aux' : '') + ' × ' + prix.toFixed(2) + ' €');
+                payDetailParts.push(payNbN + (payNbN > 1 ? ' normaux' : ' normal') + ' × ' + prix.toFixed(2) + ' €');
             }
             if (payNbV > 0) {
                 payDetailParts.push(payNbV + ' variante' + (payNbV > 1 ? 's' : '') + ' × ' + prixVariante.toFixed(2) + ' €');
