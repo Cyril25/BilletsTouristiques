@@ -356,6 +356,12 @@ body.has-impersonate-banner #menu-placeholder {
         z-index: 999;
         border-radius: 0 0 8px 8px;
         align-items: stretch;
+        /* Bandeau figé : le menu déroulé est épinglé avec la navbar. On lui
+           donne son propre défilement pour pouvoir atteindre tous les liens
+           quand la liste dépasse la hauteur de l'écran (cas admin). */
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .nav-links.active {
