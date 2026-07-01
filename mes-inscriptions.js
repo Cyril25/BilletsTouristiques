@@ -11,6 +11,7 @@ var membrePays = '';
 var fraisPortData = [];
 var mesFraisPort = []; // Frais de port dus (enveloppes expédiées avec prix saisi, non confirmés)
 var currentInscFilter = 'tous'; // #9 — filtre actif
+var currentInscSearch = ''; // Recherche texte (billet / référence / collecteur / collecte)
 var modifierInscCurrent = null; // Inscription en cours de modification (pré-collecte)
 
 // #14 — Onboarding membre inscriptions
@@ -195,6 +196,40 @@ function filterInscriptions(statut) {
     renderInscriptions();
 }
 
+// Recherche texte — filtre saisi dans la barre de recherche
+function searchInscriptions(q) {
+    currentInscSearch = (q || '').trim().toLowerCase();
+    // Une recherche ne doit pas être masquée par un filtre de statut resté actif :
+    // repasser sur « Tous » dès qu'un texte est saisi.
+    if (currentInscSearch && currentInscFilter !== 'tous') {
+        currentInscFilter = 'tous';
+        var btns = document.querySelectorAll('.inscriptions-filter-btn');
+        for (var i = 0; i < btns.length; i++) {
+            var isTous = btns[i].getAttribute('onclick') === "filterInscriptions('tous')";
+            btns[i].classList.toggle('active', isTous);
+        }
+    }
+    renderInscriptions();
+}
+
+// L'inscription correspond-elle à la recherche courante ? (nom billet / référence / collecteur / collecte)
+function inscMatchesSearch(insc) {
+    if (!currentInscSearch) return true;
+    var billet = billetsMap[insc.billet_id] || {};
+    var haystack = [
+        billet.NomBillet, billet.Reference, billet.Millesime, billet.Version,
+        billet.Ville, billet.Collecteur,
+        (insc.collecte_id ? collectesMap[insc.collecte_id] : '')
+    ].join(' ').toLowerCase();
+    return haystack.indexOf(currentInscSearch) !== -1;
+}
+
+// Un pseudo-item frais de port correspond-il à la recherche ? (collecteur uniquement)
+function portMatchesSearch(env) {
+    if (!currentInscSearch) return true;
+    return String(env.collecteur_alias || '').toLowerCase().indexOf(currentInscSearch) !== -1;
+}
+
 function estBeneficiaire(insc, activeEmail) {
     var b = billetsMap[insc.billet_id] || {};
     var col = collecteursMap[b.Collecteur];
@@ -312,6 +347,11 @@ function renderInscriptions() {
             var billet = billetsMap[insc.billet_id] || {};
             return (insc.statut_paiement || 'non_paye') === currentInscFilter && billet.Categorie !== 'Pas de collecte';
         });
+    }
+
+    // Recherche texte par-dessus le filtre de statut
+    if (currentInscSearch) {
+        filteredInscriptions = filteredInscriptions.filter(inscMatchesSearch);
     }
 
     var activeEmail = window.getActiveEmail();
@@ -512,6 +552,7 @@ function renderInscriptions() {
     // Frais de port dus : même filtrage par statut (non chargés si déjà confirmés)
     var filteredPort = mesFraisPort.filter(function(env) {
         if (estBeneficiairePort(env, activeEmail)) return false;
+        if (!portMatchesSearch(env)) return false;
         var s = env.statut_paiement_port || 'non_paye';
         if (currentInscFilter === 'prix_non_defini' || currentInscFilter === 'pas_de_collecte') return false;
         if (currentInscFilter === 'tous') return true;

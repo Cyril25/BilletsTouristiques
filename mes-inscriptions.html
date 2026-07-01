@@ -26,6 +26,11 @@
 
             <div id="inscriptions-view">
                 <div id="inscriptions-summary"></div>
+                <!-- Recherche texte (billet / référence / collecteur / collecte) -->
+                <div class="inscriptions-search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="inscriptions-search" placeholder="Rechercher un billet, une référence, un collecteur…" oninput="searchInscriptions(this.value)" aria-label="Rechercher dans mes inscriptions">
+                </div>
                 <!-- #9 — Filtres par statut de paiement -->
                 <div class="inscriptions-filters" id="inscriptions-filters">
                     <button class="inscriptions-filter-btn active" onclick="filterInscriptions('tous')">Tous</button>

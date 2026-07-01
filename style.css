@@ -4710,6 +4710,30 @@ body.login-page {
 }
 
 /* #9 — Filtres par statut inscriptions */
+.inscriptions-search-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.inscriptions-search-bar i {
+    color: var(--color-text-hint);
+}
+
+.inscriptions-search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: inherit;
+}
+
 .inscriptions-filters {
     display: flex;
     gap: var(--spacing-xs);
