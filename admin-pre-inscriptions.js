@@ -174,6 +174,11 @@ function preInscRenderCard(item) {
     html += '<span class="preinsc-badge preinsc-badge--info"><i class="fa-solid fa-credit-card"></i> ' + item.mode_paiement + '</span>';
     html += '<span class="preinsc-badge preinsc-badge--info"><i class="fa-solid fa-truck"></i> ' + item.mode_envoi + '</span>';
 
+    // Commentaire (terminaisons demandées…)
+    if (item.commentaire) {
+        html += '<div class="preinsc-card-commentaire"><i class="fa-solid fa-comment"></i> ' + preInscEscapeHtml(item.commentaire) + '</div>';
+    }
+
     html += '</div>';
     html += '</div>';
 
@@ -306,6 +311,13 @@ function preInscOpenForm(membreEmail) {
 
     html += '</div>';
     html += '</fieldset>';
+
+    // Commentaire (terminaisons demandées…) — recopié sur les inscriptions auto
+    html += '<div class="preinsc-form-group">';
+    html += '<label for="preinsc-commentaire">Commentaire (terminaisons demandées…) :</label>';
+    html += '<textarea id="preinsc-commentaire" class="admin-form-input" rows="2" placeholder="Ex. : souhaite les terminaisons 07 et 78">' + preInscEscapeHtml(existing ? (existing.commentaire || '') : '') + '</textarea>';
+    html += '<small class="preinsc-form-hint">Visible par le collecteur sur les inscriptions créées automatiquement.</small>';
+    html += '</div>';
 
     // Boutons
     html += '<div class="fdp-actions">';
@@ -475,7 +487,8 @@ function preInscSave() {
         nb_normaux_etr_defaut: nbNormauxEtrDefaut,
         nb_variantes_etr_defaut: nbVariantesEtrDefaut,
         mode_paiement: modePaiement,
-        mode_envoi: modeEnvoi
+        mode_envoi: modeEnvoi,
+        commentaire: (document.getElementById('preinsc-commentaire').value || '').trim()
     };
 
     // DELETE + INSERT pattern (comme fdp)
@@ -630,7 +643,7 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
                 nb_variantes: nbVariantes,
                 mode_paiement: config.mode_paiement,
                 mode_envoi: config.mode_envoi,
-                commentaire: '',
+                commentaire: config.commentaire || '',
                 adresse_snapshot: adresseSnapshot,
                 statut_paiement: 'non_paye',
                 envoye: false,
@@ -706,7 +719,8 @@ function preInscDuplicateYear() {
             nb_normaux_etr_defaut: item.nb_normaux_etr_defaut,
             nb_variantes_etr_defaut: item.nb_variantes_etr_defaut,
             mode_paiement: item.mode_paiement,
-            mode_envoi: item.mode_envoi
+            mode_envoi: item.mode_envoi,
+            commentaire: item.commentaire || ''
         };
     });
 
