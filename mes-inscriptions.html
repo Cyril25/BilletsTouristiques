@@ -80,6 +80,18 @@
         </div>
     </div>
 
+    <!-- Modale d'annulation d'une déclaration de paiement faite par erreur -->
+    <div id="annuler-declaration-modal" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)fermerAnnulationDeclaration()">
+        <div class="user-modal" role="alertdialog" aria-modal="true">
+            <h2 class="user-modal-title"><i class="fa-solid fa-rotate-left"></i> Annuler la déclaration</h2>
+            <p class="user-modal-desc">Vous avez déclaré ce paiement par erreur ?<br>L'élément repassera en <strong>« À payer »</strong>.</p>
+            <div class="user-modal-actions">
+                <button type="button" class="user-modal-btn" onclick="fermerAnnulationDeclaration()">Non, garder</button>
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="confirmerAnnulationDeclaration()">Oui, annuler</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
     <script src="global.js"></script>

@@ -6049,6 +6049,29 @@ body.login-page {
     margin-right: 0;
 }
 
+/* Bouton "Annuler" une déclaration de paiement faite par erreur (statut declare) */
+.btn-annuler-declaration {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    margin-left: 4px;
+    background: none;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+    vertical-align: middle;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-annuler-declaration:hover {
+    background: var(--color-bg-hover, #eee);
+    color: var(--color-text);
+}
+
 /* Cellule paiement — wrapper flex pour badge + boutons */
 .paiement-cell {
     display: inline-flex;
@@ -6986,6 +7009,21 @@ body.login-page {
     border-radius: 20px;
     font-size: 0.82rem;
     font-weight: 500;
+}
+
+/* Commentaire du paramétrage (terminaisons demandées…) */
+.preinsc-card-commentaire {
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--color-text-muted);
+}
+
+.preinsc-form-hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
 }
 
 .preinsc-badge--fr {

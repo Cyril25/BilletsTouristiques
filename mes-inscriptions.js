@@ -256,7 +256,10 @@ function makePortItem(env) {
 // Badge / bouton de paiement des frais de port (côté membre)
 function badgePaiementPortMembre(statut, enveloppeId) {
     if (statut === 'confirme') return '<span class="badge-paiement badge-paye">Payé</span>';
-    if (statut === 'declare') return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>';
+    if (statut === 'declare') {
+        return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>'
+            + '<button class="btn-annuler-declaration" title="Déclaré par erreur ? Annuler la déclaration de paiement" onclick="annulerDeclaration(' + enveloppeId + ', true)"><i class="fa-solid fa-rotate-left"></i> Annuler</button>';
+    }
     return '<button class="btn-jai-paye" title="Cliquez pour déclarer le paiement des frais de port" onclick="declarerPaiementPort(' + enveloppeId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
 }
 
@@ -689,7 +692,8 @@ function badgePaiementMembre(statut, inscriptionId, categorie, isBeneficiaire) {
     }
     if (statut === 'declare') {
         // QW-4 — Badge raccourci avec tooltip pour le détail
-        return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>';
+        return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>'
+            + '<button class="btn-annuler-declaration" title="Déclaré par erreur ? Annuler la déclaration de paiement" onclick="annulerDeclaration(' + inscriptionId + ', false)"><i class="fa-solid fa-rotate-left"></i> Annuler</button>';
     }
     // non_paye — Story 9.8 : bloquer en pré-collecte
     if (categorie === 'Pré collecte') {
@@ -853,6 +857,79 @@ function annulerDeclarationPaiement() {
     pendingDeclarationId = null;
     pendingDeclarationIds = null;
     pendingDeclarationPortIds = null;
+}
+
+// Annulation d'une déclaration de paiement faite par erreur
+// (uniquement en statut 'declare' — impossible une fois validé par le collecteur)
+var pendingAnnulationId = null;
+var pendingAnnulationIsPort = false;
+
+function annulerDeclaration(id, isPort) {
+    var statut = null;
+    if (isPort) {
+        for (var i = 0; i < mesFraisPort.length; i++) {
+            if (mesFraisPort[i].id === id) { statut = mesFraisPort[i].statut_paiement_port; break; }
+        }
+    } else {
+        for (var j = 0; j < mesInscriptions.length; j++) {
+            if (mesInscriptions[j].id === id) { statut = mesInscriptions[j].statut_paiement; break; }
+        }
+    }
+    if (statut !== 'declare') return; // déjà validé (ou introuvable) : pas d'annulation possible
+
+    pendingAnnulationId = id;
+    pendingAnnulationIsPort = !!isPort;
+    var modal = document.getElementById('annuler-declaration-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function fermerAnnulationDeclaration() {
+    var modal = document.getElementById('annuler-declaration-modal');
+    if (modal) modal.style.display = 'none';
+    pendingAnnulationId = null;
+}
+
+function confirmerAnnulationDeclaration() {
+    var modal = document.getElementById('annuler-declaration-modal');
+    if (modal) modal.style.display = 'none';
+    var id = pendingAnnulationId;
+    var isPort = pendingAnnulationIsPort;
+    pendingAnnulationId = null;
+    if (!id) return;
+
+    var url = isPort
+        ? '/rest/v1/enveloppes?id=eq.' + id + '&statut_paiement_port=eq.declare'
+        : '/rest/v1/inscriptions?id=eq.' + id + '&statut_paiement=eq.declare';
+    var body = isPort ? { statut_paiement_port: 'non_paye' } : { statut_paiement: 'non_paye' };
+
+    supabaseFetch(url, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+        headers: { 'Prefer': 'return=representation' }
+    })
+    .then(function(rows) {
+        if (!rows || rows.length === 0) {
+            // Le collecteur a validé entre-temps : rien n'a été annulé
+            showToast('Annulation impossible : le paiement a déjà été validé par le collecteur', 'error');
+            loadMesInscriptions();
+            return;
+        }
+        if (isPort) {
+            for (var i = 0; i < mesFraisPort.length; i++) {
+                if (mesFraisPort[i].id === id) { mesFraisPort[i].statut_paiement_port = 'non_paye'; break; }
+            }
+        } else {
+            for (var j = 0; j < mesInscriptions.length; j++) {
+                if (mesInscriptions[j].id === id) { mesInscriptions[j].statut_paiement = 'non_paye'; break; }
+            }
+        }
+        renderInscriptions();
+        showToast('Déclaration de paiement annulée');
+    })
+    .catch(function(error) {
+        console.error('Erreur annulation déclaration:', error);
+        showToast('Erreur lors de l\'annulation', 'error');
+    });
 }
 
 // ============================================================
