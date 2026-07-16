@@ -9442,6 +9442,10 @@ body.login-page {
     padding: 8px 10px;
     border-top: 1px solid var(--color-border-light, #f0f0f0);
     vertical-align: middle;
+    white-space: nowrap;
+}
+.demandes-table td.demande-desc-cell {
+    white-space: normal;
 }
 
 .demandes-table tbody tr {
@@ -9474,13 +9478,9 @@ body.login-page {
 
 .demande-date-cell,
 .demande-demandeur-cell {
-    white-space: nowrap;
     color: var(--color-text-muted, #888);
-    font-size: 0.8rem;
-}
-.demande-demandeur-cell i {
-    font-size: 0.7em;
-    margin-right: 2px;
+    text-align: center;
+    cursor: help;
 }
 
 .demande-etat-select {
@@ -9646,6 +9646,11 @@ body.login-page {
     }
     .demande-actions-cell {
         float: right;
+    }
+    /* Pas de survol sur mobile : l'info est dans la modale */
+    .demande-demandeur-cell,
+    .demande-date-cell {
+        display: none;
     }
 }
 

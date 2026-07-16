@@ -217,12 +217,12 @@ function trierDemandes(key) {
     renderDemandes();
 }
 
-function headerCell(key, label) {
+function headerCell(key, labelHtml, sortTitle) {
     var arrow = '';
     if (sortState.key === key) {
         arrow = ' <i class="fa-solid fa-caret-' + (sortState.dir === 1 ? 'up' : 'down') + '"></i>';
     }
-    return '<th class="demandes-th-sort" onclick="trierDemandes(\'' + key + '\')" title="Trier par ' + escapeAttr(label.toLowerCase()) + '">' + escapeHtml(label) + arrow + '</th>';
+    return '<th class="demandes-th-sort" onclick="trierDemandes(\'' + key + '\')" title="Trier par ' + escapeAttr(sortTitle) + '">' + labelHtml + arrow + '</th>';
 }
 
 function renderDemandes() {
@@ -254,14 +254,14 @@ function renderDemandes() {
     if (emptyState) emptyState.style.display = 'none';
 
     list.innerHTML = '<table class="demandes-table"><thead><tr>'
-        + headerCell('etat', 'État')
-        + headerCell('priorite', 'Prio')
-        + headerCell('complexite', 'Cplx')
+        + headerCell('etat', 'État', 'état')
+        + headerCell('priorite', 'Prio', 'priorité')
+        + headerCell('complexite', 'Cplx', 'complexité')
         + '<th>Qui</th>'
-        + headerCell('ecran', 'Écran')
+        + headerCell('ecran', 'Écran', 'écran')
         + '<th>Description</th>'
-        + headerCell('demandeur', 'Demandeur')
-        + headerCell('date', 'Date')
+        + headerCell('demandeur', '<i class="fa-solid fa-user"></i>', 'demandeur')
+        + headerCell('date', '<i class="fa-solid fa-calendar-day"></i>', 'date')
         + '<th></th>'
         + '</tr></thead><tbody>'
         + demandes.map(renderDemandeRow).join('')
@@ -272,8 +272,10 @@ function renderDemandeRow(d) {
     var etatDef = getEtatDef(d.etat);
     var estClose = (d.etat === 'terminee' || d.etat === 'abandonnee');
 
-    // Email raccourci (partie avant @), complet au survol
-    var demandeurCourt = (d.demandeur || '').split('@')[0];
+    var dateInfo = 'Créée le ' + formatDateFr(d.created_at);
+    if (d.updated_at && d.updated_at.slice(0, 10) !== d.created_at.slice(0, 10)) {
+        dateInfo += ' — modifiée le ' + formatDateFr(d.updated_at);
+    }
 
     var etatOptions = ETATS.map(function(e) {
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(e.label) + '</option>';
@@ -294,8 +296,8 @@ function renderDemandeRow(d) {
         + '<td><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
         + '<td>' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
         + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
-        + '<td class="demande-demandeur-cell" title="' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i> ' + escapeHtml(demandeurCourt) + '</td>'
-        + '<td class="demande-date-cell">' + formatDateFr(d.created_at) + '</td>'
+        + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'
+        + '<td class="demande-date-cell" title="' + escapeAttr(dateInfo) + '"><i class="fa-solid fa-calendar-day"></i></td>'
         + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirModaleDemande(' + d.id + ')" title="Modifier la demande"><i class="fa-solid fa-pen"></i></button></td>'
         + '</tr>';
 }
