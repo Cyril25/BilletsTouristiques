@@ -182,8 +182,47 @@ function getDemandesFiltrees() {
 }
 
 // ============================================================
-// 8. RENDU DE LA LISTE
+// 8. RENDU DU TABLEAU (tri par colonnes)
 // ============================================================
+var COMPLEXITE_ORDER = { 'S': 0, 'M': 1, 'L': 2, '': 3 };
+var sortState = { key: 'priorite', dir: 1 };
+
+function getEtatIndex(etat) {
+    for (var i = 0; i < ETATS.length; i++) {
+        if (ETATS[i].value === etat) return i;
+    }
+    return ETATS.length;
+}
+
+function getSortValue(d, key) {
+    switch (key) {
+        case 'etat': return getEtatIndex(d.etat);
+        case 'priorite': return PRIORITE_ORDER[d.priorite] !== undefined ? PRIORITE_ORDER[d.priorite] : 1;
+        case 'complexite': return COMPLEXITE_ORDER[d.complexite] !== undefined ? COMPLEXITE_ORDER[d.complexite] : 3;
+        case 'ecran': return (d.ecran || '').toLowerCase();
+        case 'date': return d.created_at || '';
+        default: return 0;
+    }
+}
+
+function trierDemandes(key) {
+    if (sortState.key === key) {
+        sortState.dir = -sortState.dir;
+    } else {
+        sortState.key = key;
+        sortState.dir = 1;
+    }
+    renderDemandes();
+}
+
+function headerCell(key, label) {
+    var arrow = '';
+    if (sortState.key === key) {
+        arrow = ' <i class="fa-solid fa-caret-' + (sortState.dir === 1 ? 'up' : 'down') + '"></i>';
+    }
+    return '<th class="demandes-th-sort" onclick="trierDemandes(\'' + key + '\')" title="Trier par ' + escapeAttr(label.toLowerCase()) + '">' + escapeHtml(label) + arrow + '</th>';
+}
+
 function renderDemandes() {
     var list = document.getElementById('demandes-list');
     var emptyState = document.getElementById('demande-empty-state');
@@ -192,11 +231,12 @@ function renderDemandes() {
 
     var demandes = getDemandesFiltrees();
 
-    // Tri : priorité (haute d'abord) puis plus récentes en premier
     demandes.sort(function(a, b) {
-        var pa = PRIORITE_ORDER[a.priorite] !== undefined ? PRIORITE_ORDER[a.priorite] : 1;
-        var pb = PRIORITE_ORDER[b.priorite] !== undefined ? PRIORITE_ORDER[b.priorite] : 1;
-        if (pa !== pb) return pa - pb;
+        var va = getSortValue(a, sortState.key);
+        var vb = getSortValue(b, sortState.key);
+        if (va < vb) return -sortState.dir;
+        if (va > vb) return sortState.dir;
+        // Égalité : plus récentes en premier
         return (a.created_at < b.created_at) ? 1 : -1;
     });
 
@@ -211,10 +251,21 @@ function renderDemandes() {
     }
     if (emptyState) emptyState.style.display = 'none';
 
-    list.innerHTML = demandes.map(renderDemandeCard).join('');
+    list.innerHTML = '<table class="demandes-table"><thead><tr>'
+        + headerCell('etat', 'État')
+        + headerCell('priorite', 'Prio')
+        + headerCell('complexite', 'Cplx')
+        + '<th>Qui</th>'
+        + headerCell('ecran', 'Écran')
+        + '<th>Description</th>'
+        + headerCell('date', 'Date')
+        + '<th></th>'
+        + '</tr></thead><tbody>'
+        + demandes.map(renderDemandeRow).join('')
+        + '</tbody></table>';
 }
 
-function renderDemandeCard(d) {
+function renderDemandeRow(d) {
     var etatDef = getEtatDef(d.etat);
     var estClose = (d.etat === 'faite' || d.etat === 'abandonnee');
 
@@ -222,36 +273,24 @@ function renderDemandeCard(d) {
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(e.label) + '</option>';
     }).join('');
 
-    var badges = '<span class="demande-badge demande-badge-priorite demande-badge-priorite--' + escapeAttr(d.priorite) + '">'
-        + escapeHtml(PRIORITE_LABELS[d.priorite] || d.priorite) + '</span>';
-    if (d.complexite) {
-        badges += '<span class="demande-badge demande-badge-complexite" title="Complexité estimée">' + escapeHtml(d.complexite) + '</span>';
-    }
-    badges += '<span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span>';
-    if (d.ecran) {
-        badges += '<span class="demande-badge demande-badge-ecran" title="Écran / onglet"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>';
-    }
+    var commentaireIcon = d.commentaire
+        ? ' <i class="fa-solid fa-comment-dots demande-desc-comment" title="' + escapeAttr(d.commentaire) + '"></i>'
+        : '';
 
-    var commentaireHtml = '';
-    if (d.commentaire) {
-        commentaireHtml = '<div class="demande-card-commentaire"><i class="fa-solid fa-comment-dots"></i> ' + escapeHtml(d.commentaire) + '</div>';
-    }
-
-    return '<div class="demande-card' + (estClose ? ' demande-card--close' : '') + '">'
-        + '<div class="demande-card-header">'
+    return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '') + '" onclick="ouvrirModaleDemande(' + d.id + ')">'
+        + '<td class="demande-etat-cell">'
         +   '<select class="demande-etat-select" style="border-color:' + etatDef.color + ';color:' + etatDef.color + ';" '
-        +       'onchange="changerEtat(' + d.id + ', this.value)" title="Changer l\'état">' + etatOptions + '</select>'
-        +   badges
-        +   '<button type="button" class="demande-edit-btn" onclick="ouvrirModaleDemande(' + d.id + ')" title="Modifier la demande"><i class="fa-solid fa-pen"></i></button>'
-        + '</div>'
-        + '<div class="demande-card-description">' + escapeHtml(d.description) + '</div>'
-        + commentaireHtml
-        + '<div class="demande-card-meta">'
-        +   '<i class="fa-solid fa-user"></i> ' + escapeHtml(d.demandeur)
-        +   ' — ' + formatDateFr(d.created_at)
-        +   (d.updated_at && d.updated_at.slice(0, 10) !== d.created_at.slice(0, 10) ? ' (maj ' + formatDateFr(d.updated_at) + ')' : '')
-        + '</div>'
-        + '</div>';
+        +       'onclick="event.stopPropagation()" onchange="changerEtat(' + d.id + ', this.value)" title="Changer l\'état">' + etatOptions + '</select>'
+        + '</td>'
+        + '<td><span class="demande-badge demande-badge-priorite demande-badge-priorite--' + escapeAttr(d.priorite) + '">'
+        +   escapeHtml(PRIORITE_LABELS[d.priorite] || d.priorite) + '</span></td>'
+        + '<td>' + (d.complexite ? '<span class="demande-badge demande-badge-complexite" title="Complexité estimée">' + escapeHtml(d.complexite) + '</span>' : '') + '</td>'
+        + '<td><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
+        + '<td>' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
+        + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
+        + '<td class="demande-date-cell">' + formatDateFr(d.created_at) + '</td>'
+        + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirModaleDemande(' + d.id + ')" title="Modifier la demande"><i class="fa-solid fa-pen"></i></button></td>'
+        + '</tr>';
 }
 
 // ============================================================

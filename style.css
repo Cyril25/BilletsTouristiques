@@ -9400,32 +9400,82 @@ body.login-page {
    B0 — GESTION DES DEMANDES (admin-demandes)
    ========================================= */
 .demandes-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 0 20px 20px;
+    overflow-x: auto;
 }
 
-.demande-card {
+.demandes-table {
+    width: 100%;
+    border-collapse: collapse;
     background: #fff;
     border: 1px solid var(--color-border-light, #e5e5ea);
     border-radius: 8px;
-    padding: 14px 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    font-size: 0.88rem;
 }
 
-.demande-card--close {
-    opacity: 0.65;
+.demandes-table th {
+    text-align: left;
+    padding: 10px;
+    background: var(--color-surface, #f8f8fa);
+    color: var(--color-text-secondary, #555);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-border-light, #e5e5ea);
 }
 
-.demande-card-header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
+.demandes-th-sort {
+    cursor: pointer;
+    user-select: none;
+}
+.demandes-th-sort:hover {
+    color: var(--color-primary, #5D3A7E);
+}
+.demandes-th-sort i {
+    color: var(--color-primary, #5D3A7E);
+}
+
+.demandes-table td {
+    padding: 8px 10px;
+    border-top: 1px solid var(--color-border-light, #f0f0f0);
+    vertical-align: middle;
+}
+
+.demandes-table tbody tr {
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.demandes-table tbody tr:hover {
+    background: var(--color-surface, #f8f8fa);
+}
+
+.demande-row--close {
+    opacity: 0.6;
+}
+
+.demande-desc-cell {
+    max-width: 420px;
+}
+.demande-desc-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+    color: var(--color-text, #333);
+}
+.demande-desc-comment {
+    color: #D4A437;
+}
+
+.demande-date-cell {
+    white-space: nowrap;
+    color: var(--color-text-muted, #888);
+    font-size: 0.8rem;
 }
 
 .demande-etat-select {
@@ -9476,7 +9526,6 @@ body.login-page {
 }
 
 .demande-edit-btn {
-    margin-left: auto;
     background: transparent;
     border: none;
     color: var(--color-text-muted, #888);
@@ -9490,36 +9539,11 @@ body.login-page {
     background: var(--color-surface, #f2f2f5);
 }
 
-.demande-card-description {
-    font-size: 0.92rem;
-    line-height: 1.5;
-    color: var(--color-text, #333);
-    white-space: pre-wrap;
-}
-
-.demande-card-commentaire {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: #FFF8E5;
-    border-left: 3px solid #D4A437;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    color: var(--color-text-secondary, #555);
-    white-space: pre-wrap;
-}
-.demande-card-commentaire i { color: #D4A437; margin-right: 4px; }
-
-.demande-card-meta {
-    margin-top: 8px;
-    font-size: 0.78rem;
-    color: var(--color-text-muted, #888);
-}
-.demande-card-meta i { margin-right: 3px; }
-
 /* Modale ajout/édition */
 .demande-modal {
     max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 .demande-modal .user-modal-title {
     color: var(--color-primary, #5D3A7E);
@@ -9577,11 +9601,50 @@ body.login-page {
     font-size: 0.8rem !important;
 }
 
+/* Mobile : le tableau devient des mini-fiches empilées */
+@media (max-width: 700px) {
+    .demandes-table {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+    }
+    .demandes-table thead {
+        display: none;
+    }
+    .demandes-table,
+    .demandes-table tbody {
+        display: block;
+    }
+    .demandes-table tr {
+        display: block;
+        background: #fff;
+        border: 1px solid var(--color-border-light, #e5e5ea);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .demandes-table td {
+        display: inline-block;
+        border: none;
+        padding: 2px 6px 2px 0;
+        vertical-align: middle;
+    }
+    .demandes-table td.demande-desc-cell {
+        display: block;
+        max-width: none;
+        padding: 6px 0 2px;
+    }
+    .demande-desc-text {
+        -webkit-line-clamp: 3;
+    }
+    .demande-actions-cell {
+        float: right;
+    }
+}
+
 @media (max-width: 600px) {
     .demande-modal-form {
         grid-template-columns: 1fr;
-    }
-    .demande-card-header {
-        gap: 6px;
     }
 }
