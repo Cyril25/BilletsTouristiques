@@ -3277,7 +3277,7 @@ function buildEbayDescriptionHtml(billet) {
     ];
 
     var html = '<div style="font-family: Arial, sans-serif; font-size: 14pt;">';
-    html += '<p>Billet Rare Touristique 0 Euro Souvenir / 0-Euro Souvenir-Schein</p>';
+    html += '<p>Billet Touristique 0 Euro Souvenir / 0-Euro Souvenir-Schein</p>';
     var items = [];
     lignes.forEach(function(l) {
         if (l[1] === null || l[1] === undefined || l[1] === '') return;
