@@ -9487,11 +9487,16 @@ body.login-page {
     font-family: 'Roboto', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
-    padding: 3px 6px;
+    padding: 5px 8px;
+    min-width: 108px;
     border: 1.5px solid;
     border-radius: 12px;
     background: #fff;
     cursor: pointer;
+}
+
+.demande-etat-cell {
+    min-width: 120px;
 }
 
 .demande-badge {
