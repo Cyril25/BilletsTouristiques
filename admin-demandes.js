@@ -49,12 +49,13 @@ var ETATS = [
     { value: 'a_cadrer',   label: 'À cadrer',   color: '#EF6C00' },
     { value: 'validee',    label: 'Validée',    color: '#6A1B9A' },
     { value: 'en_cours',   label: 'En cours',   color: '#00838F' },
-    { value: 'faite',      label: 'Faite',      color: '#2E7D32' },
+    { value: 'a_tester',   label: 'À tester',   color: '#C2185B' },
+    { value: 'terminee',   label: 'Terminée',   color: '#2E7D32' },
     { value: 'abandonnee', label: 'Abandonnée', color: '#757575' }
 ];
 
 // États considérés comme « actifs » (filtre par défaut)
-var ETATS_ACTIFS = ['nouvelle', 'a_cadrer', 'validee', 'en_cours'];
+var ETATS_ACTIFS = ['nouvelle', 'a_cadrer', 'validee', 'en_cours', 'a_tester'];
 
 var PRIORITE_LABELS = { haute: 'Haute', normale: 'Normale', basse: 'Basse' };
 var PRIORITE_ORDER = { haute: 0, normale: 1, basse: 2 };
@@ -200,6 +201,7 @@ function getSortValue(d, key) {
         case 'priorite': return PRIORITE_ORDER[d.priorite] !== undefined ? PRIORITE_ORDER[d.priorite] : 1;
         case 'complexite': return COMPLEXITE_ORDER[d.complexite] !== undefined ? COMPLEXITE_ORDER[d.complexite] : 3;
         case 'ecran': return (d.ecran || '').toLowerCase();
+        case 'demandeur': return (d.demandeur || '').toLowerCase();
         case 'date': return d.created_at || '';
         default: return 0;
     }
@@ -258,6 +260,7 @@ function renderDemandes() {
         + '<th>Qui</th>'
         + headerCell('ecran', 'Écran')
         + '<th>Description</th>'
+        + headerCell('demandeur', 'Demandeur')
         + headerCell('date', 'Date')
         + '<th></th>'
         + '</tr></thead><tbody>'
@@ -267,7 +270,10 @@ function renderDemandes() {
 
 function renderDemandeRow(d) {
     var etatDef = getEtatDef(d.etat);
-    var estClose = (d.etat === 'faite' || d.etat === 'abandonnee');
+    var estClose = (d.etat === 'terminee' || d.etat === 'abandonnee');
+
+    // Email raccourci (partie avant @), complet au survol
+    var demandeurCourt = (d.demandeur || '').split('@')[0];
 
     var etatOptions = ETATS.map(function(e) {
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(e.label) + '</option>';
@@ -288,6 +294,7 @@ function renderDemandeRow(d) {
         + '<td><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
         + '<td>' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
         + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
+        + '<td class="demande-demandeur-cell" title="' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i> ' + escapeHtml(demandeurCourt) + '</td>'
         + '<td class="demande-date-cell">' + formatDateFr(d.created_at) + '</td>'
         + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirModaleDemande(' + d.id + ')" title="Modifier la demande"><i class="fa-solid fa-pen"></i></button></td>'
         + '</tr>';

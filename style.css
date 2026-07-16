@@ -9399,10 +9399,9 @@ body.login-page {
 /* =========================================
    B0 — GESTION DES DEMANDES (admin-demandes)
    ========================================= */
+/* Pleine largeur de #app-content, aligné sur la barre de recherche */
 .demandes-list {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px 20px;
+    padding-bottom: 20px;
     overflow-x: auto;
 }
 
@@ -9458,7 +9457,8 @@ body.login-page {
 }
 
 .demande-desc-cell {
-    max-width: 420px;
+    min-width: 260px;
+    width: 100%;
 }
 .demande-desc-text {
     display: -webkit-box;
@@ -9472,10 +9472,15 @@ body.login-page {
     color: #D4A437;
 }
 
-.demande-date-cell {
+.demande-date-cell,
+.demande-demandeur-cell {
     white-space: nowrap;
     color: var(--color-text-muted, #888);
     font-size: 0.8rem;
+}
+.demande-demandeur-cell i {
+    font-size: 0.7em;
+    margin-right: 2px;
 }
 
 .demande-etat-select {
@@ -9632,7 +9637,8 @@ body.login-page {
     }
     .demandes-table td.demande-desc-cell {
         display: block;
-        max-width: none;
+        min-width: 0;
+        width: auto;
         padding: 6px 0 2px;
     }
     .demande-desc-text {
