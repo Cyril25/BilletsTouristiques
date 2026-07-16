@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestion des demandes d'amélioration — interface d'administration.">
+    <title>Gestion Demandes - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-require-admin="true">
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="admin-page-header">
+            <h1><i class="fa-solid fa-clipboard-list"></i> Gestion des demandes</h1>
+            <button type="button" class="admin-fab" title="Ajouter une demande" onclick="ouvrirModaleDemande(null)">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="admin-search" style="margin-bottom: 12px;">
+            <i class="fa-solid fa-magnifying-glass admin-search__icon"></i>
+            <input type="text" id="demande-search-input" class="admin-search__input" placeholder="Rechercher (description, écran, demandeur, commentaire...)" oninput="renderDemandes()">
+            <button type="button" class="admin-search__clear" id="demande-search-clear" onclick="clearDemandeSearch()" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="demande-etat-filter" class="user-role-filter"></div>
+        <div id="demande-count" style="margin-bottom: 12px; font-size: 0.875rem; color: var(--color-text-light, #666);"></div>
+
+        <div id="demandes-list" class="demandes-list"></div>
+
+        <div class="user-empty-state" id="demande-empty-state" style="display:none">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <p>Aucune demande dans ce filtre</p>
+        </div>
+
+    </div>
+
+    <!-- Modale ajout / édition de demande -->
+    <div id="demande-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal demande-modal" role="dialog" aria-modal="true" aria-labelledby="demande-modal-title">
+            <h2 class="user-modal-title" id="demande-modal-title">Nouvelle demande</h2>
+            <div class="demande-modal-form">
+                <div class="demande-modal-field demande-modal-field--full">
+                    <label for="dm-description">Description *</label>
+                    <textarea id="dm-description" rows="4" placeholder="Décrire la demande : quoi, pour qui, dans quel contexte..."></textarea>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="dm-ecran">Écran / onglet</label>
+                    <input type="text" id="dm-ecran" list="dm-ecran-list" placeholder="Ex: Mes collectes" autocomplete="off">
+                    <datalist id="dm-ecran-list">
+                        <option value="Accueil"></option>
+                        <option value="Les billets"></option>
+                        <option value="Fiche billet"></option>
+                        <option value="Frais de port"></option>
+                        <option value="Règlement"></option>
+                        <option value="Infos Collecteurs"></option>
+                        <option value="Liens Utiles"></option>
+                        <option value="Mes inscriptions"></option>
+                        <option value="Mes collectes"></option>
+                        <option value="Mes contacts"></option>
+                        <option value="Ma collection"></option>
+                        <option value="Mon profil"></option>
+                        <option value="Gestion Billets"></option>
+                        <option value="Gestion Membres"></option>
+                        <option value="Gestion Collecteurs"></option>
+                        <option value="Gestion Frais de Port"></option>
+                        <option value="Gestion Pré-inscriptions"></option>
+                        <option value="Demandes d'inscription"></option>
+                        <option value="Menu / Navigation"></option>
+                    </datalist>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="dm-qui">Qui est concerné</label>
+                    <select id="dm-qui">
+                        <option value="tous">Tous</option>
+                        <option value="membres">Membres</option>
+                        <option value="collecteurs">Collecteurs</option>
+                        <option value="admins">Admins</option>
+                    </select>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="dm-priorite">Priorité</label>
+                    <select id="dm-priorite">
+                        <option value="haute">Haute</option>
+                        <option value="normale" selected>Normale</option>
+                        <option value="basse">Basse</option>
+                    </select>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="dm-complexite">Complexité</label>
+                    <select id="dm-complexite">
+                        <option value="">À estimer</option>
+                        <option value="S">S — petit</option>
+                        <option value="M">M — moyen</option>
+                        <option value="L">L — gros</option>
+                    </select>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="dm-etat">État</label>
+                    <select id="dm-etat"></select>
+                </div>
+                <div class="demande-modal-field demande-modal-field--full">
+                    <label for="dm-commentaire">Commentaire</label>
+                    <textarea id="dm-commentaire" rows="3" placeholder="Questions ouvertes, décisions, avancement..."></textarea>
+                </div>
+                <p class="user-modal-desc demande-modal-meta" id="dm-meta" style="display:none"></p>
+            </div>
+            <div class="user-modal-actions">
+                <button type="button" id="dm-delete-btn" class="user-modal-btn user-modal-btn-danger" style="display:none" onclick="ouvrirModaleSuppression()">Supprimer</button>
+                <button type="button" class="user-modal-btn" onclick="fermerModaleDemande()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="sauverDemande()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de confirmation de suppression -->
+    <div id="demande-delete-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal" role="alertdialog" aria-modal="true">
+            <h2 class="user-modal-title">Supprimer cette demande ?</h2>
+            <p class="user-modal-desc">
+                La demande sera définitivement supprimée. Pour la conserver sans la traiter, préférez l'état « Abandonnée ».
+            </p>
+            <div class="user-modal-actions">
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="fermerModaleSuppression()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerSuppressionDemande()">Confirmer la suppression</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="admin-demandes.js"></script>
+</body>
+</html>

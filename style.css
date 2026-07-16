@@ -9395,3 +9395,177 @@ body.login-page {
     .admin-insc-actions { margin-left: 0; width: 100%; }
     .admin-insc-actions button { flex: 1; justify-content: center; }
 }
+
+/* =========================================
+   B0 — GESTION DES DEMANDES (admin-demandes)
+   ========================================= */
+.demandes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px 20px;
+}
+
+.demande-card {
+    background: #fff;
+    border: 1px solid var(--color-border-light, #e5e5ea);
+    border-radius: 8px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.demande-card--close {
+    opacity: 0.65;
+}
+
+.demande-card-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.demande-etat-select {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 6px;
+    border: 1.5px solid;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.demande-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-surface, #f2f2f5);
+    color: var(--color-text-secondary, #555);
+    white-space: nowrap;
+}
+.demande-badge i {
+    font-size: 0.7em;
+    margin-right: 3px;
+}
+
+.demande-badge-priorite--haute {
+    background: #FEE4E4;
+    color: #A63030;
+    font-weight: 700;
+}
+.demande-badge-priorite--normale {
+    background: #E8EAF6;
+    color: #3949AB;
+}
+.demande-badge-priorite--basse {
+    background: #f0f0f0;
+    color: #888;
+}
+
+.demande-badge-complexite {
+    background: var(--color-primary, #5D3A7E);
+    color: #fff;
+    font-weight: 700;
+    min-width: 22px;
+    text-align: center;
+}
+
+.demande-edit-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted, #888);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+.demande-edit-btn:hover {
+    color: var(--color-primary, #5D3A7E);
+    background: var(--color-surface, #f2f2f5);
+}
+
+.demande-card-description {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--color-text, #333);
+    white-space: pre-wrap;
+}
+
+.demande-card-commentaire {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #FFF8E5;
+    border-left: 3px solid #D4A437;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary, #555);
+    white-space: pre-wrap;
+}
+.demande-card-commentaire i { color: #D4A437; margin-right: 4px; }
+
+.demande-card-meta {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #888);
+}
+.demande-card-meta i { margin-right: 3px; }
+
+/* Modale ajout/édition */
+.demande-modal {
+    max-width: 560px;
+}
+.demande-modal .user-modal-title {
+    color: var(--color-primary, #5D3A7E);
+}
+
+.demande-modal-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin-bottom: var(--spacing-md);
+}
+.demande-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.demande-modal-field--full {
+    grid-column: 1 / -1;
+}
+.demande-modal-field label {
+    font-size: 0.78rem;
+    color: var(--color-text-secondary, #555);
+    font-weight: 500;
+}
+.demande-modal-field input,
+.demande-modal-field select,
+.demande-modal-field textarea {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--color-border, #ccc);
+    border-radius: var(--radius-sm, 4px);
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+}
+.demande-modal-field textarea {
+    resize: vertical;
+}
+.demande-modal-meta {
+    margin: 0 !important;
+    font-size: 0.8rem !important;
+}
+
+@media (max-width: 600px) {
+    .demande-modal-form {
+        grid-template-columns: 1fr;
+    }
+    .demande-card-header {
+        gap: 6px;
+    }
+}
