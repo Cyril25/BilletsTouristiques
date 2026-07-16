@@ -9556,6 +9556,22 @@ body.login-page {
 .demande-modal-field textarea {
     resize: vertical;
 }
+.demande-qui-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 6px 0;
+}
+.demande-qui-cb {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    font-size: 0.88rem;
+    color: var(--color-text, #333);
+    cursor: pointer;
+    font-weight: 400 !important;
+}
 .demande-modal-meta {
     margin: 0 !important;
     font-size: 0.8rem !important;

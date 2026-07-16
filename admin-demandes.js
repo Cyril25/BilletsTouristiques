@@ -58,7 +58,20 @@ var ETATS_ACTIFS = ['nouvelle', 'a_cadrer', 'validee', 'en_cours'];
 
 var PRIORITE_LABELS = { haute: 'Haute', normale: 'Normale', basse: 'Basse' };
 var PRIORITE_ORDER = { haute: 0, normale: 1, basse: 2 };
-var QUI_LABELS = { tous: 'Tous', membres: 'Membres', collecteurs: 'Collecteurs', admins: 'Admins' };
+var QUI_VALUES = ['membres', 'collecteurs', 'admins'];
+var QUI_LABELS = { membres: 'Membres', collecteurs: 'Collecteurs', admins: 'Admins' };
+
+// qui = liste séparée par des virgules (ancienne valeur 'tous' = les trois)
+function parseQui(qui) {
+    if (!qui || qui === 'tous') return QUI_VALUES.slice();
+    return qui.split(',').filter(function(v) { return QUI_VALUES.indexOf(v) !== -1; });
+}
+
+function quiLabel(qui) {
+    var values = parseQui(qui);
+    if (values.length === QUI_VALUES.length) return 'Tous';
+    return values.map(function(v) { return QUI_LABELS[v]; }).join(' + ');
+}
 
 function getEtatDef(value) {
     for (var i = 0; i < ETATS.length; i++) {
@@ -214,7 +227,7 @@ function renderDemandeCard(d) {
     if (d.complexite) {
         badges += '<span class="demande-badge demande-badge-complexite" title="Complexité estimée">' + escapeHtml(d.complexite) + '</span>';
     }
-    badges += '<span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(QUI_LABELS[d.qui] || d.qui) + '</span>';
+    badges += '<span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span>';
     if (d.ecran) {
         badges += '<span class="demande-badge demande-badge-ecran" title="Écran / onglet"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>';
     }
@@ -285,7 +298,10 @@ function ouvrirModaleDemande(id) {
     titre.textContent = d ? 'Modifier la demande' : 'Nouvelle demande';
     document.getElementById('dm-description').value = d ? d.description : '';
     document.getElementById('dm-ecran').value = d ? d.ecran : '';
-    document.getElementById('dm-qui').value = d ? d.qui : 'tous';
+    var quiValues = d ? parseQui(d.qui) : QUI_VALUES.slice();
+    QUI_VALUES.forEach(function(v) {
+        document.getElementById('dm-qui-' + v).checked = (quiValues.indexOf(v) !== -1);
+    });
     document.getElementById('dm-priorite').value = d ? d.priorite : 'normale';
     document.getElementById('dm-complexite').value = d ? d.complexite : '';
     document.getElementById('dm-etat').value = d ? d.etat : 'nouvelle';
@@ -318,10 +334,18 @@ function sauverDemande() {
         return;
     }
 
+    var quiValues = QUI_VALUES.filter(function(v) {
+        return document.getElementById('dm-qui-' + v).checked;
+    });
+    if (quiValues.length === 0) {
+        showToast('Cochez au moins un public concerné', 'error');
+        return;
+    }
+
     var data = {
         description: description,
         ecran: document.getElementById('dm-ecran').value.trim(),
-        qui: document.getElementById('dm-qui').value,
+        qui: quiValues.join(','),
         priorite: document.getElementById('dm-priorite').value,
         complexite: document.getElementById('dm-complexite').value,
         etat: document.getElementById('dm-etat').value,

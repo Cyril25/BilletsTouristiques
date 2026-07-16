@@ -74,13 +74,12 @@
                     </datalist>
                 </div>
                 <div class="demande-modal-field">
-                    <label for="dm-qui">Qui est concerné</label>
-                    <select id="dm-qui">
-                        <option value="tous">Tous</option>
-                        <option value="membres">Membres</option>
-                        <option value="collecteurs">Collecteurs</option>
-                        <option value="admins">Admins</option>
-                    </select>
+                    <label>Qui est concerné</label>
+                    <div class="demande-qui-checkboxes">
+                        <label class="demande-qui-cb"><input type="checkbox" id="dm-qui-membres"> Membres</label>
+                        <label class="demande-qui-cb"><input type="checkbox" id="dm-qui-collecteurs"> Collecteurs</label>
+                        <label class="demande-qui-cb"><input type="checkbox" id="dm-qui-admins"> Admins</label>
+                    </div>
                 </div>
                 <div class="demande-modal-field">
                     <label for="dm-priorite">Priorité</label>
