@@ -4999,6 +4999,15 @@ body.login-page {
     opacity: 0.85;
 }
 
+/* Refus d'une déclaration de paiement (vérification paiement) */
+.btn-refuser-paiement {
+    background-color: var(--color-badge-inactive);
+}
+
+.btn-refuser-paiement:hover {
+    background-color: var(--color-badge-inactive-dark);
+}
+
 /* --- Etat vide --- */
 .envois-empty {
     text-align: center;

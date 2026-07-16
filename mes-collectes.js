@@ -2457,6 +2457,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
                 + '<span class="envoi-montant">' + montant + ' €</span>'
                 + badgePaiementEnvoi(insc.statut_paiement)
                 + '<button onclick="validerPaiementVue(' + insc.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement"><i class="fa-solid fa-check"></i></button>'
+                + (insc.statut_paiement === 'declare' ? '<button onclick="refuserPaiementVue(' + insc.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Refuser la déclaration (repasse à non payé)"><i class="fa-solid fa-xmark"></i></button>' : '')
                 + '</div>';
         }
 
@@ -2474,6 +2475,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
                 + '<span class="envoi-montant">' + montantPort.toFixed(2) + ' €</span>'
                 + badgePaiementEnvoi(env.statut_paiement_port)
                 + '<button onclick="validerPaiementPort(' + env.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement des frais de port"><i class="fa-solid fa-check"></i></button>'
+                + (env.statut_paiement_port === 'declare' ? '<button onclick="refuserPaiementPort(' + env.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Refuser la déclaration (repasse à non payé)"><i class="fa-solid fa-xmark"></i></button>' : '')
                 + '</div>';
         }
 
@@ -2523,6 +2525,38 @@ function validerPaiementPort(enveloppeId) {
     })
     .catch(function(error) {
         console.error('Erreur confirmation frais de port:', error);
+        showToast('Erreur', 'error');
+    });
+}
+
+// Refuser une déclaration de paiement (declare → non_paye)
+function refuserPaiementVue(inscriptionId) {
+    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+        method: 'PATCH',
+        body: JSON.stringify({ statut_paiement: 'non_paye' })
+    })
+    .then(function() {
+        showToast('Déclaration refusée — repassé à non payé');
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur refus paiement:', error);
+        showToast('Erreur', 'error');
+    });
+}
+
+// Refuser une déclaration de paiement des frais de port (declare → non_paye)
+function refuserPaiementPort(enveloppeId) {
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify({ statut_paiement_port: 'non_paye' })
+    })
+    .then(function() {
+        showToast('Déclaration refusée — repassé à non payé');
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur refus frais de port:', error);
         showToast('Erreur', 'error');
     });
 }
