@@ -139,6 +139,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     // --- AUTORISÉ : l'email est dans la table membres ---
                     console.log("Accès autorisé pour : " + user.email);
                     window.userRole = rows[0].role || 'member';
+                    // Classe CSS pour les éléments réservés au superadmin (rôle réel, même en impersonation)
+                    if (window.userRole === 'superadmin') document.body.classList.add('is-superadmin');
 
                     // Fire-and-forget : mettre à jour last_active_at
                     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(user.email), {

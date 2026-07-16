@@ -825,6 +825,9 @@ function renderAdminCards() {
                 '<button class="admin-card-share-btn" onclick="openShareModal(' + docId + ')" title="Partager">' +
                     '<i class="fa-solid fa-share-nodes"></i>' +
                 '</button>' +
+                '<button class="admin-card-ebay-btn" onclick="openEbayModal(' + docId + ')" title="Annonce eBay">' +
+                    '<i class="fa-brands fa-ebay"></i>' +
+                '</button>' +
                 '<button class="admin-card-copy-btn" data-doc-id="' + docId + '" title="Dupliquer">' +
                     '<i class="fa-solid fa-copy"></i>' +
                 '</button>' +
@@ -3233,12 +3236,134 @@ function copyShareText() {
     });
 }
 
+// ============================================================
+// ANNONCE EBAY (superadmin uniquement)
+// ============================================================
+// Modèle fourni par Cyril (cf. notes/ebay-annonces.md) :
+//   Titre : Billet Euro Schein Souvenir Touristique -{Nom}-{Ref} {Millésime}-{Version}
+//   Description : Arial 14pt, lignes Nom / Version / Référence / N° de série,
+//   enrichie de l'image, du lieu, du thème et de l'état.
+
+// Référence complète façon annonce : « CHAX 2024-9 »
+function buildEbayRef(billet) {
+    var ref = billet.Reference || '';
+    if (billet.Millesime) ref += (ref ? ' ' : '') + billet.Millesime;
+    if (billet.Version) ref += '-' + billet.Version;
+    return ref;
+}
+
+function buildEbayTitre(billet) {
+    var prefix = 'Billet Euro Schein Souvenir Touristique -';
+    var ref = buildEbayRef(billet);
+    var suffix = ref ? '-' + ref : '';
+    // eBay limite le titre à 80 caractères : on tronque le nom, jamais la référence
+    var nom = billet.NomBillet || '';
+    var maxNom = 80 - prefix.length - suffix.length;
+    if (nom.length > maxNom) nom = nom.slice(0, maxNom).trim();
+    return prefix + nom + suffix;
+}
+
+function buildEbayDescriptionHtml(billet) {
+    // Version vendue : « Normale » par défaut ; libellé variante (Doré, Anniversaire)
+    // si le billet n'existe qu'en variante. À ajuster à la main dans la modale si on
+    // vend la variante d'un billet qui existe aussi en normal.
+    var versionVendue = (billet.VersionNormaleExiste !== false) ? 'Normale' : (varianteLabel(billet.HasVariante) || 'Normale');
+
+    var lignes = [
+        ['Nom', billet.NomBillet],
+        ['Version', versionVendue],
+        ['Référence', buildEbayRef(billet)],
+        ['Numéro de série', 'Aléatoire']
+    ];
+
+    var html = '<div style="font-family: Arial, sans-serif; font-size: 14pt;">';
+    html += '<p>Billet Rare Touristique 0 Euro Souvenir / 0-Euro Souvenir-Schein</p>';
+    var items = [];
+    lignes.forEach(function(l) {
+        if (l[1] === null || l[1] === undefined || l[1] === '') return;
+        items.push('<b>' + l[0] + '&nbsp;:</b> ' + escapeHtml(String(l[1])));
+    });
+    html += '<p>' + items.join('<br><br>') + '</p>';
+    html += '</div>';
+    return html;
+}
+
+function openEbayModal(billetId) {
+    var billet = adminBillets.find(function(b) { return b._id === billetId; });
+    if (!billet) return;
+
+    var overlay = document.getElementById('ebay-modal-overlay');
+    var titreInput = document.getElementById('ebay-titre-input');
+    var htmlArea = document.getElementById('ebay-html-textarea');
+    if (!overlay || !titreInput || !htmlArea) return;
+
+    titreInput.value = buildEbayTitre(billet);
+    htmlArea.value = buildEbayDescriptionHtml(billet);
+    updateEbayTitreCount();
+    updateEbayPreview();
+
+    // Reset boutons copie
+    resetEbayCopyBtn('ebay-copy-titre-btn', 'Copier');
+    resetEbayCopyBtn('ebay-copy-html-btn', 'Copier le HTML');
+
+    overlay.style.display = '';
+}
+
+function closeEbayModal() {
+    var overlay = document.getElementById('ebay-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function updateEbayTitreCount() {
+    var titreInput = document.getElementById('ebay-titre-input');
+    var countEl = document.getElementById('ebay-titre-count');
+    if (titreInput && countEl) countEl.textContent = titreInput.value.length;
+}
+
+function updateEbayPreview() {
+    var htmlArea = document.getElementById('ebay-html-textarea');
+    var preview = document.getElementById('ebay-preview');
+    if (htmlArea && preview) preview.innerHTML = htmlArea.value;
+}
+
+function resetEbayCopyBtn(btnId, label) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.innerHTML = '<i class="fa-solid fa-copy"></i> ' + label;
+    btn.classList.remove('admin-modal-btn-success');
+    btn.classList.add('admin-modal-btn-primary');
+}
+
+function copyEbayField(value, btnId, label) {
+    navigator.clipboard.writeText(value).then(function() {
+        var btn = document.getElementById(btnId);
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copié !';
+        btn.classList.remove('admin-modal-btn-primary');
+        btn.classList.add('admin-modal-btn-success');
+        setTimeout(function() { resetEbayCopyBtn(btnId, label); }, 2000);
+    }).catch(function() {
+        showToast('Erreur lors de la copie', 'error');
+    });
+}
+
+function copyEbayTitre() {
+    copyEbayField(document.getElementById('ebay-titre-input').value, 'ebay-copy-titre-btn', 'Copier');
+}
+
+function copyEbayHtml() {
+    copyEbayField(document.getElementById('ebay-html-textarea').value, 'ebay-copy-html-btn', 'Copier le HTML');
+}
+
 // Fermer les modales avec Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         var shareOverlay = document.getElementById('share-modal-overlay');
         if (shareOverlay && shareOverlay.style.display !== 'none') {
             closeShareModal();
+        }
+        var ebayOverlay = document.getElementById('ebay-modal-overlay');
+        if (ebayOverlay && ebayOverlay.style.display !== 'none') {
+            closeEbayModal();
         }
         var inscOverlay = document.getElementById('inscriptions-modal-overlay');
         if (inscOverlay && inscOverlay.style.display !== 'none') {
@@ -3252,6 +3377,12 @@ var shareOverlayEl = document.getElementById('share-modal-overlay');
 if (shareOverlayEl) {
     shareOverlayEl.addEventListener('click', function(e) {
         if (e.target === this) closeShareModal();
+    });
+}
+var ebayOverlayEl = document.getElementById('ebay-modal-overlay');
+if (ebayOverlayEl) {
+    ebayOverlayEl.addEventListener('click', function(e) {
+        if (e.target === this) closeEbayModal();
     });
 }
 var inscOverlayEl = document.getElementById('inscriptions-modal-overlay');
