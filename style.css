@@ -9561,6 +9561,12 @@ body.is-superadmin .admin-card-ebay-btn {
     min-width: 120px;
 }
 
+.demande-id-cell {
+    color: var(--color-text-muted, #888);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+}
+
 .demande-badge {
     font-size: 0.75rem;
     font-weight: 500;

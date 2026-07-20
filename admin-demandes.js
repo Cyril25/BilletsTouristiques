@@ -47,7 +47,7 @@ function formatDateFr(isoString) {
 var ETATS = [
     { value: 'nouvelle',   label: 'Nouvelle',   color: '#1976D2' },
     { value: 'a_cadrer',   label: 'À cadrer',   color: '#EF6C00' },
-    { value: 'validee',    label: 'Validée',    color: '#6A1B9A' },
+    { value: 'validee',    label: 'Prêt à dev', color: '#6A1B9A' },
     { value: 'en_cours',   label: 'En cours',   color: '#00838F' },
     { value: 'a_tester',   label: 'À tester',   color: '#C2185B' },
     { value: 'terminee',   label: 'Terminée',   color: '#2E7D32' },
@@ -254,6 +254,7 @@ function renderDemandes() {
     if (emptyState) emptyState.style.display = 'none';
 
     list.innerHTML = '<table class="demandes-table"><thead><tr>'
+        + '<th title="Numéro de la demande">N°</th>'
         + headerCell('etat', 'État', 'état')
         + headerCell('priorite', 'Prio', 'priorité')
         + headerCell('complexite', 'Cplx', 'complexité')
@@ -286,6 +287,7 @@ function renderDemandeRow(d) {
         : '';
 
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '') + '" onclick="ouvrirModaleDemande(' + d.id + ')">'
+        + '<td class="demande-id-cell" title="Demande n°' + d.id + '">#' + d.id + '</td>'
         + '<td class="demande-etat-cell">'
         +   '<select class="demande-etat-select" style="border-color:' + etatDef.color + ';color:' + etatDef.color + ';" '
         +       'onclick="event.stopPropagation()" onchange="changerEtat(' + d.id + ', this.value)" title="Changer l\'état">' + etatOptions + '</select>'
@@ -343,7 +345,7 @@ function ouvrirModaleDemande(id) {
         if (!d) return;
     }
 
-    titre.textContent = d ? 'Modifier la demande' : 'Nouvelle demande';
+    titre.textContent = d ? 'Modifier la demande #' + d.id : 'Nouvelle demande';
     document.getElementById('dm-description').value = d ? d.description : '';
     document.getElementById('dm-ecran').value = d ? d.ecran : '';
     var quiValues = d ? parseQui(d.qui) : QUI_VALUES.slice();
