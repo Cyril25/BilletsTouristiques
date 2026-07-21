@@ -48,3 +48,17 @@ l'enveloppe → bouton). Sur du volume, c'est fastidieux.
   `updateHistoriqueBulkBar`, `marquerEnveloppesRecuesBulk`), `style.css`
   (`.historique-select-checkbox`, `.historique-bulk-bar`), `sw.js` (cache `billets-v233`).
 - **Commit :** `9d4786e` — feat(collecteur): selection multiple pour marquer plusieurs envois comme recus.
+
+## Évolution (2026-07-21) — choix du statut distribué / reçu
+
+Retour d'un admin après test (demande rouverte en « nouvelle » avec commentaire
+« faire un choix des membres et dire si on met en distribué ou en reçu ») :
+
+- La sélection par cases à cocher couvrait déjà le « choix des membres ».
+- Ajout d'un **menu déroulant** « Marquer comme : Reçu / Distribué » dans la barre d'action
+  groupée. `appliquerStatutEnveloppesBulk()` remplace `marquerEnveloppesRecuesBulk()` :
+  applique `recue` (+ `date_reception`) ou `distribuee` (+ `date_distribution`) aux envois
+  sélectionnés. Les cases restent visibles sur les envois non encore reçus.
+- **Fichiers :** `mes-collectes.js`, `style.css` (`.historique-bulk-select`), `sw.js`
+  (cache `billets-v240`).
+- **Commit :** `d6dbf0b` — feat(collecteur): choix du statut distribue/recu sur l'action groupee.
