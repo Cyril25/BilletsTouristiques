@@ -4971,6 +4971,35 @@ body.login-page {
     white-space: nowrap;
 }
 
+/* Demande #23 — Badge « En vacances » (côté collecteur) */
+.badge-vacances {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: #E67E22;
+    color: #fff;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Demande #23 — Case « Mode vacances » sur le profil */
+.profil-vacances-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.profil-vacances-hint {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-text-light, #666);
+    font-size: 0.8rem;
+}
+
 .badge-beneficiaire {
     font-size: 0.7rem;
     padding: 2px 8px;

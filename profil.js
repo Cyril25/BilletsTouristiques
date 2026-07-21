@@ -383,7 +383,7 @@ function loadProfil() {
     var email = window.getActiveEmail();
     if (!email) return;
 
-    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone')
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,en_vacances')
         .then(function(data) {
             if (data && data.length > 0) {
                 prefillProfil(data[0]);
@@ -414,6 +414,10 @@ function prefillProfil(data) {
     if (data.indicatif_tel) {
         setIndicatifByDial(data.indicatif_tel);
     }
+
+    // Demande #23 — Mode vacances
+    var vacancesEl = document.getElementById('profil-en-vacances');
+    if (vacancesEl) vacancesEl.checked = data.en_vacances === true;
 }
 
 // ============================================================
@@ -453,6 +457,7 @@ function saveProfil() {
         return;
     }
 
+    var vacancesEl = document.getElementById('profil-en-vacances');
     var email = window.getActiveEmail();
     var body = {
         nom: nom,
@@ -462,7 +467,8 @@ function saveProfil() {
         ville: ville,
         pays: pays,
         indicatif_tel: indicatifTel,
-        telephone: telephone
+        telephone: telephone,
+        en_vacances: vacancesEl ? vacancesEl.checked : false
     };
 
     var saveBtn = document.getElementById('profil-save-btn');
