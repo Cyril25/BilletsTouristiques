@@ -5311,6 +5311,26 @@ body.login-page {
     background: var(--color-surface);
 }
 
+/* Demande #20 — Section paiements confirmés (annulation d'erreur) */
+.paiements-confirmes-access {
+    margin-top: var(--spacing-lg);
+}
+
+.paiements-confirmes-titre {
+    margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+    color: var(--color-text-light, #666);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.paiements-confirmes-loading,
+.paiements-confirmes-vide {
+    margin-top: var(--spacing-sm);
+    color: var(--color-text-light, #666);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
 .historique-envoi {
     border: 1px solid var(--color-surface);
     border-radius: var(--radius-md);

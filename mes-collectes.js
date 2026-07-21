@@ -2603,7 +2603,17 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
             + '</div>';
     }
 
+    html += buildPaiementsConfirmesAccess();
     container.innerHTML = html;
+}
+
+// Demande #20 — Accès à la section « Paiements confirmés » (pour annuler une erreur)
+function buildPaiementsConfirmesAccess() {
+    return '<div class="paiements-confirmes-access">'
+        + '<button onclick="loadPaiementsConfirmes()" class="btn-historique-enveloppes">'
+        + '<i class="fa-solid fa-rotate-left"></i> Paiements confirmés (annuler une erreur)</button>'
+        + '<div id="paiements-confirmes-container"></div>'
+        + '</div>';
 }
 
 function validerPaiementVue(inscriptionId) {
@@ -2669,6 +2679,145 @@ function refuserPaiementPort(enveloppeId) {
     });
 }
 
+// ============================================================
+// Demande #20 — Annuler un paiement déjà CONFIRMÉ (correction d'erreur)
+// ============================================================
+
+// Charge (ou masque) la liste des paiements confirmés du collecteur.
+function loadPaiementsConfirmes() {
+    var container = document.getElementById('paiements-confirmes-container');
+    if (!container || !monCollecteur || mesBillets.length === 0) return;
+
+    // Toggle : si déjà ouvert, on referme
+    if (container.getAttribute('data-loaded') === '1') {
+        container.innerHTML = '';
+        container.removeAttribute('data-loaded');
+        return;
+    }
+
+    container.innerHTML = '<p class="paiements-confirmes-loading">Chargement…</p>';
+    var billetIds = mesBillets.map(function(b) { return b.id; });
+    var alias = encodeURIComponent(monCollecteur.alias);
+    var emailColl = encodeURIComponent(monCollecteur.email_membre);
+
+    var pInsc = supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=eq.confirme&pas_interesse=eq.false&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,billet_id.asc');
+    var pPort = supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&statut_paiement_port=eq.confirme&prix_envoi_reel=not.is.null&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc');
+
+    Promise.all([pInsc, pPort])
+        .then(function(results) {
+            var inscriptions = results[0] || [];
+            var port = (results[1] || []).filter(function(e) { return parseFloat(e.prix_envoi_reel || 0) > 0; });
+            if (inscriptions.length === 0 && port.length === 0) {
+                container.innerHTML = '<p class="paiements-confirmes-vide">Aucun paiement confirmé.</p>';
+                container.setAttribute('data-loaded', '1');
+                return;
+            }
+            var emails = [];
+            inscriptions.forEach(function(i) { if (emails.indexOf(i.membre_email) === -1) emails.push(i.membre_email); });
+            port.forEach(function(e) { if (emails.indexOf(e.membre_email) === -1) emails.push(e.membre_email); });
+            var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
+                .then(function(membres) {
+                    var mMap = {};
+                    (membres || []).forEach(function(m) { mMap[m.email] = m; });
+                    renderPaiementsConfirmes(inscriptions, port, mMap);
+                    container.setAttribute('data-loaded', '1');
+                });
+        })
+        .catch(function(err) {
+            console.error('Erreur chargement paiements confirmés:', err);
+            container.innerHTML = '<p class="paiements-confirmes-vide">Erreur de chargement.</p>';
+        });
+}
+
+function renderPaiementsConfirmes(inscriptions, port, membresMap) {
+    var container = document.getElementById('paiements-confirmes-container');
+    if (!container) return;
+    var bMap = {};
+    mesBillets.forEach(function(b) { bMap[b.id] = b; });
+
+    var groupes = {};
+    function ensureG(email) { if (!groupes[email]) groupes[email] = { inscriptions: [], port: [] }; return groupes[email]; }
+    inscriptions.forEach(function(i) { ensureG(i.membre_email).inscriptions.push(i); });
+    port.forEach(function(e) { ensureG(e.membre_email).port.push(e); });
+
+    var emails = Object.keys(groupes);
+    emails.sort(function(a, b) {
+        var na = ((membresMap[a] || {}).nom || '').toLowerCase(), nb = ((membresMap[b] || {}).nom || '').toLowerCase();
+        return na < nb ? -1 : (na > nb ? 1 : 0);
+    });
+
+    var html = '<div class="paiements-confirmes-liste">';
+    html += '<h4 class="paiements-confirmes-titre">Paiements confirmés — « Annuler » repasse le paiement à non payé</h4>';
+    emails.forEach(function(email) {
+        var m = membresMap[email] || {};
+        var nom = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || email;
+        var lignes = '';
+        groupes[email].inscriptions.forEach(function(insc) {
+            var billet = bMap[insc.billet_id] || {};
+            var prix = parseFloat(billet.Prix || 0);
+            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var nbN = billet.VersionNormaleExiste !== false ? (insc.nb_normaux || 0) : 0;
+            var nbV = (billet.HasVariante && billet.HasVariante !== 'N') ? (insc.nb_variantes || 0) : 0;
+            var montant = (prix * nbN) + (prixVar * nbV);
+            var refPrefix = billet.Reference ? billet.Reference + ' ' : '';
+            lignes += '<div class="envoi-ligne">'
+                + '<span class="envoi-billet">' + escapeHtmlMC(refPrefix + (billet.NomBillet || '?')) + '</span>'
+                + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
+                + badgePaiementEnvoi('confirme')
+                + '<button onclick="annulerPaiementConfirme(' + insc.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
+                + '</div>';
+        });
+        groupes[email].port.forEach(function(env) {
+            var montant = parseFloat(env.prix_envoi_reel || 0);
+            lignes += '<div class="envoi-ligne envoi-ligne-port">'
+                + '<span class="envoi-billet"><i class="fa-solid fa-truck-fast"></i> Frais d\'envoi</span>'
+                + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
+                + badgePaiementEnvoi('confirme')
+                + '<button onclick="annulerPaiementPortConfirme(' + env.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement de frais de port confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
+                + '</div>';
+        });
+        html += '<div class="envoi-groupe">'
+            + '<div class="envoi-groupe-header"><strong>' + escapeHtmlMC(nom) + '</strong></div>'
+            + '<div class="envoi-groupe-lignes">' + lignes + '</div>'
+            + '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function annulerPaiementConfirme(inscriptionId) {
+    if (!window.confirm('Annuler ce paiement confirmé ? Il repassera à « non payé ».')) return;
+    supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
+        method: 'PATCH',
+        body: JSON.stringify({ statut_paiement: 'non_paye' })
+    })
+    .then(function() {
+        showToast('Paiement annulé — repassé à non payé');
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur annulation paiement confirmé:', error);
+        showToast('Erreur', 'error');
+    });
+}
+
+function annulerPaiementPortConfirme(enveloppeId) {
+    if (!window.confirm('Annuler ce paiement de frais de port confirmé ? Il repassera à « non payé ».')) return;
+    supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
+        method: 'PATCH',
+        body: JSON.stringify({ statut_paiement_port: 'non_paye' })
+    })
+    .then(function() {
+        showToast('Paiement annulé — repassé à non payé');
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur annulation frais de port confirmé:', error);
+        showToast('Erreur', 'error');
+    });
+}
+
 function validerTousPaiementsVue(ids, portIds) {
     ids = ids || [];
     portIds = portIds || [];
@@ -2701,7 +2850,8 @@ function validerTousPaiementsVue(ids, portIds) {
 function renderPaiementsVide() {
     var container = document.getElementById('paiements-view');
     if (container) {
-        container.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-check-circle"></i><p>Tous les paiements sont vérifiés !</p></div>';
+        container.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-check-circle"></i><p>Tous les paiements sont vérifiés !</p></div>'
+            + buildPaiementsConfirmesAccess();
     }
 }
 
