@@ -1510,6 +1510,8 @@ function loadHistoriqueGlobal() {
 // #15 — Données historique pour recherche/export
 var _historiqueEnvois = [];
 var _historiqueMembresMap = {};
+// Demande #19 — Sélection multiple pour marquage groupé "reçue"
+var _historiqueSelectedIds = [];
 
 function renderHistoriqueGlobal(envPassees, membresMap) {
     var container = document.getElementById('historique-view');
@@ -1517,6 +1519,7 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
 
     _historiqueEnvois = envPassees;
     _historiqueMembresMap = membresMap;
+    _historiqueSelectedIds = [];
 
     var html = '<div class="historique-toolbar">'
         + '<div class="admin-search" style="flex:1;max-width:350px">'
@@ -1525,6 +1528,11 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
         + '<button id="historique-search-clear" class="admin-search__clear" onclick="clearHistoriqueSearch()" style="display:none"><i class="fa-solid fa-xmark"></i></button>'
         + '</div>'
         + '<button class="btn-export-csv" onclick="exportHistoriqueCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>'
+        + '</div>';
+
+    html += '<div id="historique-bulk-bar" class="historique-bulk-bar" style="display:none">'
+        + '<span id="historique-bulk-count"></span>'
+        + '<button class="btn-marquer-recue" onclick="marquerEnveloppesRecuesBulk()"><i class="fa-solid fa-circle-check"></i> Marquer comme reçues</button>'
         + '</div>';
 
     var totalPrix = 0;
@@ -1577,8 +1585,16 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
         }
 
         var prixH = (envH.prix_envoi_reel !== null && envH.prix_envoi_reel !== undefined) ? Number(envH.prix_envoi_reel).toFixed(2) + ' €' : '';
+        // Demande #19 — case à cocher uniquement sur les envois pas encore reçus (ceux sur lesquels l'action groupée a un effet)
+        var checkboxH = '';
+        if (envH.statut !== 'recue') {
+            var isChecked = _historiqueSelectedIds.indexOf(envH.id) !== -1;
+            checkboxH = '<input type="checkbox" class="historique-select-checkbox" ' + (isChecked ? 'checked' : '')
+                + ' onclick="event.stopPropagation()" onchange="toggleHistoriqueSelect(' + envH.id + ', this.checked)">';
+        }
         html += '<div class="envoi-groupe historique-envoi-card" onclick="_retourDepuisHistorique=true;openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
+            + checkboxH
             + '<strong>' + escapeHtmlMC(nomH) + '</strong>'
             + '<span class="envoi-date"><i class="fa-solid fa-calendar"></i> ' + dateExp + '</span>'
             + '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>'
@@ -1611,6 +1627,50 @@ function clearHistoriqueSearch() {
     var input = document.getElementById('historique-search');
     if (input) { input.value = ''; input.focus(); }
     filterHistorique();
+}
+
+// Demande #19 — Sélection multiple + marquage groupé "reçue" dans l'historique des envois
+function toggleHistoriqueSelect(id, checked) {
+    var idx = _historiqueSelectedIds.indexOf(id);
+    if (checked && idx === -1) {
+        _historiqueSelectedIds.push(id);
+    } else if (!checked && idx !== -1) {
+        _historiqueSelectedIds.splice(idx, 1);
+    }
+    updateHistoriqueBulkBar();
+}
+
+function updateHistoriqueBulkBar() {
+    var bar = document.getElementById('historique-bulk-bar');
+    var countEl = document.getElementById('historique-bulk-count');
+    if (!bar || !countEl) return;
+    var n = _historiqueSelectedIds.length;
+    if (n === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+    bar.style.display = '';
+    countEl.textContent = n + ' envoi' + (n > 1 ? 's' : '') + ' sélectionné' + (n > 1 ? 's' : '');
+}
+
+function marquerEnveloppesRecuesBulk() {
+    if (_historiqueSelectedIds.length === 0) return;
+    var ids = _historiqueSelectedIds.slice();
+    supabaseFetch('/rest/v1/enveloppes?id=in.(' + ids.join(',') + ')', {
+        method: 'PATCH',
+        body: JSON.stringify({
+            statut: 'recue',
+            date_reception: new Date().toISOString()
+        })
+    })
+    .then(function() {
+        showToast(ids.length + ' envoi' + (ids.length > 1 ? 's' : '') + ' marqué' + (ids.length > 1 ? 's' : '') + ' comme reçu' + (ids.length > 1 ? 's' : ''));
+        loadHistoriqueGlobal();
+    })
+    .catch(function(error) {
+        console.error('Erreur marquage groupé reçues:', error);
+        showToast('Erreur lors du marquage groupé', 'error');
+    });
 }
 
 function exportHistoriqueCSV() {
