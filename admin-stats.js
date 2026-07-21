@@ -229,17 +229,8 @@ function barChart(items, color) {
     }).join('');
 }
 
-// Demande #26 — code pays ISO (2 lettres) dérivé de l'emoji drapeau (fiable sur tous les navigateurs)
-function paysCode(pays) {
-    var emoji = window.flagPays(pays);
-    if (!emoji) return '';
-    var cps = Array.from(emoji);
-    if (cps.length < 2) return '';
-    var a = cps[0].codePointAt(0) - 0x1F1E6;
-    var b = cps[1].codePointAt(0) - 0x1F1E6;
-    if (a < 0 || a > 25 || b < 0 || b > 25) return '';
-    return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
-}
+// Code pays : helper partagé window.paysCode (global.js)
+function paysCode(pays) { return window.paysCode(pays); }
 
 function vbarChart(items) {
     if (!items || items.length === 0) return '<p class="kpi-sub">Aucune donnée.</p>';

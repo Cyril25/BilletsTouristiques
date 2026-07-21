@@ -313,6 +313,18 @@ window.PAYS_FLAGS = {
 window.flagPays = function(pays) {
     return window.PAYS_FLAGS[window._normPays(pays)] || '';
 };
+// Code pays ISO 2 lettres (FR, BE…) dérivé de l'emoji drapeau.
+// Fiable sur tous les navigateurs, contrairement aux emojis drapeaux (non rendus sous Windows).
+window.paysCode = function(pays) {
+    var emoji = window.flagPays(pays);
+    if (!emoji) return '';
+    var cps = Array.from(emoji);
+    if (cps.length < 2) return '';
+    var a = cps[0].codePointAt(0) - 0x1F1E6;
+    var b = cps[1].codePointAt(0) - 0x1F1E6;
+    if (a < 0 || a > 25 || b < 0 || b > 25) return '';
+    return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
+};
 
 // Demande #28 / #26 — audience effective (rôle + statut collecteur) de l'identité active.
 // On interroge toujours la table membres pour le rôle de l'email actif (impersonné ou réel),

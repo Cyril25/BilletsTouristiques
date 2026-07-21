@@ -3390,9 +3390,19 @@ body.login-page {
     border-color: #5D3A7E;
 }
 
-/* Demande #2 — drapeau pays + filtre par pays (Gestion Membres) */
-.user-card-flag {
-    font-size: 1.05em;
+/* Demande #2 — code pays + filtre par pays (Gestion Membres) */
+.pays-code {
+    display: inline-block;
+    min-width: 26px;
+    text-align: center;
+    font-size: 0.72em;
+    font-weight: 700;
+    background: #ece5f5;
+    color: #5D3A7E;
+    border-radius: 4px;
+    padding: 1px 5px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
 }
 .user-country-filter-wrapper {
     display: flex;
