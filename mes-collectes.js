@@ -1535,7 +1535,12 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
 
     html += '<div id="historique-bulk-bar" class="historique-bulk-bar" style="display:none">'
         + '<span id="historique-bulk-count"></span>'
-        + '<button class="btn-marquer-recue" onclick="marquerEnveloppesRecuesBulk()"><i class="fa-solid fa-circle-check"></i> Marquer comme reçues</button>'
+        + '<label class="historique-bulk-label">Marquer comme :'
+        + '<select id="historique-bulk-statut" class="historique-bulk-select">'
+        + '<option value="recue">Reçu</option>'
+        + '<option value="distribuee">Distribué</option>'
+        + '</select></label>'
+        + '<button class="btn-marquer-recue" onclick="appliquerStatutEnveloppesBulk()"><i class="fa-solid fa-circle-check"></i> Appliquer</button>'
         + '</div>';
 
     var totalPrix = 0;
@@ -1656,22 +1661,32 @@ function updateHistoriqueBulkBar() {
     countEl.textContent = n + ' envoi' + (n > 1 ? 's' : '') + ' sélectionné' + (n > 1 ? 's' : '');
 }
 
-function marquerEnveloppesRecuesBulk() {
+// Demande #19 (évolution) — appliquer le statut choisi (distribué / reçu) aux envois sélectionnés
+function appliquerStatutEnveloppesBulk() {
     if (_historiqueSelectedIds.length === 0) return;
+    var selectEl = document.getElementById('historique-bulk-statut');
+    var statut = selectEl ? selectEl.value : 'recue';
+    if (statut !== 'recue' && statut !== 'distribuee') return;
     var ids = _historiqueSelectedIds.slice();
+
+    var patch = { statut: statut };
+    var now = new Date().toISOString();
+    if (statut === 'recue') patch.date_reception = now;
+    else patch.date_distribution = now;
+
+    var labelSing = statut === 'recue' ? 'reçu' : 'distribué';
+
     supabaseFetch('/rest/v1/enveloppes?id=in.(' + ids.join(',') + ')', {
         method: 'PATCH',
-        body: JSON.stringify({
-            statut: 'recue',
-            date_reception: new Date().toISOString()
-        })
+        body: JSON.stringify(patch)
     })
     .then(function() {
-        showToast(ids.length + ' envoi' + (ids.length > 1 ? 's' : '') + ' marqué' + (ids.length > 1 ? 's' : '') + ' comme reçu' + (ids.length > 1 ? 's' : ''));
+        var plur = ids.length > 1 ? 's' : '';
+        showToast(ids.length + ' envoi' + plur + ' marqué' + plur + ' comme ' + labelSing + plur);
         loadHistoriqueGlobal();
     })
     .catch(function(error) {
-        console.error('Erreur marquage groupé reçues:', error);
+        console.error('Erreur marquage groupé:', error);
         showToast('Erreur lors du marquage groupé', 'error');
     });
 }

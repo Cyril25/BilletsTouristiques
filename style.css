@@ -5248,6 +5248,23 @@ body.login-page {
     margin-left: auto;
 }
 
+/* Demande #19 (évolution) — choix du statut sur l'action groupée */
+.historique-bulk-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--color-text, #333);
+    white-space: nowrap;
+}
+.historique-bulk-select {
+    padding: 5px 8px;
+    border: 1px solid var(--color-border-light, #ddd);
+    border-radius: var(--radius-sm, 6px);
+    background: var(--color-bg-white, #fff);
+    font-size: 0.9rem;
+}
+
 .historique-envoi-card .envoi-groupe-header {
     font-size: 0.9rem;
 }
