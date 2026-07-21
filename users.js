@@ -4,30 +4,9 @@
 // ============================================================
 
 // Demande #2 — Drapeau du pays de résidence (+ filtre/compteur par pays)
-function _normPays(s) {
-    return (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-var PAYS_FLAGS = {
-    'afrique du sud': '🇿🇦', 'allemagne': '🇩🇪', 'andorre': '🇦🇩', 'arabie saoudite': '🇸🇦',
-    'argentine': '🇦🇷', 'armenie': '🇦🇲', 'australie': '🇦🇺', 'autriche': '🇦🇹', 'bahamas': '🇧🇸',
-    'bahrein': '🇧🇭', 'belgique': '🇧🇪', 'birmanie': '🇲🇲', 'bresil': '🇧🇷', 'bulgarie': '🇧🇬',
-    'cambodge': '🇰🇭', 'canada': '🇨🇦', 'chine': '🇨🇳', 'croatie': '🇭🇷', 'cuba': '🇨🇺',
-    'danemark': '🇩🇰', 'egypte': '🇪🇬', 'emirats arabes unis': '🇦🇪', 'espagne': '🇪🇸',
-    'estonie': '🇪🇪', 'etats-unis': '🇺🇸', 'finlande': '🇫🇮', 'france': '🇫🇷', 'georgie': '🇬🇪',
-    'grande-bretagne': '🇬🇧', 'grece': '🇬🇷', 'haiti': '🇭🇹', 'hongrie': '🇭🇺', 'ile maurice': '🇲🇺',
-    'inde': '🇮🇳', 'indonesie': '🇮🇩', 'iraq': '🇮🇶', 'irlande': '🇮🇪', 'islande': '🇮🇸',
-    'israel': '🇮🇱', 'italie': '🇮🇹', 'japon': '🇯🇵', 'jordanie': '🇯🇴', 'kosovo': '🇽🇰',
-    'koweit': '🇰🇼', 'lettonie': '🇱🇻', 'liban': '🇱🇧', 'libye': '🇱🇾', 'lituanie': '🇱🇹',
-    'luxembourg': '🇱🇺', 'madagascar': '🇲🇬', 'malte': '🇲🇹', 'maroc': '🇲🇦', 'mexique': '🇲🇽',
-    'monaco': '🇲🇨', 'norvege': '🇳🇴', 'oman': '🇴🇲', 'palestine': '🇵🇸', 'pays-bas': '🇳🇱',
-    'perou': '🇵🇪', 'pologne': '🇵🇱', 'portugal': '🇵🇹', 'qatar': '🇶🇦', 'republique tcheque': '🇨🇿',
-    'roumanie': '🇷🇴', 'russie': '🇷🇺', 'slovaquie': '🇸🇰', 'slovenie': '🇸🇮', 'suede': '🇸🇪',
-    'suisse': '🇨🇭', 'syrie': '🇸🇾', 'thailande': '🇹🇭', 'togo': '🇹🇬', 'turquie': '🇹🇷',
-    'ukraine': '🇺🇦', 'vatican': '🇻🇦'
-};
-function flagPays(pays) {
-    return PAYS_FLAGS[_normPays(pays)] || '';
-}
+// Helpers _normPays / flagPays fournis par global.js (partagés avec admin-stats).
+var _normPays = window._normPays;
+var flagPays = window.flagPays;
 // Un membre sans pays renseigné est considéré comme France (cohérent avec l'affichage adresse)
 function paysAffiche(user) {
     var p = (user.pays || '').trim();

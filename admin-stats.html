@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Statistiques du site — tableau de bord administrateur.">
+    <title>Statistiques - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .stats-page { max-width: 1100px; margin: 0 auto; padding: var(--spacing-md, 16px); }
+        .stats-header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+        .stats-header h1 { margin: 0; }
+        .stats-subtitle { color: #888; font-size: 0.9em; margin: 0 0 20px; }
+
+        /* Cartes KPI */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-bottom: 28px; }
+        .kpi-card {
+            position: relative; background: #fff; border: 1px solid #eae6f0; border-radius: 12px;
+            padding: 16px 18px 16px 56px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;
+        }
+        .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--kpi-color, #5D3A7E); }
+        .kpi-icon {
+            position: absolute; left: 14px; top: 16px; width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 0.95em;
+            background: color-mix(in srgb, var(--kpi-color, #5D3A7E) 14%, #fff); color: var(--kpi-color, #5D3A7E);
+        }
+        .kpi-value { font-size: 1.9em; font-weight: 700; line-height: 1.05; color: #2b2b2b; }
+        .kpi-label { font-size: 0.82em; color: #777; margin-top: 3px; }
+        .kpi-sub { font-size: 0.78em; color: #999; margin-top: 4px; }
+
+        /* Sections + graphes */
+        .stats-section { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; }
+        .stats-section h2 { margin: 0 0 16px; font-size: 1.1em; color: var(--color-primary, #5D3A7E); display: flex; align-items: center; gap: 8px; }
+        .stats-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 760px) { .stats-2col { grid-template-columns: 1fr; } }
+
+        /* Barres horizontales */
+        .bar-row { display: grid; grid-template-columns: 140px 1fr 54px; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 0.88em; }
+        .bar-label { color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+        .bar-track { background: #f0edf5; border-radius: 6px; height: 16px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; background: var(--bar-color, #5D3A7E); min-width: 2px; transition: width .4s ease; }
+        .bar-value { text-align: right; color: #444; font-variant-numeric: tabular-nums; font-weight: 500; }
+
+        /* Barres verticales (tendance) */
+        .vbars { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 10px; }
+        .vbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+        .vbar-fill { width: 100%; max-width: 46px; background: linear-gradient(180deg, #7E57C2, #5D3A7E); border-radius: 6px 6px 0 0; min-height: 3px; transition: height .4s ease; }
+        .vbar-val { font-size: 0.78em; color: #555; font-weight: 600; }
+        .vbar-label { font-size: 0.72em; color: #999; }
+
+        .stats-loading { text-align: center; padding: 50px; color: #888; }
+        .stats-loading i { font-size: 2em; margin-bottom: 10px; display: block; color: #bbb; }
+    </style>
+</head>
+<body data-require-admin="true">
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="stats-page">
+            <div class="stats-header">
+                <h1><i class="fa-solid fa-chart-line"></i> Statistiques</h1>
+            </div>
+            <p class="stats-subtitle" id="stats-subtitle">Chargement des données…</p>
+
+            <div id="stats-body">
+                <div class="stats-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Calcul des statistiques…</p></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="admin-stats.js"></script>
+</body>
+</html>
