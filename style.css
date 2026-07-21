@@ -5440,6 +5440,30 @@ body.login-page {
     background: var(--color-surface);
 }
 
+/* Demande #14 — section repliable des collectes réparties */
+.btn-toggle-reparties {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: var(--spacing-md) 0 var(--spacing-sm);
+    padding: 10px 14px;
+    background: var(--color-surface);
+    color: var(--color-text-light, #555);
+    border: 1px dashed var(--color-border, #ccc);
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.btn-toggle-reparties:hover {
+    background: var(--color-bg-white, #fff);
+    border-color: var(--color-primary);
+}
+.btn-toggle-reparties .toggle-chevron {
+    margin-left: auto;
+}
+
 /* Demande #20 — Section paiements confirmés (annulation d'erreur) */
 .paiements-confirmes-access {
     margin-top: var(--spacing-lg);

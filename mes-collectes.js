@@ -102,7 +102,7 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,nb_normaux,nb_variantes');
+            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes');
         })
         .then(function(inscriptions) {
             mesInscriptionsParBillet = {};
@@ -111,7 +111,7 @@ function loadMesCollectes() {
                     var ins = inscriptions[i];
                     if (!mesInscriptionsParBillet[ins.billet_id]) {
                         mesInscriptionsParBillet[ins.billet_id] = {
-                            total: 0, confirmes: 0,
+                            total: 0, confirmes: 0, repartis: 0,
                             billetsTotal: { normaux: 0, variantes: 0 },
                             billetsEnvoyes: { normaux: 0, variantes: 0 }
                         };
@@ -121,6 +121,8 @@ function loadMesCollectes() {
                     if (!isBenef) {
                         st.total++;
                         if (ins.statut_paiement === 'confirme') st.confirmes++;
+                        // Demande #14 — "réparti" = placé en enveloppe (prêt à envoyer ou expédié)
+                        if (ins.statut_livraison === 'pret_a_envoyer' || ins.statut_livraison === 'expedie') st.repartis++;
                     }
                     var nn = ins.nb_normaux || 0;
                     var nv = ins.nb_variantes || 0;
@@ -132,6 +134,11 @@ function loadMesCollectes() {
                     }
                 }
             }
+            // Demande #14 — collecte "répartie" : au moins un inscrit et tous placés en enveloppe
+            Object.keys(mesInscriptionsParBillet).forEach(function(bid) {
+                var s = mesInscriptionsParBillet[bid];
+                s.tousRepartis = s.total > 0 && s.repartis === s.total;
+            });
             loadMesCollectesSupplementaires();
         })
         .catch(function(error) {
@@ -211,10 +218,15 @@ function renderCollectesList() {
     var today = new Date().toISOString().slice(0, 10);
 
     // Séparer billets principaux ouverts / fermés
-    var billetsOpen   = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
-    var billetsClosed = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
+    var billetsOpenAll = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
+    var billetsClosed  = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
+    // Demande #14 — séparer les collectes réparties (tous les billets en enveloppe)
+    function estRepartie(b) { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousRepartis); }
+    var billetsOpen     = billetsOpenAll.filter(function(b) { return !estRepartie(b); });
+    var billetsRepartis = billetsOpenAll.filter(estRepartie);
     var dateDesc = function(a, b) { return (b.Date || '').localeCompare(a.Date || ''); };
     billetsOpen.sort(dateDesc);
+    billetsRepartis.sort(dateDesc);
     billetsClosed.sort(dateDesc);
 
     // Séparer collectes supplémentaires ouvertes / fermées
@@ -280,15 +292,42 @@ function renderCollectesList() {
         return h;
     }
 
-    // Ordre final : billets ouverts → collectes supp ouvertes → billets fermés → collectes supp fermées
+    // Ordre : collectes actives → supp ouvertes → [section repliable : réparties] → fermées → supp fermées
     var html = '<div class="collectes-cards">';
     for (var i = 0; i < billetsOpen.length; i++) html += renderBilletCard(billetsOpen[i]);
     for (var j = 0; j < suppOpen.length; j++) html += renderCollecteSupplementaireCard(suppOpen[j].collecte, suppOpen[j].billet);
-    for (var k = 0; k < billetsClosed.length; k++) html += renderBilletCard(billetsClosed[k]);
-    for (var l = 0; l < suppClosed.length; l++) html += renderCollecteSupplementaireCard(suppClosed[l].collecte, suppClosed[l].billet);
     html += '</div>';
 
+    // Demande #14 — section repliable des collectes réparties (en attente de réception)
+    if (billetsRepartis.length > 0) {
+        html += '<button class="btn-toggle-reparties" onclick="toggleReparties(this)">'
+            + '<i class="fa-solid fa-box-archive"></i> Collectes réparties — en attente de réception (' + billetsRepartis.length + ')'
+            + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
+        html += '<div id="collectes-reparties" class="collectes-cards" style="display:none">';
+        for (var r = 0; r < billetsRepartis.length; r++) html += renderBilletCard(billetsRepartis[r]);
+        html += '</div>';
+    }
+
+    if (billetsClosed.length > 0 || suppClosed.length > 0) {
+        html += '<div class="collectes-cards">';
+        for (var k = 0; k < billetsClosed.length; k++) html += renderBilletCard(billetsClosed[k]);
+        for (var l = 0; l < suppClosed.length; l++) html += renderCollecteSupplementaireCard(suppClosed[l].collecte, suppClosed[l].billet);
+        html += '</div>';
+    }
+
     container.innerHTML = onboardingHtml + html;
+}
+
+// Demande #14 — replier/déplier la section des collectes réparties
+function toggleReparties(btn) {
+    var sec = document.getElementById('collectes-reparties');
+    if (!sec) return;
+    var open = sec.style.display !== 'none';
+    sec.style.display = open ? 'none' : '';
+    if (btn) {
+        var chev = btn.querySelector('.toggle-chevron');
+        if (chev) chev.className = 'fa-solid toggle-chevron ' + (open ? 'fa-chevron-down' : 'fa-chevron-up');
+    }
 }
 
 // ============================================================

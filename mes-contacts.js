@@ -122,7 +122,7 @@ function renderContacts() {
     if (searchFilter) {
         var q = searchFilter.toLowerCase();
         filtered = contactsData.filter(function(c) {
-            var blob = [c.titre, c.nom, c.prenom, c.societe, c.email, c.telephone, c.adresse, c.references_billets, c.commentaire]
+            var blob = [c.titre, c.nom, c.prenom, c.societe, c.email, c.telephone, c.adresse, c.ordre_cheque, c.references_billets, c.commentaire]
                 .filter(function(s) { return s; }).join(' ').toLowerCase();
             return blob.indexOf(q) !== -1;
         });
@@ -160,6 +160,7 @@ function renderContacts() {
             (c.societe ? '<div class="contact-card-societe">' + escapeHtml(c.societe) + '</div>' : '') +
             (meta.length ? '<div class="contact-card-meta">' + meta.join('') + '</div>' : '') +
             adresseBloc +
+            (c.ordre_cheque ? '<div class="contact-card-cheque"><i class="fa-solid fa-money-check-pen"></i> Ordre : ' + escapeHtml(c.ordre_cheque) + '</div>' : '') +
             (c.references_billets ? '<div class="contact-card-refs"><i class="fa-solid fa-ticket"></i> ' + escapeHtml(c.references_billets) + '</div>' : '') +
             '</div>';
     }).join('');
@@ -190,6 +191,7 @@ function ouvrirContactModal(id) {
         'contact-email': '',
         'contact-telephone': '',
         'contact-adresse': '',
+        'contact-ordre-cheque': '',
         'contact-references': '',
         'contact-commentaire': ''
     };
@@ -204,6 +206,7 @@ function ouvrirContactModal(id) {
             champs['contact-email']       = c.email || '';
             champs['contact-telephone']   = c.telephone || '';
             champs['contact-adresse']     = c.adresse || '';
+            champs['contact-ordre-cheque'] = c.ordre_cheque || '';
             champs['contact-references']  = c.references_billets || '';
             champs['contact-commentaire'] = c.commentaire || '';
         }
@@ -249,6 +252,7 @@ function enregistrerContact() {
         email:              val('contact-email'),
         telephone:          val('contact-telephone'),
         adresse:            val('contact-adresse'),
+        ordre_cheque:       val('contact-ordre-cheque'),
         references_billets: val('contact-references'),
         commentaire:        val('contact-commentaire')
     };
@@ -331,8 +335,8 @@ function exporterContactsCsv() {
         return;
     }
 
-    var headers = ['Titre', 'Nom', 'Prénom', 'Société', 'Email', 'Téléphone', 'Adresse', 'Référence(s) billet', 'Commentaire', 'Créé le', 'Modifié le'];
-    var cols = ['titre', 'nom', 'prenom', 'societe', 'email', 'telephone', 'adresse', 'references_billets', 'commentaire', 'created_at', 'updated_at'];
+    var headers = ['Titre', 'Nom', 'Prénom', 'Société', 'Email', 'Téléphone', 'Adresse', 'Ordre du chèque', 'Référence(s) billet', 'Commentaire', 'Créé le', 'Modifié le'];
+    var cols = ['titre', 'nom', 'prenom', 'societe', 'email', 'telephone', 'adresse', 'ordre_cheque', 'references_billets', 'commentaire', 'created_at', 'updated_at'];
 
     function csvCell(val) {
         if (val == null) return '';
