@@ -32,3 +32,4 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
 | [#24](demande-24-collecte-nb-max.md) | Plafond de billets sur une collecte supplémentaire | M | À tester | ✅ | `87156d1` |
 | [#25](demande-25-envoi-mode-adresse-prix-auto.md) | Mode d'envoi selon l'adresse + prix auto à l'expédition | M | À tester | ✅ | `eea5267` |
+| [#28](demande-28-notifications-membres.md) | Notifications « nouveautés » pour tous les membres + page dédiée | M | À tester | ✅ | `f3a2710` |
