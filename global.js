@@ -421,7 +421,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=160")
+    fetch("menu.html?v=161")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -499,10 +499,8 @@ function loadMenu() {
                     })
                     .catch(function() {});
 
-                // Notifications (admin uniquement pour l'instant)
-                if (effectiveRole === 'admin' || effectiveRole === 'superadmin') {
-                    refreshNotifications();
-                }
+                // Notifications : nouveautés pour tous + demandes d'inscription pour les admins
+                refreshNotifications(effectiveRole);
             });
         })
         .catch(function(err) { console.error("Menu introuvable :", err); });
@@ -512,27 +510,77 @@ function loadMenu() {
 // 4b. NOTIFICATIONS (cloche du menu)
 // ============================================================
 // Modèle générique : chaque source peut pousser des items dans window.__notifs.
-// Pour l'instant seule source : demandes d'inscription en attente (admin).
+// Sources :
+//   - broadcast (tous) : table `notifications`, non encore vues par le membre (Demande #28)
+//   - signup_request (admin) : demandes d'inscription en attente
 window.__notifs = [];
 
-function refreshNotifications() {
+function refreshNotifications(effectiveRole) {
     window.__notifs = [];
-    var pendingPromise = supabaseFetch('/rest/v1/membres?statut=eq.en_attente&select=email,prenom,nom,demande_at&order=demande_at.desc')
-        .then(function(rows) {
-            (rows || []).forEach(function(r) {
-                window.__notifs.push({
-                    type: 'signup_request',
-                    title: 'Demande d\'inscription',
-                    subtitle: ((r.prenom || '') + ' ' + (r.nom || '')).trim() + ' (' + r.email + ')',
-                    date: r.demande_at,
-                    href: 'admin-inscriptions.html'
-                });
-            });
-        })
-        .catch(function(e) { console.warn('Notifs inscription : échec chargement', e); });
+    var email = window.getActiveEmail();
+    var promises = [];
 
-    Promise.all([pendingPromise]).then(renderNotifications);
+    // Nouveautés (broadcast) — pour tout membre connecté, non encore lues par lui
+    if (email) {
+        promises.push(
+            Promise.all([
+                supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,created_at&order=created_at.desc'),
+                supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id')
+            ]).then(function(res) {
+                var notifs = res[0] || [];
+                var vues = {};
+                (res[1] || []).forEach(function(v) { vues[v.notification_id] = true; });
+                notifs.forEach(function(n) {
+                    if (vues[n.id]) return; // déjà lue par ce membre
+                    window.__notifs.push({
+                        type: 'broadcast',
+                        notifId: n.id,
+                        title: n.titre,
+                        subtitle: n.texte || '',
+                        date: n.created_at,
+                        href: n.lien || 'notifications.html'
+                    });
+                });
+            }).catch(function(e) { console.warn('Notifs nouveautés : échec chargement', e); })
+        );
+    }
+
+    // Demandes d'inscription — admins uniquement
+    if (effectiveRole === 'admin' || effectiveRole === 'superadmin') {
+        promises.push(
+            supabaseFetch('/rest/v1/membres?statut=eq.en_attente&select=email,prenom,nom,demande_at&order=demande_at.desc')
+                .then(function(rows) {
+                    (rows || []).forEach(function(r) {
+                        window.__notifs.push({
+                            type: 'signup_request',
+                            title: 'Demande d\'inscription',
+                            subtitle: ((r.prenom || '') + ' ' + (r.nom || '')).trim() + ' (' + r.email + ')',
+                            date: r.demande_at,
+                            href: 'admin-inscriptions.html'
+                        });
+                    });
+                })
+                .catch(function(e) { console.warn('Notifs inscription : échec chargement', e); })
+        );
+    }
+
+    Promise.all(promises).then(renderNotifications);
 }
+
+// Demande #28 — marquer une nouveauté comme lue (par ce membre) puis naviguer
+window.marquerNotifLue = function(e, notifId, href) {
+    if (e) e.preventDefault();
+    var email = window.getActiveEmail();
+    var dest = href || 'notifications.html';
+    if (!email || !notifId) { window.location.href = dest; return; }
+    supabaseFetch('/rest/v1/notifications_vues', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=ignore-duplicates' },
+        body: JSON.stringify({ notification_id: notifId, membre_email: email })
+    })
+    .then(function() { window.location.href = dest; })
+    .catch(function() { window.location.href = dest; });
+};
 
 function renderNotifications() {
     var badge = document.getElementById('notif-bell-badge');
@@ -557,18 +605,24 @@ function renderNotifications() {
         return;
     }
 
-    // Grouper par href (pour l'instant = toutes vers admin-inscriptions)
-    var signupItems = window.__notifs.filter(function(n) { return n.type === 'signup_request'; });
+    // Tri par date décroissante, tous types confondus
+    var items = window.__notifs.slice().sort(function(a, b) {
+        return new Date(b.date || 0) - new Date(a.date || 0);
+    });
     var html = '';
-    // Afficher max 5 items, lien "voir tout" s'il y en a plus
-    var shown = signupItems.slice(0, 5);
-    shown.forEach(function(n) {
+    // Afficher max 5 items, lien "voir tout" en pied
+    items.slice(0, 5).forEach(function(n) {
         var dateStr = '';
         if (n.date) {
             try { dateStr = new Date(n.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }); } catch(e) {}
         }
-        html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '">' +
-                '<div class="notif-item-title">' + notifEscHtml(n.title) + '</div>' +
+        var icon = n.type === 'broadcast' ? '<i class="fa-solid fa-bullhorn"></i> ' : '';
+        // Une nouveauté : clic = marquer lue (par ce membre) puis naviguer
+        var onclick = n.type === 'broadcast'
+            ? ' onclick="marquerNotifLue(event, \'' + n.notifId + '\', \'' + notifEscHtml(n.href) + '\')"'
+            : '';
+        html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '"' + onclick + '>' +
+                '<div class="notif-item-title">' + icon + notifEscHtml(n.title) + '</div>' +
                 '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +
                 '</a>';
     });
@@ -577,18 +631,12 @@ function renderNotifications() {
     var dropdown = document.getElementById('notif-dropdown');
     var oldFooter = document.getElementById('notif-dropdown-footer');
     if (oldFooter) oldFooter.remove();
-    if (signupItems.length > 5 && dropdown) {
+    if (dropdown) {
         var footer = document.createElement('div');
         footer.id = 'notif-dropdown-footer';
         footer.className = 'notif-dropdown-footer';
-        footer.innerHTML = '<a href="admin-inscriptions.html">Voir les ' + signupItems.length + ' demandes</a>';
+        footer.innerHTML = '<a href="notifications.html">Voir toutes les notifications</a>';
         dropdown.appendChild(footer);
-    } else if (dropdown) {
-        var footer2 = document.createElement('div');
-        footer2.id = 'notif-dropdown-footer';
-        footer2.className = 'notif-dropdown-footer';
-        footer2.innerHTML = '<a href="admin-inscriptions.html">Gérer les demandes</a>';
-        dropdown.appendChild(footer2);
     }
 }
 

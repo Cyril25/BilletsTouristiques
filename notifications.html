@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nouveautés et notifications du site BilletsTouristiques.">
+    <title>Nouveautés - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .notifs-page { max-width: 760px; margin: 0 auto; padding: var(--spacing-md, 16px); }
+        .notifs-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .notifs-header h1 { margin: 0; }
+        .notifs-list { display: flex; flex-direction: column; gap: 12px; }
+        .notif-card {
+            background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 14px 16px;
+            border-left: 4px solid var(--color-border-disabled, #ccc);
+        }
+        .notif-card.notif-card-nouveau { border-left-color: var(--color-primary, #5D3A7E); background: #faf7fe; }
+        .notif-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+        .notif-card-titre { font-weight: 600; color: var(--color-primary, #5D3A7E); font-size: 1.05em; display: inline-flex; align-items: center; gap: 8px; }
+        .notif-card-badge {
+            font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+            background: var(--color-primary, #5D3A7E); color: #fff;
+        }
+        .notif-card-date { margin-left: auto; font-size: 0.8em; color: #888; white-space: nowrap; }
+        .notif-card-texte { color: #333; font-size: 0.95em; line-height: 1.5; white-space: pre-wrap; }
+        .notif-card-lien { display: inline-block; margin-top: 8px; font-size: 0.9em; }
+        .notifs-empty { text-align: center; padding: 40px; color: #888; background: #fafafa; border-radius: 8px; }
+        .notifs-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: #bbb; }
+    </style>
+</head>
+<body>
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="notifs-page">
+            <div class="notifs-header">
+                <h1><i class="fa-solid fa-bullhorn"></i> Nouveautés</h1>
+            </div>
+
+            <div id="notifs-list" class="notifs-list"></div>
+
+            <div id="notifs-empty" class="notifs-empty" style="display:none">
+                <i class="fa-solid fa-bell-slash"></i>
+                <p><strong>Aucune notification pour le moment.</strong></p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="notifications.js"></script>
+</body>
+</html>
