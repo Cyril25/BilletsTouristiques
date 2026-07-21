@@ -5017,20 +5017,48 @@ body.login-page {
     gap: 4px;
 }
 
-/* Demande #23 — Case « Mode vacances » sur le profil */
+/* Demande #23 — Encadré « Mode vacances » sur le profil */
+.profil-vacances-box {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: #fff7ed;
+    border: 1px solid #f0b27a;
+    border-left: 4px solid #E67E22;
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .profil-vacances-label {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     white-space: nowrap;
     cursor: pointer;
 }
 
+/* Checkbox compacte alignée à gauche (ne pas hériter du style des champs texte) */
+.profil-vacances-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+    accent-color: #E67E22;
+    cursor: pointer;
+}
+
+.profil-vacances-titre {
+    font-weight: 600;
+    color: #b3560f;
+    font-size: 0.95rem;
+}
+
 .profil-vacances-hint {
     display: block;
-    margin-top: 4px;
     color: var(--color-text-light, #666);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
 }
 
 .badge-beneficiaire {
