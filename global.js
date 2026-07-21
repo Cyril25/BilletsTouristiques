@@ -313,6 +313,33 @@ window.PAYS_FLAGS = {
 window.flagPays = function(pays) {
     return window.PAYS_FLAGS[window._normPays(pays)] || '';
 };
+
+// Demande #28 / #26 — audience effective (rôle + statut collecteur) de l'identité active.
+// En impersonation, on prend le rôle de la personne impersonnée → notifications fidèles.
+window.getEffectiveNotifAudience = function() {
+    var email = window.getActiveEmail();
+    var rolePromise;
+    if (window.impersonatedEmail) {
+        rolePromise = supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=role')
+            .then(function(rows) { return (rows && rows[0]) ? (rows[0].role || 'member') : 'member'; })
+            .catch(function() { return 'member'; });
+    } else {
+        rolePromise = Promise.resolve(window.userRole || 'member');
+    }
+    return rolePromise.then(function(role) {
+        var isAdmin = (role === 'admin' || role === 'superadmin');
+        if (isAdmin) return { isAdmin: true, isCollecteur: true };
+        return supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
+            .then(function(rows) { return { isAdmin: false, isCollecteur: !!(rows && rows.length) }; })
+            .catch(function() { return { isAdmin: false, isCollecteur: false }; });
+    });
+};
+
+// Une notif (selon sa cible) est-elle visible pour cette audience ?
+window.notifVisiblePour = function(cible, aud) {
+    cible = cible || 'tous';
+    return cible === 'tous' || aud.isAdmin || (cible === 'collecteurs' && aud.isCollecteur);
+};
 // Libellé long pour variante ACTIVE uniquement ('Anniversaire', 'Doré') ou '' sinon.
 // → À utiliser pour les badges ⭐ qui ne doivent apparaître que s'il y a une variante.
 function varianteLabel(code) {
@@ -555,18 +582,31 @@ function refreshNotifications(effectiveRole) {
     var email = window.getActiveEmail();
     var promises = [];
 
-    // Nouveautés (broadcast) — pour tout membre connecté, non encore lues par lui
+    // Nouveautés (broadcast) — pour tout membre connecté, non encore lues par lui.
+    // Filtre selon l'identité EFFECTIVE (rôle + statut collecteur), pour rester fidèle en
+    // impersonation : la RLS filtre selon le vrai jeton (superadmin voit tout), donc on
+    // ré-applique côté front le filtrage du point de vue de la personne impersonnée.
     if (email) {
+        var effIsAdmin = (effectiveRole === 'admin' || effectiveRole === 'superadmin');
+        var collecteurPromise = effIsAdmin
+            ? Promise.resolve(true)
+            : supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
+                .then(function(rows) { return !!(rows && rows.length); })
+                .catch(function() { return false; });
+
         promises.push(
             Promise.all([
-                supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,created_at&order=created_at.desc'),
-                supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id')
+                supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,cible,created_at&order=created_at.desc'),
+                supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id'),
+                collecteurPromise
             ]).then(function(res) {
                 var notifs = res[0] || [];
                 var vues = {};
                 (res[1] || []).forEach(function(v) { vues[v.notification_id] = true; });
+                var aud = { isAdmin: effIsAdmin, isCollecteur: res[2] === true };
                 notifs.forEach(function(n) {
                     if (vues[n.id]) return; // déjà lue par ce membre
+                    if (!window.notifVisiblePour(n.cible, aud)) return; // hors cible pour l'identité effective
                     window.__notifs.push({
                         type: 'broadcast',
                         notifId: n.id,

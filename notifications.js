@@ -24,13 +24,16 @@ function loadNotificationsPage() {
     if (!listEl) return;
 
     Promise.all([
-        supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,created_at&order=created_at.desc'),
-        supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id')
+        supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,cible,created_at&order=created_at.desc'),
+        supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id'),
+        window.getEffectiveNotifAudience()
     ])
     .then(function(res) {
-        var notifs = res[0] || [];
         var vues = {};
         (res[1] || []).forEach(function(v) { vues[v.notification_id] = true; });
+        var aud = res[2] || { isAdmin: false, isCollecteur: false };
+        // Filtre fidèle (utile en impersonation) : ne garder que les notifs destinées à l'identité active
+        var notifs = (res[0] || []).filter(function(n) { return window.notifVisiblePour(n.cible, aud); });
 
         if (notifs.length === 0) {
             if (emptyEl) emptyEl.style.display = '';
