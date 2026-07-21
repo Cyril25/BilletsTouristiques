@@ -1129,7 +1129,7 @@ function loadEnveloppes() {
                         return;
                     }
                     var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-                    return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays,en_vacances')
+                    return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,rue,code_postal,ville,pays,en_vacances,vacances_jusqu_au')
                         .then(function(membres) {
                             var membresMap = {};
                             if (membres) {
@@ -1145,7 +1145,8 @@ function loadEnveloppes() {
                                     ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
                                     ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
                                     ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
-                                    ins.adresse_snapshot.en_vacances = membre.en_vacances === true;
+                                    ins.adresse_snapshot.en_vacances = window.estEnVacancesEffectif(membre.en_vacances, membre.vacances_jusqu_au);
+                                    ins.adresse_snapshot.vacances_jusqu_au = membre.vacances_jusqu_au || null;
                                 }
                             });
                             var billetsMap = {};
@@ -1270,7 +1271,7 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
             demandeHtml = '<span class="badge-demande-envoi">⚡ Demande d\'envoi le ' + dateStr + (modeLabel ? ' — ' + modeLabel : '') + '</span>';
         }
         var impayesHtml = item.nbImpayes > 0 ? ' — <strong>' + item.nbImpayes + ' impayé(s)</strong>' : '';
-        var vacancesHtml = item.adr.en_vacances ? badgeVacances() : '';
+        var vacancesHtml = item.adr.en_vacances ? badgeVacances(item.adr.vacances_jusqu_au) : '';
         return '<div class="envoi-groupe" onclick="openEnveloppeDetail(' + item.env.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'
@@ -2364,9 +2365,15 @@ function badgePaiementEnvoi(statut) {
     return '<span class="badge-non-paye">Non payé</span>';
 }
 
-// Demande #23 — Badge « En vacances » (paiement plus tard, ne pas envoyer)
-function badgeVacances() {
-    return '<span class="badge-vacances" title="Ce membre est en vacances : paiement plus tard, ne pas envoyer pour le moment"><i class="fa-solid fa-umbrella-beach"></i> En vacances</span>';
+// Demande #23 / #27 — Badge « En vacances » (paiement plus tard, ne pas envoyer) + date de fin éventuelle
+function badgeVacances(jusquAu) {
+    var suffix = '';
+    if (jusquAu) {
+        try {
+            suffix = ' jusqu\'au ' + new Date(jusquAu).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        } catch (e) {}
+    }
+    return '<span class="badge-vacances" title="Ce membre est en vacances : paiement plus tard, ne pas envoyer pour le moment"><i class="fa-solid fa-umbrella-beach"></i> En vacances' + suffix + '</span>';
 }
 
 function changerStatutPaiement(inscriptionId, nouveauStatut) {
@@ -2446,7 +2453,7 @@ function loadVerificationPaiement() {
                 if (e.membre_email && emails.indexOf(e.membre_email) === -1) emails.push(e.membre_email);
             });
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
-            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,pseudo,rue,code_postal,ville,pays,en_vacances')
+            return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,pseudo,rue,code_postal,ville,pays,en_vacances,vacances_jusqu_au')
                 .then(function(membres) {
                     var membresMap = {};
                     if (membres) {
@@ -2463,7 +2470,8 @@ function loadVerificationPaiement() {
                             ins.adresse_snapshot.code_postal = membre.code_postal || ins.adresse_snapshot.code_postal || '';
                             ins.adresse_snapshot.ville = membre.ville || ins.adresse_snapshot.ville || '';
                             ins.adresse_snapshot.pays = membre.pays || ins.adresse_snapshot.pays || '';
-                            ins.adresse_snapshot.en_vacances = membre.en_vacances === true;
+                            ins.adresse_snapshot.en_vacances = window.estEnVacancesEffectif(membre.en_vacances, membre.vacances_jusqu_au);
+                            ins.adresse_snapshot.vacances_jusqu_au = membre.vacances_jusqu_au || null;
                         }
                     });
                     var billetsMap = {};
@@ -2619,7 +2627,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
         html += '<div class="envoi-groupe">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'
-            + (adr.en_vacances ? badgeVacances() : '')
+            + (adr.en_vacances ? badgeVacances(adr.vacances_jusqu_au) : '')
             + '<span class="envoi-count">' + countParts.join(' + ') + '</span>'
             + '<span class="paiement-groupe-total">Total : ' + totalGroupe.toFixed(2) + ' €</span>'
             + '<button onclick="validerTousPaiementsVue([' + groupeIds.join(',') + '],[' + portIds.join(',') + '])" class="btn-marquer-envoye" title="Confirmer tous les paiements de ce membre"><i class="fa-solid fa-check-double"></i></button>'

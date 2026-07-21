@@ -278,6 +278,15 @@ window.VARIANTE_LABELS_ALL_SHORT = {
 function hasVarianteActive(code) {
     return !!(code && code !== 'N');
 }
+
+// Demande #27 — Statut vacances effectif : actif si coché ET (pas de date de fin OU date non passée).
+// La date de fin est incluse (encore en vacances le jour J, inactif à J+1).
+window.estEnVacancesEffectif = function(enVacances, jusquAu) {
+    if (enVacances !== true) return false;
+    if (!jusquAu) return true;
+    var today = new Date().toISOString().slice(0, 10);
+    return jusquAu >= today;
+};
 // Libellé long pour variante ACTIVE uniquement ('Anniversaire', 'Doré') ou '' sinon.
 // → À utiliser pour les badges ⭐ qui ne doivent apparaître que s'il y a une variante.
 function varianteLabel(code) {

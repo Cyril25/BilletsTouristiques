@@ -5061,6 +5061,28 @@ body.login-page {
     font-size: 0.82rem;
 }
 
+/* Demande #27 — champ date de fin du mode vacances */
+.profil-vacances-date {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed #f0b27a;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.profil-vacances-date label {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #b3560f;
+}
+.profil-vacances-date input[type="date"] {
+    max-width: 200px;
+    padding: 6px 10px;
+    border: 1px solid #f0b27a;
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.95rem;
+}
+
 .badge-beneficiaire {
     font-size: 0.7rem;
     padding: 2px 8px;

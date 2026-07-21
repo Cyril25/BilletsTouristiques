@@ -383,7 +383,7 @@ function loadProfil() {
     var email = window.getActiveEmail();
     if (!email) return;
 
-    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,en_vacances')
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,en_vacances,vacances_jusqu_au')
         .then(function(data) {
             if (data && data.length > 0) {
                 prefillProfil(data[0]);
@@ -415,9 +415,33 @@ function prefillProfil(data) {
         setIndicatifByDial(data.indicatif_tel);
     }
 
-    // Demande #23 — Mode vacances
+    // Demande #23 / #27 — Mode vacances + date de fin optionnelle
     var vacancesEl = document.getElementById('profil-en-vacances');
+    var dateEl = document.getElementById('profil-vacances-jusqu-au');
+
+    // Auto-nettoyage : si la date de fin est passée, on désactive le mode (état honnête)
+    var effectif = window.estEnVacancesEffectif(data.en_vacances === true, data.vacances_jusqu_au);
+    if (data.en_vacances === true && !effectif) {
+        var email = window.getActiveEmail();
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email), {
+            method: 'PATCH',
+            body: JSON.stringify({ en_vacances: false, vacances_jusqu_au: null })
+        }).catch(function() {});
+        data.en_vacances = false;
+        data.vacances_jusqu_au = null;
+    }
+
     if (vacancesEl) vacancesEl.checked = data.en_vacances === true;
+    if (dateEl) dateEl.value = data.vacances_jusqu_au || '';
+    toggleVacancesDate();
+}
+
+// Demande #27 — afficher le champ date uniquement quand le mode vacances est coché
+function toggleVacancesDate() {
+    var vacancesEl = document.getElementById('profil-en-vacances');
+    var wrapper = document.getElementById('profil-vacances-date-wrapper');
+    if (!wrapper) return;
+    wrapper.style.display = (vacancesEl && vacancesEl.checked) ? '' : 'none';
 }
 
 // ============================================================
@@ -458,6 +482,8 @@ function saveProfil() {
     }
 
     var vacancesEl = document.getElementById('profil-en-vacances');
+    var dateVacancesEl = document.getElementById('profil-vacances-jusqu-au');
+    var enVacances = vacancesEl ? vacancesEl.checked : false;
     var email = window.getActiveEmail();
     var body = {
         nom: nom,
@@ -468,7 +494,9 @@ function saveProfil() {
         pays: pays,
         indicatif_tel: indicatifTel,
         telephone: telephone,
-        en_vacances: vacancesEl ? vacancesEl.checked : false
+        en_vacances: enVacances,
+        // Date de fin seulement si le mode est actif ET une date est saisie ; sinon null
+        vacances_jusqu_au: (enVacances && dateVacancesEl && dateVacancesEl.value) ? dateVacancesEl.value : null
     };
 
     var saveBtn = document.getElementById('profil-save-btn');

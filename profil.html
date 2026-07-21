@@ -82,10 +82,15 @@
 
                 <div class="profil-vacances-box">
                     <label class="profil-vacances-label">
-                        <input type="checkbox" id="profil-en-vacances">
+                        <input type="checkbox" id="profil-en-vacances" onchange="toggleVacancesDate()">
                         <span class="profil-vacances-titre"><i class="fa-solid fa-umbrella-beach"></i> Mode vacances / absent</span>
                     </label>
                     <small class="profil-vacances-hint">Signale aux collecteurs que vous paierez plus tard et qu'il ne faut pas vous envoyer de billets pour le moment.</small>
+                    <div class="profil-vacances-date" id="profil-vacances-date-wrapper" style="display:none;">
+                        <label for="profil-vacances-jusqu-au">Jusqu'au (optionnel) :</label>
+                        <input type="date" id="profil-vacances-jusqu-au">
+                        <small class="profil-vacances-hint">Sans date, le mode reste actif jusqu'à ce que vous le désactiviez vous-même.</small>
+                    </div>
                 </div>
 
                 <button type="submit" id="profil-save-btn" class="profil-save-btn">
