@@ -315,24 +315,22 @@ window.flagPays = function(pays) {
 };
 
 // Demande #28 / #26 — audience effective (rôle + statut collecteur) de l'identité active.
-// En impersonation, on prend le rôle de la personne impersonnée → notifications fidèles.
+// On interroge toujours la table membres pour le rôle de l'email actif (impersonné ou réel),
+// afin de ne pas dépendre de window.userRole qui peut ne pas être encore défini (course au
+// chargement d'une page qui utilise ce helper avant que global.js ait renseigné le rôle).
 window.getEffectiveNotifAudience = function() {
     var email = window.getActiveEmail();
-    var rolePromise;
-    if (window.impersonatedEmail) {
-        rolePromise = supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=role')
-            .then(function(rows) { return (rows && rows[0]) ? (rows[0].role || 'member') : 'member'; })
-            .catch(function() { return 'member'; });
-    } else {
-        rolePromise = Promise.resolve(window.userRole || 'member');
-    }
-    return rolePromise.then(function(role) {
-        var isAdmin = (role === 'admin' || role === 'superadmin');
-        if (isAdmin) return { isAdmin: true, isCollecteur: true };
-        return supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
-            .then(function(rows) { return { isAdmin: false, isCollecteur: !!(rows && rows.length) }; })
-            .catch(function() { return { isAdmin: false, isCollecteur: false }; });
-    });
+    if (!email) return Promise.resolve({ isAdmin: false, isCollecteur: false });
+    return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=role')
+        .then(function(rows) { return (rows && rows[0]) ? (rows[0].role || 'member') : 'member'; })
+        .catch(function() { return 'member'; })
+        .then(function(role) {
+            var isAdmin = (role === 'admin' || role === 'superadmin');
+            if (isAdmin) return { isAdmin: true, isCollecteur: true };
+            return supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
+                .then(function(rows) { return { isAdmin: false, isCollecteur: !!(rows && rows.length) }; })
+                .catch(function() { return { isAdmin: false, isCollecteur: false }; });
+        });
 };
 
 // Une notif (selon sa cible) est-elle visible pour cette audience ?
