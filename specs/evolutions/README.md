@@ -25,4 +25,5 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 | Demande | Titre | Complexité | Statut | Spec | Commit |
 |---|---|---|---|---|---|
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple « marquer comme reçus » (historique envois) | S | À tester | ✅ | `9d4786e` |
+| [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#25](demande-25-envoi-mode-adresse-prix-auto.md) | Mode d'envoi selon l'adresse + prix auto à l'expédition | M | À tester | ✅ | `eea5267` |
