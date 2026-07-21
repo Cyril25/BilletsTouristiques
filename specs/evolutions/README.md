@@ -27,4 +27,5 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple « marquer comme reçus » (historique envois) | S | À tester | ✅ | `9d4786e` |
 | [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
+| [#24](demande-24-collecte-nb-max.md) | Plafond de billets sur une collecte supplémentaire | M | À tester | ✅ | `87156d1` |
 | [#25](demande-25-envoi-mode-adresse-prix-auto.md) | Mode d'envoi selon l'adresse + prix auto à l'expédition | M | À tester | ✅ | `eea5267` |
