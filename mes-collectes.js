@@ -2004,36 +2004,75 @@ function getModeEnvoiPlusExigeant(inscriptions) {
     return max;
 }
 
+// Demande #25 — Ordre et libellés des modes d'envoi
+var EXP_MODES_ORDRE = ['normal', 'suivi', 'r1', 'r2', 'r3'];
+var EXP_MODES_LABELS = { normal: 'Normal', suivi: 'Suivi', r1: 'Recommandé R1', r2: 'Recommandé R2', r3: 'Recommandé R3' };
+
 function ouvrirFormulaireExpedition(enveloppeId) {
     var container = document.getElementById('expedition-form-container');
     if (!container) return;
+    if (!currentEnveloppeData) return;
 
-    // Récupérer les inscriptions dans l'enveloppe pour le mode pré-rempli
-    var billetIds = mesBillets.map(function(b) { return b.id; });
-    if (!currentEnveloppeData || billetIds.length === 0) return;
+    var annee = new Date().getFullYear();
 
-    var membreEmail = encodeURIComponent(currentEnveloppeData.membre_email);
-    supabaseFetch('/rest/v1/inscriptions?enveloppe_id=eq.' + enveloppeId + '&statut_livraison=eq.pret_a_envoyer&select=mode_envoi')
-        .then(function(inscriptions) {
-            inscriptions = inscriptions || [];
+    // frais_port n'est chargé qu'à l'ouverture d'une collecte ; le charger ici si besoin
+    var fraisPromise = (fraisPortCollecte && fraisPortCollecte.length > 0)
+        ? Promise.resolve(fraisPortCollecte)
+        : supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*').then(function(fp) {
+            fraisPortCollecte = fp || [];
+            return fraisPortCollecte;
+        });
+
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions?enveloppe_id=eq.' + enveloppeId + '&statut_livraison=eq.pret_a_envoyer&select=mode_envoi,nb_normaux,nb_variantes,adresse_snapshot'),
+        fraisPromise
+    ])
+        .then(function(results) {
+            var inscriptions = results[0] || [];
+
+            // Nb de billets physiques dans l'enveloppe + pays du membre (pour la destination)
+            var nbBillets = 0;
+            var pays = '';
+            inscriptions.forEach(function(ins) {
+                nbBillets += (ins.nb_normaux || 0) + (ins.nb_variantes || 0);
+                if (!pays && ins.adresse_snapshot && ins.adresse_snapshot.pays) pays = ins.adresse_snapshot.pays;
+            });
+            var destination = (pays === 'France') ? 'france' : 'international';
+
+            // Modes d'envoi disponibles pour cette destination (d'après frais_port)
+            var modesDispo = EXP_MODES_ORDRE.filter(function(m) {
+                return fraisPortCollecte.some(function(r) { return r.destination === destination && r.type_envoi === m; });
+            });
+            if (modesDispo.length === 0) modesDispo = EXP_MODES_ORDRE.slice(); // fallback si aucune donnée frais_port
+
+            // Mode suggéré = le plus exigeant demandé par les membres, s'il est proposé pour cette destination
             var modeSuggere = getModeEnvoiPlusExigeant(inscriptions);
             var modeMap = { Normal: 'normal', Suivi: 'suivi', R1: 'r1', R2: 'r2', R3: 'r3' };
             var modeVal = modeMap[modeSuggere] || 'normal';
+            if (modesDispo.indexOf(modeVal) === -1) modeVal = modesDispo[0];
+
+            var prixInit = findFdpPriceCollecte(nbBillets, destination, modeVal);
+
+            var optionsHtml = modesDispo.map(function(m) {
+                return '<option value="' + m + '"' + (m === modeVal ? ' selected' : '') + '>' + EXP_MODES_LABELS[m] + '</option>';
+            }).join('');
+
+            var destLabel = (destination === 'france')
+                ? 'France'
+                : 'International' + (pays ? ' (' + escapeHtmlMC(pays) + ')' : '');
 
             var html = '<div class="expedition-form">'
                 + '<h3><i class="fa-solid fa-paper-plane"></i> Expédier l\'enveloppe</h3>'
+                + '<p class="expedition-info">Destination : <strong>' + destLabel + '</strong> &nbsp;·&nbsp; <strong>' + nbBillets + '</strong> billet(s)</p>'
                 + '<div class="insc-form-field"><label>Mode d\'envoi réel</label>'
-                + '<select id="mode-envoi-reel">'
-                + '<option value="normal"' + (modeVal === 'normal' ? ' selected' : '') + '>Normal</option>'
-                + '<option value="suivi"' + (modeVal === 'suivi' ? ' selected' : '') + '>Suivi</option>'
-                + '<option value="r1"' + (modeVal === 'r1' ? ' selected' : '') + '>Recommandé R1</option>'
-                + '<option value="r2"' + (modeVal === 'r2' ? ' selected' : '') + '>Recommandé R2</option>'
-                + '<option value="r3"' + (modeVal === 'r3' ? ' selected' : '') + '>Recommandé R3</option>'
+                + '<select id="mode-envoi-reel" onchange="majPrixExpedition(' + nbBillets + ', \'' + destination + '\')">'
+                + optionsHtml
                 + '</select></div>'
                 + '<div class="insc-form-field"><label>Numéro de suivi (optionnel)</label>'
                 + '<input type="text" id="numero-suivi" placeholder="Ex: 1Z999AA..."></div>'
                 + '<div class="insc-form-field"><label>Prix payé (€)</label>'
-                + '<input type="number" id="prix-envoi-reel" step="0.01" min="0" placeholder="Ex: 4.95"></div>'
+                + '<input type="number" id="prix-envoi-reel" step="0.01" min="0" placeholder="Ex: 4.95" value="' + (prixInit > 0 ? prixInit.toFixed(2) : '') + '">'
+                + '<small class="expedition-prix-auto"><i class="fa-solid fa-wand-magic-sparkles"></i> Calculé selon la destination, le mode et le nombre de billets — modifiable</small></div>'
                 + '<div class="expedition-actions">'
                 + '<button onclick="annulerExpedition()" class="btn-secondary">Annuler</button>'
                 + '<button onclick="confirmerExpedition(' + enveloppeId + ')" class="btn-confirmer-expedition"><i class="fa-solid fa-check"></i> Confirmer l\'expédition</button>'
@@ -2045,6 +2084,15 @@ function ouvrirFormulaireExpedition(enveloppeId) {
         .catch(function(error) {
             console.error('Erreur chargement modes:', error);
         });
+}
+
+// Demande #25 — Recalcule le prix payé quand le collecteur change de mode d'envoi
+function majPrixExpedition(nbBillets, destination) {
+    var modeEl = document.getElementById('mode-envoi-reel');
+    var prixEl = document.getElementById('prix-envoi-reel');
+    if (!modeEl || !prixEl) return;
+    var prix = findFdpPriceCollecte(nbBillets, destination, modeEl.value);
+    prixEl.value = prix > 0 ? prix.toFixed(2) : '';
 }
 
 function annulerExpedition() {

@@ -5480,6 +5480,22 @@ body.login-page {
     color: var(--color-primary);
 }
 
+/* Demande #25 — infos destination/nb billets + hint prix auto */
+.expedition-info {
+    margin: 0 0 var(--spacing-md) 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-bg-white);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+}
+
+.expedition-prix-auto {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-text-light, #666);
+    font-size: 0.8rem;
+}
+
 .expedition-actions {
     display: flex;
     gap: var(--spacing-sm);
