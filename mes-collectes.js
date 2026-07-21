@@ -2533,8 +2533,16 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
         + ' <button onclick="ouvrirRelanceGlobale()" class="btn-relance" style="margin-left:8px;"><i class="fa-solid fa-envelope"></i> Relancer individuellement</button>'
         + '</div>';
     var emails = Object.keys(groupes);
-    // Tri par nom puis prénom
+    // Demande #10 — membre avec au moins un paiement déclaré (à valider) ?
+    function groupeADeclare(gr) {
+        return (gr.inscriptions || []).some(function(i) { return i.statut_paiement === 'declare'; })
+            || (gr.port || []).some(function(e) { return e.statut_paiement_port === 'declare'; });
+    }
+    // Tri : les déclarés (à valider) en tête, puis par nom / prénom
     emails.sort(function(a, b) {
+        var da = groupeADeclare(groupes[a]) ? 0 : 1;
+        var db = groupeADeclare(groupes[b]) ? 0 : 1;
+        if (da !== db) return da - db;
         var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
         var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
         if (na < nb) return -1; if (na > nb) return 1;
@@ -2644,7 +2652,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
 function buildPaiementsConfirmesAccess() {
     return '<div class="paiements-confirmes-access">'
         + '<button onclick="loadPaiementsConfirmes()" class="btn-historique-enveloppes">'
-        + '<i class="fa-solid fa-rotate-left"></i> Paiements confirmés (annuler une erreur)</button>'
+        + '<i class="fa-solid fa-clock-rotate-left"></i> Historique des paiements validés</button>'
         + '<div id="paiements-confirmes-container"></div>'
         + '</div>';
 }
@@ -2652,7 +2660,7 @@ function buildPaiementsConfirmesAccess() {
 function validerPaiementVue(inscriptionId) {
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'PATCH',
-        body: JSON.stringify({ statut_paiement: 'confirme' })
+        body: JSON.stringify({ statut_paiement: 'confirme', date_validation: new Date().toISOString() })
     })
     .then(function() {
         showToast('Paiement confirmé');
@@ -2668,7 +2676,7 @@ function validerPaiementVue(inscriptionId) {
 function validerPaiementPort(enveloppeId) {
     supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
         method: 'PATCH',
-        body: JSON.stringify({ statut_paiement_port: 'confirme' })
+        body: JSON.stringify({ statut_paiement_port: 'confirme', date_validation_port: new Date().toISOString() })
     })
     .then(function() {
         showToast('Frais de port confirmés');
@@ -2763,6 +2771,15 @@ function loadPaiementsConfirmes() {
         });
 }
 
+// Demande #11 — libellé « validé le JJ/MM/AAAA » (historique de validation)
+function labelDateValidation(iso) {
+    if (!iso) return '';
+    var dStr;
+    try { dStr = new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    catch (e) { return ''; }
+    return '<span class="paiement-valide-date" title="Date de validation du paiement"><i class="fa-solid fa-clock-rotate-left"></i> validé le ' + dStr + '</span>';
+}
+
 function renderPaiementsConfirmes(inscriptions, port, membresMap) {
     var container = document.getElementById('paiements-confirmes-container');
     if (!container) return;
@@ -2781,7 +2798,7 @@ function renderPaiementsConfirmes(inscriptions, port, membresMap) {
     });
 
     var html = '<div class="paiements-confirmes-liste">';
-    html += '<h4 class="paiements-confirmes-titre">Paiements confirmés — « Annuler » repasse le paiement à non payé</h4>';
+    html += '<h4 class="paiements-confirmes-titre">Historique des paiements validés — « Annuler » repasse le paiement à non payé</h4>';
     emails.forEach(function(email) {
         var m = membresMap[email] || {};
         var nom = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || email;
@@ -2798,6 +2815,7 @@ function renderPaiementsConfirmes(inscriptions, port, membresMap) {
                 + '<span class="envoi-billet">' + escapeHtmlMC(refPrefix + (billet.NomBillet || '?')) + '</span>'
                 + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
                 + badgePaiementEnvoi('confirme')
+                + labelDateValidation(insc.date_validation)
                 + '<button onclick="annulerPaiementConfirme(' + insc.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
                 + '</div>';
         });
@@ -2807,6 +2825,7 @@ function renderPaiementsConfirmes(inscriptions, port, membresMap) {
                 + '<span class="envoi-billet"><i class="fa-solid fa-truck-fast"></i> Frais d\'envoi</span>'
                 + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
                 + badgePaiementEnvoi('confirme')
+                + labelDateValidation(env.date_validation_port)
                 + '<button onclick="annulerPaiementPortConfirme(' + env.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement de frais de port confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
                 + '</div>';
         });
@@ -2823,7 +2842,7 @@ function annulerPaiementConfirme(inscriptionId) {
     if (!window.confirm('Annuler ce paiement confirmé ? Il repassera à « non payé ».')) return;
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'PATCH',
-        body: JSON.stringify({ statut_paiement: 'non_paye' })
+        body: JSON.stringify({ statut_paiement: 'non_paye', date_validation: null })
     })
     .then(function() {
         showToast('Paiement annulé — repassé à non payé');
@@ -2839,7 +2858,7 @@ function annulerPaiementPortConfirme(enveloppeId) {
     if (!window.confirm('Annuler ce paiement de frais de port confirmé ? Il repassera à « non payé ».')) return;
     supabaseFetch('/rest/v1/enveloppes?id=eq.' + enveloppeId, {
         method: 'PATCH',
-        body: JSON.stringify({ statut_paiement_port: 'non_paye' })
+        body: JSON.stringify({ statut_paiement_port: 'non_paye', date_validation_port: null })
     })
     .then(function() {
         showToast('Paiement annulé — repassé à non payé');
@@ -2855,17 +2874,18 @@ function validerTousPaiementsVue(ids, portIds) {
     ids = ids || [];
     portIds = portIds || [];
     if (ids.length === 0 && portIds.length === 0) return;
+    var nowIso = new Date().toISOString();
     var tasks = [];
     if (ids.length > 0) {
         tasks.push(supabaseFetch('/rest/v1/inscriptions?id=in.(' + ids.join(',') + ')', {
             method: 'PATCH',
-            body: JSON.stringify({ statut_paiement: 'confirme' })
+            body: JSON.stringify({ statut_paiement: 'confirme', date_validation: nowIso })
         }));
     }
     if (portIds.length > 0) {
         tasks.push(supabaseFetch('/rest/v1/enveloppes?id=in.(' + portIds.join(',') + ')', {
             method: 'PATCH',
-            body: JSON.stringify({ statut_paiement_port: 'confirme' })
+            body: JSON.stringify({ statut_paiement_port: 'confirme', date_validation_port: nowIso })
         }));
     }
     Promise.all(tasks)

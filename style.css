@@ -5452,6 +5452,15 @@ body.login-page {
     font-weight: 500;
 }
 
+.paiement-valide-date {
+    font-size: 0.78rem;
+    color: var(--color-text-light, #666);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .paiements-confirmes-loading,
 .paiements-confirmes-vide {
     margin-top: var(--spacing-sm);

@@ -240,6 +240,11 @@ function getDateUpdatesForStatusChange(oldStatus, newStatus, existingDates) {
     if (newStatus === 'Pré collecte' && !existingDates.DatePre) {
         updates.DatePre = today;
     }
+    // Demande #12 — en sortant de "Masqué" vers Pré collecte, forcer la date du jour
+    // (un billet masqué garde souvent une DatePre = sa date d'ajout, à écraser)
+    if (oldStatus === 'Masqué' && newStatus === 'Pré collecte') {
+        updates.DatePre = today;
+    }
     if (newStatus === 'Collecte' && !existingDates.DateColl) {
         updates.DateColl = today;
     }
