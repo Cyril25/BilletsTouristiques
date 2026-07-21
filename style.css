@@ -8836,6 +8836,28 @@ body.is-superadmin .admin-card-ebay-btn {
     color: #888;
 }
 
+/* Demande #24 — Badge capacité (plafond de billets) */
+.collecte-badge-capacite {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+    background: #e8f5e9;
+    color: var(--color-success);
+}
+.collecte-badge-capacite--plein {
+    background: #fdecea;
+    color: var(--color-danger);
+}
+.collecte-supp-capacite {
+    font-size: 0.8rem;
+    color: var(--color-success);
+    font-weight: 500;
+}
+.collecte-supp-capacite--plein {
+    color: var(--color-danger);
+}
+
 .collecte-meta {
     font-size: 0.8rem;
     color: var(--color-text-light, #666);

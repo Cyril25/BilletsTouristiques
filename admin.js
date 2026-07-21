@@ -3849,9 +3849,20 @@ function renderCollectesList(collectes, billetId) {
         var isOpen = !c.date_fin || c.date_fin > today;
         var statusClass = isOpen ? 'ouverte' : 'cloturee';
         var statusLabel = isOpen ? 'Ouverte' : 'Clôturée';
+        // Demande #24 — plafond de billets (nb_max) + compte courant si disponible
+        var capaciteHtml = '';
+        if (c.nb_max !== null && c.nb_max !== undefined) {
+            var cnt = adminCollecteInscriptionCounts[c.id];
+            var totalBillets = cnt ? (cnt.normaux || 0) + (cnt.variantes || 0) : null;
+            var plein = totalBillets !== null && totalBillets >= c.nb_max;
+            capaciteHtml = '<span class="collecte-badge-capacite' + (plein ? ' collecte-badge-capacite--plein' : '') + '">'
+                + (totalBillets !== null ? totalBillets + ' / ' : 'max ') + c.nb_max + ' billet(s)'
+                + (plein ? ' — complète' : '') + '</span>';
+        }
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
             '<span class="collecte-badge-status ' + statusClass + '">' + statusLabel + '</span>' +
+            capaciteHtml +
             '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
             '</div>';
@@ -3889,6 +3900,9 @@ function saveCollecte(billetId) {
         var el = document.getElementById(id);
         return el ? el.value.trim() : '';
     };
+    var nbMaxRaw = getValue('field-collecte-nb-max');
+    var nbMax = nbMaxRaw !== '' ? parseInt(nbMaxRaw, 10) : null;
+    if (nbMax !== null && (isNaN(nbMax) || nbMax < 1)) nbMax = null;
     var body = {
         billet_id: parseInt(billetId, 10),
         nom: getValue('field-collecte-nom'),
@@ -3896,7 +3910,8 @@ function saveCollecte(billetId) {
         collecteur: getValue('field-collecte-collecteur') || null,
         date_pre: getValue('field-collecte-date-pre') || null,
         date_coll: getValue('field-collecte-date-coll') || null,
-        date_fin: getValue('field-collecte-date-fin') || null
+        date_fin: getValue('field-collecte-date-fin') || null,
+        nb_max: nbMax
     };
     supabaseFetch('/rest/v1/collectes', {
         method: 'POST',
@@ -3905,7 +3920,7 @@ function saveCollecte(billetId) {
     .then(function() {
         showToast('Collecte ajoutée', 'success');
         var ids = ['field-collecte-nom', 'field-collecte-scope', 'field-collecte-collecteur',
-                   'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin'];
+                   'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin', 'field-collecte-nb-max'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';

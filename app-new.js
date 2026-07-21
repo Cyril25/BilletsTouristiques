@@ -1434,16 +1434,42 @@ function handleDeepLinkBillet() {
 
 function loadCollectesByBillet() {
     var today = new Date().toISOString().slice(0, 10);
-    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin&or=(date_fin.is.null,date_fin.gt.' + today + ')')
+    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,collecteur,date_pre,date_coll,date_fin,nb_max&or=(date_fin.is.null,date_fin.gt.' + today + ')')
         .then(function(data) {
             collectesByBillet = {};
-            (data || []).forEach(function(c) {
+            var collectes = data || [];
+            collectes.forEach(function(c) {
                 if (!collectesByBillet[c.billet_id]) collectesByBillet[c.billet_id] = [];
                 collectesByBillet[c.billet_id].push(c);
             });
+            // Demande #24 — pour les collectes avec plafond, calculer le total de billets déjà inscrits
+            var avecMax = collectes.filter(function(c) { return c.nb_max !== null && c.nb_max !== undefined; });
+            if (avecMax.length === 0) return;
+            var ids = avecMax.map(function(c) { return c.id; }).join(',');
+            return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + ids + ')&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+                .then(function(inscs) {
+                    var totals = {};
+                    (inscs || []).forEach(function(i) {
+                        totals[i.collecte_id] = (totals[i.collecte_id] || 0) + (i.nb_normaux || 0) + (i.nb_variantes || 0);
+                    });
+                    avecMax.forEach(function(c) {
+                        c._total = totals[c.id] || 0;
+                        c._full = c._total >= c.nb_max;
+                    });
+                });
         })
         .catch(function(error) {
             console.warn('Erreur chargement collectes supplémentaires:', error);
+        });
+}
+
+// Demande #24 — Total de billets déjà inscrits à une collecte (frais)
+function fetchCollecteTotalBillets(collecteId) {
+    return supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&pas_interesse=eq.false&select=nb_normaux,nb_variantes')
+        .then(function(inscs) {
+            var total = 0;
+            (inscs || []).forEach(function(i) { total += (i.nb_normaux || 0) + (i.nb_variantes || 0); });
+            return total;
         });
 }
 
@@ -1452,10 +1478,17 @@ function buildCollectesSupplementairesHtml(item) {
     if (collectes.length === 0) return '';
     var html = '';
     collectes.forEach(function(c) {
+        var capaciteHtml = '';
+        if (c.nb_max !== null && c.nb_max !== undefined) {
+            var total = c._total || 0;
+            capaciteHtml = '<span class="collecte-supp-capacite' + (c._full ? ' collecte-supp-capacite--plein' : '') + '">'
+                + total + ' / ' + c.nb_max + ' billet(s)' + (c._full ? ' — complète' : '') + '</span>';
+        }
         html += '<div class="collecte-supplementaire-section" data-collecte-id="' + escapeAttr(c.id) + '">'
             + '<div class="collecte-supp-header">'
             + '<span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span>'
             + '<span class="collecte-supp-collecteur">Collecteur : ' + escapeHtml(c.collecteur || '—') + '</span>'
+            + capaciteHtml
             + '</div>'
             + buildInscriptionHtmlForCollecte(item, c)
             + '</div>';
@@ -1477,6 +1510,12 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
     }
     if (membreBloqueInscription) {
         return buildBlocageInscriptionHtml(false);
+    }
+    // Demande #24 — collecte pleine (plafond de billets atteint)
+    if (collecte._full) {
+        return '<div class="inscription-badges">'
+            + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-lock"></i> Collecte complète</button>'
+            + '</div>';
     }
     var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
     if (isBlackliste) {
@@ -1573,7 +1612,16 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
         showToast('Sélectionnez au moins un billet', 'error');
         return;
     }
-    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
+
+    // Demande #24 — re-contrôle du plafond juste avant l'insertion (anti-course)
+    var collecteObj = null;
+    var collectesForBillet = collectesByBillet[billetId] || [];
+    for (var ci = 0; ci < collectesForBillet.length; ci++) {
+        if (collectesForBillet[ci].id === collecteId) { collecteObj = collectesForBillet[ci]; break; }
+    }
+
+    function creerInscription() {
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
         .then(function(membreData) {
             var adresse = membreData && membreData[0] ? membreData[0] : {};
             var body = {
@@ -1601,10 +1649,29 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
             annulerInscriptionCollecte(collecteId);
             loadMesInscriptions();
             loadCompteursInscriptions();
+            loadCollectesByBillet(); // Demande #24 — rafraîchir le total/plafond de la collecte
             if (billet.Collecteur) creerEnveloppeSiAbsente(billet.Collecteur, email);
         })
         .catch(function(error) {
             console.error('Erreur inscription collecte supplémentaire:', error);
             showToast('Erreur lors de l\'inscription', 'error');
         });
+    }
+
+    // Si la collecte a un plafond, revérifier le total courant avant d'insérer
+    if (collecteObj && collecteObj.nb_max !== null && collecteObj.nb_max !== undefined) {
+        fetchCollecteTotalBillets(collecteId)
+            .then(function(total) {
+                if (total >= collecteObj.nb_max) {
+                    collecteObj._total = total;
+                    collecteObj._full = true;
+                    showToast('Cette collecte est complète (' + total + '/' + collecteObj.nb_max + ' billets).', 'error');
+                    return;
+                }
+                creerInscription();
+            })
+            .catch(function() { creerInscription(); }); // recomptage impossible : ne pas bloquer
+        return;
+    }
+    creerInscription();
 }

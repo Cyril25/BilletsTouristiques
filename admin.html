@@ -336,6 +336,11 @@
                             <label for="field-collecte-date-fin">Date fin</label>
                             <input type="date" id="field-collecte-date-fin">
                         </div>
+                        <div class="admin-form-group">
+                            <label for="field-collecte-nb-max">Nombre max de billets</label>
+                            <input type="number" id="field-collecte-nb-max" min="1" step="1" placeholder="Laisser vide = pas de plafond">
+                            <small class="field-hint">Une fois ce total de billets atteint, l'inscription à cette collecte se ferme.</small>
+                        </div>
                         <button type="button" id="btn-add-collecte" class="btn-admin-secondary">
                             <i class="fa-solid fa-plus"></i> Ajouter cette collecte
                         </button>
