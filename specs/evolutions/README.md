@@ -24,6 +24,9 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 
 | Demande | Titre | Complexité | Statut | Spec | Commit |
 |---|---|---|---|---|---|
+| [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
+| [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
+| [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple « marquer comme reçus » (historique envois) | S | À tester | ✅ | `9d4786e` |
 | [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
