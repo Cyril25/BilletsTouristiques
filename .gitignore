@@ -5,6 +5,10 @@ _bmad-output/
 # Claude Code local config and memory
 .claude/
 
+# Cache local wrangler (Cloudflare Workers)
+.wrangler/
+workers/**/.wrangler/
+
 # Migration scripts (outils locaux, credentials sensibles)
 scripts/
 
