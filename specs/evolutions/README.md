@@ -27,6 +27,9 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 | [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
 | [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
 | [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |
+| [#7](demande-7-export-csv-nom-totaux.md) | Export CSV : nom de fichier (amorce/millésime) + ligne totaux | S | À tester | ✅ | `00ba372` |
+| [#8](demande-8-recap-amorce-millesime.md) | Amorce + millésime dans le récap individuel | S | À tester | ✅ | `00ba372` |
+| [#9](demande-9-preference-terminaisons.md) | Préférence profil « terminaisons souhaitées » | M | À tester | ✅ | `00ba372` |
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple + choix statut distribué/reçu (historique envois) | S | À tester | ✅ | `9d4786e`, `d6dbf0b` |
 | [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
