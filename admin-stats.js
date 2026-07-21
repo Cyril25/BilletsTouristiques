@@ -153,9 +153,9 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     html += '<div class="stats-section">';
     html += '<h2><i class="fa-solid fa-earth-europe"></i> Membres par pays</h2>';
     html += barChart(paysList.slice(0, 8).map(function(p) {
-        var code = paysCode(p.label);
+        var flag = window.flagImg(p.label);
         return {
-            labelHtml: (code ? '<span class="pays-code">' + code + '</span> ' : '') + escStat(p.label),
+            labelHtml: (flag ? flag + ' ' : '') + escStat(p.label),
             labelTitle: p.label,
             value: p.count
         };

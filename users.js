@@ -252,10 +252,10 @@ function renderUserCards(searchQuery) {
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
         var isBloque = !!user._bloque;
 
-        var codeH = window.paysCode(paysAffiche(user));
+        var flagH = window.flagImg(paysAffiche(user));
         html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
-                '<span class="user-card-name">' + (codeH ? '<span class="pays-code" title="' + escapeAttr(paysAffiche(user)) + '">' + codeH + '</span> ' : '') + escapeHtml(displayName) + '</span>' +
+                '<span class="user-card-name">' + (flagH ? flagH + ' ' : '') + escapeHtml(displayName) + '</span>' +
                 (isBloque ? '<span class="user-badge-role user-badge-bloque" title="' + escapeAttr(user._blocageMotif || 'Bloqué pour les inscriptions') + '"><i class="fa-solid fa-ban"></i> Bloqué</span>' : '') +
                 '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +

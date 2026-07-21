@@ -325,6 +325,13 @@ window.paysCode = function(pays) {
     if (a < 0 || a > 25 || b < 0 || b > 25) return '';
     return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
 };
+// Vraie image de drapeau, hébergée dans le repo (flags/<code>.svg), affichée partout (Windows inclus).
+window.flagImg = function(pays) {
+    var code = window.paysCode(pays);
+    if (!code) return '';
+    var titre = String(pays == null ? '' : pays).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<img class="pays-flag" src="flags/' + code.toLowerCase() + '.svg" alt="' + code + '" title="' + titre + '" loading="lazy">';
+};
 
 // Demande #28 / #26 — audience effective (rôle + statut collecteur) de l'identité active.
 // On interroge toujours la table membres pour le rôle de l'email actif (impersonné ou réel),

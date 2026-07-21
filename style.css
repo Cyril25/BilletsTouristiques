@@ -3390,7 +3390,16 @@ body.login-page {
     border-color: #5D3A7E;
 }
 
-/* Demande #2 — code pays + filtre par pays (Gestion Membres) */
+/* Demande #2 — drapeau (image locale) + filtre par pays (Gestion Membres) */
+.pays-flag {
+    width: 20px;
+    height: 15px;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+    vertical-align: -2px;
+    display: inline-block;
+}
 .pays-code {
     display: inline-block;
     min-width: 26px;
