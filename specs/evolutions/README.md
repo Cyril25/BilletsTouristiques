@@ -30,6 +30,9 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 | [#7](demande-7-export-csv-nom-totaux.md) | Export CSV : nom de fichier (amorce/millésime) + ligne totaux | S | À tester | ✅ | `00ba372` |
 | [#8](demande-8-recap-amorce-millesime.md) | Amorce + millésime dans le récap individuel | S | À tester | ✅ | `00ba372` |
 | [#9](demande-9-preference-terminaisons.md) | Préférence profil « terminaisons souhaitées » | M | À tester | ✅ | `00ba372` |
+| [#10](demande-10-paiements-declares-en-tete.md) | Paiements déclarés en tête (Vérification paiement) | S | À tester | ✅ | `25ddee1` |
+| [#11](demande-11-historique-paiements-valides.md) | Historique des paiements validés (date de validation) | M | À tester | ✅ | `25ddee1` |
+| [#12](demande-12-bug-date-precollecte.md) | Bug : date pré-collecte en sortant de « Masqué » | S | À tester | ✅ | `25ddee1` |
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple + choix statut distribué/reçu (historique envois) | S | À tester | ✅ | `9d4786e`, `d6dbf0b` |
 | [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
