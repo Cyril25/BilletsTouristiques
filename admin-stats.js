@@ -63,16 +63,29 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
         byCat[cat] = (byCat[cat] || 0) + 1;
     });
 
-    // --- Top collecteurs : billets collectés (via inscriptions) depuis l'ouverture ---
+    // --- Top collecteurs : billets collectés + nombre de collectes (via inscriptions) depuis l'ouverture ---
     var billetsParCollecteur = {};
+    var collectesParCollecteur = {}; // collecteur -> Set de billet_id distincts
     inscActives.forEach(function(i) {
         var coll = billetCollecteur[i.billet_id];
         if (!coll) return;
         billetsParCollecteur[coll] = (billetsParCollecteur[coll] || 0) + (i.nb_normaux || 0) + (i.nb_variantes || 0);
+        if (!collectesParCollecteur[coll]) collectesParCollecteur[coll] = {};
+        collectesParCollecteur[coll][i.billet_id] = true;
     });
     var topCollecteurs = Object.keys(billetsParCollecteur)
         .map(function(k) { return { label: k, value: billetsParCollecteur[k] }; })
         .sort(function(a, b) { return b.value - a.value; });
+    var topCollectes = Object.keys(collectesParCollecteur)
+        .map(function(k) { return { label: k, value: Object.keys(collectesParCollecteur[k]).length }; })
+        .sort(function(a, b) { return b.value - a.value; });
+
+    // Date de la première collecte du nouveau mode (première inscription du site)
+    var premiereDate = null;
+    inscActives.forEach(function(i) {
+        if (i.date_inscription && (!premiereDate || i.date_inscription < premiereDate)) premiereDate = i.date_inscription;
+    });
+    var premiereDateStr = premiereDate ? new Date(premiereDate).toLocaleDateString('fr-FR') : '—';
 
     // --- Collecteurs actifs dans l'année (billets mis en collecte cette année) ---
     var collecteursActifs = {};
@@ -84,12 +97,12 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     var nbCollecteursActifs = Object.keys(collecteursActifs).length;
     var nbCollecteursTotal = collecteurs.filter(function(c) { return !c.masque; }).length;
 
-    // --- Inscriptions par mois ---
+    // --- Billets collectés par mois (somme normaux + variantes) ---
     var parMois = {};
     inscActives.forEach(function(i) {
         if (!i.date_inscription) return;
         var k = i.date_inscription.slice(0, 7);
-        parMois[k] = (parMois[k] || 0) + 1;
+        parMois[k] = (parMois[k] || 0) + (i.nb_normaux || 0) + (i.nb_variantes || 0);
     });
     var moisKeys = Object.keys(parMois).sort();
 
@@ -124,9 +137,10 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     html += kpiCard('fa-book', fmtNb(billets.length), 'Billets au catalogue', 'historique complet', '#7B1FA2');
     html += '</div>';
 
-    // Tendance inscriptions / mois
+    // Billets collectés par mois
     html += '<div class="stats-section">';
-    html += '<h2><i class="fa-solid fa-chart-column"></i> Inscriptions par mois</h2>';
+    html += '<h2><i class="fa-solid fa-chart-column"></i> Billets collectés par mois</h2>';
+    html += '<p class="kpi-sub" style="margin-top:-8px">En nombre de billets (normaux + variantes)</p>';
     html += vbarChart(moisKeys.map(function(k) {
         var parts = k.split('-');
         return { label: MOIS_COURTS[parseInt(parts[1], 10) - 1] + ' ' + parts[0].slice(2), value: parMois[k] };
@@ -139,8 +153,12 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     html += '<div class="stats-section">';
     html += '<h2><i class="fa-solid fa-earth-europe"></i> Membres par pays</h2>';
     html += barChart(paysList.slice(0, 8).map(function(p) {
-        var flag = window.flagPays(p.label);
-        return { label: (flag ? flag + ' ' : '') + p.label, value: p.count };
+        var code = paysCode(p.label);
+        return {
+            labelHtml: (code ? '<span class="pays-code">' + code + '</span> ' : '') + escStat(p.label),
+            labelTitle: p.label,
+            value: p.count
+        };
     }), '#5D3A7E');
     if (paysList.length > 8) html += '<p class="kpi-sub">+ ' + (paysList.length - 8) + ' autres pays</p>';
     html += '</div>';
@@ -154,21 +172,30 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
 
     html += '</div>'; // fin 2col
 
-    // 2 colonnes : top collecteurs + catalogue
+    // 2 colonnes : top collecteurs (billets) + top collecteurs (collectes)
+    var depuisTxt = '<p class="kpi-sub" style="margin-top:-8px">Depuis le ' + escStat(premiereDateStr) + ' (ouverture du site)</p>';
     html += '<div class="stats-2col">';
 
     html += '<div class="stats-section">';
-    html += '<h2><i class="fa-solid fa-ranking-star"></i> Top collecteurs (billets collectés)</h2>';
+    html += '<h2><i class="fa-solid fa-ranking-star"></i> Top collecteurs — billets collectés</h2>';
+    html += depuisTxt;
     html += barChart(topCollecteurs.slice(0, 8), '#B3560F');
     html += '</div>';
 
+    html += '<div class="stats-section">';
+    html += '<h2><i class="fa-solid fa-ranking-star"></i> Top collecteurs — nombre de collectes</h2>';
+    html += depuisTxt;
+    html += barChart(topCollectes.slice(0, 8), '#1565C0');
+    html += '</div>';
+
+    html += '</div>'; // fin 2col
+
+    // Catalogue par statut (pleine largeur)
     html += '<div class="stats-section">';
     html += '<h2><i class="fa-solid fa-layer-group"></i> Catalogue par statut</h2>';
     var catList = Object.keys(byCat).map(function(k) { return { label: k, value: byCat[k] }; }).sort(function(a, b) { return b.value - a.value; });
     html += barChart(catList, '#C8860D');
     html += '</div>';
-
-    html += '</div>'; // fin 2col
 
     var body = document.getElementById('stats-body');
     if (body) body.innerHTML = html;
@@ -192,12 +219,26 @@ function barChart(items, color) {
     var max = items.reduce(function(m, it) { return Math.max(m, it.value); }, 0) || 1;
     return items.map(function(it) {
         var pct = Math.round((it.value / max) * 100);
+        var labelHtml = it.labelHtml || escStat(it.label);
+        var title = escStat(it.labelTitle || it.label || '');
         return '<div class="bar-row">'
-            + '<span class="bar-label" title="' + escStat(it.label) + '">' + escStat(it.label) + '</span>'
+            + '<span class="bar-label" title="' + title + '">' + labelHtml + '</span>'
             + '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%;--bar-color:' + color + '"></span></span>'
             + '<span class="bar-value">' + fmtNb(it.value) + '</span>'
             + '</div>';
     }).join('');
+}
+
+// Demande #26 — code pays ISO (2 lettres) dérivé de l'emoji drapeau (fiable sur tous les navigateurs)
+function paysCode(pays) {
+    var emoji = window.flagPays(pays);
+    if (!emoji) return '';
+    var cps = Array.from(emoji);
+    if (cps.length < 2) return '';
+    var a = cps[0].codePointAt(0) - 0x1F1E6;
+    var b = cps[1].codePointAt(0) - 0x1F1E6;
+    if (a < 0 || a > 25 || b < 0 || b > 25) return '';
+    return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
 }
 
 function vbarChart(items) {

@@ -38,11 +38,15 @@
         @media (max-width: 760px) { .stats-2col { grid-template-columns: 1fr; } }
 
         /* Barres horizontales */
-        .bar-row { display: grid; grid-template-columns: 140px 1fr 54px; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 0.88em; }
+        .bar-row { display: grid; grid-template-columns: 150px 1fr 54px; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 0.88em; }
         .bar-label { color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
-        .bar-track { background: #f0edf5; border-radius: 6px; height: 16px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 6px; background: var(--bar-color, #5D3A7E); min-width: 2px; transition: width .4s ease; }
+        .bar-track { display: block; width: 100%; background: #f0edf5; border-radius: 6px; height: 16px; overflow: hidden; }
+        .bar-fill { display: block; height: 100%; border-radius: 6px; background: var(--bar-color, #5D3A7E); min-width: 3px; transition: width .4s ease; }
         .bar-value { text-align: right; color: #444; font-variant-numeric: tabular-nums; font-weight: 500; }
+        .pays-code {
+            display: inline-block; min-width: 26px; text-align: center; font-size: 0.72em; font-weight: 700;
+            background: #ece5f5; color: #5D3A7E; border-radius: 4px; padding: 1px 5px; letter-spacing: 0.5px;
+        }
 
         /* Barres verticales (tendance) */
         .vbars { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 10px; }
