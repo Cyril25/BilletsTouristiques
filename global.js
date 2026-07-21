@@ -634,35 +634,33 @@ function renderNotifications() {
     }
 
     if (count === 0) {
-        body.innerHTML = '<p class="notif-empty">Aucune notification.</p>';
-        var existingFooter = document.getElementById('notif-dropdown-footer');
-        if (existingFooter) existingFooter.remove();
-        return;
+        body.innerHTML = '<p class="notif-empty">Aucune nouvelle notification.</p>';
+    } else {
+        // Tri par date décroissante, tous types confondus
+        var items = window.__notifs.slice().sort(function(a, b) {
+            return new Date(b.date || 0) - new Date(a.date || 0);
+        });
+        var html = '';
+        // Afficher max 5 items, lien "voir tout" en pied
+        items.slice(0, 5).forEach(function(n) {
+            var dateStr = '';
+            if (n.date) {
+                try { dateStr = new Date(n.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }); } catch(e) {}
+            }
+            var icon = n.type === 'broadcast' ? '<i class="fa-solid fa-bullhorn"></i> ' : '';
+            // Une nouveauté : clic = marquer lue (par ce membre) puis naviguer
+            var onclick = n.type === 'broadcast'
+                ? ' onclick="marquerNotifLue(event, \'' + n.notifId + '\', \'' + notifEscHtml(n.href) + '\')"'
+                : '';
+            html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '"' + onclick + '>' +
+                    '<div class="notif-item-title">' + icon + notifEscHtml(n.title) + '</div>' +
+                    '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +
+                    '</a>';
+        });
+        body.innerHTML = html;
     }
 
-    // Tri par date décroissante, tous types confondus
-    var items = window.__notifs.slice().sort(function(a, b) {
-        return new Date(b.date || 0) - new Date(a.date || 0);
-    });
-    var html = '';
-    // Afficher max 5 items, lien "voir tout" en pied
-    items.slice(0, 5).forEach(function(n) {
-        var dateStr = '';
-        if (n.date) {
-            try { dateStr = new Date(n.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }); } catch(e) {}
-        }
-        var icon = n.type === 'broadcast' ? '<i class="fa-solid fa-bullhorn"></i> ' : '';
-        // Une nouveauté : clic = marquer lue (par ce membre) puis naviguer
-        var onclick = n.type === 'broadcast'
-            ? ' onclick="marquerNotifLue(event, \'' + n.notifId + '\', \'' + notifEscHtml(n.href) + '\')"'
-            : '';
-        html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '"' + onclick + '>' +
-                '<div class="notif-item-title">' + icon + notifEscHtml(n.title) + '</div>' +
-                '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +
-                '</a>';
-    });
-    body.innerHTML = html;
-
+    // Pied toujours présent : accès à la page Nouveautés, même sans notification non lue
     var dropdown = document.getElementById('notif-dropdown');
     var oldFooter = document.getElementById('notif-dropdown-footer');
     if (oldFooter) oldFooter.remove();
