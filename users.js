@@ -3,6 +3,39 @@
 // Stories 3.1, 3.2, 4.1
 // ============================================================
 
+// Demande #2 — Drapeau du pays de résidence (+ filtre/compteur par pays)
+function _normPays(s) {
+    return (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+var PAYS_FLAGS = {
+    'afrique du sud': '🇿🇦', 'allemagne': '🇩🇪', 'andorre': '🇦🇩', 'arabie saoudite': '🇸🇦',
+    'argentine': '🇦🇷', 'armenie': '🇦🇲', 'australie': '🇦🇺', 'autriche': '🇦🇹', 'bahamas': '🇧🇸',
+    'bahrein': '🇧🇭', 'belgique': '🇧🇪', 'birmanie': '🇲🇲', 'bresil': '🇧🇷', 'bulgarie': '🇧🇬',
+    'cambodge': '🇰🇭', 'canada': '🇨🇦', 'chine': '🇨🇳', 'croatie': '🇭🇷', 'cuba': '🇨🇺',
+    'danemark': '🇩🇰', 'egypte': '🇪🇬', 'emirats arabes unis': '🇦🇪', 'espagne': '🇪🇸',
+    'estonie': '🇪🇪', 'etats-unis': '🇺🇸', 'finlande': '🇫🇮', 'france': '🇫🇷', 'georgie': '🇬🇪',
+    'grande-bretagne': '🇬🇧', 'grece': '🇬🇷', 'haiti': '🇭🇹', 'hongrie': '🇭🇺', 'ile maurice': '🇲🇺',
+    'inde': '🇮🇳', 'indonesie': '🇮🇩', 'iraq': '🇮🇶', 'irlande': '🇮🇪', 'islande': '🇮🇸',
+    'israel': '🇮🇱', 'italie': '🇮🇹', 'japon': '🇯🇵', 'jordanie': '🇯🇴', 'kosovo': '🇽🇰',
+    'koweit': '🇰🇼', 'lettonie': '🇱🇻', 'liban': '🇱🇧', 'libye': '🇱🇾', 'lituanie': '🇱🇹',
+    'luxembourg': '🇱🇺', 'madagascar': '🇲🇬', 'malte': '🇲🇹', 'maroc': '🇲🇦', 'mexique': '🇲🇽',
+    'monaco': '🇲🇨', 'norvege': '🇳🇴', 'oman': '🇴🇲', 'palestine': '🇵🇸', 'pays-bas': '🇳🇱',
+    'perou': '🇵🇪', 'pologne': '🇵🇱', 'portugal': '🇵🇹', 'qatar': '🇶🇦', 'republique tcheque': '🇨🇿',
+    'roumanie': '🇷🇴', 'russie': '🇷🇺', 'slovaquie': '🇸🇰', 'slovenie': '🇸🇮', 'suede': '🇸🇪',
+    'suisse': '🇨🇭', 'syrie': '🇸🇾', 'thailande': '🇹🇭', 'togo': '🇹🇬', 'turquie': '🇹🇷',
+    'ukraine': '🇺🇦', 'vatican': '🇻🇦'
+};
+function flagPays(pays) {
+    return PAYS_FLAGS[_normPays(pays)] || '';
+}
+// Un membre sans pays renseigné est considéré comme France (cohérent avec l'affichage adresse)
+function paysAffiche(user) {
+    var p = (user.pays || '').trim();
+    return p || 'France';
+}
+
+var activeCountryFilter = '';
+
 // ============================================================
 // 1. TOAST NOTIFICATIONS
 // ============================================================
@@ -109,6 +142,7 @@ function loadUsers() {
             } else {
                 var emptyState = document.getElementById('user-empty-state');
                 if (emptyState) emptyState.style.display = 'none';
+                populateCountryFilter(); // Demande #2
                 renderUserCards();
             }
         })
@@ -153,6 +187,37 @@ function filterUsersByRole(role) {
     filterUsers();
 }
 
+// Demande #2 — filtre/compteur par pays
+function filterUsersByCountry(normPays) {
+    activeCountryFilter = normPays || '';
+    var input = document.getElementById('user-search-input');
+    renderUserCards(input ? input.value.trim() : '');
+}
+
+function populateCountryFilter() {
+    var select = document.getElementById('user-country-filter');
+    if (!select) return;
+    // Compter les membres par pays (clé normalisée → { label, count })
+    var counts = {};
+    usersList.forEach(function(user) {
+        var label = paysAffiche(user);
+        var key = _normPays(label);
+        if (!counts[key]) counts[key] = { label: label, count: 0 };
+        counts[key].count++;
+    });
+    var keys = Object.keys(counts).sort(function(a, b) {
+        return counts[a].label.localeCompare(counts[b].label, 'fr');
+    });
+    var html = '<option value="">Tous les pays (' + usersList.length + ')</option>';
+    keys.forEach(function(k) {
+        var c = counts[k];
+        var flag = flagPays(c.label);
+        html += '<option value="' + escapeAttr(k) + '"' + (k === activeCountryFilter ? ' selected' : '') + '>'
+            + (flag ? flag + ' ' : '') + escapeHtml(c.label) + ' (' + c.count + ')</option>';
+    });
+    select.innerHTML = html;
+}
+
 // ============================================================
 // 6. RENDU DES CARTES UTILISATEURS
 // ============================================================
@@ -168,6 +233,10 @@ function renderUserCards(searchQuery) {
         filtered = filtered.filter(function(user) { return user.role !== 'admin' && user.role !== 'superadmin'; });
     } else if (activeRoleFilter === 'bloque') {
         filtered = filtered.filter(function(user) { return user._bloque; });
+    }
+    // Demande #2 — filtre par pays
+    if (activeCountryFilter) {
+        filtered = filtered.filter(function(user) { return _normPays(paysAffiche(user)) === activeCountryFilter; });
     }
     if (query) {
         filtered = filtered.filter(function(user) {
@@ -204,9 +273,10 @@ function renderUserCards(searchQuery) {
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
         var isBloque = !!user._bloque;
 
+        var flagH = flagPays(paysAffiche(user));
         html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
-                '<span class="user-card-name">' + escapeHtml(displayName) + '</span>' +
+                '<span class="user-card-name">' + (flagH ? '<span class="user-card-flag" title="' + escapeAttr(paysAffiche(user)) + '">' + flagH + '</span> ' : '') + escapeHtml(displayName) + '</span>' +
                 (isBloque ? '<span class="user-badge-role user-badge-bloque" title="' + escapeAttr(user._blocageMotif || 'Bloqué pour les inscriptions') + '"><i class="fa-solid fa-ban"></i> Bloqué</span>' : '') +
                 '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +

@@ -806,6 +806,13 @@ function renderAdminCards() {
                     '<i class="fa-solid fa-pen"></i> Modifier' +
                 '</button>' +
                 (function() {
+                    var fb = (billet.LinkFB || '').trim();
+                    if (fb && /^https?:\/\//i.test(fb)) {
+                        return '<a href="' + escapeAttr(fb) + '" target="_blank" onclick="event.stopPropagation()" class="admin-card-fb-btn" title="Publication Facebook"><i class="fa-brands fa-facebook"></i></a>';
+                    }
+                    return '';
+                })() +
+                (function() {
                     var ls = (billet.LinkSheet || '').trim();
                     if (ls && /^https?:\/\//i.test(ls)) {
                         return '<a href="' + escapeAttr(ls) + '" target="_blank" onclick="event.stopPropagation()" class="admin-card-sheet-btn" title="Google Sheet"><i class="fa-solid fa-file-csv"></i></a>';

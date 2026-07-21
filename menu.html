@@ -47,6 +47,10 @@
         </div>
 
         <div class="user-info">
+            <!-- Demande #4 — Somme due par le membre (affichée si > 0) -->
+            <a id="somme-due-pill" class="somme-due-pill" href="mes-inscriptions.html" style="display:none;" title="Ce que vous devez (billets + frais de port). Voir mes inscriptions.">
+                <i class="fa-solid fa-euro-sign"></i> <span id="somme-due-montant">0,00 €</span>
+            </a>
             <div id="notif-bell-wrapper" class="notif-bell-wrapper admin-only">
                 <button id="notif-bell-btn" type="button" class="notif-bell-btn" onclick="toggleNotifDropdown(event)" title="Notifications" aria-label="Notifications">
                     <i class="fa-solid fa-bell"></i>

@@ -33,6 +33,11 @@
             <button type="button" class="user-role-filter-btn" data-role="member" onclick="filterUsersByRole('member')">Membres</button>
             <button type="button" class="user-role-filter-btn" data-role="bloque" onclick="filterUsersByRole('bloque')">Bloqués</button>
         </div>
+        <!-- Demande #2 — filtre par pays de résidence -->
+        <div class="user-country-filter-wrapper" style="margin-bottom: 12px;">
+            <label for="user-country-filter"><i class="fa-solid fa-earth-europe"></i> Pays :</label>
+            <select id="user-country-filter" onchange="filterUsersByCountry(this.value)"></select>
+        </div>
         <div id="user-count" style="margin-bottom: 12px; font-size: 0.875rem; color: var(--color-text-light, #666);"></div>
 
         <!-- Formulaire d'ajout de membre -->

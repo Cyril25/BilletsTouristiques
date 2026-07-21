@@ -346,11 +346,82 @@ function setupStickyNavbar() {
     onScroll(); // état initial (utile si la page est déjà défilée)
 }
 
+// Demande #4 — Calcule ce que le membre doit (billets non payés + frais de port dus)
+// et l'affiche dans la barre de menu (pastille à côté de la cloche).
+function loadSommeDue() {
+    var pill = document.getElementById('somme-due-pill');
+    if (!pill) return;
+    var email = window.getActiveEmail();
+    if (!email) return;
+    var annee = new Date().getFullYear();
+    var e = encodeURIComponent(email);
+
+    Promise.all([
+        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi'),
+        supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + e + '&select=alias'),
+        supabaseFetch('/rest/v1/membres?email=eq.' + e + '&select=pays'),
+        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=destination,type_envoi,qte_min,qte_max,prix'),
+        supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + e + '&prix_envoi_reel=not.is.null&statut_paiement_port=eq.non_paye&select=prix_envoi_reel')
+    ])
+    .then(function(res) {
+        var inscriptions = res[0] || [];
+        var monAlias = (res[1] && res[1][0]) ? res[1][0].alias : null;
+        var pays = (res[2] && res[2][0]) ? res[2][0].pays : '';
+        var fraisPort = res[3] || [];
+        var enveloppesPort = res[4] || [];
+        var dest = (pays === 'France') ? 'france' : 'international';
+
+        function findFdp(nb, typeEnvoi) {
+            for (var i = 0; i < fraisPort.length; i++) {
+                var r = fraisPort[i];
+                if (r.destination === dest && r.type_envoi === typeEnvoi && nb >= r.qte_min && nb <= r.qte_max) return parseFloat(r.prix);
+            }
+            return 0;
+        }
+
+        var billetIds = [];
+        inscriptions.forEach(function(i) { if (billetIds.indexOf(i.billet_id) === -1) billetIds.push(i.billet_id); });
+        var billetsPromise = billetIds.length
+            ? supabaseFetch('/rest/v1/billets?id=in.(' + billetIds.join(',') + ')&select=id,Prix,PrixVariante,PayerFDP,Categorie,Collecteur')
+            : Promise.resolve([]);
+
+        return billetsPromise.then(function(billets) {
+            var bMap = {};
+            (billets || []).forEach(function(b) { bMap[b.id] = b; });
+            var total = 0;
+            inscriptions.forEach(function(insc) {
+                var billet = bMap[insc.billet_id];
+                if (!billet) return;
+                if (billet.Categorie === 'Pré collecte' || billet.Categorie === 'Pas de collecte') return;
+                if (monAlias && billet.Collecteur === monAlias) return; // le collecteur est bénéficiaire : il ne se doit rien
+                var prix = parseFloat(billet.Prix || 0);
+                var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+                var nbN = insc.nb_normaux || 0, nbV = insc.nb_variantes || 0;
+                var montant = (prix * nbN) + (prixVar * nbV);
+                if (billet.PayerFDP === 'oui') {
+                    montant += findFdp(nbN + nbV, (insc.mode_envoi || 'Normal').toLowerCase());
+                }
+                total += montant;
+            });
+            enveloppesPort.forEach(function(env) { total += parseFloat(env.prix_envoi_reel || 0); });
+
+            var montantEl = document.getElementById('somme-due-montant');
+            if (total > 0) {
+                if (montantEl) montantEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
+                pill.style.display = '';
+            } else {
+                pill.style.display = 'none';
+            }
+        });
+    })
+    .catch(function(err) { console.warn('Erreur calcul somme due:', err); });
+}
+
 function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=159")
+    fetch("menu.html?v=160")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -366,6 +437,9 @@ function loadMenu() {
             if (typeof window.__showInstallButtonIfRelevant === 'function') {
                 window.__showInstallButtonIfRelevant();
             }
+
+            // Demande #4 — Somme due par le membre, à côté de la cloche
+            loadSommeDue();
 
             // 3. ON AFFICHE L'EMAIL
             var user = firebase.auth().currentUser;
