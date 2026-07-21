@@ -3099,7 +3099,7 @@ function ouvrirRelanceGlobale() {
             totalMembre += montant;
 
             var relVne = billet.VersionNormaleExiste !== false;
-            detailsLignes += '\n• ' + (billet.NomBillet || '?');
+            detailsLignes += '\n• ' + refBilletLabel(billet);
             if (relVne) detailsLignes += ' — ' + (insc.nb_normaux || 0) + ' normal(aux)';
             if (insc.nb_variantes > 0) detailsLignes += ' — ' + insc.nb_variantes + ' variante(s)';
             detailsLignes += ' — ' + montant.toFixed(2) + ' €';
@@ -3211,15 +3211,7 @@ function ouvrirRecapPaiementGlobal() {
             var prix = parseFloat(billet.Prix || 0);
             var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
             totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
-            var libParts = [];
-            if (billet.Reference) libParts.push(billet.Reference);
-            var milVer = '';
-            if (billet.Millesime) milVer += billet.Millesime;
-            if (billet.Version) milVer += '-' + billet.Version;
-            if (milVer) libParts.push(milVer);
-            if (billet.NomBillet) libParts.push(billet.NomBillet);
-            var libBillet = libParts.join(' ') || '?';
-            billetsSet[libBillet] = true;
+            billetsSet[refBilletLabel(billet)] = true;
         }
         totalGlobal += totalMembre;
 
@@ -3275,6 +3267,19 @@ function copierRecapPaiement() {
 // STORY 9.5 — EXPORT CSV DES INSCRIPTIONS
 // ============================================================
 
+// Demande #8 — libellé billet « Amorce Millésime-Version Nom » (ex. UEBK 2026-14 NAUSICAA)
+function refBilletLabel(billet) {
+    billet = billet || {};
+    var parts = [];
+    if (billet.Reference) parts.push(billet.Reference);
+    var milVer = '';
+    if (billet.Millesime) milVer += billet.Millesime;
+    if (billet.Version) milVer += '-' + billet.Version;
+    if (milVer) parts.push(milVer);
+    if (billet.NomBillet) parts.push(billet.NomBillet);
+    return parts.join(' ') || '?';
+}
+
 function escapeCSV(val) {
     var s = String(val == null ? '' : val);
     // Prévention injection formule Excel (=, +, -, @)
@@ -3323,13 +3328,28 @@ function exporterCSV(billetId) {
         return row.join(';');
     });
 
+    // Demande #7 — ligne de totaux en bas des colonnes de quantité
+    var totalNormaux = 0, totalVariantes = 0;
+    inscActives.forEach(function(ins) { totalNormaux += ins.nb_normaux || 0; totalVariantes += ins.nb_variantes || 0; });
+    var totalRow = ['TOTAL', '', '', '', '', '', '', ''];
+    if (csvVne) totalRow.push(totalNormaux);
+    if (inclureVariantes) totalRow.push(totalVariantes);
+    lines.push(totalRow.join(';'));
+
     // Assemblage CSV avec BOM UTF-8
     var csvContent = '\uFEFF' + headers.join(';') + '\r\n' + lines.join('\r\n');
 
-    // Nom de fichier
+    // Demande #7 — nom de fichier : amorce (Référence) + millésime-version + nom du billet
     var nomBillet = (currentBillet.NomBillet || 'export').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
-    var today = new Date().toISOString().split('T')[0];
-    var nomFichier = 'Collecte_' + nomBillet + '_' + today + '.csv';
+    var refPart = (currentBillet.Reference || '').trim().replace(/\s+/g, '');
+    var milVer = '';
+    if (currentBillet.Millesime) milVer += currentBillet.Millesime;
+    if (currentBillet.Version) milVer += '-' + currentBillet.Version;
+    var fichierParts = ['Collecte'];
+    if (refPart) fichierParts.push(refPart);
+    if (milVer) fichierParts.push(milVer);
+    fichierParts.push(nomBillet);
+    var nomFichier = fichierParts.join('_') + '.csv';
 
     // Téléchargement
     var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

@@ -59,6 +59,7 @@ var collecteursMap = {};
 // Frais de port dynamiques
 var fraisPortCatalogue = [];
 var membrePaysCatalogue = '';
+var membreTerminaisonsCatalogue = ''; // Demande #9 — préférence terminaisons du membre (pré-remplissage pré-collecte)
 
 // Story 5.12 : Compteurs BT automatiques
 var compteurInscriptionsMap = {};
@@ -959,12 +960,13 @@ function loadFraisPortCatalogue(email) {
     var annee = new Date().getFullYear();
     Promise.all([
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
-        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays,masquer_pas_interesse')
+        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays,masquer_pas_interesse,terminaisons_pref')
     ])
     .then(function(results) {
         fraisPortCatalogue = results[0] || [];
         var membre = results[1] && results[1][0];
         membrePaysCatalogue = membre ? (membre.pays || '') : '';
+        membreTerminaisonsCatalogue = membre ? (membre.terminaisons_pref || '') : '';
         var prefChargee = membre ? (membre.masquer_pas_interesse === true) : false;
         if (prefChargee !== masquerPasInteresse) {
             masquerPasInteresse = prefChargee;
@@ -1233,12 +1235,16 @@ function ouvrirInscription(billetId) {
         var champVariantes = varianteActive
             ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (!versionNormaleExiste ? '1' : '0') + '" min="' + (!versionNormaleExiste ? '1' : '0') + '"></div>'
             : '';
+        // Demande #9 — en pré-collecte, pré-remplir le commentaire avec la préférence "terminaisons" du profil
+        var estPreCollecte = billet.Categorie === 'Pré collecte';
+        var commentaireLabel = estPreCollecte ? 'Commentaire (terminaisons souhaitées)' : 'Commentaire';
+        var commentaireDefaut = estPreCollecte ? (membreTerminaisonsCatalogue || '') : '';
         var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + billetId + '">'
             + champNormaux
             + champVariantes
             + '<div class="mini-form-field"><label>Paiement</label><select id="insc-paiement-' + billetId + '"><option value="PayPal">PayPal</option><option value="Chèque">Chèque</option></select></div>'
             + '<div class="mini-form-field"><label>Envoi</label><select id="insc-envoi-' + billetId + '"><option value="Normal">Normal</option><option value="Suivi">Suivi</option><option value="R1">Recommandé R1</option><option value="R2">Recommandé R2</option><option value="R3">Recommandé R3</option></select></div>'
-            + '<div class="mini-form-field"><label>Commentaire</label><textarea id="insc-commentaire-' + billetId + '" rows="2"></textarea></div>'
+            + '<div class="mini-form-field"><label>' + commentaireLabel + '</label><textarea id="insc-commentaire-' + billetId + '" rows="2">' + escapeHtml(commentaireDefaut) + '</textarea></div>'
             + '<div class="mini-form-actions">'
             + '<button onclick="confirmerInscription(' + billetId + ')" class="btn-confirmer-inscription">Confirmer</button>'
             + '<button onclick="annulerInscription(' + billetId + ')" class="btn-annuler-inscription">Annuler</button>'

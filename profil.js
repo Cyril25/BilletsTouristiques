@@ -383,7 +383,7 @@ function loadProfil() {
     var email = window.getActiveEmail();
     if (!email) return;
 
-    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,en_vacances,vacances_jusqu_au')
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,en_vacances,vacances_jusqu_au,terminaisons_pref')
         .then(function(data) {
             if (data && data.length > 0) {
                 prefillProfil(data[0]);
@@ -434,6 +434,10 @@ function prefillProfil(data) {
     if (vacancesEl) vacancesEl.checked = data.en_vacances === true;
     if (dateEl) dateEl.value = data.vacances_jusqu_au || '';
     toggleVacancesDate();
+
+    // Demande #9 — préférence terminaisons
+    var termEl = document.getElementById('profil-terminaisons');
+    if (termEl) termEl.value = data.terminaisons_pref || '';
 }
 
 // Demande #27 — afficher le champ date uniquement quand le mode vacances est coché
@@ -496,7 +500,9 @@ function saveProfil() {
         telephone: telephone,
         en_vacances: enVacances,
         // Date de fin seulement si le mode est actif ET une date est saisie ; sinon null
-        vacances_jusqu_au: (enVacances && dateVacancesEl && dateVacancesEl.value) ? dateVacancesEl.value : null
+        vacances_jusqu_au: (enVacances && dateVacancesEl && dateVacancesEl.value) ? dateVacancesEl.value : null,
+        // Demande #9 — préférence terminaisons (pré-remplissage des pré-inscriptions)
+        terminaisons_pref: (function() { var t = document.getElementById('profil-terminaisons'); return t && t.value.trim() ? t.value.trim() : null; })()
     };
 
     var saveBtn = document.getElementById('profil-save-btn');
