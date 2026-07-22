@@ -20,10 +20,23 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 - Le numéro de demande fait le lien avec la table `demandes` (et l'écran admin-demandes).
 - Après dev, la demande passe en `a_tester` (voir la convention de traitement des demandes).
 
+## Demandes de complexité « L »
+
+Les demandes estimées **L** sont de gros chantiers : elles ne se traitent jamais « au fil de l'eau »
+avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
+
+1. Passer la demande au statut **En cours** (`etat=en_cours`) : le chantier est ouvert, mais en phase d'analyse.
+2. Rédiger une **spec détaillée** (nettement plus poussée que pour une S/M), en **posant les questions
+   nécessaires** au porteur du projet plutôt qu'en faisant des hypothèses implicites.
+3. Utiliser la **méthode BMAD** (PRD, architecture, epics/stories, brainstorming…) si l'ampleur du
+   chantier le justifie ; sinon une spec longue dans ce dossier suffit.
+4. **Ne démarrer le développement qu'une fois l'analyse considérée comme terminée d'un commun accord.**
+
 ## Demandes rattachées
 
 | Demande | Titre | Complexité | Statut | Spec | Commit |
 |---|---|---|---|---|---|
+| [#5](demande-5-signalement-erreur-billet.md) | Signaler une erreur sur un billet + boîte aux lettres admin | L → M | À tester | ✅ | — |
 | [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
 | [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
 | [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |

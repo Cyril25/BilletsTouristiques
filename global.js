@@ -500,7 +500,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=162")
+    fetch("menu.html?v=163")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -592,6 +592,8 @@ function loadMenu() {
 // Sources :
 //   - broadcast (tous) : table `notifications`, non encore vues par le membre (Demande #28)
 //   - signup_request (admin) : demandes d'inscription en attente
+//   - billet_report (admin) : signalements d'erreur sur un billet à l'état `nouveau` (Demande #5)
+//   - signalement_traite (auteur) : ses signalements clôturés qu'il n'a pas encore vus (Demande #5)
 window.__notifs = [];
 
 function refreshNotifications(effectiveRole) {
@@ -656,8 +658,82 @@ function refreshNotifications(effectiveRole) {
         );
     }
 
+    // Demande #5 — Signalements d'erreur sur un billet, à traiter (admins uniquement)
+    if (effectiveRole === 'admin' || effectiveRole === 'superadmin') {
+        promises.push(
+            supabaseFetch('/rest/v1/signalements?etat=eq.nouveau&select=id,billet_ref,motif,created_at&order=created_at.desc')
+                .then(function(rows) {
+                    (rows || []).forEach(function(s) {
+                        window.__notifs.push({
+                            type: 'billet_report',
+                            title: 'Signalement d\'erreur',
+                            subtitle: (s.billet_ref || 'Billet') + ' — ' + window.signalementMotifLabel(s.motif),
+                            date: s.created_at,
+                            href: 'admin-signalements.html'
+                        });
+                    });
+                })
+                .catch(function(e) { console.warn('Notifs signalements : échec chargement', e); })
+        );
+    }
+
+    // Demande #5 — Réponse à MES signalements (clôturés et pas encore vus).
+    // Toujours sur l'email RÉEL : la RLS filtre sur le vrai JWT, pas sur l'identité impersonnée.
+    var realEmail = firebase.auth().currentUser && firebase.auth().currentUser.email;
+    if (realEmail) {
+        promises.push(
+            supabaseFetch('/rest/v1/signalements?auteur_email=eq.' + encodeURIComponent(realEmail) +
+                          '&etat=in.(traite,rejete)&auteur_vu_at=is.null' +
+                          '&select=id,billet_id,billet_ref,etat,reponse_admin,traite_at&order=traite_at.desc')
+                .then(function(rows) {
+                    (rows || []).forEach(function(s) {
+                        window.__notifs.push({
+                            type: 'signalement_traite',
+                            signalementId: s.id,
+                            title: 'Signalement ' + (s.etat === 'traite' ? 'traité' : 'non retenu'),
+                            subtitle: (s.billet_ref || 'Billet') + (s.reponse_admin ? ' — ' + s.reponse_admin : ''),
+                            date: s.traite_at,
+                            href: 'billet.html?id=' + encodeURIComponent(s.billet_id)
+                        });
+                    });
+                })
+                .catch(function(e) { console.warn('Notifs mes signalements : échec chargement', e); })
+        );
+    }
+
     Promise.all(promises).then(renderNotifications);
 }
+
+// Demande #5 — Libellés des motifs de signalement (partagés fiche billet / admin / cloche)
+window.SIGNALEMENT_MOTIFS = [
+    { code: 'image',      label: 'Image incorrecte' },
+    { code: 'infos',      label: 'Nom ou lieu erroné' },
+    { code: 'millesime',  label: 'Millésime ou version' },
+    { code: 'categorie',  label: 'Catégorie ou thème' },
+    { code: 'doublon',    label: 'Billet en double' },
+    { code: 'autre',      label: 'Autre' }
+];
+
+window.signalementMotifLabel = function(code) {
+    for (var i = 0; i < window.SIGNALEMENT_MOTIFS.length; i++) {
+        if (window.SIGNALEMENT_MOTIFS[i].code === code) return window.SIGNALEMENT_MOTIFS[i].label;
+    }
+    return code || '';
+};
+
+// Demande #5 — L'auteur acquitte la réponse à son signalement, puis navigue.
+// Passe par la fonction SECURITY DEFINER : l'auteur n'a aucun droit d'UPDATE sur la table.
+window.marquerSignalementVu = function(e, signalementId, href) {
+    if (e) e.preventDefault();
+    var dest = href || 'index.html';
+    if (!signalementId) { window.location.href = dest; return; }
+    supabaseFetch('/rest/v1/rpc/marquer_signalement_vu', {
+        method: 'POST',
+        body: JSON.stringify({ p_id: signalementId })
+    })
+    .then(function() { window.location.href = dest; })
+    .catch(function() { window.location.href = dest; });
+};
 
 // Demande #28 — marquer une nouveauté comme lue (par ce membre) puis naviguer
 window.marquerNotifLue = function(e, notifId, href) {
@@ -704,11 +780,18 @@ function renderNotifications() {
             if (n.date) {
                 try { dateStr = new Date(n.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }); } catch(e) {}
             }
-            var icon = n.type === 'broadcast' ? '<i class="fa-solid fa-bullhorn"></i> ' : '';
+            var icon = n.type === 'broadcast' ? '<i class="fa-solid fa-bullhorn"></i> '
+                     : n.type === 'billet_report' ? '<i class="fa-solid fa-flag"></i> '
+                     : n.type === 'signalement_traite' ? '<i class="fa-solid fa-flag-checkered"></i> '
+                     : '';
             // Une nouveauté : clic = marquer lue (par ce membre) puis naviguer
-            var onclick = n.type === 'broadcast'
-                ? ' onclick="marquerNotifLue(event, \'' + n.notifId + '\', \'' + notifEscHtml(n.href) + '\')"'
-                : '';
+            // Un signalement clôturé : clic = acquitter (auteur_vu_at) puis naviguer
+            var onclick = '';
+            if (n.type === 'broadcast') {
+                onclick = ' onclick="marquerNotifLue(event, \'' + n.notifId + '\', \'' + notifEscHtml(n.href) + '\')"';
+            } else if (n.type === 'signalement_traite') {
+                onclick = ' onclick="marquerSignalementVu(event, ' + Number(n.signalementId) + ', \'' + notifEscHtml(n.href) + '\')"';
+            }
             html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '"' + onclick + '>' +
                     '<div class="notif-item-title">' + icon + notifEscHtml(n.title) + '</div>' +
                     '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +

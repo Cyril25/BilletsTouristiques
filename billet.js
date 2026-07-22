@@ -194,7 +194,141 @@
         }
 
         document.title = (b.Reference || 'Billet') + ' — ' + (b.NomBillet || 'Fiche Billet');
+
+        // Demande #5 — bouton « Signaler une erreur »
+        currentBillet = b;
+        refreshSignalementUi();
     }
+
+    // ============================================================
+    // Demande #5 — Signalement d'erreur sur le billet
+    // ============================================================
+    var currentBillet = null;
+
+    // Email RÉEL (jamais l'identité impersonnée) : la RLS de `signalements` compare
+    // auteur_email au vrai JWT — un signalement créé en impersonation appartient donc
+    // au superadmin, c'est le comportement retenu (spec #5, point (b)).
+    function realEmail() {
+        return (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+    }
+
+    // Cherche un signalement OUVERT de ce membre sur ce billet, et affiche
+    // soit le bouton, soit l'état « signalement en cours ».
+    function refreshSignalementUi() {
+        var btn = document.getElementById('btn-signaler');
+        var etat = document.getElementById('signalement-etat');
+        if (!btn || !etat || !currentBillet) return;
+
+        var email = realEmail();
+        if (!email) return;
+
+        supabaseFetch('/rest/v1/signalements?billet_id=eq.' + encodeURIComponent(currentBillet.id) +
+                      '&auteur_email=eq.' + encodeURIComponent(email) +
+                      '&etat=in.(nouveau,en_cours)&select=id,created_at&limit=1')
+            .then(function(rows) {
+                if (rows && rows.length) {
+                    var d = rows[0].created_at ? new Date(rows[0].created_at).toLocaleDateString('fr-FR') : '';
+                    etat.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Signalement en cours' +
+                                     (d ? ' (envoyé le ' + d + ')' : '');
+                    etat.classList.remove('hidden');
+                    btn.classList.add('hidden');
+                } else {
+                    btn.classList.remove('hidden');
+                    etat.classList.add('hidden');
+                }
+            })
+            .catch(function() {
+                // En cas d'échec de lecture, on laisse le bouton disponible :
+                // la contrainte SQL empêchera de toute façon le doublon.
+                btn.classList.remove('hidden');
+            });
+    }
+
+    window.ouvrirModaleSignalement = function() {
+        if (!currentBillet) return;
+        fermerModaleSignalement();
+
+        var options = '';
+        window.SIGNALEMENT_MOTIFS.forEach(function(m) {
+            options += '<option value="' + m.code + '">' + escapeHtml(m.label) + '</option>';
+        });
+
+        var overlay = document.createElement('div');
+        overlay.className = 'admin-modal-overlay';
+        overlay.id = 'signalement-modal-overlay';
+        overlay.innerHTML =
+            '<div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="signalement-modal-title">' +
+                '<h2 class="admin-modal-title" id="signalement-modal-title"><i class="fa-solid fa-flag"></i> Signaler une erreur</h2>' +
+                '<p class="admin-modal-desc">Merci de décrire ce qui ne va pas : un administrateur vérifiera et corrigera la fiche.</p>' +
+                '<p class="admin-modal-billet-name">' + escapeHtml(currentBillet.Reference || '') + ' — ' + escapeHtml(currentBillet.NomBillet || '') + '</p>' +
+                '<div class="admin-modal-input-group">' +
+                    '<label class="admin-modal-label" for="signalement-motif">Type d\'erreur</label>' +
+                    '<select class="admin-modal-input" id="signalement-motif">' + options + '</select>' +
+                '</div>' +
+                '<div class="admin-modal-input-group">' +
+                    '<label class="admin-modal-label" for="signalement-commentaire">Description <span style="color:var(--color-danger)">*</span></label>' +
+                    '<textarea class="admin-modal-input" id="signalement-commentaire" rows="4" maxlength="1000" placeholder="Ex. : le millésime affiché est 2022, alors que le billet indique 2023."></textarea>' +
+                '</div>' +
+                '<p id="signalement-erreur" class="signalement-erreur hidden"></p>' +
+                '<div class="admin-modal-actions">' +
+                    '<button type="button" class="admin-modal-btn admin-modal-btn-secondary" onclick="fermerModaleSignalement()">Annuler</button>' +
+                    '<button type="button" class="admin-modal-btn admin-modal-btn-danger" id="signalement-envoyer" onclick="envoyerSignalement()"><i class="fa-solid fa-paper-plane"></i> Envoyer</button>' +
+                '</div>' +
+            '</div>';
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) fermerModaleSignalement();
+        });
+        document.body.appendChild(overlay);
+        var ta = document.getElementById('signalement-commentaire');
+        if (ta) ta.focus();
+    };
+
+    window.fermerModaleSignalement = function() {
+        var el = document.getElementById('signalement-modal-overlay');
+        if (el) el.remove();
+    };
+
+    window.envoyerSignalement = function() {
+        if (!currentBillet) return;
+        var motif = document.getElementById('signalement-motif').value;
+        var commentaire = (document.getElementById('signalement-commentaire').value || '').trim();
+        var erreurEl = document.getElementById('signalement-erreur');
+        var btnEnvoyer = document.getElementById('signalement-envoyer');
+
+        if (!commentaire) {
+            erreurEl.textContent = 'Merci de décrire l\'erreur constatée.';
+            erreurEl.classList.remove('hidden');
+            return;
+        }
+        erreurEl.classList.add('hidden');
+        btnEnvoyer.disabled = true;
+
+        supabaseFetch('/rest/v1/signalements', {
+            method: 'POST',
+            headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+                billet_id: currentBillet.id,
+                billet_ref: currentBillet.Reference || null,
+                auteur_email: realEmail(),
+                motif: motif,
+                commentaire: commentaire
+            })
+        })
+        .then(function() {
+            fermerModaleSignalement();
+            refreshSignalementUi();
+        })
+        .catch(function(err) {
+            btnEnvoyer.disabled = false;
+            // 23505 = violation de l'index unique (un signalement déjà ouvert sur ce billet)
+            var msg = (err && err.message) || '';
+            erreurEl.textContent = /23505|duplicate/i.test(msg)
+                ? 'Vous avez déjà un signalement en cours sur ce billet.'
+                : 'Envoi impossible : ' + (msg || 'erreur réseau') + '.';
+            erreurEl.classList.remove('hidden');
+        });
+    };
 
     function showError() {
         document.getElementById('billet-loading').classList.add('hidden');

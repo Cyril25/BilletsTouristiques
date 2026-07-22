@@ -41,8 +41,13 @@
                         <p id="billet-theme-row"><i class="fa-solid fa-palette"></i> <span id="billet-theme"></span></p>
                         <p id="billet-commentaire-row"><i class="fa-solid fa-comment"></i> <span id="billet-commentaire"></span></p>
                     </div>
-                    <div style="margin-top:24px;">
+                    <div class="billet-fiche-actions">
                         <a href="billets.html" class="btn-mode"><i class="fa-solid fa-arrow-left"></i> Retour à l'annuaire</a>
+                        <!-- Demande #5 — Signaler une erreur sur ce billet -->
+                        <button id="btn-signaler" type="button" class="btn-signaler hidden" onclick="ouvrirModaleSignalement()">
+                            <i class="fa-solid fa-flag"></i> Signaler une erreur
+                        </button>
+                        <span id="signalement-etat" class="signalement-etat hidden"></span>
                     </div>
                 </div>
             </div>
