@@ -225,10 +225,17 @@ function renderCollectesList() {
     // Demande #14 — sortir les collectes réparties de la liste, quelle que soit la catégorie :
     // en pratique la répartition se fait surtout après le passage en « Terminé ».
     // Deux paliers demandés : tout en enveloppe, puis tout expédié.
+    function estFermee(b)   { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; }
     function estRepartie(b) { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousRepartis); }
-    function estEnvoyee(b)  { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousExpedies); }
-    var billetsOpen     = billetsOpenAll.filter(function(b) { return !estRepartie(b); });
-    var billetsClosed   = billetsClosedAll.filter(function(b) { return !estRepartie(b); });
+    // Une collecte fermée sans aucun inscrit (hors bénéficiaire) n'a plus rien à envoyer :
+    // c'est le cas des anciennes collectes de l'ex-système → palier « billets envoyés ».
+    function estEnvoyee(b) {
+        var s = mesInscriptionsParBillet[b.id];
+        if (!s || s.total === 0) return estFermee(b);
+        return !!s.tousExpedies;
+    }
+    var billetsOpen     = billetsOpenAll.filter(function(b) { return !estRepartie(b) && !estEnvoyee(b); });
+    var billetsClosed   = billetsClosedAll.filter(function(b) { return !estRepartie(b) && !estEnvoyee(b); });
     var billetsRepartis = mesBillets.filter(function(b) { return estRepartie(b) && !estEnvoyee(b); });
     var billetsEnvoyes  = mesBillets.filter(estEnvoyee);
     var dateDesc = function(a, b) { return (b.Date || '').localeCompare(a.Date || ''); };

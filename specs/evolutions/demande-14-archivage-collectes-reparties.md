@@ -2,7 +2,7 @@
 
 - **Épic :** Corrections et évolutions
 - **Demande :** #14 · basse / M · collecteurs · Mes collectes
-- **Statut :** À tester (correctif du 2026-07-22) · **Commits :** `5572556` + correctif
+- **Statut :** À tester (correctifs du 2026-07-22) · **Commits :** `5572556` + `9749755` + correctif #2
 
 ## Contexte
 
@@ -15,9 +15,10 @@
 
 ## Décisions
 
-- Deux paliers calculés, sur les inscrits **hors bénéficiaire** d'une collecte ayant ≥ 1 inscrit :
-  - **Répartie** = tous placés en enveloppe (`statut_livraison` = `pret_a_envoyer` ou `expedie`) ;
-  - **Envoyée** = tous `expedie` (implique « répartie »).
+- Deux paliers calculés, sur les inscrits **hors bénéficiaire** :
+  - **Répartie** = ≥ 1 inscrit et tous placés en enveloppe (`statut_livraison` = `pret_a_envoyer` ou `expedie`) ;
+  - **Envoyée** = ≥ 1 inscrit et tous `expedie` (implique « répartie »), **ou** collecte
+    fermée sans aucun inscrit (anciennes collectes de l'ex-système : plus rien à envoyer).
 - Calcul dans `mesInscriptionsParBillet` (compteurs `repartis`/`expedies`, flags
   `tousRepartis`/`tousExpedies`), via `statut_livraison` ajouté à la requête d'inscriptions.
 - Affichage : ces collectes sortent de la liste (actives **et** fermées) vers deux
@@ -53,6 +54,31 @@ Contrôle sur les données de prod après correctif (56 réparties + 22 envoyée
 Limite connue : les collectes supplémentaires (table `collectes`) ne sont pas concernées
 (aucune inscription avec `collecte_id` en prod à ce jour).
 
+## Correctif n°2 du 2026-07-22 (retour Cyril : « les vieilles collectes apparaissent encore »)
+
+Les collectes de l'**ancien système** n'ont aucune inscription en base : le critère
+`total > 0` les excluait des deux paliers, elles restaient donc toutes dans la liste des
+collectes fermées (l'essentiel du volume pour la plupart des collecteurs). Une collecte
+**fermée et sans inscrit** n'a par définition plus rien à envoyer → elle bascule
+directement dans « Collectes terminées — billets envoyés ». Les collectes **ouvertes**
+sans inscrit restent visibles (elles attendent des inscriptions).
+
+Contrôle sur les données de prod après correctif (extraits, 81 collecteurs au total) :
+
+| Collecteur | Total | Actives | Fermées | Réparties | Envoyées | dont sans inscrit |
+|---|---|---|---|---|---|---|
+| Jean-Philippe | 1618 | 4 | 58 | 25 | 1531 | 1531 |
+| Damien PAVE | 584 | 0 | 4 | 2 | 578 | 578 |
+| Laura NCY | 587 | 0 | 30 | 0 | 557 | 557 |
+| Antoine | 403 | 0 | 17 | 20 | 366 | 366 |
+| Alain Grumelard | 267 | 1 | 12 | 0 | 254 | 254 |
+| Cyril | 123 | 1 | 2 | 3 | 117 | 95 |
+| Caro CHATAIN | 51 | 0 | 2 | 3 | 46 | 46 |
+| Marc LAGRANGE | 11 | 0 | 1 | 1 | 9 | 9 |
+
+La liste principale ne garde donc plus que quelques dizaines de collectes par collecteur
+au lieu de plusieurs centaines.
+
 ## Réalisation
 
 - `mes-collectes.js` (`loadMesCollectes` : `statut_livraison` + `tousRepartis` ;
@@ -60,3 +86,7 @@ Limite connue : les collectes supplémentaires (table `collectes`) ne sont pas c
   `style.css` (`.btn-toggle-reparties`), `sw.js` (`billets-v250`). Commit `5572556`.
 - Correctif : `mes-collectes.js` (critère étendu à toutes les catégories, second palier
   `tousExpedies`, sections en fin de page via `sectionArchive`), `sw.js` (`billets-v255`).
+  Commit `9749755`.
+- Correctif n°2 : `mes-collectes.js` (`estFermee` + `estEnvoyee` couvrant les collectes
+  fermées sans inscrit, exclusion des envoyées des listes actives/fermées),
+  `sw.js` (`billets-v256`), `global.js` (`menu.html?v=164`).
