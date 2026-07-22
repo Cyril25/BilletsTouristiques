@@ -111,7 +111,7 @@ function loadMesCollectes() {
                     var ins = inscriptions[i];
                     if (!mesInscriptionsParBillet[ins.billet_id]) {
                         mesInscriptionsParBillet[ins.billet_id] = {
-                            total: 0, confirmes: 0, repartis: 0,
+                            total: 0, confirmes: 0, repartis: 0, expedies: 0,
                             billetsTotal: { normaux: 0, variantes: 0 },
                             billetsEnvoyes: { normaux: 0, variantes: 0 }
                         };
@@ -123,6 +123,7 @@ function loadMesCollectes() {
                         if (ins.statut_paiement === 'confirme') st.confirmes++;
                         // Demande #14 — "réparti" = placé en enveloppe (prêt à envoyer ou expédié)
                         if (ins.statut_livraison === 'pret_a_envoyer' || ins.statut_livraison === 'expedie') st.repartis++;
+                        if (ins.statut_livraison === 'expedie') st.expedies++;
                     }
                     var nn = ins.nb_normaux || 0;
                     var nv = ins.nb_variantes || 0;
@@ -134,10 +135,11 @@ function loadMesCollectes() {
                     }
                 }
             }
-            // Demande #14 — collecte "répartie" : au moins un inscrit et tous placés en enveloppe
+            // Demande #14 — deux paliers : tout en enveloppe ("réparti"), puis tout expédié ("envoyé")
             Object.keys(mesInscriptionsParBillet).forEach(function(bid) {
                 var s = mesInscriptionsParBillet[bid];
                 s.tousRepartis = s.total > 0 && s.repartis === s.total;
+                s.tousExpedies = s.total > 0 && s.expedies === s.total;
             });
             loadMesCollectesSupplementaires();
         })
@@ -220,15 +222,19 @@ function renderCollectesList() {
     // Séparer billets principaux ouverts / fermés
     var billetsOpenAll   = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
     var billetsClosedAll = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
-    // Demande #14 — séparer les collectes réparties (tous les billets en enveloppe),
-    // quelle que soit la catégorie : en pratique la répartition se fait surtout en « Terminé »
+    // Demande #14 — sortir les collectes réparties de la liste, quelle que soit la catégorie :
+    // en pratique la répartition se fait surtout après le passage en « Terminé ».
+    // Deux paliers demandés : tout en enveloppe, puis tout expédié.
     function estRepartie(b) { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousRepartis); }
+    function estEnvoyee(b)  { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousExpedies); }
     var billetsOpen     = billetsOpenAll.filter(function(b) { return !estRepartie(b); });
     var billetsClosed   = billetsClosedAll.filter(function(b) { return !estRepartie(b); });
-    var billetsRepartis = mesBillets.filter(estRepartie);
+    var billetsRepartis = mesBillets.filter(function(b) { return estRepartie(b) && !estEnvoyee(b); });
+    var billetsEnvoyes  = mesBillets.filter(estEnvoyee);
     var dateDesc = function(a, b) { return (b.Date || '').localeCompare(a.Date || ''); };
     billetsOpen.sort(dateDesc);
     billetsRepartis.sort(dateDesc);
+    billetsEnvoyes.sort(dateDesc);
     billetsClosed.sort(dateDesc);
 
     // Séparer collectes supplémentaires ouvertes / fermées
@@ -294,7 +300,7 @@ function renderCollectesList() {
         return h;
     }
 
-    // Ordre : collectes actives → supp ouvertes → fermées → supp fermées → [section repliable : réparties]
+    // Ordre : actives → supp ouvertes → fermées → supp fermées → [replié : réparties] → [replié : envoyées]
     var html = '<div class="collectes-cards">';
     for (var i = 0; i < billetsOpen.length; i++) html += renderBilletCard(billetsOpen[i]);
     for (var j = 0; j < suppOpen.length; j++) html += renderCollecteSupplementaireCard(suppOpen[j].collecte, suppOpen[j].billet);
@@ -307,22 +313,26 @@ function renderCollectesList() {
         html += '</div>';
     }
 
-    // Demande #14 — section repliable des collectes réparties (archivées en bas de page)
-    if (billetsRepartis.length > 0) {
-        html += '<button class="btn-toggle-reparties" onclick="toggleReparties(this)">'
-            + '<i class="fa-solid fa-box-archive"></i> Collectes réparties (' + billetsRepartis.length + ')'
+    // Demande #14 — sections repliables archivées en bas de page (repliées par défaut)
+    function sectionArchive(id, icone, libelle, billets) {
+        if (billets.length === 0) return '';
+        var s = '<button class="btn-toggle-reparties" onclick="toggleReparties(this, \'' + id + '\')">'
+            + '<i class="fa-solid ' + icone + '"></i> ' + libelle + ' (' + billets.length + ')'
             + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
-        html += '<div id="collectes-reparties" class="collectes-cards" style="display:none">';
-        for (var r = 0; r < billetsRepartis.length; r++) html += renderBilletCard(billetsRepartis[r]);
-        html += '</div>';
+        s += '<div id="' + id + '" class="collectes-cards" style="display:none">';
+        for (var n = 0; n < billets.length; n++) s += renderBilletCard(billets[n]);
+        s += '</div>';
+        return s;
     }
+    html += sectionArchive('collectes-reparties', 'fa-box-archive', 'Billets reçus et répartis — envois à faire', billetsRepartis);
+    html += sectionArchive('collectes-envoyees', 'fa-circle-check', 'Collectes terminées — billets envoyés', billetsEnvoyes);
 
     container.innerHTML = onboardingHtml + html;
 }
 
-// Demande #14 — replier/déplier la section des collectes réparties
-function toggleReparties(btn) {
-    var sec = document.getElementById('collectes-reparties');
+// Demande #14 — replier/déplier une section de collectes archivées
+function toggleReparties(btn, sectionId) {
+    var sec = document.getElementById(sectionId || 'collectes-reparties');
     if (!sec) return;
     var open = sec.style.display !== 'none';
     sec.style.display = open ? 'none' : '';
