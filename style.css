@@ -1799,7 +1799,7 @@ body.login-page {
     transform: translateY(-1px);
 }
 
-/* --- Pagination admin --- */
+/* --- Pagination (liste admin + page Nouveautés, cf. demande #30) --- */
 .admin-pagination {
     display: flex;
     align-items: center;
