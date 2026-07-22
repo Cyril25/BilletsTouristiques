@@ -167,6 +167,31 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
   payées (billets 5393 ITIF / 5395 VEHH) → **purgeables** (aucune valeur métier,
   conforme au principe directeur), et 3 `pas_interesse` qui migrent vers
   `collection` de toute façon.
+- **Q2bis — Cycle de vie de la pré-collecte abandonnée (précision Cyril,
+  2026-07-22).** Flux nominal : à la création d'un billet on lance en général une
+  **pré-collecte** (sans savoir encore si le billet sera obtenable). Si on se rend
+  compte qu'il ne sera pas collectable : **on supprime la pré-collecte** (on ne
+  passe ni la collecte ni le billet en « Pas de collecte » à la main). Le billet
+  n'ayant plus aucune collecte, il retombe sur le statut manuel avec **« Pas de
+  collecte » par défaut**, modifiable ensuite en « Jamais édité, projet » (ou
+  « Masqué »). Si un jour on relance une collecte, la dérivation reprend la main
+  et le statut manuel s'efface.
+  Le partage des rôles devient net : « Pré collecte / Collecte / Terminé » sont
+  des états **de collecte** (dérivés sur le billet) ; « Pas de collecte / Projet /
+  Masqué » des états **du billet seul** (aucune collecte).
+  **Implications à traiter en tech-spec :**
+  - La FK `ON DELETE RESTRICT` interdit de supprimer une collecte portant des
+    inscriptions → la suppression d'une pré-collecte doit supprimer d'abord ses
+    pré-inscriptions automatiques, et n'être **autorisée que si toutes les
+    inscriptions rattachées sont sans valeur métier** (`changed_by='pré-inscription'`,
+    non payé) — garanti en pratique puisque le paiement est bloqué en pré-collecte ;
+    sinon la suppression est refusée (pas de cascade silencieuse).
+  - Le mécanisme de dérivation doit poser « Pas de collecte » comme défaut à la
+    disparition de la dernière collecte (la branche d'avril mettait NULL + badge
+    de saisie manuelle — à aligner sur ce défaut).
+  - Les billets 5393/5395 d'AUD-N1 sont exactement ce cas historique (pré-collecte
+    abandonnée dont les pré-inscriptions sont restées) : le nouveau flux les
+    aurait purgées proprement.
 - **Q3 — Environnement de validation : tranché.** **Pas de réactivation de
   TestEnv ni de staging déployé** (risque assumé : la lourdeur du staging est ce
   qui a fait mourir la v1 d'avril). Stratégie : tout préparer sur une **branche
@@ -227,8 +252,9 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
    Décisions ci-dessus). Seul point encore ouvert : valider la recommandation Q4
    (rien ajouter maintenant pour #1/#22) — décision par défaut si pas d'objection.
 2. Amendement formel du PRD/architecture (ou addendum) intégrant les décisions
-   Q1–Q6 + la règle anti-réinscription auto (Q1) + le masquage catalogue de
-   `pas_interesse` (Q5).
+   Q1–Q6 + la règle anti-réinscription auto (Q1) + le cycle de vie de la
+   pré-collecte abandonnée (Q2bis : suppression + retombée en « Pas de collecte »)
+   + le masquage catalogue de `pas_interesse` (Q5).
 3. Rejeu des audits AUD1–6 (AUD1 déjà invalidé) + AUD-N2/N3/N4, résultats figés
    dans la tech-spec.
 4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
