@@ -68,4 +68,4 @@ sur les notifs ciblées, `Précédent`/`Suivant` désactivés aux extrémités, 
   (conteneur `#notifs-pagination`), `style.css` (commentaire de section), `sw.js` (cache `billets-v259`),
   `global.js` (cache-buster `menu.html?v=167`).
 - **Migration :** aucune.
-- **Commit :** `d8ab13b` — feat(notifications): demande #30 - pagination de la page Nouveautes.
+- **Commit :** `5c1f1e1` — feat(notifications): demande #30 - pagination de la page Nouveautes.
