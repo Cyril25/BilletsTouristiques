@@ -369,11 +369,27 @@ lecture seule).
   la v2 + `compteurs_inscriptions_par_collecte()` de la branche n'ont jamais été
   déployées, la tech-spec v2 devra les créer) ; `marquer_signalement_vu`,
   `check_enveloppe_membre_update` + les 6 fonctions trigger vues en S4.
-- **S8 (ajouté suite à S4, reste à jouer)** : corps des 5 fonctions trigger
-  critiques (`sync_billet_date_effective`, `sync_billet_date_effective_from_billet`,
-  `set_inscription_audit`, `enforce_inscription_statut_paiement`,
-  `enforce_enveloppe_membre_update`) — bloc S8 ajouté au script
-  `scripts/audit-refonte-2026-07.sql`.
+- ✅ **S8 — corps des fonctions trigger** (joué par Cyril le 2026-07-22) :
+  - `set_inscription_audit` : sur UPDATE, force `changed_by :=
+    COALESCE(jwt_email, 'système')` et `last_changed := NOW()` → **confirmé : le
+    backfill doit `DISABLE TRIGGER trg_inscription_audit`** pendant l'UPDATE des
+    4 616 lignes, puis le réactiver (sinon tout l'audit est écrasé).
+  - `enforce_inscription_statut_paiement` : **bypass explicite si pas de JWT**
+    (SQL Editor / service role) et retour immédiat si le statut ne change pas →
+    **ne bloque pas la migration**. ⚠ Mais il scope le collecteur via
+    `billets."Collecteur"` → à réécrire vers `collectes.collecteur` (s'ajoute
+    aux 3 policies RLS dans la liste des dépendants de `billets.Collecteur`).
+  - `sync_billet_date_effective` (AFTER sur collectes) et
+    `sync_billet_date_effective_from_billet` (BEFORE sur billets) : calculent
+    `GREATEST(dates du billet, MAX(dates des collectes))` → **lisent encore
+    `billets.DatePre/DateColl/DateFin`** ; à réécrire (dérivation 100 % collectes)
+    au moment du DROP de ces colonnes — plpgsql étant lié tardivement, le DROP ne
+    casse pas à froid mais au premier déclenchement.
+  - `enforce_enveloppe_membre_update` : aucune dépendance billets/collectes,
+    hors impact.
+
+**→ VERROU D'AUDIT LEVÉ le 2026-07-22** (hors AUD-N3 intégré à la tech-spec v2
+et re-count au jour J). La tech-spec migration v2 peut être écrite.
 - ✅ **S7 — index** (joué par Cyril le 2026-07-22) :
   - `inscriptions` : PK id · **UK `(billet_id, membre_email)`
     (`inscriptions_billet_id_membre_email_key`)** — confirme AUD2, c'est elle
@@ -409,9 +425,14 @@ lecture seule).
    ci-dessus. **Reste :** (a) **S8** — corps des 5 fonctions trigger (bloc
    ajouté au script, à jouer par Cyril) ; (b) AUD-N3 (inventaire code détaillé)
    intégré à la tech-spec v2 ; (c) re-count au jour J.
-4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
-   amendements) + plan de bascule : branche longue durée, test à blanc du SQL
-   sur copie jetable Supabase, merge quand sûr, pas de staging déployé (Q3).
+4. ~~Nouvelle tech-spec de migration~~ ✅ rédigée le 2026-07-22 :
+   `_bmad-output/implementation-artifacts/tech-spec-16-refonte-collectes-v2.md`
+   (locale, gitignorée — remplace la tech-spec 13). Blocs A0–A13 (SQL), B1–B6
+   (admin), C1–C7 (membre + nouveaux lecteurs), D (cache), E0–E2 (runbook sans
+   staging), AC21–AC26 ajoutés. **4 décisions DV2-1..4 à valider par Cyril**
+   avant dev : FK collectes CASCADE→RESTRICT, marqueur « Collecte initiale »,
+   `billets.Collecteur` conservé en phase 1 (bascule scoping = dette tracée),
+   retrait du statut de la colonne `Recherche`.
 5. Dev (nouvelle branche, la branche d'avril restant en référence), validation
    à blanc, bascule en fenêtre de maintenance, surveillance 24 h, correctifs au
    fil de l'eau.
