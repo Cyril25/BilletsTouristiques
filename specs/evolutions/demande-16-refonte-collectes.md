@@ -251,10 +251,10 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
 1. ~~Réponses de Cyril aux questions Q1–Q6~~ ✅ obtenues le 2026-07-22 (section
    Décisions ci-dessus). Seul point encore ouvert : valider la recommandation Q4
    (rien ajouter maintenant pour #1/#22) — décision par défaut si pas d'objection.
-2. Amendement formel du PRD/architecture (ou addendum) intégrant les décisions
-   Q1–Q6 + la règle anti-réinscription auto (Q1) + le cycle de vie de la
-   pré-collecte abandonnée (Q2bis : suppression + retombée en « Pas de collecte »)
-   + le masquage catalogue de `pas_interesse` (Q5).
+2. ~~Amendement formel du PRD/architecture~~ ✅ fait le 2026-07-22 :
+   [addendum-refonte-collectes-2026-07.md](../../_bmad-output/planning-artifacts/addendum-refonte-collectes-2026-07.md)
+   (confirmations, amendements AM1–AM7, nouvelles exigences N1–N4, hors périmètre) ;
+   renvois posés en tête du PRD, de l'architecture et de la tech-spec 13.
 3. Rejeu des audits AUD1–6 (AUD1 déjà invalidé) + AUD-N2/N3/N4, résultats figés
    dans la tech-spec.
 4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
