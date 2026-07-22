@@ -102,7 +102,10 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&collecte_id=is.null&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes');
+            // Demande #16 — plus de filtre collecte_id=is.null : après la migration
+            // toute inscription porte une collecte, ce filtre viderait la vue.
+            // Les compteurs de la carte billet agrègent désormais toutes ses collectes.
+            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000');
         })
         .then(function(inscriptions) {
             mesInscriptionsParBillet = {};
@@ -984,21 +987,43 @@ function confirmerCloturer() {
     fermerModalCloturer();
     if (!billetId) return;
 
+    // Demande #16 — on clôture TOUJOURS une collecte, jamais le billet : son
+    // statut est dérivé des collectes et une écriture directe est refusée par la
+    // base. Poser categorie='Terminé' (et pas seulement date_fin) est ce qui fait
+    // basculer le billet.
     var today = new Date().toISOString().slice(0, 10);
+    var cloture = { categorie: 'Terminé', date_fin: today };
+    var ABANDON = {};   // sentinelle : un PATCH réussi résout à null (204), pas utilisable comme marqueur
     var patchPromise;
+
     if (currentCollecteSupp !== null) {
         patchPromise = supabaseFetch('/rest/v1/collectes?id=eq.' + currentCollecteSupp.id, {
             method: 'PATCH',
-            body: JSON.stringify({ date_fin: today })
+            body: JSON.stringify(cloture)
         });
     } else {
-        patchPromise = supabaseFetch('/rest/v1/billets?id=eq.' + billetId, {
-            method: 'PATCH',
-            body: JSON.stringify({ Categorie: 'Terminé', DateFin: today })
-        });
+        patchPromise = supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&select=id,nom,categorie')
+            .then(function(collectes) {
+                var ouvertes = (collectes || []).filter(function(c) {
+                    return c.categorie !== 'Terminé';
+                });
+                if (ouvertes.length === 0) {
+                    showToast('Aucune collecte ouverte à clôturer sur ce billet', 'error');
+                    return ABANDON;
+                }
+                if (ouvertes.length > 1) {
+                    showToast('Ce billet a ' + ouvertes.length + ' collectes ouvertes : clôture-les depuis leur fiche', 'error');
+                    return ABANDON;
+                }
+                return supabaseFetch('/rest/v1/collectes?id=eq.' + ouvertes[0].id, {
+                    method: 'PATCH',
+                    body: JSON.stringify(cloture)
+                });
+            });
     }
     patchPromise
-    .then(function() {
+    .then(function(res) {
+        if (res === ABANDON) return;
         showToast('Collecte clôturée');
         loadMesCollectes();
     })

@@ -77,7 +77,10 @@ var CATEGORIE_FLOW = {
     'Pas de collecte': null,
     'Terminé': null
 };
-var CATEGORIE_DEFAULT = 'Pré collecte';
+// Demande #16 — un billet naît sans collecte : son statut par défaut est donc un
+// statut manuel. « Pré collecte » est désormais un statut DÉRIVÉ, refusé par la
+// base à la création (il découle de la collecte, créée juste après le billet).
+var CATEGORIE_DEFAULT = 'Pas de collecte';
 
 // Couleurs des categories
 var CATEGORIE_COLORS = {
@@ -515,7 +518,9 @@ function loadAdminBillets() {
 // 4a-bis. CHARGEMENT DES COMPTEURS D'INSCRIPTIONS
 // ============================================================
 function loadAdminCollectes() {
-    return supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,date_fin')
+    // Demande #16 — limit explicite : après la migration il y a une collecte par
+    // billet (~5 300), au-delà du plafond de 1000 lignes de PostgREST.
+    return supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,date_fin&limit=10000')
         .then(function(data) {
             adminCollectesByBillet = {};
             adminCollecteInscriptionCounts = {};
@@ -528,17 +533,16 @@ function loadAdminCollectes() {
                 if (adminBillets.length > 0) renderAdminCards();
                 return;
             }
-            var ids = collectes.map(function(c) { return c.id; });
-            return supabaseFetch('/rest/v1/inscriptions?collecte_id=in.(' + ids.join(',') + ')&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+            // Demande #16 — RPC au lieu d'un in.(<tous les uuid>) : avec une collecte
+            // par billet, l'URL construite dépassait toute limite acceptable.
+            return supabaseFetch('/rest/v1/rpc/compteurs_inscriptions_par_collecte')
                 .then(function(rows) {
                     (rows || []).forEach(function(row) {
-                        if (!adminCollecteInscriptionCounts[row.collecte_id]) {
-                            adminCollecteInscriptionCounts[row.collecte_id] = { count: 0, normaux: 0, variantes: 0 };
-                        }
-                        var c = adminCollecteInscriptionCounts[row.collecte_id];
-                        c.count++;
-                        c.normaux += (row.nb_normaux || 0);
-                        c.variantes += (row.nb_variantes || 0);
+                        adminCollecteInscriptionCounts[row.collecte_id] = {
+                            count: row.total_count || 0,
+                            normaux: row.total_normaux || 0,
+                            variantes: row.total_variantes || 0
+                        };
                     });
                     if (adminBillets.length > 0) renderAdminCards();
                 });
@@ -548,18 +552,20 @@ function loadAdminCollectes() {
         });
 }
 
+// Demande #16 — compteurs par billet via RPC : toutes les inscriptions du billet
+// (toutes collectes confondues), agrégées côté serveur. Remplace le filtre
+// collecte_id=is.null, vide après la migration, et lève au passage la limite
+// de 1000 lignes de PostgREST qui tronquait déjà les compteurs.
 function loadAdminInscriptionCounts() {
-    return supabaseFetch('/rest/v1/inscriptions?select=billet_id,nb_normaux,nb_variantes&pas_interesse=eq.false&collecte_id=is.null')
+    return supabaseFetch('/rest/v1/rpc/compteurs_inscriptions')
         .then(function(data) {
             adminInscriptionCounts = {};
             (data || []).forEach(function(row) {
-                if (!adminInscriptionCounts[row.billet_id]) {
-                    adminInscriptionCounts[row.billet_id] = { count: 0, normaux: 0, variantes: 0 };
-                }
-                var c = adminInscriptionCounts[row.billet_id];
-                c.count++;
-                c.normaux += (row.nb_normaux || 0);
-                c.variantes += (row.nb_variantes || 0);
+                adminInscriptionCounts[row.billet_id] = {
+                    count: row.total_count || 0,
+                    normaux: row.total_normaux || 0,
+                    variantes: row.total_variantes || 0
+                };
             });
             // Re-render si les billets sont déjà chargés
             if (adminBillets.length > 0) renderAdminCards();
@@ -783,7 +789,10 @@ function renderAdminCards() {
             // Badges collectes supplémentaires
             (function() {
                 var collectes = adminCollectesByBillet[docId] || [];
-                if (collectes.length === 0) return '';
+                // Demande #16 — après la migration chaque billet a au moins une
+                // collecte : on ne détaille que s'il y en a plusieurs, sinon le
+                // badge du dessus (total du billet) dit déjà tout.
+                if (collectes.length < 2) return '';
                 var today = new Date().toISOString().slice(0, 10);
                 return collectes.map(function(c) {
                     var isOpen = !c.date_fin || c.date_fin > today;
