@@ -21,7 +21,6 @@ const STATIC_ASSETS = [
     'liens.html',
     'menu.html',
     'style.css',
-    'app.js',
     'global.js',
     'users.html',
     'users.js',

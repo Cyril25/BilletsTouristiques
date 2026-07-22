@@ -19,7 +19,7 @@ Application web privée pour la gestion de la collection de billets et jetons to
 | `login.html` | Page de connexion Google |
 | `menu.html` | Composant navigation (injecté dynamiquement) |
 | `global.js` | Auth Firebase + vérification whitelist + menu |
-| `app.js` | Chargement, filtrage et rendu des billets |
+| `app-new.js` | Chargement, filtrage et rendu des billets (catalogue) |
 | `style.css` | Feuille de styles unique |
 
 ## Prérequis
