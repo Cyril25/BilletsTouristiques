@@ -51,9 +51,16 @@ function loadNotificationsPage() {
                     dateStr = new Date(n.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
                 } catch (e) {}
             }
+            // Demande #29 — badge de cible (rien pour les notifs « tous »)
+            var cible = window.notifCibleBadge(n.cible);
+            var cibleHtml = cible
+                ? '<span class="notif-card-cible"><i class="fa-solid ' + cible.icone + '"></i> ' + escapeHtmlNotif(cible.label) + '</span>'
+                : '';
+
             html += '<div class="notif-card' + (estNouveau ? ' notif-card-nouveau' : '') + '">'
                 + '<div class="notif-card-head">'
                 + '<span class="notif-card-titre"><i class="fa-solid fa-bullhorn"></i> ' + escapeHtmlNotif(n.titre) + '</span>'
+                + cibleHtml
                 + (estNouveau ? '<span class="notif-card-badge">Nouveau</span>' : '')
                 + (dateStr ? '<span class="notif-card-date">' + escapeHtmlNotif(dateStr) + '</span>' : '')
                 + '</div>'

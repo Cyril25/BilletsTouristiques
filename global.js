@@ -357,6 +357,19 @@ window.notifVisiblePour = function(cible, aud) {
     cible = cible || 'tous';
     return cible === 'tous' || aud.isAdmin || (cible === 'collecteurs' && aud.isCollecteur);
 };
+
+// Demande #29 — badge de cible d'une notif, pour la page Nouveautés.
+// Rien pour 'tous' (cas par défaut, le badge n'apprendrait rien) ; libellé + icône sinon.
+// Une cible inconnue est affichée telle quelle plutôt qu'ignorée.
+window.NOTIF_CIBLE_BADGES = {
+    collecteurs: { label: 'Collecteurs', icone: 'fa-user-group' },
+    admins:      { label: 'Admins',      icone: 'fa-user-shield' }
+};
+window.notifCibleBadge = function(cible) {
+    cible = cible || 'tous';
+    if (cible === 'tous') return null;
+    return window.NOTIF_CIBLE_BADGES[cible] || { label: cible, icone: 'fa-user-tag' };
+};
 // Libellé long pour variante ACTIVE uniquement ('Anniversaire', 'Doré') ou '' sinon.
 // → À utiliser pour les badges ⭐ qui ne doivent apparaître que s'il y a une variante.
 function varianteLabel(code) {
@@ -500,7 +513,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=165")
+    fetch("menu.html?v=166")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

@@ -25,6 +25,14 @@
             font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
             background: var(--color-primary, #5D3A7E); color: #fff;
         }
+        /* Demande #29 — cible de la notif : pastille claire (métadonnée),
+           volontairement différente du badge « Nouveau » qui est plein (état de lecture). */
+        .notif-card-cible {
+            font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+            background: #f2ecf9; color: var(--color-primary, #5D3A7E);
+            border: 1px solid #d9c9ee; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
         .notif-card-date { margin-left: auto; font-size: 0.8em; color: #888; white-space: nowrap; }
         .notif-card-texte { color: #333; font-size: 0.95em; line-height: 1.5; white-space: pre-wrap; }
         .notif-card-lien { display: inline-block; margin-top: 8px; font-size: 0.9em; }
