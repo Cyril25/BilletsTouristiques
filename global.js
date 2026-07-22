@@ -449,7 +449,11 @@ function loadSommeDue() {
     var e = encodeURIComponent(email);
 
     Promise.all([
-        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi'),
+        // Demande #16 — prix et FDP viennent de la collecte, plus du billet. L'embed
+        // PostgREST les ramène dans la même requête : ce code tourne sur chaque page,
+        // on ne rajoute pas d'aller-retour. `billets(Collecteur)` ne sert que de
+        // repli quand une collecte supplémentaire n'a pas de collecteur propre.
+        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi,collectes(prix,prix_variante,payer_fdp,categorie,collecteur),billets(Collecteur)'),
         supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + e + '&select=alias'),
         supabaseFetch('/rest/v1/membres?email=eq.' + e + '&select=pays'),
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=destination,type_envoi,qte_min,qte_max,prix'),
@@ -471,40 +475,41 @@ function loadSommeDue() {
             return 0;
         }
 
-        var billetIds = [];
-        inscriptions.forEach(function(i) { if (billetIds.indexOf(i.billet_id) === -1) billetIds.push(i.billet_id); });
-        var billetsPromise = billetIds.length
-            ? supabaseFetch('/rest/v1/billets?id=in.(' + billetIds.join(',') + ')&select=id,Prix,PrixVariante,PayerFDP,Categorie,Collecteur')
-            : Promise.resolve([]);
+        // Les embeds to-one de PostgREST peuvent arriver en objet ou en tableau
+        // selon la version : on normalise pour ne pas dépendre de ce détail.
+        function embed(v) { return Array.isArray(v) ? (v[0] || null) : (v || null); }
 
-        return billetsPromise.then(function(billets) {
-            var bMap = {};
-            (billets || []).forEach(function(b) { bMap[b.id] = b; });
-            var total = 0;
-            inscriptions.forEach(function(insc) {
-                var billet = bMap[insc.billet_id];
-                if (!billet) return;
-                if (billet.Categorie === 'Pré collecte' || billet.Categorie === 'Pas de collecte') return;
-                if (monAlias && billet.Collecteur === monAlias) return; // le collecteur est bénéficiaire : il ne se doit rien
-                var prix = parseFloat(billet.Prix || 0);
-                var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
-                var nbN = insc.nb_normaux || 0, nbV = insc.nb_variantes || 0;
-                var montant = (prix * nbN) + (prixVar * nbV);
-                if (billet.PayerFDP === 'oui') {
-                    montant += findFdp(nbN + nbV, (insc.mode_envoi || 'Normal').toLowerCase());
-                }
-                total += montant;
-            });
-            enveloppesPort.forEach(function(env) { total += parseFloat(env.prix_envoi_reel || 0); });
+        var total = 0;
+        inscriptions.forEach(function(insc) {
+            var collecte = embed(insc.collectes);
+            if (!collecte) return;
+            // Pré collecte = prix pas encore fixé, rien n'est dû
+            if (collecte.categorie === 'Pré collecte') return;
+            // Le collecteur de la collecte est bénéficiaire : il ne se doit rien
+            var billet = embed(insc.billets);
+            var collecteurCollecte = collecte.collecteur || (billet && billet.Collecteur) || null;
+            if (monAlias && collecteurCollecte === monAlias) return;
 
-            var montantEl = document.getElementById('somme-due-montant');
-            if (total > 0) {
-                if (montantEl) montantEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
-                pill.style.display = '';
-            } else {
-                pill.style.display = 'none';
+            var prix = parseFloat(collecte.prix || 0);
+            var prixVar = (collecte.prix_variante !== null && collecte.prix_variante !== undefined && collecte.prix_variante !== '') ? parseFloat(collecte.prix_variante) : prix;
+            var nbN = insc.nb_normaux || 0, nbV = insc.nb_variantes || 0;
+            var montant = (prix * nbN) + (prixVar * nbV);
+            // AC26 — comparaison enfin vraie : payer_fdp est normalisé en minuscules
+            // au backfill (les 4 billets 'Oui' n'ajoutaient jamais les FDP avant).
+            if (collecte.payer_fdp === 'oui') {
+                montant += findFdp(nbN + nbV, (insc.mode_envoi || 'Normal').toLowerCase());
             }
+            total += montant;
         });
+        enveloppesPort.forEach(function(env) { total += parseFloat(env.prix_envoi_reel || 0); });
+
+        var montantEl = document.getElementById('somme-due-montant');
+        if (total > 0) {
+            if (montantEl) montantEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
+            pill.style.display = '';
+        } else {
+            pill.style.display = 'none';
+        }
     })
     .catch(function(err) { console.warn('Erreur calcul somme due:', err); });
 }

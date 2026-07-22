@@ -6,7 +6,9 @@
 var mesInscriptions = [];
 var billetsMap = {};
 var collecteursMap = {};
-var collectesMap = {}; // Story 12.6 — {collecte_id: nom} pour affichage badge
+// Demande #16 — {collecte_id: {nom, prix, prix_variante, payer_fdp, fdp_com, scope,
+// categorie, collecteur}}. Porte désormais tout le commercial, lu sur le billet avant.
+var collectesMap = {};
 var membrePays = '';
 var fraisPortData = [];
 var mesFraisPort = []; // Frais de port dus (enveloppes expédiées avec prix saisi, non confirmés)
@@ -99,7 +101,9 @@ function loadMesInscriptions() {
                 return;
             }
             var idsParam = 'id=in.(' + billetIds.join(',') + ')';
-            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Prix","PrixVariante","Categorie","PayerFDP","Reference","Millesime","Version","HasVariante"');
+            // Demande #16 — Prix/PrixVariante/PayerFDP/Categorie retirés du select :
+            // ils vivent sur la collecte. Le billet ne garde que son identité.
+            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Reference","Millesime","Version","HasVariante"');
         })
         .then(function(billets) {
             if (billets) {
@@ -124,12 +128,14 @@ function loadMesInscriptions() {
                 // Frais de port dus : enveloppes avec prix saisi, non encore confirmé payé
                 supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc')
             ];
-            // Story 12.6 — charger noms des collectes supplémentaires si nécessaire
+            // Demande #16 — la collecte porte prix/FDP/statut : on la charge toujours,
+            // et en entier (avant, seulement le nom, pour les collectes supplémentaires).
             var collecteIds = mesInscriptions
                 .filter(function(i) { return i.collecte_id; })
                 .map(function(i) { return i.collecte_id; });
             if (collecteIds.length > 0) {
-                promises.push(supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIds.join(',') + ')&select=id,nom'));
+                promises.push(supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIds.join(',') +
+                    ')&select=id,nom,prix,prix_variante,payer_fdp,fdp_com,scope,categorie,collecteur'));
             }
             return Promise.all(promises);
         })
@@ -150,10 +156,10 @@ function loadMesInscriptions() {
             mesFraisPort = enveloppesPort.filter(function(e) {
                 return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
             });
-            // Story 12.6 — peupler collectesMap si la requête a été émise (index 4)
+            // Demande #16 — collectesMap stocke l'objet complet (index 4)
             collectesMap = {};
             if (results[4]) {
-                results[4].forEach(function(c) { collectesMap[c.id] = c.nom; });
+                results[4].forEach(function(c) { collectesMap[c.id] = c; });
             }
 
             renderInscriptions();
@@ -166,6 +172,42 @@ function loadMesInscriptions() {
 // ============================================================
 // 2. RENDU DE LA LISTE
 // ============================================================
+
+// ============================================================
+// Demande #16 — source unique des données commerciales : la COLLECTE
+// ============================================================
+// Avant, prix / prix variante / PayerFDP / statut se lisaient sur le billet, avec
+// le même bloc de calcul recopié à 6 endroits. Tout passe désormais par ici.
+
+// Renvoie {prix, prixVar, payerFdp, categorie, nom, collecteur, indisponible}.
+// indisponible = collecte absente de la map : on n'invente pas de montant (AC14).
+function getTarif(insc) {
+    var c = (insc && insc.collecte_id) ? collectesMap[insc.collecte_id] : null;
+    if (!c) {
+        console.warn('[#16] Collecte introuvable pour l\'inscription', insc && insc.id);
+        return { prix: 0, prixVar: 0, payerFdp: '', categorie: '', nom: '', collecteur: null, scope: '', indisponible: true };
+    }
+    var prix = parseFloat(c.prix || 0);
+    var prixVar = (c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '')
+        ? parseFloat(c.prix_variante) : prix;
+    return {
+        prix: prix,
+        prixVar: prixVar,
+        payerFdp: c.payer_fdp || '',
+        categorie: c.categorie || '',
+        nom: c.nom || '',
+        collecteur: c.collecteur || null,
+        scope: c.scope || 'normal',
+        indisponible: false
+    };
+}
+
+// Rien n'est dû tant que la collecte est en pré-collecte (prix pas encore fixé),
+// ni si la collecte est introuvable. Remplace les gardes sur billet.Categorie.
+function montantExigible(insc) {
+    var t = getTarif(insc);
+    return !t.indisponible && t.categorie !== 'Pré collecte';
+}
 
 function findFdpPrice(nbBillets, destination, typeEnvoi) {
     for (var i = 0; i < fraisPortData.length; i++) {
@@ -219,7 +261,7 @@ function inscMatchesSearch(insc) {
     var haystack = [
         billet.NomBillet, billet.Reference, billet.Millesime, billet.Version,
         billet.Ville, billet.Collecteur,
-        (insc.collecte_id ? collectesMap[insc.collecte_id] : '')
+        getTarif(insc).nom
     ].join(' ').toLowerCase();
     return haystack.indexOf(currentInscSearch) !== -1;
 }
@@ -332,23 +374,20 @@ function renderInscriptions() {
     var filteredInscriptions = mesInscriptions;
     if (currentInscFilter === 'prix_non_defini') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
-            var billet = billetsMap[insc.billet_id] || {};
-            return billet.Categorie === 'Pré collecte';
+            return getTarif(insc).categorie === 'Pré collecte';
         });
     } else if (currentInscFilter === 'pas_de_collecte') {
-        filteredInscriptions = mesInscriptions.filter(function(insc) {
-            var billet = billetsMap[insc.billet_id] || {};
-            return billet.Categorie === 'Pas de collecte';
-        });
+        // Demande #16 — ce filtre ne peut plus rien remonter : une inscription est
+        // désormais toujours rattachée à une collecte (FK NOT NULL). Conservé le
+        // temps que le chip disparaisse de l'UI.
+        filteredInscriptions = [];
     } else if (currentInscFilter === 'non_paye') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
-            var billet = billetsMap[insc.billet_id] || {};
-            return (insc.statut_paiement || 'non_paye') === 'non_paye' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte';
+            return (insc.statut_paiement || 'non_paye') === 'non_paye' && montantExigible(insc);
         });
     } else if (currentInscFilter !== 'tous') {
         filteredInscriptions = mesInscriptions.filter(function(insc) {
-            var billet = billetsMap[insc.billet_id] || {};
-            return (insc.statut_paiement || 'non_paye') === currentInscFilter && billet.Categorie !== 'Pas de collecte';
+            return (insc.statut_paiement || 'non_paye') === currentInscFilter;
         });
     }
 
@@ -364,16 +403,18 @@ function renderInscriptions() {
 
     function renderInscriptionCard(insc) {
         var billet = billetsMap[insc.billet_id] || {};
-        var prix = parseFloat(billet.Prix || 0);
-        var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+        var tarif = getTarif(insc);
+        var prix = tarif.prix;
+        var prixVar = tarif.prixVar;
         var nbNormaux = insc.nb_normaux || 0;
         var nbVariantes = insc.nb_variantes || 0;
         var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
         var statut = insc.statut_paiement || 'non_paye';
         var isBenef = estBeneficiaire(insc, activeEmail);
+        var exigible = montantExigible(insc);
 
         var fdpMontant = 0;
-        if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
+        if (tarif.payerFdp === 'oui' && exigible) {
             var nbTotal = nbNormaux + nbVariantes;
             var dest = (membrePays === 'France') ? 'france' : 'international';
             var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
@@ -381,15 +422,15 @@ function renderInscriptions() {
         }
         var montantAvecFdp = montant + fdpMontant;
 
-        if (billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
+        if (exigible) {
             if (statut === 'non_paye' && !isBenef) totalDu += montantAvecFdp;
             else if (statut === 'declare' && !isBenef) totalEnAttente += montantAvecFdp;
         }
 
-        var collecteur = collecteursMap[billet.Collecteur] || {};
+        var collecteur = collecteursMap[tarif.collecteur || billet.Collecteur] || {};
         var paypalNoteHtml = '';
         var paypalBtnHtml = '';
-        if (statut === 'non_paye' && !isBenef && insc.mode_paiement === 'PayPal' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
+        if (statut === 'non_paye' && !isBenef && insc.mode_paiement === 'PayPal' && exigible) {
             // Construire la note PayPal : Ref année-version titre - détail quantités = total
             var refPart = (billet.Reference || '') + ' ' + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '');
             var noteparts = [refPart.trim(), billet.NomBillet || ''];
@@ -420,22 +461,25 @@ function renderInscriptions() {
         return '<div class="inscription-card">'
             + '<div class="inscription-card-header">'
             + '<strong>' + escapeHtml(((billet.Reference ? billet.Reference + ' ' : '') + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '') + (billet.NomBillet ? ' - ' + billet.NomBillet : '')).trim() || 'Billet inconnu') + '</strong>'
-            + (insc.collecte_id && collectesMap[insc.collecte_id] ? '<span class="badge-nom-collecte-insc">' + escapeHtml(collectesMap[insc.collecte_id]) + '</span>' : '')
+            + (tarif.nom ? '<span class="badge-nom-collecte-insc">' + escapeHtml(tarif.nom) + '</span>' : '')
             + (billet.Collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(billet.Collecteur) + '</span>' : '')
             + '</div>'
             + '<div class="inscription-card-details">'
-            + '<span><i class="fa-solid fa-ticket"></i> ' + (billet.VersionNormaleExiste === false ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
-            + (billet.Categorie === 'Pré collecte'
+            // Demande #16 — le périmètre ouvert vient du scope de la collecte
+            // (billet.VersionNormaleExiste n'était même pas dans le select : la
+            // branche « variante seule » ne se déclenchait jamais).
+            + '<span><i class="fa-solid fa-ticket"></i> ' + (tarif.scope === 'variante' ? (nbVariantes + ' var.') : (nbNormaux + (nbVariantes > 0 ? ' + ' + nbVariantes + ' var.' : ''))) + '</span>'
+            + (tarif.categorie === 'Pré collecte'
                 ? '<span class="montant-indefini"><i class="fa-solid fa-euro-sign"></i> Prix non défini</span>'
-                : billet.Categorie === 'Pas de collecte'
-                ? '<span class="montant-indefini"><i class="fa-solid fa-ban"></i> Pas de collecte — billet non distribué</span>'
+                : tarif.indisponible
+                ? '<span class="montant-indefini"><i class="fa-solid fa-ban"></i> Prix indisponible</span>'
                 : (fdpMontant > 0
                     ? '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC + fdp ' + fdpMontant.toFixed(2) + ' \u20AC, soit ' + montantAvecFdp.toFixed(2) + ' \u20AC</span>'
                     : '<span class="' + montantClass + '"><i class="fa-solid fa-euro-sign"></i> ' + montant.toFixed(2) + ' \u20AC</span>'))
             + '</div>'
             + '<div class="inscription-card-statuts">'
-            + badgeCollecte(billet.Categorie)
-            + badgePaiementMembre(statut, insc.id, billet.Categorie, isBenef)
+            + badgeCollecte(tarif.categorie)
+            + badgePaiementMembre(statut, insc.id, tarif.categorie, isBenef)
             + '<span class="badge-paiement ' + (insc.envoye ? 'badge-envoye' : 'badge-non-envoye') + '">' + (insc.envoye ? 'Envoy\u00E9' : 'Non envoy\u00E9') + '</span>'
             + '</div>'
             + paypalNoteHtml
@@ -443,7 +487,7 @@ function renderInscriptions() {
             + '<span class="inscription-date"><i class="fa-regular fa-calendar"></i> ' + dateInsc + '</span>'
             + paypalBtnHtml
             + '</div>'
-            + (billet.Categorie === 'Pré collecte'
+            + (tarif.categorie === 'Pré collecte'
                 ? '<div class="inscription-card-actions">'
                     + '<button class="btn-modifier-insc" onclick="ouvrirModifierPreCollecte(' + insc.id + ')"><i class="fa-solid fa-pen"></i> Modifier</button>'
                     + '<button class="btn-desinscrire" onclick="desinscriprePreCollecte(' + insc.id + ')"><i class="fa-solid fa-xmark"></i> Se désinscrire</button>'
@@ -475,13 +519,14 @@ function renderInscriptions() {
                 return;
             }
             var billet = billetsMap[insc.billet_id] || {};
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var tarifI = getTarif(insc);
+            var prix = tarifI.prix;
+            var prixVar = tarifI.prixVar;
             var nbN = insc.nb_normaux || 0;
             var nbV = insc.nb_variantes || 0;
             var montant = (prix * nbN) + (prixVar * nbV);
             var fdp = 0;
-            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
+            if (tarifI.payerFdp === 'oui' && montantExigible(insc)) {
                 var dest = (membrePays === 'France') ? 'france' : 'international';
                 fdp = findFdpPrice(nbN + nbV, dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
@@ -537,11 +582,9 @@ function renderInscriptions() {
     ];
 
     filteredInscriptions.forEach(function(insc) {
-        var billet = billetsMap[insc.billet_id] || {};
-        if (billet.Categorie === 'Pré collecte') {
+        var tarifG = getTarif(insc);
+        if (tarifG.categorie === 'Pré collecte' || tarifG.indisponible) {
             statGroups[3].items.push(insc);
-        } else if (billet.Categorie === 'Pas de collecte') {
-            statGroups[4].items.push(insc);
         } else if (estBeneficiaire(insc, activeEmail)) {
             statGroups[5].items.push(insc);
         } else {
@@ -586,7 +629,11 @@ function renderInscriptions() {
             var byCollecteur = {};
             var colOrder = [];
             group.items.forEach(function(insc) {
-                var col = insc._isPort ? insc.collecteur : ((billetsMap[insc.billet_id] || {}).Collecteur || '(sans collecteur)');
+                // Demande #16 — on regroupe par le collecteur de la COLLECTE (c'est
+                // lui qu'on paie), avec repli sur celui du billet.
+                var col = insc._isPort
+                    ? insc.collecteur
+                    : (getTarif(insc).collecteur || (billetsMap[insc.billet_id] || {}).Collecteur || '(sans collecteur)');
                 if (!byCollecteur[col]) { byCollecteur[col] = []; colOrder.push(col); }
                 byCollecteur[col].push(insc);
             });
@@ -619,18 +666,17 @@ function renderInscriptions() {
     var totalDuGlobal = 0;
     var totalEnAttenteGlobal = 0;
     mesInscriptions.forEach(function(insc) {
-        var b = billetsMap[insc.billet_id] || {};
-        var p = parseFloat(b.Prix || 0);
-        var pv = (b.PrixVariante !== null && b.PrixVariante !== undefined && b.PrixVariante !== '') ? parseFloat(b.PrixVariante) : p;
-        var m = (p * (insc.nb_normaux || 0)) + (pv * (insc.nb_variantes || 0));
+        var t = getTarif(insc);
+        var exigible = montantExigible(insc);
+        var m = (t.prix * (insc.nb_normaux || 0)) + (t.prixVar * (insc.nb_variantes || 0));
         var fdp = 0;
-        if (b.PayerFDP === 'oui' && b.Categorie !== 'Pré collecte' && b.Categorie !== 'Pas de collecte') {
+        if (t.payerFdp === 'oui' && exigible) {
             var d = (membrePays === 'France') ? 'france' : 'international';
             fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), d, (insc.mode_envoi || 'Normal').toLowerCase());
         }
         var total = m + fdp;
         var s = insc.statut_paiement || 'non_paye';
-        if (b.Categorie !== 'Pré collecte' && b.Categorie !== 'Pas de collecte' && !estBeneficiaire(insc, activeEmail)) {
+        if (exigible && !estBeneficiaire(insc, activeEmail)) {
             if (s === 'non_paye') totalDuGlobal += total;
             else if (s === 'declare') totalEnAttenteGlobal += total;
         }
@@ -718,12 +764,11 @@ function declarerPaiementGroupe(idsCsv, portIdsCsv) {
             if (mesInscriptions[i].id !== id) continue;
             var insc = mesInscriptions[i];
             var billet = billetsMap[insc.billet_id] || {};
-            if (!collecteur) collecteur = billet.Collecteur || '';
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
-            var m = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
+            var t = getTarif(insc);
+            if (!collecteur) collecteur = t.collecteur || billet.Collecteur || '';
+            var m = (t.prix * (insc.nb_normaux || 0)) + (t.prixVar * (insc.nb_variantes || 0));
             var fdp = 0;
-            if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
+            if (t.payerFdp === 'oui' && montantExigible(insc)) {
                 var dest = (membrePays === 'France') ? 'france' : 'international';
                 fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
@@ -782,10 +827,9 @@ function declarerPaiement(inscriptionId) {
         if (mesInscriptions[i].id === inscriptionId) { insc = mesInscriptions[i]; break; }
     }
     var billet = insc ? billetsMap[insc.billet_id] : null;
-    var collecteur = billet ? (billet.Collecteur || '') : '';
-    var prix = parseFloat((billet && billet.Prix) || 0);
-    var prixVar = (billet && billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
-    var montant = insc ? (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0)) : 0;
+    var tarif = insc ? getTarif(insc) : null;
+    var collecteur = (tarif && tarif.collecteur) || (billet && billet.Collecteur) || '';
+    var montant = (insc && tarif) ? (tarif.prix * (insc.nb_normaux || 0)) + (tarif.prixVar * (insc.nb_variantes || 0)) : 0;
 
     pendingDeclarationId = inscriptionId;
     var modal = document.getElementById('confirm-paiement-modal');
@@ -946,8 +990,12 @@ function ouvrirModifierPreCollecte(inscId) {
     modifierInscCurrent = { id: inscId, billet: billet };
 
     var titre = ((billet.Reference ? billet.Reference + ' ' : '') + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '') + (billet.NomBillet ? ' - ' + billet.NomBillet : '')).trim();
-    var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-    var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+    // Demande #16 — les champs proposés suivent le périmètre de la collecte : le
+    // trigger D4 refuse en base un nb_variantes > 0 sur une collecte « normal »
+    // (et inversement), donc l'UI ne doit pas laisser saisir l'impossible.
+    var scope = getTarif(insc).scope;
+    var hasNormale  = scope !== 'variante';
+    var hasVariante = scope !== 'normal' && !!(billet.HasVariante && billet.HasVariante !== 'N');
 
     document.getElementById('modifier-preinsc-titre').textContent = titre || 'Billet inconnu';
 
@@ -1056,7 +1104,7 @@ function showInscriptionsTab(tab) {
     if (tab === 'envois') loadMesEnvois();
 }
 
-var envoisData = { enveloppes: [], inscByEnv: {}, billetsEnvoisMap: {}, inscSansEnveloppe: [] };
+var envoisData = { enveloppes: [], inscByEnv: {}, billetsEnvoisMap: {}, collectesEnvoisMap: {}, inscSansEnveloppe: [] };
 
 function loadMesEnvois() {
     var email = window.getActiveEmail();
@@ -1096,15 +1144,31 @@ function loadMesEnvois() {
                 return;
             }
 
-            return supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","PayerFDP","Collecteur","Categorie"')
-                .then(function(billets) {
+            // Demande #16 — statut et FDP se lisent sur la collecte de l'inscription :
+            // un billet peut porter plusieurs collectes d'états différents.
+            var collecteIdsEnvois = toutesInscriptions
+                .filter(function(i) { return i.collecte_id; })
+                .map(function(i) { return i.collecte_id; });
+            var pCollectes = collecteIdsEnvois.length
+                ? supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIdsEnvois.join(',') + ')&select=id,categorie,payer_fdp')
+                : Promise.resolve([]);
+
+            return Promise.all([
+                supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","Collecteur"'),
+                pCollectes
+            ]).then(function(res2) {
                     var map = {};
-                    (billets || []).forEach(function(b) { map[b.id] = b; });
+                    (res2[0] || []).forEach(function(b) { map[b.id] = b; });
                     envoisData.billetsEnvoisMap = map;
+
+                    var cMap = {};
+                    (res2[1] || []).forEach(function(c) { cMap[c.id] = c; });
+                    envoisData.collectesEnvoisMap = cMap;
+
                     // Exclure les pré-collectes de la section "En attente de préparation"
                     envoisData.inscSansEnveloppe = envoisData.inscSansEnveloppe.filter(function(insc) {
-                        var b = map[insc.billet_id];
-                        return !(b && b.Categorie === 'Pré collecte');
+                        var c = cMap[insc.collecte_id];
+                        return !(c && c.categorie === 'Pré collecte');
                     });
                     renderMesEnvois();
                 });
@@ -1172,10 +1236,10 @@ function renderMesEnvois() {
                 return b ? b.NomBillet : 'Billet';
             }).join(', ');
 
-            // Vérifier si TOUS les billets de cette enveloppe ont FDP demandé
+            // Vérifier si TOUTES les collectes de cette enveloppe ont FDP demandé
             var tousAvecFDP = inscs.length > 0 && inscs.every(function(i) {
-                var b = billetsMap2[i.billet_id];
-                return b && b.PayerFDP === 'oui';
+                var c = envoisData.collectesEnvoisMap[i.collecte_id];
+                return c && c.payer_fdp === 'oui';
             });
 
             html += '<div class="envoi-carte">'
