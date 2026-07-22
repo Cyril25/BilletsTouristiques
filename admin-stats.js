@@ -229,9 +229,6 @@ function barChart(items, color) {
     }).join('');
 }
 
-// Code pays : helper partagé window.paysCode (global.js)
-function paysCode(pays) { return window.paysCode(pays); }
-
 function vbarChart(items) {
     if (!items || items.length === 0) return '<p class="kpi-sub">Aucune donnée.</p>';
     var max = items.reduce(function(m, it) { return Math.max(m, it.value); }, 0) || 1;
