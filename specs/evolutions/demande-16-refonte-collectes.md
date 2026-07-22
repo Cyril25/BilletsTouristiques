@@ -220,31 +220,85 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
   `membres_read_authenticated` MEDIUM) restent au backlog sécurité, à traiter
   dans un chantier séparé après la bascule.
 
-## Audits à rejouer avant d'écrire la tech-spec (verrou ready-for-dev)
+## Audits (plan consolidé — verrou ready-for-dev)
 
-- **AUD1–AUD6 d'avril** : rejouer sur la prod de juillet (colonnes de version,
-  UK actuelle, counts, types prix/FDP, policies RLS `inscriptions`, sémantique
-  `FDP_Com`).
-  ⚠️ **AUD1 déjà invalidé** (constat 2026-07-22) : la colonne
-  **`VersionNormaleExiste` existe désormais** dans `billets` (booléen, visible en
-  prod) alors que l'audit d'avril concluait qu'elle n'existait pas et fondait le
-  mapping du `scope` et le trigger D12 sur `HasVariante` seul. Le mapping backfill
-  et les triggers D4/D12 doivent être réécrits sur le couple
-  `VersionNormaleExiste` × `HasVariante`.
-- ~~**AUD-N1**~~ ✅ **joué le 2026-07-22** : inscriptions portées par les billets
-  sans collecte → Pas de collecte : 9 inscriptions sur 2 billets (5393 ITIF 2026,
-  5395 VEHH 2025), toutes `changed_by='pré-inscription'` + `non_paye` (aucune
-  valeur métier, purgeables) ; Jamais édité-projet : 0 ; Masqué : 3, toutes
-  `pas_interesse` (migrent vers `collection`). → backfill restreint validé (Q2).
-- **AUD-N2 (nouveau)** : distribution actuelle de `PayerFDP` + inventaire des
-  comparaisons front (`=== 'oui'` vs casse réelle).
-- **AUD-N3 (nouveau)** : inventaire ligne à ligne des lecteurs de
-  `Prix|PrixVariante|PayerFDP|FDP_Com|Categorie` sur main (grep du 2026-07-22 en
-  donne la carte grossière, à détailler par zone fonctionnelle).
-- **AUD-N4 (nouveau)** : re-lister toutes les colonnes de `billets` en prod
-  (le schéma a dérivé depuis avril : `VersionNormaleExiste`, `date_effective`,
-  `Recherche`… absentes ou différentes de l'audit d'avril) et refaire la liste
-  exhaustive DROP/KEEP de D2.
+**Audit des audits (2026-07-22, question de Cyril)** : la liste d'avril (AUD1–6)
+a été croisée décision par décision avec l'addendum (AM1–AM7, N1–N4). Verdict :
+insuffisante — elle ignorait le croisement des colonnes de version, la
+représentation de la désinscription, l'état de la table `collection`, la
+couverture des dates pour le backfill, le graphe des FK et les triggers déjà en
+prod. Plan consolidé ci-dessous. Les audits **données** sont joués via le Worker ;
+les audits **schéma** (information_schema, policies, triggers) passent par
+`scripts/audit-refonte-2026-07.sql` (local, à coller dans le SQL Editor par Cyril,
+lecture seule).
+
+### Joués le 2026-07-22 via le Worker (résultats figés)
+
+- ✅ **AUD-N1 — inscriptions des billets sans collecte** (sert AM2) :
+  Pas de collecte : 9 inscriptions sur 2 billets (5393 ITIF, 5395 VEHH), toutes
+  `changed_by='pré-inscription'` + `non_paye` → purgeables ; Projet : 0 ;
+  Masqué : 3, toutes `pas_interesse`. Backfill restreint validé sans perte.
+- ✅ **AUD-N2 — `PayerFDP` réel** (sert N2) : NULL 4 892 · `''` 262 · `'non'` 262 ·
+  `'Oui'` 4. La comparaison `loadSommeDue` `=== 'oui'` ne matche **jamais**
+  (bug latent : les 4 billets `'Oui'` n'ajoutent pas les FDP à la somme due) —
+  normalisation à prévoir au backfill + correction du front à la bascule.
+  `Prix` NULL : 1 299 · `PrixVariante` renseigné : 145.
+- ✅ **AUD-N5 — croisement `VersionNormaleExiste` × `HasVariante`** (sert AM5) :
+  VNE=T × HV `''` 5 142 · VNE=T × `D` 198 · VNE=T × `A` 47 · VNE=T × `N` 29 ·
+  VNE=F × `D` 2 · VNE=F × `A` 2. **Mapping scope du backfill** : variante existe
+  ssi HV ∈ {A,D} → `normal` 5 171 (VNE=T, HV ∈ {'',N}) · `les_deux` 245
+  (VNE=T, HV ∈ {A,D}) · `variante` 4 (VNE=F, HV ∈ {A,D} — le cas « variante
+  seule » qu'avril déclarait indétectable est désormais détectable).
+- ✅ **AUD-N6 — désinscription & `changed_by`** (sert N1, AM4) :
+  la désinscription est un **DELETE physique** (0 ligne à 0/0 hors
+  `pas_interesse`) → « déjà inscrit » = la ligne existe, simple pour la règle
+  anti-réinscription. `changed_by` : emails = saisies manuelles ·
+  `'pré-inscription'` 330 = hooks auto actuels (admin.js:2146,
+  admin-pre-inscriptions.js:652) · `'système'` 676 = **historique mars–avril 2026**
+  (plus écrit par le code, dont 138 `confirme` → valeur métier, ne jamais purger
+  sur ce seul critère) · 1 `'duplication billet 5212'`.
+  `statut_paiement` : confirme 2 926 · non_paye 1 670 · declare 20.
+  `statut_livraison` : non_reparti 3 285 · pret_a_envoyer 895 · expedie 436.
+  `enveloppe_id` renseigné : 1 328.
+- ✅ **AUD-N7 — table `collection`** (sert N3) : 101 lignes, colonnes
+  `(membre_email, billet_id, owned_normal, owned_variante, serial_normal,
+  serial_variante, nb_doubles)` — **pas de colonne `pas_interesse`** (à créer,
+  comme sur la branche) ; migration des 582 en upsert (recouvrement possible
+  avec les 101 lignes existantes). `nb_doubles` existe déjà (tous à 0) — hook
+  naturel pour la demande #22.
+- ✅ **AUD-N8 — colonnes variante « cachées »** : `CollecteurVariante`,
+  `DateCollVariante`, `DateFinVariante` sont **100 % vides** sur 5 420 billets →
+  colonnes mortes, à ajouter à la liste DROP de D2. Aucune « seconde collecte
+  cachée » dans `billets`.
+- ✅ **AUD3 rejoué — counts** : 5 420 billets · 4 616 inscriptions ·
+  `collectes` 0 · `collecte_id` rattachés 0 · `pas_interesse` 582.
+  Dates par catégorie (pour le backfill) : Terminé 5 193 dont DateColl NULL 128
+  et DateFin NULL 58 ; DatePre jamais NULL sauf Masqué (18/21) → les collectes
+  backfillées auront des dates partiellement NULL, prévoir le fallback de
+  dérivation de `date_effective`. **À rejouer au jour J** (données vivantes).
+
+### À jouer par Cyril dans le SQL Editor — `scripts/audit-refonte-2026-07.sql`
+
+- **S1** (AUD-N4/AUD1/AUD4 rejoués) : colonnes exactes, types, nullabilité,
+  défauts des 5 tables clés → liste DROP/KEEP définitive de D2.
+- **S2** (AUD2 rejoué) : contraintes PK/UK/FK/CHECK.
+- **S3 (nouveau)** : graphe complet des FK référençant
+  `billets`/`inscriptions`/`collectes` — aucune table dépendante oubliée.
+- **S4 (nouveau)** : triggers déjà en prod — ⚠ quelque chose alimente
+  `billets.date_effective` aujourd'hui, à identifier avant d'en poser un autre.
+- **S5** (AUD5 rejoué) : policies RLS (+ `inscriptions_auto*`).
+- **S6 (nouveau)** : fonctions/RPC existantes (compteurs, helpers).
+- **S7 (nouveau)** : index sur `inscriptions`/`collectes`/`collection` (perf des
+  jointures par `collecte_id`, notamment la somme due exécutée sur chaque page).
+
+### Restant côté code (avant tech-spec)
+
+- **AUD-N3** : inventaire ligne à ligne des lecteurs de
+  `Prix|PrixVariante|PayerFDP|FDP_Com|Categorie` sur main (la carte grossière du
+  2026-07-22 : admin.js 29, mes-collectes.js 28, mes-inscriptions.js 18,
+  app-new.js 10+17, global.js, admin-stats.js, app.js, billet.js,
+  admin-pre-inscriptions.js) — à détailler par zone fonctionnelle dans la
+  tech-spec v2.
 
 ## Prochaines étapes
 
@@ -255,8 +309,11 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
    [addendum-refonte-collectes-2026-07.md](../../_bmad-output/planning-artifacts/addendum-refonte-collectes-2026-07.md)
    (confirmations, amendements AM1–AM7, nouvelles exigences N1–N4, hors périmètre) ;
    renvois posés en tête du PRD, de l'architecture et de la tech-spec 13.
-3. Rejeu des audits AUD1–6 (AUD1 déjà invalidé) + AUD-N2/N3/N4, résultats figés
-   dans la tech-spec.
+3. ~~Rejeu des audits~~ ✅ audits **données** joués le 2026-07-22 (AUD-N1/N2/N5/
+   N6/N7/N8 + AUD3, résultats figés ci-dessus). **Reste :** (a) Cyril colle
+   `scripts/audit-refonte-2026-07.sql` dans le SQL Editor et rapporte les
+   résultats S1–S7 (schéma, FK, triggers, RLS, index) ; (b) AUD-N3 (inventaire
+   code détaillé) intégré à la tech-spec v2 ; (c) re-count au jour J.
 4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
    amendements) + plan de bascule : branche longue durée, test à blanc du SQL
    sur copie jetable Supabase, merge quand sûr, pas de staging déployé (Q3).
