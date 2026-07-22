@@ -218,12 +218,14 @@ function renderCollectesList() {
     var today = new Date().toISOString().slice(0, 10);
 
     // Séparer billets principaux ouverts / fermés
-    var billetsOpenAll = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
-    var billetsClosed  = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
-    // Demande #14 — séparer les collectes réparties (tous les billets en enveloppe)
+    var billetsOpenAll   = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
+    var billetsClosedAll = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
+    // Demande #14 — séparer les collectes réparties (tous les billets en enveloppe),
+    // quelle que soit la catégorie : en pratique la répartition se fait surtout en « Terminé »
     function estRepartie(b) { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousRepartis); }
     var billetsOpen     = billetsOpenAll.filter(function(b) { return !estRepartie(b); });
-    var billetsRepartis = billetsOpenAll.filter(estRepartie);
+    var billetsClosed   = billetsClosedAll.filter(function(b) { return !estRepartie(b); });
+    var billetsRepartis = mesBillets.filter(estRepartie);
     var dateDesc = function(a, b) { return (b.Date || '').localeCompare(a.Date || ''); };
     billetsOpen.sort(dateDesc);
     billetsRepartis.sort(dateDesc);
@@ -292,26 +294,26 @@ function renderCollectesList() {
         return h;
     }
 
-    // Ordre : collectes actives → supp ouvertes → [section repliable : réparties] → fermées → supp fermées
+    // Ordre : collectes actives → supp ouvertes → fermées → supp fermées → [section repliable : réparties]
     var html = '<div class="collectes-cards">';
     for (var i = 0; i < billetsOpen.length; i++) html += renderBilletCard(billetsOpen[i]);
     for (var j = 0; j < suppOpen.length; j++) html += renderCollecteSupplementaireCard(suppOpen[j].collecte, suppOpen[j].billet);
     html += '</div>';
 
-    // Demande #14 — section repliable des collectes réparties (en attente de réception)
-    if (billetsRepartis.length > 0) {
-        html += '<button class="btn-toggle-reparties" onclick="toggleReparties(this)">'
-            + '<i class="fa-solid fa-box-archive"></i> Collectes réparties — en attente de réception (' + billetsRepartis.length + ')'
-            + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
-        html += '<div id="collectes-reparties" class="collectes-cards" style="display:none">';
-        for (var r = 0; r < billetsRepartis.length; r++) html += renderBilletCard(billetsRepartis[r]);
-        html += '</div>';
-    }
-
     if (billetsClosed.length > 0 || suppClosed.length > 0) {
         html += '<div class="collectes-cards">';
         for (var k = 0; k < billetsClosed.length; k++) html += renderBilletCard(billetsClosed[k]);
         for (var l = 0; l < suppClosed.length; l++) html += renderCollecteSupplementaireCard(suppClosed[l].collecte, suppClosed[l].billet);
+        html += '</div>';
+    }
+
+    // Demande #14 — section repliable des collectes réparties (archivées en bas de page)
+    if (billetsRepartis.length > 0) {
+        html += '<button class="btn-toggle-reparties" onclick="toggleReparties(this)">'
+            + '<i class="fa-solid fa-box-archive"></i> Collectes réparties (' + billetsRepartis.length + ')'
+            + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
+        html += '<div id="collectes-reparties" class="collectes-cards" style="display:none">';
+        for (var r = 0; r < billetsRepartis.length; r++) html += renderBilletCard(billetsRepartis[r]);
         html += '</div>';
     }
 
