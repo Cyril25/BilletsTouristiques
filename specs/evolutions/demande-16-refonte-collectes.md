@@ -279,17 +279,112 @@ lecture seule).
 
 ### À jouer par Cyril dans le SQL Editor — `scripts/audit-refonte-2026-07.sql`
 
-- **S1** (AUD-N4/AUD1/AUD4 rejoués) : colonnes exactes, types, nullabilité,
-  défauts des 5 tables clés → liste DROP/KEEP définitive de D2.
-- **S2** (AUD2 rejoué) : contraintes PK/UK/FK/CHECK.
-- **S3 (nouveau)** : graphe complet des FK référençant
-  `billets`/`inscriptions`/`collectes` — aucune table dépendante oubliée.
-- **S4 (nouveau)** : triggers déjà en prod — ⚠ quelque chose alimente
-  `billets.date_effective` aujourd'hui, à identifier avant d'en poser un autre.
-- **S5** (AUD5 rejoué) : policies RLS (+ `inscriptions_auto*`).
-- **S6 (nouveau)** : fonctions/RPC existantes (compteurs, helpers).
-- **S7 (nouveau)** : index sur `inscriptions`/`collectes`/`collection` (perf des
-  jointures par `collecte_id`, notamment la somme due exécutée sur chaque page).
+- ✅ **S1 — colonnes/types** (joué par Cyril le 2026-07-22) :
+  - `billets` : `Prix`/`PrixVariante` = `numeric` sans précision (AUD4 confirmé,
+    `NUMERIC(10,2)` côté `collectes` reste compatible) ; `PayerFDP`/`FDP_Com`
+    text default `''` ; **`VersionNormaleExiste` boolean NULLABLE default true**
+    → le mapping scope doit traiter NULL comme true ; dates en `date` ;
+    trous dans les positions ordinales (14,16,17,25,29,30,33) = colonnes déjà
+    droppées par le passé.
+  - `collectes` : schéma epic 12 confirmé (id uuid, billet_id int NOT NULL,
+    nom/scope NOT NULL, collecteur, date_pre/coll/fin, categorie, created_at,
+    nb_max) — il manque bien `prix`, `prix_variante`, `payer_fdp`, `fdp_com`.
+  - `inscriptions` : **`changed_by` NOT NULL DEFAULT `'système'`** — les 676
+    lignes « système » sont donc des insertions historiques sans champ renseigné
+    (le default), pas un acteur distinct ; `collecte_id uuid` nullable déjà là ;
+    `nb_normaux` default 1, `nb_variantes` default 0 ; `adresse_snapshot` jsonb ;
+    `mode_paiement` default `'PayPal'`.
+  - `collection` : tout NOT NULL avec defaults → `pas_interesse boolean NOT NULL
+    DEFAULT false` suivra le pattern.
+  - `enveloppes` : aucune référence à `billets`/`collectes` (lien par
+    `collecteur_alias`+`membre_email` ; c'est `inscriptions.enveloppe_id` qui
+    porte la relation) → table **structurellement hors migration**.
+- ✅ **S2 — contraintes** (joué par Cyril le 2026-07-22) :
+  - UK `inscriptions (billet_id, membre_email)` confirmée (celle qu'on droppe).
+  - **FK `inscriptions.collecte_id` déjà existante, `ON DELETE SET NULL`** →
+    à passer `RESTRICT` comme prévu (A2).
+  - **⚠ FK `collectes.billet_id` = `ON DELETE CASCADE`** : supprimer un billet
+    emporte ses collectes. Aujourd'hui sans danger (la FK
+    `inscriptions.billet_id`, NO ACTION, bloque de toute façon la suppression
+    d'un billet ayant des inscriptions), mais à réexaminer en tech-spec pour
+    cohérence avec le principe « aucune cascade destructrice » (candidat :
+    passage en RESTRICT).
+  - **⚠ `billets_hasvariante_check`** : `HasVariante ∈ {NULL, N, A, D}` — le
+    CHECK interdit `''` alors que la colonne a `DEFAULT ''` (piège : le défaut
+    violerait le CHECK ; les 5 142 « vides » vus dans les données sont donc des
+    **NULL**). Mapping scope : variante existe ssi `HasVariante ∈ {A, D}`,
+    NULL/N = pas de variante.
+  - CHECKs utiles documentés : `mode_paiement {PayPal, Chèque}`,
+    `statut_paiement {non_paye, declare, confirme}`,
+    `statut_livraison {non_reparti, pret_a_envoyer, expedie, recu}` (`recu`
+    jamais utilisé en données), `collectes.scope {normal, variante, les_deux}`.
+- ✅ **S3 — graphe des FK** (joué par Cyril le 2026-07-22) : les seules tables
+  référençant `billets` sont `collectes` (CASCADE), `collection`, `inscriptions`
+  et **`signalements`** (CASCADE — demande #5, suit le billet, hors migration) ;
+  la seule table référençant `collectes` est `inscriptions`. **Aucune dépendance
+  oubliée** — `enveloppes`, `demandes`, `inscriptions_auto*` ne référencent ni
+  billets ni collectes.
+- ✅ **S4 — triggers** (joué par Cyril le 2026-07-22) :
+  - **La dérivation de `date_effective` est DÉJÀ en prod des deux côtés** :
+    `trg_billets_sync_date_effective` (BEFORE INSERT/UPDATE sur `billets` →
+    `sync_billet_date_effective_from_billet()`) et
+    `trg_collectes_sync_date_effective` (AFTER INSERT/UPDATE/DELETE sur
+    `collectes` → `sync_billet_date_effective()`). Le pattern « le billet dérive
+    des collectes » existe donc déjà pour les dates — la dérivation de
+    `Categorie` (AM3) s'inscrira dans ce mécanisme, pas à côté. Corps des
+    fonctions à récupérer (S8).
+  - **⚠ `trg_inscription_audit`** (BEFORE INSERT/UPDATE sur `inscriptions` →
+    `set_inscription_audit()`) : le backfill UPDATE des 4 616 `collecte_id`
+    déclenchera ce trigger — risque d'écraser `last_changed`/`changed_by` sur
+    toutes les lignes. La migration devra **désactiver temporairement** ce
+    trigger (ou préserver les valeurs) — corps à récupérer (S8).
+  - `trg_enforce_inscription_statut_paiement` (anti-fraude du 2026-07-14) :
+    vérifier qu'il ne bloque pas les UPDATE de backfill (S8).
+  - Divers `updated_at` (contacts_collecteur, demandes, signalements) +
+    `trg_enforce_enveloppe_membre_update` : sans impact.
+- ✅ **S5 — policies RLS** (joué par Cyril le 2026-07-22) :
+  - **⚠ BLOQUANT MIGRATION : `billets_update_collecteur`** — son WITH CHECK gèle
+    `Prix`, `PrixVariante`, `Collecteur`, `Reference` par sous-requêtes sur ces
+    colonnes. Le `DROP COLUMN Prix/PrixVariante` **échouera** (dépendance) tant
+    que cette policy n'est pas réécrite. À intégrer à la séquence de migration.
+  - **⚠ Les 3 policies collecteur sur `inscriptions`**
+    (`insert/update/delete_collecteur`) scoping par `billets."Collecteur"` :
+    en multi-collectes (collecteurs différents par collecte du même billet),
+    le bon scoping devient `collectes.collecteur` via `collecte_id`. À réécrire —
+    et **question liée à trancher en tech-spec : sort de `billets.Collecteur`**
+    (dérivé de la collecte « courante » comme Categorie ? gardé dénormalisé ?
+    droppé ?). Idem `collectes_select/update_own_collecteur` (déjà corrects,
+    par `collectes.collecteur`).
+  - Vulnérabilité HIGH du backlog **confirmée toujours présente** :
+    `inscriptions_auto_select` laisse tout membre lire toutes les préférences
+    (hors périmètre #16, backlog sécurité).
+  - Pattern conforme : `roles={public}` + helpers `is_admin()/is_whitelisted()`,
+    aucun `TO authenticated`. `collection` a des policies own/admin complètes →
+    prêtes pour `pas_interesse` (la migration elle-même passe hors RLS).
+  - `inscriptions_insert_own` utilise `is_bloque_inscription()` (helper à lister
+    en S6).
+- ✅ **S6 — fonctions/RPC** (joué par Cyril le 2026-07-22) : helpers
+  `is_admin()`, `is_admin_ou_superadmin()`, `is_whitelisted()`, `is_collecteur()`,
+  `is_bloque_inscription(email)` ; RPC `compteurs_inscriptions()` (v1 —
+  la v2 + `compteurs_inscriptions_par_collecte()` de la branche n'ont jamais été
+  déployées, la tech-spec v2 devra les créer) ; `marquer_signalement_vu`,
+  `check_enveloppe_membre_update` + les 6 fonctions trigger vues en S4.
+- **S8 (ajouté suite à S4, reste à jouer)** : corps des 5 fonctions trigger
+  critiques (`sync_billet_date_effective`, `sync_billet_date_effective_from_billet`,
+  `set_inscription_audit`, `enforce_inscription_statut_paiement`,
+  `enforce_enveloppe_membre_update`) — bloc S8 ajouté au script
+  `scripts/audit-refonte-2026-07.sql`.
+- ✅ **S7 — index** (joué par Cyril le 2026-07-22) :
+  - `inscriptions` : PK id · **UK `(billet_id, membre_email)`
+    (`inscriptions_billet_id_membre_email_key`)** — confirme AUD2, c'est elle
+    qu'on droppe · index `billet_id`, `membre_email`, `enveloppe_id`,
+    `statut_livraison`. **Aucun index sur `collecte_id`** → la migration doit
+    créer l'index (nouveau chemin de jointure principal, somme due sur chaque
+    page) — la nouvelle UK `(collecte_id, membre_email)` le fournira.
+  - `collection` : **PK `(membre_email, billet_id)`** → l'upsert des 582
+    `pas_interesse` a sa cible de conflit naturelle (`ON CONFLICT` sur la PK).
+  - `collectes` : PK id seulement. **Aucun index sur `collectes.billet_id`** →
+    à créer (jointures billet ↔ collectes et triggers de dérivation du statut).
 
 ### Restant côté code (avant tech-spec)
 
@@ -309,11 +404,11 @@ lecture seule).
    [addendum-refonte-collectes-2026-07.md](../../_bmad-output/planning-artifacts/addendum-refonte-collectes-2026-07.md)
    (confirmations, amendements AM1–AM7, nouvelles exigences N1–N4, hors périmètre) ;
    renvois posés en tête du PRD, de l'architecture et de la tech-spec 13.
-3. ~~Rejeu des audits~~ ✅ audits **données** joués le 2026-07-22 (AUD-N1/N2/N5/
-   N6/N7/N8 + AUD3, résultats figés ci-dessus). **Reste :** (a) Cyril colle
-   `scripts/audit-refonte-2026-07.sql` dans le SQL Editor et rapporte les
-   résultats S1–S7 (schéma, FK, triggers, RLS, index) ; (b) AUD-N3 (inventaire
-   code détaillé) intégré à la tech-spec v2 ; (c) re-count au jour J.
+3. ~~Rejeu des audits~~ ✅ quasi terminé le 2026-07-22 : audits données
+   (AUD-N1/N2/N5/N6/N7/N8 + AUD3) et schéma S1–S7 joués, résultats figés
+   ci-dessus. **Reste :** (a) **S8** — corps des 5 fonctions trigger (bloc
+   ajouté au script, à jouer par Cyril) ; (b) AUD-N3 (inventaire code détaillé)
+   intégré à la tech-spec v2 ; (c) re-count au jour J.
 4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
    amendements) + plan de bascule : branche longue durée, test à blanc du SQL
    sur copie jetable Supabase, merge quand sûr, pas de staging déployé (Q3).
