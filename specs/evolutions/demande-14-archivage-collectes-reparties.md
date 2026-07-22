@@ -22,8 +22,9 @@
 - Calcul dans `mesInscriptionsParBillet` (compteurs `repartis`/`expedies`, flags
   `tousRepartis`/`tousExpedies`), via `statut_livraison` ajouté à la requête d'inscriptions.
 - Affichage : ces collectes sortent de la liste (actives **et** fermées) vers deux
-  **sections repliables** en bas de page, repliées par défaut : « Billets reçus et répartis
-  — envois à faire (N) » puis « Collectes terminées — billets envoyés (N) ».
+  **sections repliables** en bas de page : « Billets reçus et répartis — envois à faire (N) »,
+  **dépliée par défaut** (c'est du travail restant), puis « Collectes terminées —
+  billets envoyés (N) », repliée par défaut.
 - Pas de nouvel état stocké : l'archivage est **calculé**, donc réversible automatiquement
   si on retire un billet de l'enveloppe.
 
@@ -89,4 +90,10 @@ au lieu de plusieurs centaines.
   Commit `9749755`.
 - Correctif n°2 : `mes-collectes.js` (`estFermee` + `estEnvoyee` couvrant les collectes
   fermées sans inscrit, exclusion des envoyées des listes actives/fermées),
-  `sw.js` (`billets-v256`), `global.js` (`menu.html?v=164`).
+  `sw.js` (`billets-v256`), `global.js` (`menu.html?v=164`). Commit `464c9b1`.
+- Correctif n°3 (retours de test) : section « envois à faire » dépliée par défaut
+  (paramètre `ouvert` de `sectionArchive`) ; espacement manquant entre deux blocs
+  `.collectes-cards` consécutifs — le `gap` flex ne s'applique qu'à l'intérieur d'un bloc,
+  donc la dernière carte des actives et la première des fermées se touchaient
+  (`.collectes-cards + .collectes-cards { margin-top }`), et le bloc des actives n'est
+  plus émis quand il est vide. `sw.js` (`billets-v257`), `global.js` (`menu.html?v=165`).

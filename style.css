@@ -4295,6 +4295,12 @@ body.login-page {
     gap: var(--spacing-md);
 }
 
+/* Le `gap` ne s'applique qu'à l'intérieur d'un bloc : sans ça les cartes de deux
+   blocs consécutifs (actives / fermées) se touchent et semblent se chevaucher. */
+.collectes-cards + .collectes-cards {
+    margin-top: var(--spacing-md);
+}
+
 .collecte-card {
     display: flex;
     align-items: center;

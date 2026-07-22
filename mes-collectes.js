@@ -307,11 +307,14 @@ function renderCollectesList() {
         return h;
     }
 
-    // Ordre : actives → supp ouvertes → fermées → supp fermées → [replié : réparties] → [replié : envoyées]
-    var html = '<div class="collectes-cards">';
-    for (var i = 0; i < billetsOpen.length; i++) html += renderBilletCard(billetsOpen[i]);
-    for (var j = 0; j < suppOpen.length; j++) html += renderCollecteSupplementaireCard(suppOpen[j].collecte, suppOpen[j].billet);
-    html += '</div>';
+    // Ordre : actives → supp ouvertes → fermées → supp fermées → [réparties] → [replié : envoyées]
+    var html = '';
+    if (billetsOpen.length > 0 || suppOpen.length > 0) {
+        html += '<div class="collectes-cards">';
+        for (var i = 0; i < billetsOpen.length; i++) html += renderBilletCard(billetsOpen[i]);
+        for (var j = 0; j < suppOpen.length; j++) html += renderCollecteSupplementaireCard(suppOpen[j].collecte, suppOpen[j].billet);
+        html += '</div>';
+    }
 
     if (billetsClosed.length > 0 || suppClosed.length > 0) {
         html += '<div class="collectes-cards">';
@@ -320,19 +323,21 @@ function renderCollectesList() {
         html += '</div>';
     }
 
-    // Demande #14 — sections repliables archivées en bas de page (repliées par défaut)
-    function sectionArchive(id, icone, libelle, billets) {
+    // Demande #14 — sections repliables archivées en bas de page.
+    // « Envois à faire » est dépliée par défaut : repliée, elle donnait l'impression
+    // qu'il ne restait plus rien à traiter. Seules les collectes terminées sont repliées.
+    function sectionArchive(id, icone, libelle, billets, ouvert) {
         if (billets.length === 0) return '';
         var s = '<button class="btn-toggle-reparties" onclick="toggleReparties(this, \'' + id + '\')">'
             + '<i class="fa-solid ' + icone + '"></i> ' + libelle + ' (' + billets.length + ')'
-            + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
-        s += '<div id="' + id + '" class="collectes-cards" style="display:none">';
+            + ' <i class="fa-solid fa-chevron-' + (ouvert ? 'up' : 'down') + ' toggle-chevron"></i></button>';
+        s += '<div id="' + id + '" class="collectes-cards"' + (ouvert ? '' : ' style="display:none"') + '>';
         for (var n = 0; n < billets.length; n++) s += renderBilletCard(billets[n]);
         s += '</div>';
         return s;
     }
-    html += sectionArchive('collectes-reparties', 'fa-box-archive', 'Billets reçus et répartis — envois à faire', billetsRepartis);
-    html += sectionArchive('collectes-envoyees', 'fa-circle-check', 'Collectes terminées — billets envoyés', billetsEnvoyes);
+    html += sectionArchive('collectes-reparties', 'fa-box-archive', 'Billets reçus et répartis — envois à faire', billetsRepartis, true);
+    html += sectionArchive('collectes-envoyees', 'fa-circle-check', 'Collectes terminées — billets envoyés', billetsEnvoyes, false);
 
     container.innerHTML = onboardingHtml + html;
 }
