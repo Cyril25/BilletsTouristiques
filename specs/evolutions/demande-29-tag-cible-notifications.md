@@ -60,4 +60,4 @@ nouveauté « tout public » d'une nouveauté réservée aux collecteurs ou aux 
   `notifications.js` (insertion du badge dans l'en-tête de carte), `notifications.html`
   (styles `.notif-card-cible`), `sw.js` (cache `billets-v258`).
 - **Migration :** aucune (colonne `notifications.cible` déjà en place depuis #26).
-- **Commit :** `9d1cc60` — feat(notifications): demande #29 - badge de cible sur les cartes de nouveautes.
+- **Commit :** `0d92625` — feat(notifications): demande #29 - badge de cible sur les cartes de nouveautes.

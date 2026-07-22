@@ -57,3 +57,4 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#26](demande-26-ecran-stats-admin.md) | Écran de statistiques (admin) | M | À tester | ✅ | `8660c38` |
 | [#27](demande-27-vacances-date-fin.md) | Date de fin optionnelle sur le mode vacances | M | À tester | ✅ | `5613657` |
 | [#28](demande-28-notifications-membres.md) | Notifications « nouveautés » pour tous les membres + page dédiée | M | À tester | ✅ | `f3a2710` |
+| [#29](demande-29-tag-cible-notifications.md) | Badge de cible sur les cartes de nouveautés | S | À tester | ✅ | `0d92625` |
