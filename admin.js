@@ -81,6 +81,9 @@ var CATEGORIE_FLOW = {
 // statut manuel. « Pré collecte » est désormais un statut DÉRIVÉ, refusé par la
 // base à la création (il découle de la collecte, créée juste après le billet).
 var CATEGORIE_DEFAULT = 'Pas de collecte';
+// Les seuls statuts saisissables à la main, et uniquement quand le billet n'a
+// aucune collecte. Pré collecte / Collecte / Terminé sont dérivés par la base.
+var STATUTS_MANUELS = ['Pas de collecte', 'Jamais édité, projet', 'Masqué'];
 
 // Couleurs des categories
 var CATEGORIE_COLORS = {
@@ -1074,24 +1077,11 @@ function initPanel() {
             var panel = document.getElementById('admin-panel');
             var billetData = collectFormData();
 
-            // Story 9.3 — Auto-remplissage/nettoyage dates si statut changé (mode édition)
+            // Demande #16 — Story 9.3 retirée d'ici : les dates suivent le statut
+            // de la COLLECTE, pas celui du billet (colonnes DatePre/DateColl/
+            // DateFin renommées *_deprecated en base).
             if (panel && panel.dataset.editId) {
                 var editId = panel.dataset.editId;
-                var oldBillet = null;
-                for (var bi = 0; bi < adminBillets.length; bi++) {
-                    if (String(adminBillets[bi]._id) === String(editId)) { oldBillet = adminBillets[bi]; break; }
-                }
-                if (oldBillet && oldBillet.Categorie !== billetData.Categorie) {
-                    var existingDates = {
-                        DatePre: billetData.DatePre || oldBillet.DatePre,
-                        DateColl: billetData.DateColl || oldBillet.DateColl,
-                        DateFin: billetData.DateFin || oldBillet.DateFin
-                    };
-                    var dateUpdates = getDateUpdatesForStatusChange(oldBillet.Categorie, billetData.Categorie, existingDates);
-                    for (var dk in dateUpdates) {
-                        billetData[dk] = dateUpdates[dk];
-                    }
-                }
                 // Détecter un changement forcé de type (champs déverrouillés par l'admin)
                 var forcedTypeChange = null;
                 var cbNormaleEl = document.getElementById('field-version-normale');
@@ -1203,11 +1193,24 @@ function initPanel() {
     var collectesList = document.getElementById('collectes-list');
     if (collectesList) {
         collectesList.addEventListener('click', function(e) {
-            var btn = e.target.closest('.btn-cloturer-collecte');
-            if (!btn) return;
-            cloturerCollecte(btn.dataset.collecteId, btn.dataset.billetId);
+            var btnCloturer = e.target.closest('.btn-cloturer-collecte');
+            if (btnCloturer) {
+                cloturerCollecte(btnCloturer.dataset.collecteId, btnCloturer.dataset.billetId);
+                return;
+            }
+            var btnSupprimer = e.target.closest('.btn-supprimer-collecte');
+            if (btnSupprimer) {
+                supprimerPreCollecte(btnSupprimer.dataset.collecteId, btnSupprimer.dataset.billetId, btnSupprimer.dataset.collecteNom);
+            }
         });
     }
+
+    // Demande #16 — le statut et le scope de la collecte pilotent l'affichage
+    // et la saisissabilité des champs prix.
+    ['field-collecte-categorie', 'field-collecte-scope'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', toggleCollectePrixFields);
+    });
 
     // Story 12.3 — Bouton ajouter une collecte
     var btnAddCollecte = document.getElementById('btn-add-collecte');
@@ -1418,9 +1421,13 @@ function openBilletPanel(billetData, docId) {
         delete panel.dataset.editId;
         if (title) title.textContent = 'Ajouter un billet';
 
-        // Story 12.3 — Masquer la section collectes supplémentaires en mode création
+        // Story 12.3 — Masquer la section collectes en mode création (le billet
+        // n'existe pas encore ; la pré-collecte s'enchaîne juste après, B6)
         var sectionCollectes = document.getElementById('admin-collectes-supplementaires');
         if (sectionCollectes) sectionCollectes.style.display = 'none';
+        // Demande #16 — un billet neuf n'a aucune collecte : statut manuel
+        currentBilletCollectes = [];
+        refreshStatutBilletUI();
         if (saveBtn) saveBtn.textContent = 'Sauvegarder';
         panel.setAttribute('aria-label', 'Ajouter un billet');
 
@@ -1514,12 +1521,8 @@ function prefillForm(data) {
         'field-categorie': 'Categorie',
         'field-theme': 'Theme',
         'field-collecteur': 'Collecteur',
-        'field-prix': 'Prix',
-        'field-prix-variante': 'PrixVariante',
-        'field-fdp-com': 'FDP_Com',
-        'field-date-pre': 'DatePre',
-        'field-date-coll': 'DateColl',
-        'field-date-fin': 'DateFin',
+        // Demande #16 — prix, prix variante, FDP et dates ne sont plus des champs
+        // du billet : ils se saisissent sur la collecte (formulaire plus bas).
         'field-image-url': 'ImageUrl',
         'field-image-id': 'ImageId',
         'field-sondage': 'Sondage',
@@ -1585,14 +1588,26 @@ function prefillForm(data) {
         collecteurSelect.value = collecteurValue;
     }
 
-    // Checkbox PayerFDP
-    var payerFdpEl = document.getElementById('field-payer-fdp');
-    if (payerFdpEl) payerFdpEl.checked = (data.PayerFDP === 'oui');
-
-    // Statut
+    // Statut — demande #16 : dérivé si le billet porte des collectes, manuel sinon.
+    // L'état réel du select est posé par refreshStatutBilletUI() une fois les
+    // collectes chargées ; ici on se contente d'afficher la valeur courante.
     var categorie = data.Categorie || CATEGORIE_DEFAULT;
     var categorieField = document.getElementById('field-categorie');
-    if (categorieField) categorieField.value = categorie;
+    if (categorieField) {
+        if (categorie && !STATUTS_MANUELS.some(function(s) { return s === categorie; })) {
+            // Statut dérivé (Pré collecte / Collecte / Terminé) : pas dans la liste
+            // des options manuelles, on l'ajoute en lecture seule pour l'afficher.
+            var opt = categorieField.querySelector('option[data-derive="1"]');
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.setAttribute('data-derive', '1');
+                categorieField.appendChild(opt);
+            }
+            opt.value = categorie;
+            opt.textContent = categorie + ' (dérivé des collectes)';
+        }
+        categorieField.value = categorie;
+    }
 
     // Checkbox "Normale" — Story 9.9
     var cbNormale = document.getElementById('field-version-normale');
@@ -1707,6 +1722,32 @@ function togglePrixFields() {
 }
 
 // --- Fermeture du panel ---
+// Demande #16 (B6) — après création d'un billet, on rouvre le panel en édition
+// sur ce billet et on pré-remplit sa pré-collecte : c'est elle qui déclenchera
+// les auto-inscriptions et donnera son statut au billet.
+function ouvrirPanelPourPreCollecte(billet) {
+    openBilletPanel(billet, billet.id);
+
+    var nomEl = document.getElementById('field-collecte-nom');
+    if (nomEl && !nomEl.value) nomEl.value = 'Collecte ' + (billet.Millesime || new Date().getFullYear());
+
+    var catEl = document.getElementById('field-collecte-categorie');
+    if (catEl) catEl.value = 'Pré collecte';
+
+    // Scope déduit des versions déclarées sur le billet
+    var scopeEl = document.getElementById('field-collecte-scope');
+    if (scopeEl) {
+        var aVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+        var aNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+        scopeEl.value = aVariante ? (aNormale ? 'les_deux' : 'variante') : 'normal';
+    }
+    toggleCollectePrixFields();
+
+    var section = document.getElementById('admin-collectes-supplementaires');
+    if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast('Renseignez la pré-collecte, puis « Ajouter cette collecte »', 'info');
+}
+
 function closeBilletPanel() {
     var panel = document.getElementById('admin-panel');
     if (!panel) return;
@@ -1837,52 +1878,16 @@ function validateBilletForm() {
         if (!firstErrorField) firstErrorField = version;
     }
 
-    var prix = document.getElementById('field-prix');
-    var categorie = document.getElementById('field-categorie');
-    var isCollecte = categorie && categorie.value === 'Collecte';
+    // Demande #16 — les règles « au moins une date », « prix obligatoire en
+    // Collecte » et « prix variante obligatoire » ont migré dans
+    // validateCollecteForm() : dates et prix sont des propriétés de la collecte.
+    // Les garder ici rendait le formulaire billet insauvegardable (les champs
+    // n'existent plus, la date manquante bloquait toute création).
 
-    // Date obligatoire si catégorie ≠ "Masqué"
-    if (categorie && categorie.value !== 'Masqué') {
-        var datePre = document.getElementById('field-date-pre');
-        var dateColl = document.getElementById('field-date-coll');
-        var dateFin = document.getElementById('field-date-fin');
-        var hasDate = (datePre && datePre.value) || (dateColl && dateColl.value) || (dateFin && dateFin.value);
-        if (!hasDate) {
-            setFieldError('field-date-pre', 'error-date-pre', 'Au moins une date est requise (sauf pour les billets "Masqué")');
-            valid = false;
-            if (!firstErrorField) firstErrorField = datePre;
-        }
-    }
-
-    if (prix && prix.value !== '' && (isNaN(parseFloat(prix.value)) || parseFloat(prix.value) < 0)) {
-        setFieldError('field-prix', 'error-prix', 'Le prix doit etre un nombre positif');
-        valid = false;
-        if (!firstErrorField) firstErrorField = prix;
-    }
-
-    // Prix obligatoire en statut Collecte (seulement si version normale existe)
-    var cbNormaleForPrix = document.getElementById('field-version-normale');
-    var normaleExistePourPrix = cbNormaleForPrix ? cbNormaleForPrix.checked : true;
-    if (isCollecte && normaleExistePourPrix && prix && (prix.value.trim() === '' || parseFloat(prix.value) <= 0)) {
-        setFieldError('field-prix', 'error-prix', 'Le prix est obligatoire pour passer en Collecte');
-        valid = false;
-        if (!firstErrorField) firstErrorField = prix;
-    }
-
-    // Prix variante obligatoire en statut Collecte si variante active et pas de version normale
-    var hasVarianteForPrix = document.getElementById('field-has-variante');
-    var varianteActivePourPrix = hasVarianteForPrix && hasVarianteForPrix.value && hasVarianteForPrix.value !== 'N';
-    var prixVarianteForValidation = document.getElementById('field-prix-variante');
-    if (isCollecte && varianteActivePourPrix && !normaleExistePourPrix && prixVarianteForValidation && (prixVarianteForValidation.value.trim() === '' || parseFloat(prixVarianteForValidation.value) <= 0)) {
-        setFieldError('field-prix-variante', 'error-prix-variante', 'Le prix variante est obligatoire pour passer en Collecte');
-        valid = false;
-        if (!firstErrorField) firstErrorField = prixVarianteForValidation;
-    }
-
-    // Collecteur obligatoire en statut Collecte
+    // Collecteur obligatoire dès qu'une collecte est ouverte sur le billet
     var collecteur = document.getElementById('field-collecteur');
-    if (isCollecte && collecteur && collecteur.value === '') {
-        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire pour passer en Collecte');
+    if (!billetAucuneCollecte() && collecteur && collecteur.value === '') {
+        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire dès qu\'une collecte existe');
         valid = false;
         if (!firstErrorField) firstErrorField = collecteur;
     }
@@ -1926,7 +1931,6 @@ function collectFormData() {
         return el ? el.value.trim() : '';
     };
 
-    var payerFdpEl = document.getElementById('field-payer-fdp');
     var panel = document.getElementById('admin-panel');
     var billetData = {
         NomBillet: getValue('field-nom-billet'),
@@ -1944,13 +1948,9 @@ function collectFormData() {
         Pays: getValue('field-pays'),
         Theme: getValue('field-theme'),
         Collecteur: getValue('field-collecteur'),
-        Prix: getValue('field-prix') ? parseFloat(getValue('field-prix')) : null,
-        PrixVariante: getValue('field-prix-variante') ? parseFloat(getValue('field-prix-variante')) : null,
-        PayerFDP: payerFdpEl && payerFdpEl.checked ? 'oui' : '',
-        FDP_Com: getValue('field-fdp-com'),
-        DatePre: getValue('field-date-pre') || null,
-        DateColl: getValue('field-date-coll') || null,
-        DateFin: getValue('field-date-fin') || null,
+        // Demande #16 — Prix / PrixVariante / PayerFDP / FDP_Com / DatePre /
+        // DateColl / DateFin ne sont plus écrits ici : ils appartiennent à la
+        // collecte (les colonnes du billet sont renommées *_deprecated en base).
         ImageUrl: getValue('field-image-url'),
         ImageId: getValue('field-image-id'),
         // Story 5.2 — Ne collecter les champs Google que si le panel est en mode edition
@@ -1958,11 +1958,21 @@ function collectFormData() {
         LinkSondage: panel && panel.dataset.editId ? getValue('field-link-sondage') : '',
         LinkSheet: panel && panel.dataset.editId ? getValue('field-link-sheet') : '',
         LinkFB: getValue('field-link-fb'),
-        Commentaire: getValue('field-commentaire'),
-        Categorie: getValue('field-categorie') || CATEGORIE_DEFAULT
+        Commentaire: getValue('field-commentaire')
     };
 
+    // Demande #16 — Categorie n'est envoyée QUE si elle est encore saisissable,
+    // c'est-à-dire si le billet n'a aucune collecte. Sinon elle est dérivée et
+    // la base refuse l'écriture (même valeur inchangée : autant ne pas l'envoyer).
+    var statutSaisi = getValue('field-categorie');
+    if (billetAucuneCollecte() && STATUTS_MANUELS.indexOf(statutSaisi) !== -1) {
+        billetData.Categorie = statutSaisi;
+    }
+
     // Champ Recherche (concatenation des champs cles en minuscules)
+    // DV2-4 — le statut n'y figure plus : il change désormais sans passer par le
+    // front (dérivation par trigger), la valeur serait périmée. Le filtre de
+    // statut du catalogue lit Categorie directement.
     billetData.Recherche = [
         billetData.NomBillet,
         billetData.Ville,
@@ -1970,7 +1980,6 @@ function collectFormData() {
         billetData.Millesime,
         billetData.Dep,
         billetData.Pays,
-        billetData.Categorie,
         billetData.Theme,
         billetData.Collecteur
     ].join(' ').toLowerCase();
@@ -1996,11 +2005,16 @@ function saveBillet(billetData) {
     })
         .then(function(data) {
             var newBillet = Array.isArray(data) ? data[0] : data;
-            showToast('Billet ajoute avec succes', 'success');
-            closeBilletPanel();
+            // Demande #16 (B6/Q2bis) — le flux nominal enchaîne sur la création
+            // d'une pré-collecte : sans collecte, le billet reste en « Pas de
+            // collecte » et aucune pré-inscription n'est générée (le hook
+            // d'auto-inscription vit maintenant dans saveCollecte).
+            showToast('Billet ajouté — créez sa pré-collecte', 'success');
             loadAdminBillets();
             if (newBillet && newBillet.id) {
-                creerAutoInscriptions(newBillet);
+                ouvrirPanelPourPreCollecte(newBillet);
+            } else {
+                closeBilletPanel();
             }
         })
         .catch(function(error) {
@@ -2032,40 +2046,54 @@ function chargerEmailsBloques() {
         });
 }
 
-function creerAutoInscriptions(billet) {
+// Demande #16 (D5/B1) — le hook se déclenche désormais à la création d'une
+// COLLECTE, plus à celle du billet : une inscription doit porter un collecte_id
+// (NOT NULL). Le scope de la collecte sert de masque sur nb_normaux/nb_variantes.
+function creerAutoInscriptions(billet, collecte) {
     var isFrance = !billet.Pays || billet.Pays === 'France';
     var annee = parseInt(billet.Millesime) || new Date().getFullYear();
-    var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-    var hasVariante = !!billet.HasVariante;
+    var scope = (collecte && collecte.scope) || 'normal';
+    // Le masque de scope prime sur ce que déclare le billet : une collecte
+    // « variante » n'ouvre jamais la version normale, même si elle existe.
+    var hasNormale = (scope !== 'variante')
+        && billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+    var hasVariante = (scope !== 'normal') && !!billet.HasVariante;
 
     // Charger les paramétrages pour cette année + les membres bloqués
+    // + (N1) les membres déjà inscrits sur une autre collecte recouvrante du billet
     Promise.all([
         supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
-        chargerEmailsBloques()
+        chargerEmailsBloques(),
+        chargerDejaInscrits(billet.id, collecte)
     ])
         .then(function(res) {
             var autoData = res[0];
             var emailsBloques = res[1] || {};
+            var dejaInscrits = res[2] || {};
             if (!autoData || autoData.length === 0) return;
 
-            // Filtrer selon type de billet, en excluant les membres bloqués
+            // Filtrer selon type de billet, en excluant les membres bloqués et
+            // (N1) ceux déjà inscrits sur une collecte au périmètre recouvrant.
+            function eligible(a) {
+                return !emailsBloques[a.membre_email] && !dejaInscrits[a.membre_email];
+            }
             var qualifies;
             if (isFrance) {
-                qualifies = autoData.filter(function(a) { return a.france && !emailsBloques[a.membre_email]; });
+                qualifies = autoData.filter(function(a) { return a.france && eligible(a); });
             } else {
-                qualifies = autoData.filter(function(a) { return a.etranger && !emailsBloques[a.membre_email]; });
+                qualifies = autoData.filter(function(a) { return a.etranger && eligible(a); });
             }
 
             if (qualifies.length === 0) return;
 
             if (isFrance) {
                 // Billet FR : on a toutes les infos, créer les inscriptions
-                creerAutoInscriptionsBatch(billet, qualifies, [], isFrance, hasNormale, hasVariante);
+                creerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
             } else {
                 // Billet étranger : charger les sélections pays pour vérifier la sélection fine
                 supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
                     .then(function(paysData) {
-                        creerAutoInscriptionsBatch(billet, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
+                        creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
                     })
                     .catch(function(err) {
                         console.warn('Erreur chargement pays auto-inscriptions:', err);
@@ -2077,7 +2105,51 @@ function creerAutoInscriptions(billet) {
         });
 }
 
-function creerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, hasNormale, hasVariante) {
+// N1 — anti-réinscription automatique. La nouvelle UK (collecte_id, membre_email)
+// autorise volontairement un membre sur plusieurs collectes d'un même billet
+// (reliquat, rachat : inscriptions manuelles). Le hook automatique, lui, ne doit
+// jamais réinscrire quelqu'un dont une inscription couvre déjà la même version.
+// Recouvrement : normal ∩ {normal, les_deux}, variante ∩ {variante, les_deux},
+// les_deux ∩ tout. Désinscription = DELETE physique (AUD-N6), donc « déjà
+// inscrit » se résume à « la ligne existe ».
+function scopesSeRecouvrent(a, b) {
+    if (!a || !b) return false;
+    if (a === 'les_deux' || b === 'les_deux') return true;
+    return a === b;
+}
+
+function chargerDejaInscrits(billetId, collecte) {
+    var scopeNouvelle = (collecte && collecte.scope) || 'normal';
+    var nouvelleId = collecte && collecte.id;
+    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&select=membre_email,collecte_id')
+        .then(function(inscriptions) {
+            var autresIds = {};
+            (inscriptions || []).forEach(function(i) {
+                if (i.collecte_id && i.collecte_id !== nouvelleId) autresIds[i.collecte_id] = true;
+            });
+            var ids = Object.keys(autresIds);
+            if (ids.length === 0) return {};
+            return supabaseFetch('/rest/v1/collectes?id=in.(' + ids.join(',') + ')&select=id,scope')
+                .then(function(collectes) {
+                    var scopeParCollecte = {};
+                    (collectes || []).forEach(function(c) { scopeParCollecte[c.id] = c.scope; });
+                    var dejaInscrits = {};
+                    (inscriptions || []).forEach(function(i) {
+                        if (!i.collecte_id || i.collecte_id === nouvelleId) return;
+                        if (scopesSeRecouvrent(scopeParCollecte[i.collecte_id], scopeNouvelle)) {
+                            dejaInscrits[i.membre_email] = true;
+                        }
+                    });
+                    return dejaInscrits;
+                });
+        })
+        .catch(function(err) {
+            console.warn('Erreur chargement des inscriptions existantes (N1):', err);
+            return {};
+        });
+}
+
+function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFrance, hasNormale, hasVariante) {
     var inscriptions = [];
 
     for (var i = 0; i < qualifies.length; i++) {
@@ -2141,6 +2213,7 @@ function creerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, hasNo
 
         inscriptions.push({
             billet_id: billet.id,
+            collecte_id: collecte.id,
             membre_email: auto.membre_email,
             nb_normaux: nbNormaux,
             nb_variantes: nbVariantes,
@@ -2159,7 +2232,8 @@ function creerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, hasNo
     if (inscriptions.length === 0) return;
 
     // POST batch (Supabase accepte un array)
-    supabaseFetch('/rest/v1/inscriptions?on_conflict=billet_id,membre_email', {
+    // Demande #16 — cible de conflit alignée sur la nouvelle UK (corrige FR31)
+    supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
         method: 'POST',
         body: JSON.stringify(inscriptions),
         headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
@@ -3843,13 +3917,34 @@ function confirmAdminDeleteInscription(inscriptionId) {
 // STORY 12.3 — GESTION DES COLLECTES SUPPLÉMENTAIRES
 // ============================================================
 
+// Demande #16 — collectes du billet actuellement ouvert dans le panel. Sert à
+// savoir si le statut du billet est encore saisissable (0 collecte) ou dérivé.
+var currentBilletCollectes = [];
+
+function billetAucuneCollecte() {
+    return currentBilletCollectes.length === 0;
+}
+
+// Active ou verrouille le select de statut selon la présence de collectes.
+function refreshStatutBilletUI() {
+    var select = document.getElementById('field-categorie');
+    var msgDerive = document.getElementById('statut-derive-msg');
+    var msgManuel = document.getElementById('statut-manuel-msg');
+    var derive = !billetAucuneCollecte();
+    if (select) select.disabled = derive;
+    if (msgDerive) msgDerive.style.display = derive ? '' : 'none';
+    if (msgManuel) msgManuel.style.display = derive ? 'none' : '';
+}
+
 function loadCollectesForBillet(billetId) {
     if (!billetId) return;
     var container = document.getElementById('collectes-list');
     if (container) container.innerHTML = '<p style="font-style:italic; color: var(--color-text-light, #666);">Chargement...</p>';
     supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&order=created_at.asc')
         .then(function(data) {
-            renderCollectesList(data || [], billetId);
+            currentBilletCollectes = data || [];
+            refreshStatutBilletUI();
+            renderCollectesList(currentBilletCollectes, billetId);
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -3862,14 +3957,25 @@ function renderCollectesList(collectes, billetId) {
     var container = document.getElementById('collectes-list');
     if (!container) return;
     if (!collectes || collectes.length === 0) {
-        container.innerHTML = '<p class="collectes-empty">Aucune collecte supplémentaire.</p>';
+        // Demande #16 — un billet sans collecte est un billet à statut manuel :
+        // ce n'est plus un cas exotique, c'est l'état de départ.
+        container.innerHTML = '<p class="collectes-empty">Aucune collecte : le statut du billet se saisit à la main. Créez une pré-collecte ci-dessous pour lancer le cycle.</p>';
         return;
     }
-    var today = new Date().toISOString().slice(0, 10);
     var html = collectes.map(function(c) {
-        var isOpen = !c.date_fin || c.date_fin > today;
+        // Demande #16 — l'état vient de categorie (source du statut du billet),
+        // plus de la seule présence d'une date de fin.
+        var isOpen = c.categorie !== 'Terminé';
         var statusClass = isOpen ? 'ouverte' : 'cloturee';
-        var statusLabel = isOpen ? 'Ouverte' : 'Clôturée';
+        var statusLabel = c.categorie || 'Sans statut';
+        var estPreCollecte = c.categorie === 'Pré collecte';
+        var prixHtml = '';
+        if (c.prix !== null && c.prix !== undefined && c.prix !== '') {
+            prixHtml = '<span class="collecte-meta">' + parseFloat(c.prix).toFixed(2) + ' €'
+                + ((c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '')
+                    ? ' / ' + parseFloat(c.prix_variante).toFixed(2) + ' € var.' : '')
+                + (c.payer_fdp === 'oui' ? ' + FDP' : '') + '</span>';
+        }
         // Demande #24 — plafond de billets (nb_max) + compte courant si disponible
         var capaciteHtml = '';
         if (c.nb_max !== null && c.nb_max !== undefined) {
@@ -3882,10 +3988,14 @@ function renderCollectesList(collectes, billetId) {
         }
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
-            '<span class="collecte-badge-status ' + statusClass + '">' + statusLabel + '</span>' +
+            '<span class="collecte-badge-status ' + statusClass + '">' + escapeHtml(statusLabel) + '</span>' +
             capaciteHtml +
             '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
+            prixHtml +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
+            // B6 / AM4 — abandon d'une pré-collecte : on la supprime, le billet
+            // retombe en « Pas de collecte » via la dérivation.
+            (estPreCollecte ? '<button type="button" class="btn-supprimer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" data-collecte-nom="' + escapeAttr(c.nom || '') + '">Supprimer la pré-collecte</button>' : '') +
             '</div>';
     }).join('');
     container.innerHTML = html;
@@ -3913,7 +4023,69 @@ function validateCollecteForm() {
         if (scopeEl && scopeEl.closest('.admin-form-group')) scopeEl.closest('.admin-form-group').classList.add('has-error');
         valid = false;
     }
+
+    // Demande #16 — règles de prix reprises du formulaire billet (Story 9.6/9.9),
+    // désormais portées par la collecte et pilotées par son scope.
+    var catEl = document.getElementById('field-collecte-categorie');
+    var prixEl = document.getElementById('field-collecte-prix');
+    var prixVarEl = document.getElementById('field-collecte-prix-variante');
+    var scope = scopeEl ? scopeEl.value : '';
+    var categorie = catEl ? catEl.value : '';
+    setFieldError('field-collecte-prix', 'error-collecte-prix', '');
+    setFieldError('field-collecte-prix-variante', 'error-collecte-prix-variante', '');
+
+    function nombrePositifInvalide(el) {
+        return el && el.value !== '' && (isNaN(parseFloat(el.value)) || parseFloat(el.value) < 0);
+    }
+    if (nombrePositifInvalide(prixEl)) {
+        setFieldError('field-collecte-prix', 'error-collecte-prix', 'Le prix doit être un nombre positif');
+        valid = false;
+    }
+    if (nombrePositifInvalide(prixVarEl)) {
+        setFieldError('field-collecte-prix-variante', 'error-collecte-prix-variante', 'Le prix variante doit être un nombre positif');
+        valid = false;
+    }
+    // À partir de « Collecte », le prix de chaque version ouverte est obligatoire
+    if (categorie === 'Collecte') {
+        if (scope !== 'variante' && (!prixEl || prixEl.value === '')) {
+            setFieldError('field-collecte-prix', 'error-collecte-prix', 'Le prix est obligatoire à partir du statut Collecte');
+            valid = false;
+        }
+        if (scope === 'variante' && (!prixVarEl || prixVarEl.value === '')) {
+            setFieldError('field-collecte-prix-variante', 'error-collecte-prix-variante', 'Le prix variante est obligatoire à partir du statut Collecte');
+            valid = false;
+        }
+    }
     return valid;
+}
+
+// Demande #16 — équivalent collecte des Stories 9.6 / 9.9 : le prix variante ne
+// s'affiche que si le scope l'ouvre, et rien ne se saisit en pré-collecte.
+function toggleCollectePrixFields() {
+    var catEl = document.getElementById('field-collecte-categorie');
+    var scopeEl = document.getElementById('field-collecte-scope');
+    var prixEl = document.getElementById('field-collecte-prix');
+    var prixVarEl = document.getElementById('field-collecte-prix-variante');
+    var groupPrixVar = document.getElementById('group-collecte-prix-variante');
+    var msgEl = document.getElementById('collecte-prix-precollecte-msg');
+    if (!catEl || !prixEl) return;
+
+    var scope = scopeEl ? scopeEl.value : '';
+    var isPreCollecte = (catEl.value === 'Pré collecte');
+
+    // Prix normal : masqué si la collecte ne porte que la variante
+    var groupPrix = prixEl.closest('.admin-form-group');
+    if (groupPrix) groupPrix.style.display = (scope === 'variante') ? 'none' : '';
+    // Prix variante : visible seulement si le scope l'ouvre
+    if (groupPrixVar) groupPrixVar.style.display = (scope === 'variante' || scope === 'les_deux') ? '' : 'none';
+
+    prixEl.disabled = isPreCollecte;
+    if (prixVarEl) prixVarEl.disabled = isPreCollecte;
+    if (isPreCollecte) {
+        prixEl.value = '';
+        if (prixVarEl) prixVarEl.value = '';
+    }
+    if (msgEl) msgEl.style.display = isPreCollecte ? '' : 'none';
 }
 
 function saveCollecte(billetId) {
@@ -3924,10 +4096,18 @@ function saveCollecte(billetId) {
     var nbMaxRaw = getValue('field-collecte-nb-max');
     var nbMax = nbMaxRaw !== '' ? parseInt(nbMaxRaw, 10) : null;
     if (nbMax !== null && (isNaN(nbMax) || nbMax < 1)) nbMax = null;
+    var payerFdpEl = document.getElementById('field-collecte-payer-fdp');
     var body = {
         billet_id: parseInt(billetId, 10),
         nom: getValue('field-collecte-nom'),
         scope: getValue('field-collecte-scope'),
+        // Demande #16 — categorie pilote le statut du billet (dérivation) et
+        // prix/FDP quittent le billet pour vivre ici.
+        categorie: getValue('field-collecte-categorie') || 'Pré collecte',
+        prix: getValue('field-collecte-prix') ? parseFloat(getValue('field-collecte-prix')) : null,
+        prix_variante: getValue('field-collecte-prix-variante') ? parseFloat(getValue('field-collecte-prix-variante')) : null,
+        payer_fdp: payerFdpEl && payerFdpEl.checked ? 'oui' : '',
+        fdp_com: getValue('field-collecte-fdp-com'),
         collecteur: getValue('field-collecte-collecteur') || null,
         date_pre: getValue('field-collecte-date-pre') || null,
         date_coll: getValue('field-collecte-date-coll') || null,
@@ -3936,16 +4116,34 @@ function saveCollecte(billetId) {
     };
     supabaseFetch('/rest/v1/collectes', {
         method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(body)
     })
-    .then(function() {
+    .then(function(data) {
+        var nouvelleCollecte = Array.isArray(data) ? data[0] : data;
         showToast('Collecte ajoutée', 'success');
+
+        // Demande #16 (D5/B1) — c'est ici que naissent les pré-inscriptions,
+        // masquées par le scope de la collecte et dédupliquées (N1).
+        var billet = null;
+        for (var i = 0; i < adminBillets.length; i++) {
+            if (String(adminBillets[i].id) === String(billetId)) { billet = adminBillets[i]; break; }
+        }
+        if (billet && nouvelleCollecte && nouvelleCollecte.id) {
+            creerAutoInscriptions(billet, nouvelleCollecte);
+        }
         var ids = ['field-collecte-nom', 'field-collecte-scope', 'field-collecte-collecteur',
-                   'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin', 'field-collecte-nb-max'];
+                   'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin', 'field-collecte-nb-max',
+                   'field-collecte-prix', 'field-collecte-prix-variante', 'field-collecte-fdp-com'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
+        var cbFdp = document.getElementById('field-collecte-payer-fdp');
+        if (cbFdp) cbFdp.checked = false;
+        var selCat = document.getElementById('field-collecte-categorie');
+        if (selCat) selCat.value = 'Pré collecte';
+        toggleCollectePrixFields();
         var elDatePre = document.getElementById('field-collecte-date-pre');
         if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
         var section = document.getElementById('admin-collectes-supplementaires');
@@ -3964,7 +4162,9 @@ function saveCollecte(billetId) {
 function cloturerCollecte(collecteId, billetId) {
     supabaseFetch('/rest/v1/collectes?id=eq.' + collecteId, {
         method: 'PATCH',
-        body: JSON.stringify({ date_fin: new Date().toISOString().slice(0, 10) })
+        // Demande #16 — poser categorie='Terminé' : c'est elle qui fait basculer
+        // le statut du billet, date_fin seule ne suffit plus.
+        body: JSON.stringify({ categorie: 'Terminé', date_fin: new Date().toISOString().slice(0, 10) })
     })
     .then(function() {
         showToast('Collecte clôturée', 'success');
@@ -3975,6 +4175,54 @@ function cloturerCollecte(collecteId, billetId) {
         console.error('Erreur clôture collecte:', error);
         showToast('Erreur lors de la clôture', 'error');
     });
+}
+
+// ============================================================
+// B6 / AM4 — Abandon d'une pré-collecte (demande #16)
+// ============================================================
+// Le billet s'avère non collectable : on supprime sa pré-collecte, il retombe
+// en « Pas de collecte » par dérivation. La FK est en RESTRICT : les
+// pré-inscriptions automatiques doivent être purgées d'abord, et la suppression
+// est refusée s'il reste la moindre inscription à valeur métier.
+function supprimerPreCollecte(collecteId, billetId, nomCollecte) {
+    if (!collecteId) return;
+    if (!confirm('Supprimer la pré-collecte « ' + (nomCollecte || '') + ' » ?\n\n'
+        + 'Les pré-inscriptions automatiques seront supprimées.\n'
+        + 'Le billet repassera en « Pas de collecte ».')) return;
+
+    supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&select=id,membre_email,statut_paiement,envoye,fdp_regles,changed_by')
+        .then(function(inscriptions) {
+            var toutes = inscriptions || [];
+            // Définition « valeur métier » alignée sur le trigger D12 côté base.
+            var aValeurMetier = toutes.filter(function(i) {
+                return (i.statut_paiement && i.statut_paiement !== 'non_paye')
+                    || i.envoye === true
+                    || i.fdp_regles === true
+                    || (i.changed_by || '') !== 'pré-inscription';
+            });
+            if (aValeurMetier.length > 0) {
+                showToast('Suppression refusée : ' + aValeurMetier.length + ' inscription(s) à valeur métier sur cette collecte', 'error');
+                return null;
+            }
+            if (toutes.length === 0) return true;
+            // Purge explicite des pré-inscriptions (pas de cascade DB)
+            return supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId, { method: 'DELETE' })
+                .then(function() { return true; });
+        })
+        .then(function(ok) {
+            if (!ok) return null;
+            return supabaseFetch('/rest/v1/collectes?id=eq.' + collecteId, { method: 'DELETE' })
+                .then(function() {
+                    showToast('Pré-collecte supprimée — billet en « Pas de collecte »', 'success');
+                    loadCollectesForBillet(billetId);
+                    loadAdminCollectes();
+                    loadAdminInscriptionCounts();
+                });
+        })
+        .catch(function(error) {
+            console.error('Erreur suppression pré-collecte:', error);
+            showToast('Erreur lors de la suppression', 'error');
+        });
 }
 
 function populateCollecteCollecteurSelect() {
