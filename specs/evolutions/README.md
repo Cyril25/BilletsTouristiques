@@ -37,7 +37,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | Demande | Titre | Complexité | Statut | Spec | Commit |
 |---|---|---|---|---|---|
 | [#5](demande-5-signalement-erreur-billet.md) | Signaler une erreur sur un billet + boîte aux lettres admin | L → M | À tester | ✅ | — |
-| [#16](demande-16-refonte-collectes.md) | Refonte collectes : découplage billet ↔ collecte (epic 13 v2) | L | En cours (analyse — questions Q1–Q6 posées) | ✅ | — |
+| [#16](demande-16-refonte-collectes.md) | Refonte collectes : découplage billet ↔ collecte (epic 13 v2) | L | En cours (Q1–Q6 tranchées → amendement PRD + audits) | ✅ | — |
 | [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
 | [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
 | [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |

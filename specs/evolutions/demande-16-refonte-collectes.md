@@ -103,14 +103,12 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
 
 ### Ce qui est caduc ou à amender
 
-1. **A3 (« collectes vide »)** : vrai aujourd'hui mais fragile. La migration doit
-   soit gérer des lignes `collectes` existantes (backfill additif), soit être
-   précédée d'un **gel des collectes supplémentaires** clairement acté. À trancher (Q2).
-2. **Backfill « 1 collecte par billet »** (~5 420 lignes) : discutable pour les
-   **143 billets sans collecte** (Pas de collecte / Projet / Masqué) — leur créer
-   une collecte fantôme contredit le nouveau modèle « billet sans collecte ».
-   Proposition : ne backfiller que les billets en Pré collecte / Collecte / Terminé
-   **ou** ayant ≥ 1 inscription (audit AUD-N1 ci-dessous). (Q2)
+1. **A3 (« collectes vide »)** : abandonné. Vrai aujourd'hui mais fragile — la
+   migration sera **additive** : elle absorbe les lignes `collectes` existantes
+   au jour J, pas de gel des collectes supplémentaires (décision Q2).
+2. **Backfill « 1 collecte par billet »** (~5 420 lignes) : restreint aux billets
+   en Pré collecte / Collecte / Terminé (décision Q2, validée par l'audit AUD-N1 :
+   les 143 billets sans collecte ne portent aucune inscription à valeur métier).
 3. **Plan staging S1–S5** : reposait sur l'env TestEnv + 2ᵉ projet Supabase ; le
    repo TestEnv est **archivé** depuis juin. À redéfinir (Q3).
 4. **Audits AUD1–6** : à rejouer intégralement (volumes ×3 sur inscriptions,
@@ -140,52 +138,105 @@ admin-pre-inscriptions.js, absents de l'inventaire d'avril).
   HIGH, `membres_read_authenticated` MEDIUM) — hors scope #16 mais la fenêtre de
   maintenance est une occasion de les traiter. (Q6)
 
-## Points à trancher avec Cyril avant la tech-spec
+## Décisions (réponses de Cyril, 2026-07-22)
 
-- **Q1 — Statut du billet** : on valide le modèle de la branche ? `Categorie`
-  dérivée automatiquement des collectes (Pré collecte > Collecte > Terminé),
-  NULL + statut **manuel** (Projet / Masqué / Pas de collecte) quand aucune
-  collecte n'existe. Corollaire : relancer une collecte (ou une vente de reliquat)
-  sur un billet Terminé le fait **repasser automatiquement** en Collecte — voulu ?
-- **Q2 — Périmètre du backfill** : une collecte historique par billet pour les
-  5 277 billets Pré/Collecte/Terminé uniquement (+ ceux ayant des inscriptions),
-  et **aucune** pour les 143 sans collecte ? Et d'ici la migration : gèle-t-on la
-  création de collectes supplémentaires (aujourd'hui table vide) ou la migration
-  doit-elle les absorber ?
-- **Q3 — Environnement de validation** : réactiver TestEnv (repo archivé) +
-  2ᵉ projet Supabase avec dump prod, ou valider uniquement sur copie Supabase
-  locale/staging sans front déployé ? (Le critère « migration exécutée à blanc sur
-  jeu réel complet » reste non négociable.)
-- **Q4 — Anticipation #1/#22** : ajoute-t-on dès la migration `collectes.type`
-  et/ou `inscriptions.prix_perso` (colonnes dormantes), ou rien tant que #1 n'est
-  pas cadrée (le modèle le permettant déjà structurellement) ?
-- **Q5 — `pas_interesse`** : déplacement vers `collection` inclus dans #16
-  (comme sur la branche) ou chantier séparé ?
-- **Q6 — Opportunité sécurité** : corriger les 2 policies RLS du backlog pendant
-  la fenêtre de maintenance ?
+- **Q1 — Statut du billet : ✅ VALIDÉ.** `Categorie` dérivée automatiquement des
+  collectes (Pré collecte > Collecte > Terminé), NULL + statut **manuel**
+  (Projet / Masqué / Pas de collecte) quand aucune collecte n'existe.
+  **Exigence ajoutée par Cyril** : l'auto-inscription ne doit **jamais réinscrire**
+  un membre déjà inscrit sur une autre collecte du même billet couvrant la même
+  version. La nouvelle UK `(collecte_id, membre_email)` *autorise* techniquement
+  ce doublon (c'est voulu pour les inscriptions manuelles : reliquat, rachat…) —
+  la déduplication doit donc vivre **dans le hook d'auto-inscription** : à la
+  création d'une collecte, exclure les membres ayant déjà une inscription non
+  désinscrite sur une collecte du même billet dont le `scope` recouvre celui de
+  la nouvelle (normal ∩ normal, variante ∩ variante, les_deux ∩ tout).
+  À formaliser en tech-spec (règle de recouvrement + définition exacte de
+  « déjà inscrit »).
+- **Q2 — Périmètre du backfill : tranché.** Pas de gel des collectes
+  supplémentaires : la migration **absorbe l'existant** au jour J (backfill
+  additif — on vérifie ce que contient `collectes` au moment de migrer et on
+  rattache, l'hypothèse « table vide » d'avril est abandonnée).
+  Le backfill crée une collecte historique **uniquement pour les billets en
+  Pré collecte / Collecte / Terminé** (5 277 aujourd'hui). Les 143 billets
+  « sans collecte » (= `Categorie` ∈ Pas de collecte 93 / Jamais édité-projet 29 /
+  Masqué 21 — des billets pour lesquels aucune collecte n'a jamais été lancée ou
+  aboutie) **ne reçoivent pas de collecte** : ils passent en statut manuel.
+  L'audit AUD-N1 (joué le 2026-07-22, voir ci-dessous) confirme que c'est sans
+  perte : leurs seules inscriptions sont 9 pré-inscriptions automatiques non
+  payées (billets 5393 ITIF / 5395 VEHH) → **purgeables** (aucune valeur métier,
+  conforme au principe directeur), et 3 `pas_interesse` qui migrent vers
+  `collection` de toute façon.
+- **Q3 — Environnement de validation : tranché.** **Pas de réactivation de
+  TestEnv ni de staging déployé** (risque assumé : la lourdeur du staging est ce
+  qui a fait mourir la v1 d'avril). Stratégie : tout préparer sur une **branche
+  longue durée**, analyse poussée en amont (cette spec + tech-spec), merge sur
+  main uniquement quand on est sûrs (fonctionnalités ET interface), correctifs
+  au fil de l'eau si des bugs remontent. **Reste non négociable** : le script SQL
+  étant destructif, il sera testé à blanc sur une **copie jetable de la base**
+  (projet Supabase gratuit temporaire restauré du `pg_dump`, contrôles d'égalité
+  pré/post) — c'est du SQL pur, aucun front à déployer ; un front local peut
+  pointer la copie pour les smoke tests si utile.
+- **Q4 — Anticipation #1/#22 : reformulée, recommandation par défaut.**
+  La question était : faut-il ajouter *dès cette migration* des colonnes qui ne
+  serviront qu'aux demandes #1/#22 (un `type` de collecte « vente de reliquat »,
+  un prix personnalisé par inscription), pour éviter une seconde migration plus
+  tard ? **Recommandation retenue : non** — un `ALTER TABLE ADD COLUMN` ultérieur
+  est trivial (pas de migration de données, pas de fenêtre de maintenance), et
+  le modèle cible ne bloque structurellement ni l'un ni l'autre. On n'ajoute
+  rien maintenant ; on statuera au cadrage de #1.
+- **Q5 — `pas_interesse` : ✅ INCLUS dans #16.** Déplacement de
+  `inscriptions.pas_interesse` (581 lignes) vers `collection`, comme sur la
+  branche d'avril. **Exigence fonctionnelle ajoutée** : cliquer « Pas intéressé »
+  doit aussi **masquer le billet sur la page billets** (catalogue), et le
+  masquage devra être repris dans la future page collections.
+- **Q6 — RLS sécurité : ❌ HORS périmètre #16.** La migration est déjà énorme ;
+  les 2 vulnérabilités (`inscriptions_auto` SELECT HIGH,
+  `membres_read_authenticated` MEDIUM) restent au backlog sécurité, à traiter
+  dans un chantier séparé après la bascule.
 
 ## Audits à rejouer avant d'écrire la tech-spec (verrou ready-for-dev)
 
 - **AUD1–AUD6 d'avril** : rejouer sur la prod de juillet (colonnes de version,
   UK actuelle, counts, types prix/FDP, policies RLS `inscriptions`, sémantique
   `FDP_Com`).
-- **AUD-N1 (nouveau)** : inscriptions portées par des billets en
-  Pas de collecte / Projet / Masqué (détermine le périmètre du backfill, Q2).
+  ⚠️ **AUD1 déjà invalidé** (constat 2026-07-22) : la colonne
+  **`VersionNormaleExiste` existe désormais** dans `billets` (booléen, visible en
+  prod) alors que l'audit d'avril concluait qu'elle n'existait pas et fondait le
+  mapping du `scope` et le trigger D12 sur `HasVariante` seul. Le mapping backfill
+  et les triggers D4/D12 doivent être réécrits sur le couple
+  `VersionNormaleExiste` × `HasVariante`.
+- ~~**AUD-N1**~~ ✅ **joué le 2026-07-22** : inscriptions portées par les billets
+  sans collecte → Pas de collecte : 9 inscriptions sur 2 billets (5393 ITIF 2026,
+  5395 VEHH 2025), toutes `changed_by='pré-inscription'` + `non_paye` (aucune
+  valeur métier, purgeables) ; Jamais édité-projet : 0 ; Masqué : 3, toutes
+  `pas_interesse` (migrent vers `collection`). → backfill restreint validé (Q2).
 - **AUD-N2 (nouveau)** : distribution actuelle de `PayerFDP` + inventaire des
   comparaisons front (`=== 'oui'` vs casse réelle).
 - **AUD-N3 (nouveau)** : inventaire ligne à ligne des lecteurs de
   `Prix|PrixVariante|PayerFDP|FDP_Com|Categorie` sur main (grep du 2026-07-22 en
   donne la carte grossière, à détailler par zone fonctionnelle).
+- **AUD-N4 (nouveau)** : re-lister toutes les colonnes de `billets` en prod
+  (le schéma a dérivé depuis avril : `VersionNormaleExiste`, `date_effective`,
+  `Recherche`… absentes ou différentes de l'audit d'avril) et refaire la liste
+  exhaustive DROP/KEEP de D2.
 
 ## Prochaines étapes
 
-1. Réponses de Cyril aux questions Q1–Q6.
-2. Amendement formel du PRD/architecture (ou addendum) intégrant les décisions.
-3. Rejeu des audits (AUD1–6 + N1–N3), résultats figés dans la tech-spec.
+1. ~~Réponses de Cyril aux questions Q1–Q6~~ ✅ obtenues le 2026-07-22 (section
+   Décisions ci-dessus). Seul point encore ouvert : valider la recommandation Q4
+   (rien ajouter maintenant pour #1/#22) — décision par défaut si pas d'objection.
+2. Amendement formel du PRD/architecture (ou addendum) intégrant les décisions
+   Q1–Q6 + la règle anti-réinscription auto (Q1) + le masquage catalogue de
+   `pas_interesse` (Q5).
+3. Rejeu des audits AUD1–6 (AUD1 déjà invalidé) + AUD-N2/N3/N4, résultats figés
+   dans la tech-spec.
 4. Nouvelle tech-spec de migration (repartant de celle d'avril, corrigée des
-   amendements) + plan de bascule adapté à l'environnement choisi en Q3.
+   amendements) + plan de bascule : branche longue durée, test à blanc du SQL
+   sur copie jetable Supabase, merge quand sûr, pas de staging déployé (Q3).
 5. Dev (nouvelle branche, la branche d'avril restant en référence), validation
-   à blanc, bascule en fenêtre de maintenance, surveillance 24 h.
+   à blanc, bascule en fenêtre de maintenance, surveillance 24 h, correctifs au
+   fil de l'eau.
 
 ## Réalisation
 
