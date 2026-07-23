@@ -3742,6 +3742,13 @@ function soumettreNouvelleInscription() {
         return;
     }
 
+    // Demande #16 — l'inscription porte sur la collecte affichée dans le détail
+    // (la principale du billet, ou la collecte supplémentaire consultée).
+    if (!currentCollectePrincipale) {
+        showToast('Aucune collecte active pour ce billet', 'error');
+        return;
+    }
+
     // Chercher l'adresse du membre dans le cache
     var membre = null;
     if (membresCache) {
@@ -3766,6 +3773,7 @@ function soumettreNouvelleInscription() {
 
     var body = {
         billet_id: currentBilletId,
+        collecte_id: currentCollectePrincipale.id,
         membre_email: email,
         nb_normaux: nbNormaux,
         nb_variantes: nbVariantes,
@@ -3775,8 +3783,7 @@ function soumettreNouvelleInscription() {
         adresse_snapshot: adresseSnapshot,
         statut_paiement: 'non_paye',
         envoye: false,
-        fdp_regles: false,
-        pas_interesse: false
+        fdp_regles: false
     };
 
     supabaseFetch('/rest/v1/inscriptions', {

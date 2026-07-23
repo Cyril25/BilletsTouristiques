@@ -2291,8 +2291,16 @@ function recalculerAutoInscriptions(billet) {
     adminRecalculEnCoursBilletId = String(billet.id);
     var isFrance = !billet.Pays || billet.Pays === 'France';
     var annee = parseInt(billet.Millesime) || new Date().getFullYear();
-    var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-    var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+
+    // Demande #16 — le recalcul cible la collecte principale du billet et masque
+    // par SON scope (source de vérité du périmètre ouvert), pas par les versions
+    // déclarées du billet. Sans collecte, rien à recalculer.
+    var collecte = collectePrincipaleBilletAdmin(billet.id);
+    if (!collecte) return;
+    var scope = collecte.scope || 'normal';
+    var hasNormale = (scope !== 'variante')
+        && billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+    var hasVariante = (scope !== 'normal') && !!(billet.HasVariante && billet.HasVariante !== 'N');
 
     Promise.all([
         supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
@@ -2306,11 +2314,11 @@ function recalculerAutoInscriptions(billet) {
             if (qualifies.length === 0) return;
 
             if (isFrance) {
-                recalculerAutoInscriptionsBatch(billet, qualifies, [], isFrance, hasNormale, hasVariante);
+                recalculerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
             } else {
                 supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
                     .then(function(paysData) {
-                        recalculerAutoInscriptionsBatch(billet, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
+                        recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
                     })
                     .catch(function(err) { console.warn('Erreur paysData recalcul:', err); });
             }
@@ -2318,7 +2326,17 @@ function recalculerAutoInscriptions(billet) {
         .catch(function(err) { console.warn('Erreur recalculerAutoInscriptions:', err); });
 }
 
-function recalculerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, hasNormale, hasVariante) {
+// Collecte principale d'un billet côté admin (depuis adminCollectesByBillet,
+// alimenté par loadAdminCollectes) : « Collecte initiale » > ouverte > 1re.
+function collectePrincipaleBilletAdmin(billetId) {
+    var list = adminCollectesByBillet[billetId] || [];
+    if (list.length === 0) return null;
+    for (var i = 0; i < list.length; i++) { if (list[i].nom === 'Collecte initiale') return list[i]; }
+    for (var j = 0; j < list.length; j++) { if (list[j].categorie !== 'Terminé') return list[j]; }
+    return list[0];
+}
+
+function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFrance, hasNormale, hasVariante) {
     var updates = [];
 
     for (var i = 0; i < qualifies.length; i++) {
@@ -2349,6 +2367,7 @@ function recalculerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, 
 
         updates.push({
             billet_id: billet.id,
+            collecte_id: collecte.id,
             membre_email: auto.membre_email,
             nb_normaux: nbNormaux,
             nb_variantes: nbVariantes
@@ -2357,7 +2376,9 @@ function recalculerAutoInscriptionsBatch(billet, qualifies, paysData, isFrance, 
 
     if (updates.length === 0) return;
 
-    supabaseFetch('/rest/v1/inscriptions?on_conflict=billet_id,membre_email', {
+    // Demande #16 — merge sur la nouvelle UK (collecte_id, membre_email) : corrige
+    // nativement FR31 (merge-duplicates ne réinitialise plus les lignes existantes).
+    supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
         method: 'POST',
         body: JSON.stringify(updates),
         headers: { 'Prefer': 'return=minimal, resolution=merge-duplicates' }
@@ -3782,6 +3803,13 @@ function submitAdminAddInscription() {
         return;
     }
 
+    // Demande #16 — l'inscription porte sur la collecte principale du billet
+    var collecteInsc = collectePrincipaleBilletAdmin(adminCurrentBilletId);
+    if (!collecteInsc) {
+        showToast('Ce billet n\'a pas de collecte : créez-en une avant d\'inscrire un membre', 'error');
+        return;
+    }
+
     // Snapshot adresse du membre
     var membre = null;
     if (adminMembresCache) {
@@ -3806,6 +3834,7 @@ function submitAdminAddInscription() {
 
     var body = {
         billet_id: adminCurrentBilletId,
+        collecte_id: collecteInsc.id,
         membre_email: email,
         nb_normaux: nbNormaux,
         nb_variantes: nbVariantes,
@@ -3815,8 +3844,7 @@ function submitAdminAddInscription() {
         adresse_snapshot: adresseSnapshot,
         statut_paiement: 'non_paye',
         envoye: false,
-        fdp_regles: false,
-        pas_interesse: false
+        fdp_regles: false
     };
 
     supabaseFetch('/rest/v1/inscriptions', {
