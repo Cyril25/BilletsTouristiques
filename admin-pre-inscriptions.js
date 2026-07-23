@@ -604,12 +604,38 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
             };
         }
 
+        // Demande #16 — une pré-inscription porte sur la collecte principale du
+        // billet (collecte_id NOT NULL). On charge les collectes de ces billets.
+        var billetIds = billets.map(function(b) { return b.id; });
+        return supabaseFetch('/rest/v1/collectes?billet_id=in.(' + billetIds.join(',') + ')&select=id,billet_id,nom,scope,categorie&limit=10000')
+            .then(function(collectesData) {
+                var parBillet = {};
+                (collectesData || []).forEach(function(c) {
+                    if (!parBillet[c.billet_id]) parBillet[c.billet_id] = [];
+                    parBillet[c.billet_id].push(c);
+                });
+                function principale(bid) {
+                    var list = parBillet[bid] || [];
+                    for (var i = 0; i < list.length; i++) { if (list[i].nom === 'Collecte initiale') return list[i]; }
+                    for (var j = 0; j < list.length; j++) { if (list[j].categorie !== 'Terminé') return list[j]; }
+                    return list[0] || null;
+                }
+                return construireEtInserer(billets, principale, adresseSnapshot, config, paysSelections);
+            });
+    });
+
+    function construireEtInserer(billets, principale, adresseSnapshot, config, paysSelections) {
         var inscriptions = [];
         for (var i = 0; i < billets.length; i++) {
             var billet = billets[i];
+            var collecte = principale(billet.id);
+            if (!collecte) continue;   // billet ouvert sans collecte : rien à rattacher
+            var scope = collecte.scope || 'normal';
             var isFrance = !billet.Pays || billet.Pays === 'France';
-            var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-            var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+            // Masque de scope : une collecte « variante » n'ouvre pas la normale, etc.
+            var hasNormale = (scope !== 'variante')
+                && billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+            var hasVariante = (scope !== 'normal') && !!(billet.HasVariante && billet.HasVariante !== 'N');
             var nbNormaux = 0, nbVariantes = 0;
 
             if (isFrance) {
@@ -638,6 +664,7 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
 
             inscriptions.push({
                 billet_id: billet.id,
+                collecte_id: collecte.id,
                 membre_email: membreEmail,
                 nb_normaux: nbNormaux,
                 nb_variantes: nbVariantes,
@@ -648,19 +675,19 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
                 statut_paiement: 'non_paye',
                 envoye: false,
                 fdp_regles: false,
-                pas_interesse: false,
                 changed_by: 'pré-inscription'
             });
         }
 
         if (inscriptions.length === 0) return 0;
 
-        return supabaseFetch('/rest/v1/inscriptions?on_conflict=billet_id,membre_email', {
+        // Demande #16 — cible de conflit alignée sur la nouvelle UK (collecte_id, membre_email)
+        return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
             method: 'POST',
             body: JSON.stringify(inscriptions),
             headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
         }).then(function() { return inscriptions.length; });
-    });
+    }
 }
 
 /**
