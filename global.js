@@ -29,15 +29,50 @@ if (typeof firebase === 'undefined') {
 // /BilletsTouristiques-TestEnv/, la prod restant intacte partout ailleurs.
 // ⚠ À RETIRER à la bascule prod (E1) une fois la copie jetable supprimée :
 // remettre en dur l'URL/clé de prod. La clé anon est publique (RLS), safe en clair.
+var SUPABASE_URL_PROD = 'https://lhwcoybugdsggcclhtgb.supabase.co';
 var BT_IS_TESTENV = window.location.pathname.indexOf('/BilletsTouristiques-TestEnv/') === 0;
 var SUPABASE_URL = BT_IS_TESTENV
     ? 'https://ijxajtxnhbczgiarkefo.supabase.co'
-    : 'https://lhwcoybugdsggcclhtgb.supabase.co';
+    : SUPABASE_URL_PROD;
 var SUPABASE_ANON_KEY = BT_IS_TESTENV
     ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqeGFqdHhuaGJjemdpYXJrZWZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjY0MTMsImV4cCI6MjA5MTY0MjQxM30.5t-P56E4QfJpDooveaYp6zEW1vqMsmnD3ejQ9ZhU8rg'
     : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
 
-if (BT_IS_TESTENV) console.info('[BT] Environnement TEST — Supabase copie migrée (' + SUPABASE_URL + ')');
+// L'environnement est déterminé par la base RÉELLEMENT utilisée (pas par le seul
+// chemin) : « pas la prod » ⇔ SUPABASE_URL ≠ URL de prod. Le bandeau ne peut donc
+// pas mentir — il reflète exactement la base que toutes les requêtes vont taper.
+var BT_ON_PROD = (SUPABASE_URL === SUPABASE_URL_PROD);
+
+if (!BT_ON_PROD) console.warn('[BT] ENVIRONNEMENT DE TEST — base : ' + SUPABASE_URL + ' (PAS la production)');
+
+// Bandeau visible quand on n'est pas sur la prod (test / copie migrée / autre).
+function showEnvBanner() {
+    if (BT_ON_PROD) return;                                  // prod → aucun bandeau
+    if (document.getElementById('bt-env-banner')) return;    // déjà posé
+    if (!document.body) { document.addEventListener('DOMContentLoaded', showEnvBanner); return; }
+
+    var ref = '';
+    try { ref = JSON.parse(atob(SUPABASE_ANON_KEY.split('.')[1])).ref || ''; } catch (e) {}
+
+    var bar = document.createElement('div');
+    bar.id = 'bt-env-banner';
+    bar.setAttribute('role', 'status');
+    bar.textContent = '🧪 ENVIRONNEMENT DE TEST — vous n’êtes PAS sur la production'
+        + (ref ? ' (base ' + ref + ')' : '');
+    bar.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483647',
+        'background:repeating-linear-gradient(45deg,#b71c1c,#b71c1c 18px,#8e0000 18px,#8e0000 36px)',
+        'color:#fff', 'font:700 13px/1.4 system-ui,Segoe UI,Arial,sans-serif',
+        'letter-spacing:.02em', 'text-align:center', 'padding:6px 40px',
+        'box-shadow:0 2px 6px rgba(0,0,0,.35)', 'pointer-events:none', 'user-select:none'
+    ].join(';');
+
+    document.body.appendChild(bar);
+    // Décale le contenu pour ne pas masquer le haut de page (menu compris)
+    var h = bar.offsetHeight || 30;
+    document.body.style.paddingTop = ((parseFloat(getComputedStyle(document.body).paddingTop) || 0) + h) + 'px';
+}
+showEnvBanner();
 
 // --- Impersonation globale (superadmin uniquement) ---
 window.impersonatedEmail = sessionStorage.getItem('impersonatedEmail') || '';
