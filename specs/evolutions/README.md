@@ -59,4 +59,4 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#28](demande-28-notifications-membres.md) | Notifications « nouveautés » pour tous les membres + page dédiée | M | À tester | ✅ | `f3a2710` |
 | [#29](demande-29-tag-cible-notifications.md) | Badge de cible sur les cartes de nouveautés | S | À tester | ✅ | `0d92625` |
 | [#30](demande-30-pagination-notifications.md) | Pagination de la page Nouveautés | S | À tester | ✅ | `5c1f1e1` |
-| [#31](demande-31-export-exclure-billets-projet.md) | Export xlsx : exclure les billets « Jamais édité, projet » | S | À tester | ✅ | _(voir Réalisation)_ |
+| [#31](demande-31-export-exclure-billets-projet.md) | Export xlsx : exclure les billets « Jamais édité, projet » | S | À tester | ✅ | `49f18cd` |

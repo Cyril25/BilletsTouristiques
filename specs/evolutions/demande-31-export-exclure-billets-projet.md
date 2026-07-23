@@ -59,4 +59,4 @@ projet » (à faire au test manuel — critère 1).
   `b.Categorie === 'Jamais édité, projet'` en tête de `collExport()`), `sw.js` (cache `billets-v260`).
 - **Migration :** aucune (colonne `Categorie` déjà présente sur `billets`, simplement non
   sélectionnée côté membre jusqu'ici).
-- **Commit :** _(complété ci-dessous)_
+- **Commit :** `49f18cd` — feat(membre): demande #31 - exclure les billets « projet » de l'export xlsx.
