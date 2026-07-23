@@ -22,7 +22,7 @@ function loadStats() {
     Promise.all([
         supabaseFetch('/rest/v1/membres?select=role,statut,last_active_at,pays'),
         supabaseFetch('/rest/v1/inscriptions?select=date_inscription,nb_normaux,nb_variantes,pas_interesse,billet_id'),
-        supabaseFetch('/rest/v1/billets?select=id,Categorie,Collecteur,DateColl'),
+        supabaseFetch('/rest/v1/billets?select=id,Categorie,Collecteur,date_effective'),
         supabaseFetch('/rest/v1/collecteurs?select=alias,masque'),
         supabaseFetch('/rest/v1/enveloppes?select=statut')
     ])
@@ -87,10 +87,12 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     });
     var premiereDateStr = premiereDate ? new Date(premiereDate).toLocaleDateString('fr-FR') : '—';
 
-    // --- Collecteurs actifs dans l'année (billets mis en collecte cette année) ---
+    // --- Collecteurs actifs dans l'année (billets actifs cette année) ---
+    // Demande #16 — DateColl a migré sur la collecte ; on approxime via
+    // date_effective (dérivée des dates de collectes), suffisant pour une stat.
     var collecteursActifs = {};
     billets.forEach(function(b) {
-        if (b.Collecteur && b.DateColl && b.DateColl.slice(0, 4) === String(anneeCourante)) {
+        if (b.Collecteur && b.date_effective && b.date_effective.slice(0, 4) === String(anneeCourante)) {
             collecteursActifs[b.Collecteur] = true;
         }
     });
