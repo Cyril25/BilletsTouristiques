@@ -24,6 +24,58 @@ var currentCollecteSupp = null;       // Story 12.5 — collecte supplémentaire
 var mesCollectesSupp = [];            // Story 12.5 — [{collecte, billet}, ...]
 var mesInscriptionsParCollecte = {};  // Story 12.5 — {collecte_id: {total, confirmes, envoyes}}
 
+// ============================================================
+// Demande #16 — prix / FDP / dates viennent de la COLLECTE, plus du billet.
+// billets.Collecteur reste le périmètre du collecteur (DV2-3, phase 1).
+// ============================================================
+var collectesParBillet = {};    // billet_id → [collecte, ...] (vue liste)
+var collectesMapGlobal = {};    // collecte_id → collecte (toutes les collectes du collecteur)
+var currentCollectesMap = {};   // collecte_id → collecte (vue détail ouverte)
+var currentCollectePrincipale = null; // collecte représentative de la vue détail
+
+// Aplatit collectesParBillet en une carte collecte_id → collecte, pour les vues
+// (vérification paiement, relance, historique) qui calculent au niveau inscription.
+function rebuildCollectesMapGlobal() {
+    collectesMapGlobal = {};
+    Object.keys(collectesParBillet).forEach(function(bid) {
+        collectesParBillet[bid].forEach(function(c) { collectesMapGlobal[c.id] = c; });
+    });
+}
+
+// Tarif d'une inscription via la carte globale (hors vue détail).
+function tarifInsc(insc) {
+    var c = (insc && insc.collecte_id && collectesMapGlobal[insc.collecte_id]) || {};
+    return prixDepuisCollecte(c);
+}
+
+// Collecte représentative d'un billet pour l'affichage « au niveau billet »
+// (carte, en-tête). Priorité : « Collecte initiale » (backfill) > une ouverte > la 1re.
+function collectePrincipaleBillet(billetId) {
+    var list = collectesParBillet[billetId] || [];
+    if (list.length === 0) return null;
+    for (var i = 0; i < list.length; i++) { if (list[i].nom === 'Collecte initiale') return list[i]; }
+    for (var j = 0; j < list.length; j++) { if (list[j].categorie !== 'Terminé') return list[j]; }
+    return list[0];
+}
+
+// Tarif normalisé d'une collecte : {prix, prixVar, payerFdp}.
+function prixDepuisCollecte(c) {
+    var p = parseFloat((c && c.prix) || 0);
+    var pv = (c && c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '')
+        ? parseFloat(c.prix_variante) : p;
+    return { prix: p, prixVar: pv, payerFdp: (c && c.payer_fdp) || '' };
+}
+
+// Collecte d'une inscription dans la vue détail (repli sur la principale).
+function getCollectePourInsc(insc) {
+    return (insc && insc.collecte_id && currentCollectesMap[insc.collecte_id]) || currentCollectePrincipale || {};
+}
+
+// Tarif applicable à une inscription (factorise les ~7 sites de calcul, tech-spec C3).
+function getPrixFromCollecte(insc) {
+    return prixDepuisCollecte(getCollectePourInsc(insc));
+}
+
 function findFdpPriceCollecte(nbBillets, destination, typeEnvoi) {
     for (var i = 0; i < fraisPortCollecte.length; i++) {
         var r = fraisPortCollecte[i];
@@ -90,7 +142,9 @@ function checkCollecteur() {
 var mesInscriptionsParBillet = {};
 
 function loadMesCollectes() {
-    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version",attenuee,"PayerFDP","LinkSheet"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
+    // Demande #16 — Prix/PrixVariante/DateColl/DateFin/PayerFDP retirés du select :
+    // ces colonnes appartiennent à la collecte (chargées juste après).
+    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version",attenuee,"LinkSheet"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
         .then(function(billets) {
             mesBillets = billets || [];
             if (mesBillets.length === 0) {
@@ -102,12 +156,25 @@ function loadMesCollectes() {
             for (var i = 0; i < mesBillets.length; i++) {
                 billetIds.push(mesBillets[i].id);
             }
-            // Demande #16 — plus de filtre collecte_id=is.null : après la migration
-            // toute inscription porte une collecte, ce filtre viderait la vue.
-            // Les compteurs de la carte billet agrègent désormais toutes ses collectes.
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000');
+            // Demande #16 — charger les collectes de ces billets (prix, FDP, dates,
+            // statut pour l'affichage des cartes) + les inscriptions. Plus de filtre
+            // collecte_id=is.null : après la migration toute inscription porte une
+            // collecte, ce filtre viderait la vue.
+            return Promise.all([
+                supabaseFetch('/rest/v1/collectes?billet_id=in.(' + billetIds.join(',') + ')&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin&limit=10000'),
+                supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000')
+            ]);
         })
-        .then(function(inscriptions) {
+        .then(function(results) {
+            if (!results) return;
+            var collectes = results[0] || [];
+            var inscriptions = results[1] || [];
+            collectesParBillet = {};
+            collectes.forEach(function(c) {
+                if (!collectesParBillet[c.billet_id]) collectesParBillet[c.billet_id] = [];
+                collectesParBillet[c.billet_id].push(c);
+            });
+            rebuildCollectesMapGlobal();
             mesInscriptionsParBillet = {};
             if (inscriptions) {
                 for (var i = 0; i < inscriptions.length; i++) {
@@ -280,18 +347,22 @@ function renderCollectesList() {
             h += '<a href="' + escapeAttrMC(sheetUrl) + '" target="_blank" onclick="event.stopPropagation()" class="collecte-sheet-link" title="Voir le fichier Google Sheet"><i class="fa-solid fa-file-csv"></i></a>';
         }
         h += '</div>';
+        // Demande #16 — prix et date de collecte pris sur la collecte principale du billet
+        var colPrinc = collectePrincipaleBillet(b.id);
         var bVne = b.VersionNormaleExiste !== false;
         var bVarActive = b.HasVariante && b.HasVariante !== 'N';
-        var bPrixVar = (b.PrixVariante !== null && b.PrixVariante !== undefined && b.PrixVariante !== '') ? parseFloat(b.PrixVariante) : null;
+        var bPrix = (colPrinc && colPrinc.prix !== null && colPrinc.prix !== undefined && colPrinc.prix !== '') ? parseFloat(colPrinc.prix) : null;
+        var bPrixVar = (colPrinc && colPrinc.prix_variante !== null && colPrinc.prix_variante !== undefined && colPrinc.prix_variante !== '') ? parseFloat(colPrinc.prix_variante) : null;
+        var bDateColl = colPrinc ? colPrinc.date_coll : null;
         h += '<div class="collecte-card-info">';
-        if (bVne && b.Prix) {
-            h += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + (bVarActive && bPrixVar !== null ? ' / ' + bPrixVar + ' (var.)' : '') + '</span>';
+        if (bVne && bPrix !== null) {
+            h += '<span><i class="fa-solid fa-euro-sign"></i> ' + bPrix + (bVarActive && bPrixVar !== null ? ' / ' + bPrixVar + ' (var.)' : '') + '</span>';
         } else if (!bVne && bVarActive && bPrixVar !== null) {
             h += '<span><i class="fa-solid fa-euro-sign"></i> ' + bPrixVar + ' (var.)</span>';
-        } else if (b.Prix) {
-            h += '<span><i class="fa-solid fa-euro-sign"></i> ' + b.Prix + '</span>';
+        } else if (bPrix !== null) {
+            h += '<span><i class="fa-solid fa-euro-sign"></i> ' + bPrix + '</span>';
         }
-        if (b.DateColl) h += '<span><i class="fa-solid fa-calendar"></i> ' + window.formatDateFr(b.DateColl) + '</span>';
+        if (bDateColl) h += '<span><i class="fa-solid fa-calendar"></i> ' + window.formatDateFr(bDateColl) + '</span>';
         h += '</div>';
         var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, billetsTotal: { normaux: 0, variantes: 0 }, billetsEnvoyes: { normaux: 0, variantes: 0 } };
         if (stats.total > 0) {
@@ -376,11 +447,18 @@ function openCollecteDetail(billetId) {
     var annee = new Date().getFullYear();
     Promise.all([
         supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.asc'),
-        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*')
+        supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
+        // Demande #16 — les collectes du billet portent prix/FDP/statut
+        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin')
     ])
         .then(function(results) {
             currentInscriptions = results[0] || [];
             fraisPortCollecte = results[1] || [];
+            var collectesBillet = results[2] || [];
+            currentCollectesMap = {};
+            collectesBillet.forEach(function(c) { currentCollectesMap[c.id] = c; });
+            collectesParBillet[billetId] = collectesBillet;
+            currentCollectePrincipale = collectePrincipaleBillet(billetId);
             // Si le billet n'a pas de variante, ignorer toute valeur résiduelle de nb_variantes
             if (currentBillet && (!currentBillet.HasVariante || currentBillet.HasVariante === 'N')) {
                 currentInscriptions.forEach(function(ins) { ins.nb_variantes = 0; });
@@ -433,8 +511,12 @@ function renderCollecteDetail(billetId, inscriptions) {
 
     var billet = currentBillet;
     var isOpen = billet && (billet.Categorie === 'Collecte' || billet.Categorie === 'Pré collecte');
-    var prix = parseFloat((billet && billet.Prix) || 0);
-    var prixVariante = (billet && billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+    // Demande #16 — prix/FDP « niveau billet » = collecte principale de la vue.
+    // Le montant de chaque ligne utilise getPrixFromCollecte(insc) (sa propre collecte).
+    var tarifPrincipal = prixDepuisCollecte(currentCollectePrincipale);
+    var prix = tarifPrincipal.prix;
+    var prixVariante = tarifPrincipal.prixVar;
+    var payerFdpVue = tarifPrincipal.payerFdp;
 
     // Compute counters — exclure le bénéficiaire (collecteur inscrit à sa propre collecte) des compteurs de paiement
     var totalInscrits = 0;
@@ -526,7 +608,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             + '</button>';
     }
     // Bouton "Tout cocher enveloppes" (uniquement si FDP non demandé)
-    if (billet.PayerFDP !== 'oui') {
+    if (payerFdpVue !== 'oui') {
         var aCocher = inscriptions.filter(function(i) {
             return !i.pas_interesse && i.statut_livraison !== 'pret_a_envoyer' && i.statut_livraison !== 'expedie';
         });
@@ -539,7 +621,7 @@ function renderCollecteDetail(billetId, inscriptions) {
     }
 
     // Message si FDP non demandé — entre la barre d'actions et le tableau
-    if (billet.PayerFDP !== 'oui') {
+    if (payerFdpVue !== 'oui') {
         html += '<div class="message-gerer-envoi">'
             + '<i class="fa-solid fa-info-circle"></i> '
             + 'Cochez la colonne <strong>Enveloppe</strong> pour ajouter le billet à la préparation des envois, '
@@ -572,7 +654,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         html += '<th>Envoi</th>';
         html += '<th>Montant</th>';
         html += '<th>Payé</th>';
-        if (billet.PayerFDP === 'oui') {
+        if (payerFdpVue === 'oui') {
             html += '<th>FDP</th>';
             html += '<th>Envoyé</th>';
         } else {
@@ -588,12 +670,14 @@ function renderCollecteDetail(billetId, inscriptions) {
             var membreIns = membresCache ? membresCache.find(function(mc) { return mc.email === ins.membre_email; }) : null;
             var nomPrenom = ((snap.nom || '') + ' ' + (snap.prenom || '')).trim() || (membreIns ? ((membreIns.nom || '') + ' ' + (membreIns.prenom || '')).trim() : '') || ins.membre_email;
             var adresse = formatAdresse(membreIns || snap);
-            var montantBillets = (prix * (ins.nb_normaux || 0)) + (prixVariante * (ins.nb_variantes || 0));
+            // Demande #16 — montant calculé sur la collecte de CETTE inscription
+            var tarifIns = getPrixFromCollecte(ins);
+            var montantBillets = (tarifIns.prix * (ins.nb_normaux || 0)) + (tarifIns.prixVar * (ins.nb_variantes || 0));
             var commentaire = ins.commentaire || '';
 
             // Calcul FDP si demandé
             var fdpMontantIns = 0;
-            if (billet.PayerFDP === 'oui') {
+            if (payerFdpVue === 'oui') {
                 var nbTotalIns = (ins.nb_normaux || 0) + (ins.nb_variantes || 0);
                 var destIns = (snap.pays === 'France') ? 'france' : 'international';
                 var typeEnvoiIns = (ins.mode_envoi || 'Normal').toLowerCase();
@@ -614,7 +698,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '<td data-label="Envoi">' + escapeHtmlMC(ins.mode_envoi || '') + '</td>';
             html += '<td data-label="Montant">' + montantAffiche + '</td>';
             html += '<td data-label="Payé">' + badgePaiementCollecteur(ins) + '</td>';
-            if (billet.PayerFDP === 'oui') {
+            if (payerFdpVue === 'oui') {
                 html += '<td data-label="FDP"><input type="checkbox" id="chk-fdp_regles-' + ins.id + '" ' + (ins.fdp_regles ? 'checked' : '') + ' onchange="toggleInscriptionField(' + ins.id + ', \'fdp_regles\', this.checked)"></td>';
                 html += '<td data-label="Envoyé"><input type="checkbox" id="chk-envoye-' + ins.id + '" ' + (ins.envoye ? 'checked' : '') + ' onchange="demanderExpeditionDirecte(' + ins.id + ', this)"></td>';
             } else {
@@ -629,7 +713,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '</tr>';
 
             if (commentaire) {
-                var colCount = 7 + (vne ? 1 : 0) + (hasVar ? 1 : 0) + (billet.PayerFDP === 'oui' ? 2 : 1);
+                var colCount = 7 + (vne ? 1 : 0) + (hasVar ? 1 : 0) + (payerFdpVue === 'oui' ? 2 : 1);
                 html += '<tr class="tr-commentaire"><td colspan="' + colCount + '"><i class="fa-solid fa-comment"></i> ' + escapeHtmlMC(commentaire) + '</td></tr>';
             }
         }
@@ -2607,8 +2691,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
     var totalEnAttente = 0;
     inscriptions.forEach(function(insc) {
         var billet = billetsMap[insc.billet_id] || {};
-        var prix = parseFloat(billet.Prix || 0);
-        var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+        var _t = tarifInsc(insc); var prix = _t.prix, prixVariante = _t.prixVar;
         totalEnAttente += (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
     });
     enveloppesPort.forEach(function(env) {
@@ -2658,8 +2741,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
         for (var l = 0; l < groupe.inscriptions.length; l++) {
             var insc = groupe.inscriptions[l];
             var billet = billetsMap[insc.billet_id] || {};
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVariante = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var _t = tarifInsc(insc); var prix = _t.prix, prixVariante = _t.prixVar;
             var montantNum = (prix * (insc.nb_normaux || 0)) + (prixVariante * (insc.nb_variantes || 0));
             totalGroupe += montantNum;
             var montant = montantNum.toFixed(2);
@@ -2893,8 +2975,7 @@ function renderPaiementsConfirmes(inscriptions, port, membresMap) {
         var lignes = '';
         groupes[email].inscriptions.forEach(function(insc) {
             var billet = bMap[insc.billet_id] || {};
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
             var nbN = billet.VersionNormaleExiste !== false ? (insc.nb_normaux || 0) : 0;
             var nbV = (billet.HasVariante && billet.HasVariante !== 'N') ? (insc.nb_variantes || 0) : 0;
             var montant = (prix * nbN) + (prixVar * nbV);
@@ -3054,11 +3135,11 @@ function ouvrirRelance(billetId) {
 }
 
 function renderRelanceModal(billet, impayes) {
-    var prix = parseFloat(billet.Prix || 0);
-    var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
     var hasPaypal = !!(monCollecteur.paypal_me || monCollecteur.paypal_email);
 
     var messagesHtml = impayes.map(function(insc, idx) {
+        // Demande #16 — le montant se calcule sur la collecte de chaque inscription
+        var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
         var adr = insc.adresse_snapshot || {};
         var prenom = adr.prenom || insc.membre_email;
         var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
@@ -3201,8 +3282,7 @@ function ouvrirRelanceGlobale() {
         for (var j = 0; j < groupe.inscriptions.length; j++) {
             var insc = groupe.inscriptions[j];
             var billet = billetsMap[insc.billet_id] || {};
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
             var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
             totalMembre += montant;
 
@@ -3316,8 +3396,7 @@ function ouvrirRecapPaiementGlobal() {
         for (var j = 0; j < groupe.inscriptions.length; j++) {
             var insc = groupe.inscriptions[j];
             var billet = billetsMap[insc.billet_id] || {};
-            var prix = parseFloat(billet.Prix || 0);
-            var prixVar = (billet.PrixVariante !== null && billet.PrixVariante !== undefined && billet.PrixVariante !== '') ? parseFloat(billet.PrixVariante) : prix;
+            var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
             totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
             billetsSet[refBilletLabel(billet)] = true;
         }
@@ -4324,7 +4403,7 @@ function loadMesCollectesSupplementaires() {
             collectes.forEach(function(c) {
                 if (ids.indexOf(c.billet_id) === -1) ids.push(c.billet_id);
             });
-            return supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Prix","PrixVariante","DateColl","DateFin","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version","PayerFDP"&id=in.(' + ids.join(',') + ')')
+            return supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version"&id=in.(' + ids.join(',') + ')')
                 .then(function(billets) {
                     var billetsMap = {};
                     (billets || []).forEach(function(b) { billetsMap[b.id] = b; });
@@ -4389,7 +4468,10 @@ function renderCollecteSupplementaireCard(collecte, billet) {
     html += '<span class="collecte-status ' + statusClass + '">' + escapeHtmlMC(statusLabel) + '</span>';
     html += '</div>';
     html += '<div class="collecte-card-info">';
-    if (billet.Prix) html += '<span><i class="fa-solid fa-euro-sign"></i> ' + billet.Prix + '</span>';
+    // Demande #16 — prix lu sur la collecte (l'objet est déjà disponible ici)
+    if (collecte.prix !== null && collecte.prix !== undefined && collecte.prix !== '') {
+        html += '<span><i class="fa-solid fa-euro-sign"></i> ' + collecte.prix + '</span>';
+    }
     if (collecte.date_coll) html += '<span><i class="fa-solid fa-calendar"></i> ' + collecte.date_coll + '</span>';
     html += '</div>';
     if (stats.total > 0) {
@@ -4423,8 +4505,17 @@ function openCollecteDetailSupp(collecteId) {
     currentCollecteSupp = found.collecte;
     currentBilletId = found.billet ? found.billet.id : null;
 
+    // Demande #16 — vue d'UNE collecte : elle est sa propre principale
+    currentCollectesMap = {};
+    currentCollectesMap[found.collecte.id] = found.collecte;
+    currentCollectePrincipale = found.collecte;
+
+    // Statut d'ouverture dérivé de la catégorie de la collecte (date_fin en repli
+    // pour les collectes créées avant que categorie soit renseignée)
     var today = new Date().toISOString().slice(0, 10);
-    var isOpen = !currentCollecteSupp.date_fin || currentCollecteSupp.date_fin > today;
+    var isOpen = found.collecte.categorie
+        ? found.collecte.categorie !== 'Terminé'
+        : (!currentCollecteSupp.date_fin || currentCollecteSupp.date_fin > today);
 
     // Build currentBillet with Categorie override so renderCollecteDetail shows correct open/closed state
     currentBillet = found.billet ? JSON.parse(JSON.stringify(found.billet)) : {};
