@@ -64,6 +64,13 @@ function tarifInscriptionCatalogue(insc, billetId) {
     return prixCollecteCatalogue(c);
 }
 
+// Demande #16 (bascule collecteur) — le collecteur « du billet » côté catalogue
+// vient de sa collecte principale (billets.Collecteur supprimé).
+function collecteurPrincipalCatalogue(item) {
+    var cp = item && collectePrincipaleByBillet[item.id];
+    return (cp && cp.collecteur) || '';
+}
+
 // Demande #16 — tarif normalisé d'une collecte (catalogue)
 function prixCollecteCatalogue(c) {
     var p = (c && c.prix !== null && c.prix !== undefined && c.prix !== '') ? parseFloat(c.prix) : 0;
@@ -559,7 +566,7 @@ function applyFilters(silent) {
 
         return txt && matchDate &&
             (!fPays.length || fPays.indexOf(item.Pays) !== -1) && (!fYear || item.Millesime == fYear) &&
-            (!fTheme || item.Theme === fTheme) && (!fColl || item.Collecteur === fColl) &&
+            (!fTheme || item.Theme === fTheme) && (!fColl || collecteurPrincipalCatalogue(item) === fColl) &&
             (!masquerPasInteresse || !estPasInteresse(item.id));
     });
 
@@ -643,7 +650,7 @@ function renderListTable() {
             '<td class="col-ref">' + escapeHtml(item.Reference || '') + '</td>' +
             '<td>' + escapeHtml(item.Ville || '') + '</td>' +
             '<td>' + escapeHtml(item.NomBillet || '') + '</td>' +
-            '<td>' + escapeHtml(item.Collecteur || '') + '</td>' +
+            '<td>' + escapeHtml(collecteurPrincipalCatalogue(item)) + '</td>' +
             '<td class="col-comment">' + escapeHtml(item.Commentaire || '') + '</td>' +
             '</tr>';
     });
@@ -716,7 +723,7 @@ function showMore() {
                 buildVersionBadgesHtml(item) +
                 (function() {
                     var parts = [];
-                    if (item.Collecteur) parts.push('Par ' + escapeHtml(item.Collecteur));
+                    var _colr = collecteurPrincipalCatalogue(item); if (_colr) parts.push('Par ' + escapeHtml(_colr));
 
                     var versionNormaleExiste = item.VersionNormaleExiste !== false;
                     var varianteVal = item.HasVariante || '';
@@ -928,8 +935,9 @@ function loadMaCollectionPasInteresse(email) {
 
 function estBeneficiaireCatalogue(item) {
     var email = window.getActiveEmail && window.getActiveEmail();
-    if (!email || !item || !item.Collecteur) return false;
-    var col = collecteursMap[item.Collecteur];
+    var colr = collecteurPrincipalCatalogue(item);
+    if (!email || !colr) return false;
+    var col = collecteursMap[colr];
     return !!(col && col.email_membre && col.email_membre === email);
 }
 
@@ -1090,8 +1098,9 @@ function declarerPaiementCatalogue(inscriptionId) {
             break;
         }
     }
-    var collecteur = billet ? (billet.Collecteur || '') : '';
-    // Demande #16 — prix/FDP depuis la collecte de l'inscription
+    // Demande #16 — collecteur + prix/FDP depuis la collecte de l'inscription
+    var colD = insc && collecteByIdCatalogue[insc.collecte_id];
+    var collecteur = (colD && colD.collecteur) || '';
     var tarifD = tarifInscriptionCatalogue(insc, billet ? billet.id : null);
     var prix = tarifD.prix;
     var prixVar = tarifD.prixVar;
@@ -1206,7 +1215,7 @@ function buildInscriptionHtml(item) {
 
         // Lien PayPal si non payé et mode_paiement = PayPal (jamais pour le bénéficiaire)
         var statut = inscription.statut_paiement || 'non_paye';
-        var collecteurInfo = collecteursMap[item.Collecteur] || {};
+        var collecteurInfo = collecteursMap[collecteurPrincipalCatalogue(item)] || {};
         if (!isBeneficiaire && statut === 'non_paye' && inscription.mode_paiement === 'PayPal' && item.Categorie !== 'Pré collecte') {
             var refPart = (item.Reference || '') + ' ' + (item.Millesime || '') + (item.Version ? '-' + item.Version : '');
             var noteparts = [refPart.trim(), item.NomBillet || ''];
@@ -1248,7 +1257,7 @@ function buildInscriptionHtml(item) {
         var isInscriptionSite = !item.LinkSheet && !item.Sondage;
         if (isInscriptionSite) {
             // Bloqué par un admin (toutes collectes) ou blacklisté par le collecteur de ce billet
-            var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
+            var isBlackliste = blacklistCollecteurs[collecteurPrincipalCatalogue(item)];
             if (membreBloqueInscription) {
                 html = buildBlocageInscriptionHtml(true);
             } else if (isBlackliste) {
@@ -1371,9 +1380,10 @@ function confirmerInscription(billetId) {
             if (form) form.remove();
             loadMesInscriptions();
             loadCompteursInscriptions();
-            // Créer l'enveloppe en_cours si elle n'existe pas encore
-            if (billet.Collecteur) {
-                creerEnveloppeSiAbsente(billet.Collecteur, email);
+            // Créer l'enveloppe en_cours si elle n'existe pas encore (collecteur de
+            // la collecte principale, sur laquelle porte cette inscription)
+            if (colPrinc && colPrinc.collecteur) {
+                creerEnveloppeSiAbsente(colPrinc.collecteur, email);
             }
         })
         .catch(function(error) {
@@ -1623,7 +1633,7 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
             + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-lock"></i> Collecte complète</button>'
             + '</div>';
     }
-    var isBlackliste = item.Collecteur && blacklistCollecteurs[item.Collecteur];
+    var isBlackliste = blacklistCollecteurs[collecteurPrincipalCatalogue(item)];
     if (isBlackliste) {
         return '<div class="inscription-badges">'
             + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-ban"></i> Inscription impossible</button>'
@@ -1756,7 +1766,9 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
             loadMesInscriptions();
             loadCompteursInscriptions();
             loadCollectesByBillet(); // Demande #24 — rafraîchir le total/plafond de la collecte
-            if (billet.Collecteur) creerEnveloppeSiAbsente(billet.Collecteur, email);
+            // Enveloppe pour le collecteur de LA collecte visée (bascule collecteur)
+            var colE = collecteByIdCatalogue[collecteId] || collecteObj;
+            if (colE && colE.collecteur) creerEnveloppeSiAbsente(colE.collecteur, email);
         })
         .catch(function(error) {
             console.error('Erreur inscription collecte supplémentaire:', error);

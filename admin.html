@@ -209,20 +209,9 @@
                     </div>
                 </fieldset>
 
-                <!-- Section 6 : Collecteur du billet
-                     Prix, prix variante, FDP et dates ont migré sur la collecte. -->
-                <fieldset class="admin-form-section">
-                    <legend>Collecteur</legend>
-
-                    <div class="admin-form-group">
-                        <label for="field-collecteur">Collecteur</label>
-                        <select id="field-collecteur" name="Collecteur" class="admin-form-select">
-                            <option value="">— Sélectionner un collecteur —</option>
-                        </select>
-                        <span class="admin-form-error" id="error-collecteur"></span>
-                        <small class="field-hint">Collecteur principal du billet, repris par défaut sur ses collectes.</small>
-                    </div>
-                </fieldset>
+                <!-- Demande #16 (bascule collecteur) — le collecteur n'est plus un
+                     champ du billet : il se règle sur CHAQUE collecte (formulaire
+                     collecte plus bas). billets.Collecteur supprimé. -->
 
                 <!-- Section 7 : Liens -->
                 <fieldset class="admin-form-section">
@@ -294,6 +283,7 @@
                             <select id="field-collecte-collecteur" class="admin-form-select">
                                 <option value="">— Sélectionner un collecteur —</option>
                             </select>
+                            <span class="admin-form-error" id="error-collecte-collecteur"></span>
                         </div>
                         <div class="admin-form-group">
                             <label for="field-collecte-prix">Prix (€)</label>

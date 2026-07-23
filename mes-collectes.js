@@ -25,8 +25,9 @@ var mesCollectesSupp = [];            // Story 12.5 — [{collecte, billet}, ...
 var mesInscriptionsParCollecte = {};  // Story 12.5 — {collecte_id: {total, confirmes, envoyes}}
 
 // ============================================================
-// Demande #16 — prix / FDP / dates viennent de la COLLECTE, plus du billet.
-// billets.Collecteur reste le périmètre du collecteur (DV2-3, phase 1).
+// Demande #16 — prix / FDP / dates / collecteur viennent de la COLLECTE, plus du
+// billet. Le périmètre du collecteur est scopé par collectes.collecteur (bascule
+// DV2-3 faite : billets.Collecteur supprimé).
 // ============================================================
 var collectesParBillet = {};    // billet_id → [collecte, ...] (vue liste)
 var collectesMapGlobal = {};    // collecte_id → collecte (toutes les collectes du collecteur)
@@ -142,67 +143,66 @@ function checkCollecteur() {
 var mesInscriptionsParBillet = {};
 
 function loadMesCollectes() {
-    // Demande #16 — Prix/PrixVariante/DateColl/DateFin/PayerFDP retirés du select :
-    // ces colonnes appartiennent à la collecte (chargées juste après).
-    supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","Collecteur","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version",attenuee,"LinkSheet"&"Collecteur"=eq.' + encodeURIComponent(monCollecteur.alias) + '&order="Date".desc.nullslast')
-        .then(function(billets) {
-            mesBillets = billets || [];
-            if (mesBillets.length === 0) {
-                renderCollectesList();
-                return;
-            }
-            // Charger toutes les inscriptions du collecteur pour les compteurs
-            var billetIds = [];
-            for (var i = 0; i < mesBillets.length; i++) {
-                billetIds.push(mesBillets[i].id);
-            }
-            // Demande #16 — charger les collectes de ces billets (prix, FDP, dates,
-            // statut pour l'affichage des cartes) + les inscriptions. Plus de filtre
-            // collecte_id=is.null : après la migration toute inscription porte une
-            // collecte, ce filtre viderait la vue.
-            return Promise.all([
-                supabaseFetch('/rest/v1/collectes?billet_id=in.(' + billetIds.join(',') + ')&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin&limit=10000'),
-                supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000')
-            ]);
-        })
-        .then(function(results) {
-            if (!results) return;
-            var collectes = results[0] || [];
-            var inscriptions = results[1] || [];
+    // Demande #16 (bascule collecteur) — la vue est scopée par collectes.collecteur
+    // (billets.Collecteur supprimé). On charge MES collectes, puis leurs billets, puis
+    // les inscriptions de MES collectes uniquement (un même billet peut porter des
+    // collectes d'un autre collecteur). Le flux « supplémentaires » séparé est fusionné :
+    // toutes mes collectes sont désormais dans cette vue, groupées par billet.
+    supabaseFetch('/rest/v1/collectes?collecteur=eq.' + encodeURIComponent(monCollecteur.alias) + '&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin&limit=10000')
+        .then(function(mesCol) {
+            var myCollectes = mesCol || [];
             collectesParBillet = {};
-            collectes.forEach(function(c) {
+            myCollectes.forEach(function(c) {
                 if (!collectesParBillet[c.billet_id]) collectesParBillet[c.billet_id] = [];
                 collectesParBillet[c.billet_id].push(c);
             });
             rebuildCollectesMapGlobal();
+            mesCollectesSupp = [];   // fusion : plus de flux « supplémentaires » séparé
+            var billetIds = Object.keys(collectesParBillet);
+            if (billetIds.length === 0) {
+                mesBillets = [];
+                mesInscriptionsParBillet = {};
+                renderCollectesList();
+                return;
+            }
+            return Promise.all([
+                supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version",attenuee,"LinkSheet"&id=in.(' + billetIds.join(',') + ')&order="Date".desc.nullslast'),
+                supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,collecte_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000')
+            ]);
+        })
+        .then(function(results) {
+            if (!results) return;
+            mesBillets = results[0] || [];
+            var inscriptions = results[1] || [];
             mesInscriptionsParBillet = {};
-            if (inscriptions) {
-                for (var i = 0; i < inscriptions.length; i++) {
-                    var ins = inscriptions[i];
-                    if (!mesInscriptionsParBillet[ins.billet_id]) {
-                        mesInscriptionsParBillet[ins.billet_id] = {
-                            total: 0, confirmes: 0, repartis: 0, expedies: 0,
-                            billetsTotal: { normaux: 0, variantes: 0 },
-                            billetsEnvoyes: { normaux: 0, variantes: 0 }
-                        };
-                    }
-                    var st = mesInscriptionsParBillet[ins.billet_id];
-                    var isBenef = monCollecteur && ins.membre_email === monCollecteur.email_membre;
-                    if (!isBenef) {
-                        st.total++;
-                        if (ins.statut_paiement === 'confirme') st.confirmes++;
-                        // Demande #14 — "réparti" = placé en enveloppe (prêt à envoyer ou expédié)
-                        if (ins.statut_livraison === 'pret_a_envoyer' || ins.statut_livraison === 'expedie') st.repartis++;
-                        if (ins.statut_livraison === 'expedie') st.expedies++;
-                    }
-                    var nn = ins.nb_normaux || 0;
-                    var nv = ins.nb_variantes || 0;
-                    st.billetsTotal.normaux += nn;
-                    st.billetsTotal.variantes += nv;
-                    if (ins.envoye) {
-                        st.billetsEnvoyes.normaux += nn;
-                        st.billetsEnvoyes.variantes += nv;
-                    }
+            for (var i = 0; i < inscriptions.length; i++) {
+                var ins = inscriptions[i];
+                // Ne compter que les inscriptions de MES collectes (collectesMapGlobal
+                // ne contient que mes collectes).
+                if (!collectesMapGlobal[ins.collecte_id]) continue;
+                if (!mesInscriptionsParBillet[ins.billet_id]) {
+                    mesInscriptionsParBillet[ins.billet_id] = {
+                        total: 0, confirmes: 0, repartis: 0, expedies: 0,
+                        billetsTotal: { normaux: 0, variantes: 0 },
+                        billetsEnvoyes: { normaux: 0, variantes: 0 }
+                    };
+                }
+                var st = mesInscriptionsParBillet[ins.billet_id];
+                var isBenef = monCollecteur && ins.membre_email === monCollecteur.email_membre;
+                if (!isBenef) {
+                    st.total++;
+                    if (ins.statut_paiement === 'confirme') st.confirmes++;
+                    // Demande #14 — "réparti" = placé en enveloppe (prêt à envoyer ou expédié)
+                    if (ins.statut_livraison === 'pret_a_envoyer' || ins.statut_livraison === 'expedie') st.repartis++;
+                    if (ins.statut_livraison === 'expedie') st.expedies++;
+                }
+                var nn = ins.nb_normaux || 0;
+                var nv = ins.nb_variantes || 0;
+                st.billetsTotal.normaux += nn;
+                st.billetsTotal.variantes += nv;
+                if (ins.envoye) {
+                    st.billetsEnvoyes.normaux += nn;
+                    st.billetsEnvoyes.variantes += nv;
                 }
             }
             // Demande #14 — deux paliers : tout en enveloppe ("réparti"), puis tout expédié ("envoyé")
@@ -211,7 +211,7 @@ function loadMesCollectes() {
                 s.tousRepartis = s.total > 0 && s.repartis === s.total;
                 s.tousExpedies = s.total > 0 && s.expedies === s.total;
             });
-            loadMesCollectesSupplementaires();
+            renderCollectesList();
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -448,8 +448,9 @@ function openCollecteDetail(billetId) {
     Promise.all([
         supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=*&order=date_inscription.asc'),
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
-        // Demande #16 — les collectes du billet portent prix/FDP/statut
-        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin')
+        // Demande #16 (bascule collecteur) — seulement MES collectes de ce billet
+        // (un autre collecteur peut en avoir d'autres sur le même billet).
+        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&collecteur=eq.' + encodeURIComponent(monCollecteur.alias) + '&select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,date_pre,date_coll,date_fin')
     ])
         .then(function(results) {
             currentInscriptions = results[0] || [];
@@ -459,6 +460,8 @@ function openCollecteDetail(billetId) {
             collectesBillet.forEach(function(c) { currentCollectesMap[c.id] = c; });
             collectesParBillet[billetId] = collectesBillet;
             currentCollectePrincipale = collectePrincipaleBillet(billetId);
+            // Ne garder que les inscriptions de MES collectes de ce billet
+            currentInscriptions = currentInscriptions.filter(function(ins) { return currentCollectesMap[ins.collecte_id]; });
             // Si le billet n'a pas de variante, ignorer toute valeur résiduelle de nb_variantes
             if (currentBillet && (!currentBillet.HasVariante || currentBillet.HasVariante === 'N')) {
                 currentInscriptions.forEach(function(ins) { ins.nb_variantes = 0; });
@@ -1086,7 +1089,7 @@ function confirmerCloturer() {
             body: JSON.stringify(cloture)
         });
     } else {
-        patchPromise = supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&select=id,nom,categorie')
+        patchPromise = supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&collecteur=eq.' + encodeURIComponent(monCollecteur.alias) + '&select=id,nom,categorie')
             .then(function(collectes) {
                 var ouvertes = (collectes || []).filter(function(c) {
                     return c.categorie !== 'Terminé';

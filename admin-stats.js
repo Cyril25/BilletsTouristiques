@@ -21,13 +21,16 @@ var MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'a
 function loadStats() {
     Promise.all([
         supabaseFetch('/rest/v1/membres?select=role,statut,last_active_at,pays'),
-        supabaseFetch('/rest/v1/inscriptions?select=date_inscription,nb_normaux,nb_variantes,pas_interesse,billet_id'),
-        supabaseFetch('/rest/v1/billets?select=id,Categorie,Collecteur,date_effective'),
+        // Demande #16 (bascule collecteur) — l'attribution collecteur passe par la
+        // collecte (collecte_id), plus par billets.Collecteur.
+        supabaseFetch('/rest/v1/inscriptions?select=date_inscription,nb_normaux,nb_variantes,pas_interesse,billet_id,collecte_id'),
+        supabaseFetch('/rest/v1/billets?select=id,Categorie,date_effective'),
         supabaseFetch('/rest/v1/collecteurs?select=alias,masque'),
-        supabaseFetch('/rest/v1/enveloppes?select=statut')
+        supabaseFetch('/rest/v1/enveloppes?select=statut'),
+        supabaseFetch('/rest/v1/collectes?select=id,billet_id,collecteur,date_pre,date_coll,date_fin&limit=10000')
     ])
     .then(function(res) {
-        renderStats(res[0] || [], res[1] || [], res[2] || [], res[3] || [], res[4] || []);
+        renderStats(res[0] || [], res[1] || [], res[2] || [], res[3] || [], res[4] || [], res[5] || []);
     })
     .catch(function(err) {
         console.error('Erreur chargement stats:', err);
@@ -36,9 +39,12 @@ function loadStats() {
     });
 }
 
-function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
+function renderStats(membres, inscriptions, billets, collecteurs, enveloppes, collectes) {
     var now = Date.now();
     var anneeCourante = new Date().getFullYear();
+    // Demande #16 — collecte_id → collecteur (attribution des stats)
+    var collecteById = {};
+    (collectes || []).forEach(function(c) { collecteById[c.id] = c; });
 
     // --- Membres ---
     var membresActifs = membres.filter(function(m) { return m.statut === 'actif'; }).length;
@@ -53,21 +59,21 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     inscActives.forEach(function(i) { bNormaux += i.nb_normaux || 0; bVariantes += i.nb_variantes || 0; });
     var billetsCollectes = bNormaux + bVariantes;
 
-    // --- Billets : map id→collecteur + répartition catalogue ---
-    var billetCollecteur = {};
+    // --- Répartition catalogue par statut ---
     var byCat = {};
     billets.forEach(function(b) {
-        if (b.Collecteur) billetCollecteur[b.id] = b.Collecteur;
         var cat = (b.Categorie || '—');
         if (cat.indexOf('Termin') === 0) cat = 'Terminé'; // corrige un souci d'encodage résiduel
         byCat[cat] = (byCat[cat] || 0) + 1;
     });
 
-    // --- Top collecteurs : billets collectés + nombre de collectes (via inscriptions) depuis l'ouverture ---
+    // --- Top collecteurs : billets collectés + nombre de collectes, attribués via
+    //     la collecte de chaque inscription (bascule collecteur).
     var billetsParCollecteur = {};
     var collectesParCollecteur = {}; // collecteur -> Set de billet_id distincts
     inscActives.forEach(function(i) {
-        var coll = billetCollecteur[i.billet_id];
+        var c = collecteById[i.collecte_id];
+        var coll = c && c.collecteur;
         if (!coll) return;
         billetsParCollecteur[coll] = (billetsParCollecteur[coll] || 0) + (i.nb_normaux || 0) + (i.nb_variantes || 0);
         if (!collectesParCollecteur[coll]) collectesParCollecteur[coll] = {};
@@ -87,13 +93,13 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes) {
     });
     var premiereDateStr = premiereDate ? new Date(premiereDate).toLocaleDateString('fr-FR') : '—';
 
-    // --- Collecteurs actifs dans l'année (billets actifs cette année) ---
-    // Demande #16 — DateColl a migré sur la collecte ; on approxime via
-    // date_effective (dérivée des dates de collectes), suffisant pour une stat.
+    // --- Collecteurs actifs dans l'année : collecteurs ayant une collecte datée
+    //     de cette année (demande #16 : via collectes.collecteur + dates de collecte).
     var collecteursActifs = {};
-    billets.forEach(function(b) {
-        if (b.Collecteur && b.date_effective && b.date_effective.slice(0, 4) === String(anneeCourante)) {
-            collecteursActifs[b.Collecteur] = true;
+    (collectes || []).forEach(function(c) {
+        var d = c.date_coll || c.date_pre || c.date_fin;
+        if (c.collecteur && d && String(d).slice(0, 4) === String(anneeCourante)) {
+            collecteursActifs[c.collecteur] = true;
         }
     });
     var nbCollecteursActifs = Object.keys(collecteursActifs).length;

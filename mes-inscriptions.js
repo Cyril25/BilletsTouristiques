@@ -103,7 +103,7 @@ function loadMesInscriptions() {
             var idsParam = 'id=in.(' + billetIds.join(',') + ')';
             // Demande #16 — Prix/PrixVariante/PayerFDP/Categorie retirés du select :
             // ils vivent sur la collecte. Le billet ne garde que son identité.
-            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Collecteur","Reference","Millesime","Version","HasVariante"');
+            return supabaseFetch('/rest/v1/billets?' + idsParam + '&select=id,"NomBillet","Ville","Reference","Millesime","Version","HasVariante"');
         })
         .then(function(billets) {
             if (billets) {
@@ -260,7 +260,7 @@ function inscMatchesSearch(insc) {
     var billet = billetsMap[insc.billet_id] || {};
     var haystack = [
         billet.NomBillet, billet.Reference, billet.Millesime, billet.Version,
-        billet.Ville, billet.Collecteur,
+        billet.Ville, getTarif(insc).collecteur,
         getTarif(insc).nom
     ].join(' ').toLowerCase();
     return haystack.indexOf(currentInscSearch) !== -1;
@@ -273,8 +273,8 @@ function portMatchesSearch(env) {
 }
 
 function estBeneficiaire(insc, activeEmail) {
-    var b = billetsMap[insc.billet_id] || {};
-    var col = collecteursMap[b.Collecteur];
+    // Demande #16 (bascule) — le collecteur vient de la collecte de l'inscription
+    var col = collecteursMap[getTarif(insc).collecteur];
     return !!(col && col.email_membre && col.email_membre === activeEmail);
 }
 
@@ -427,7 +427,7 @@ function renderInscriptions() {
             else if (statut === 'declare' && !isBenef) totalEnAttente += montantAvecFdp;
         }
 
-        var collecteur = collecteursMap[tarif.collecteur || billet.Collecteur] || {};
+        var collecteur = collecteursMap[tarif.collecteur] || {};
         var paypalNoteHtml = '';
         var paypalBtnHtml = '';
         if (statut === 'non_paye' && !isBenef && insc.mode_paiement === 'PayPal' && exigible) {
@@ -462,7 +462,7 @@ function renderInscriptions() {
             + '<div class="inscription-card-header">'
             + '<strong>' + escapeHtml(((billet.Reference ? billet.Reference + ' ' : '') + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '') + (billet.NomBillet ? ' - ' + billet.NomBillet : '')).trim() || 'Billet inconnu') + '</strong>'
             + (tarif.nom ? '<span class="badge-nom-collecte-insc">' + escapeHtml(tarif.nom) + '</span>' : '')
-            + (billet.Collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(billet.Collecteur) + '</span>' : '')
+            + (tarif.collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(tarif.collecteur) + '</span>' : '')
             + '</div>'
             + '<div class="inscription-card-details">'
             // Demande #16 — le périmètre ouvert vient du scope de la collecte
@@ -633,7 +633,7 @@ function renderInscriptions() {
                 // lui qu'on paie), avec repli sur celui du billet.
                 var col = insc._isPort
                     ? insc.collecteur
-                    : (getTarif(insc).collecteur || (billetsMap[insc.billet_id] || {}).Collecteur || '(sans collecteur)');
+                    : (getTarif(insc).collecteur || '(sans collecteur)');
                 if (!byCollecteur[col]) { byCollecteur[col] = []; colOrder.push(col); }
                 byCollecteur[col].push(insc);
             });
@@ -765,7 +765,7 @@ function declarerPaiementGroupe(idsCsv, portIdsCsv) {
             var insc = mesInscriptions[i];
             var billet = billetsMap[insc.billet_id] || {};
             var t = getTarif(insc);
-            if (!collecteur) collecteur = t.collecteur || billet.Collecteur || '';
+            if (!collecteur) collecteur = t.collecteur || '';
             var m = (t.prix * (insc.nb_normaux || 0)) + (t.prixVar * (insc.nb_variantes || 0));
             var fdp = 0;
             if (t.payerFdp === 'oui' && montantExigible(insc)) {
@@ -828,7 +828,7 @@ function declarerPaiement(inscriptionId) {
     }
     var billet = insc ? billetsMap[insc.billet_id] : null;
     var tarif = insc ? getTarif(insc) : null;
-    var collecteur = (tarif && tarif.collecteur) || (billet && billet.Collecteur) || '';
+    var collecteur = (tarif && tarif.collecteur) || '';
     var montant = (insc && tarif) ? (tarif.prix * (insc.nb_normaux || 0)) + (tarif.prixVar * (insc.nb_variantes || 0)) : 0;
 
     pendingDeclarationId = inscriptionId;
@@ -1150,11 +1150,11 @@ function loadMesEnvois() {
                 .filter(function(i) { return i.collecte_id; })
                 .map(function(i) { return i.collecte_id; });
             var pCollectes = collecteIdsEnvois.length
-                ? supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIdsEnvois.join(',') + ')&select=id,categorie,payer_fdp')
+                ? supabaseFetch('/rest/v1/collectes?id=in.(' + collecteIdsEnvois.join(',') + ')&select=id,categorie,payer_fdp,collecteur')
                 : Promise.resolve([]);
 
             return Promise.all([
-                supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet","Collecteur"'),
+                supabaseFetch('/rest/v1/billets?id=in.(' + uniqueIds.join(',') + ')&select=id,"NomBillet"'),
                 pCollectes
             ]).then(function(res2) {
                     var map = {};
@@ -1200,8 +1200,9 @@ function renderMesEnvois() {
     // Grouper inscriptions sans enveloppe par collecteur
     var sansEnvParCollecteur = {};
     inscSansEnveloppe.forEach(function(insc) {
-        var b = billetsMap2[insc.billet_id];
-        var collecteur = (b && b.Collecteur) || '(sans collecteur)';
+        // Demande #16 (bascule) — regrouper par le collecteur de la collecte
+        var c = envoisData.collectesEnvoisMap[insc.collecte_id];
+        var collecteur = (c && c.collecteur) || '(sans collecteur)';
         if (!sansEnvParCollecteur[collecteur]) sansEnvParCollecteur[collecteur] = [];
         sansEnvParCollecteur[collecteur].push(insc);
     });

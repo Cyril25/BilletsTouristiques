@@ -497,11 +497,10 @@ function loadSommeDue() {
     var e = encodeURIComponent(email);
 
     Promise.all([
-        // Demande #16 — prix et FDP viennent de la collecte, plus du billet. L'embed
-        // PostgREST les ramène dans la même requête : ce code tourne sur chaque page,
-        // on ne rajoute pas d'aller-retour. `billets(Collecteur)` ne sert que de
-        // repli quand une collecte supplémentaire n'a pas de collecteur propre.
-        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi,collectes(prix,prix_variante,payer_fdp,categorie,collecteur),billets(Collecteur)'),
+        // Demande #16 — prix / FDP / collecteur viennent de la collecte (embed
+        // PostgREST, même requête, ce code tourne sur chaque page). billets.Collecteur
+        // supprimé (bascule collecteur).
+        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi,collectes(prix,prix_variante,payer_fdp,categorie,collecteur)'),
         supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + e + '&select=alias'),
         supabaseFetch('/rest/v1/membres?email=eq.' + e + '&select=pays'),
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=destination,type_envoi,qte_min,qte_max,prix'),
@@ -534,9 +533,7 @@ function loadSommeDue() {
             // Pré collecte = prix pas encore fixé, rien n'est dû
             if (collecte.categorie === 'Pré collecte') return;
             // Le collecteur de la collecte est bénéficiaire : il ne se doit rien
-            var billet = embed(insc.billets);
-            var collecteurCollecte = collecte.collecteur || (billet && billet.Collecteur) || null;
-            if (monAlias && collecteurCollecte === monAlias) return;
+            if (monAlias && collecte.collecteur === monAlias) return;
 
             var prix = parseFloat(collecte.prix || 0);
             var prixVar = (collecte.prix_variante !== null && collecte.prix_variante !== undefined && collecte.prix_variante !== '') ? parseFloat(collecte.prix_variante) : prix;

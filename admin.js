@@ -1271,14 +1271,13 @@ function openBilletPanel(billetData, docId) {
         if (sectionCollectes) {
             sectionCollectes.style.display = '';
             sectionCollectes.dataset.billetId = billetData.id || '';
-            sectionCollectes.dataset.billetCollecteur = billetData.Collecteur || '';
             loadCollectesForBillet(billetData.id);
             var elDatePre = document.getElementById('field-collecte-date-pre');
             if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
         }
+        // Demande #16 — le collecteur se choisit sur chaque collecte (plus de défaut
+        // repris du billet, billets.Collecteur supprimé).
         populateCollecteCollecteurSelect();
-        var selectColl = document.getElementById('field-collecte-collecteur');
-        if (selectColl && billetData.Collecteur) selectColl.value = billetData.Collecteur;
 
         // Story 5.2 — Gestion des champs Google en mode edition
         var hasGoogleData = (billetData.LinkSheet && billetData.LinkSheet !== '') ||
@@ -1323,24 +1322,12 @@ function openBilletPanel(billetData, docId) {
             }
         });
 
-        // Story 5.2 — Gel du collecteur + type de billet si des inscriptions existent
-        var collecteurSelect = document.getElementById('field-collecteur');
-        var collecteurValue = billetData.Collecteur || '';
-        var statutCourant = billetData.Categorie || '';
-        // En pré-collecte (ou avant), le collecteur reste modifiable même s'il existe des inscriptions
-        var collecteurGelable = (statutCourant === 'Collecte' || statutCourant === 'Terminé');
+        // Story 5.2 — Gel du type de billet si des inscriptions existent.
+        // Demande #16 — le gel du collecteur a disparu (le collecteur n'est plus un
+        // champ du billet ; il est sur la collecte).
         if (docId) {
             hasInscriptions(docId).then(function(frozen) {
                 if (frozen) {
-                    // Gel du collecteur (uniquement à partir de Collecte)
-                    if (collecteurGelable && collecteurSelect && collecteurValue) {
-                        collecteurSelect.disabled = true;
-                        collecteurSelect.classList.add('admin-field-frozen');
-                        var hint = document.createElement('small');
-                        hint.className = 'collecteur-frozen-hint';
-                        hint.textContent = 'Collecteur figé — des inscriptions existent pour ce billet';
-                        if (collecteurSelect.parentNode) collecteurSelect.parentNode.appendChild(hint);
-                    }
                     // Gel de VersionNormaleExiste
                     var cbNormale = document.getElementById('field-version-normale');
                     if (cbNormale) {
@@ -1484,7 +1471,6 @@ function prefillForm(data) {
         'field-pays': 'Pays',
         'field-categorie': 'Categorie',
         'field-theme': 'Theme',
-        'field-collecteur': 'Collecteur',
         // Demande #16 — prix, prix variante, FDP et dates ne sont plus des champs
         // du billet : ils se saisissent sur la collecte (formulaire plus bas).
         'field-image-url': 'ImageUrl',
@@ -1536,21 +1522,8 @@ function prefillForm(data) {
         millesimeSelect.value = millesimeValue;
     }
 
-    // Story 4.6 — Collecteur select : ajouter l'option si elle n'existe pas
-    var collecteurSelect = document.getElementById('field-collecteur');
-    var collecteurValue = data.Collecteur || '';
-    if (collecteurSelect && collecteurValue) {
-        var collecteurOptionExists = Array.prototype.some.call(collecteurSelect.options, function(opt) {
-            return opt.value === collecteurValue;
-        });
-        if (!collecteurOptionExists) {
-            var newCollOption = document.createElement('option');
-            newCollOption.value = collecteurValue;
-            newCollOption.textContent = collecteurValue + ' (ancien)';
-            collecteurSelect.appendChild(newCollOption);
-        }
-        collecteurSelect.value = collecteurValue;
-    }
+    // Demande #16 — plus de select Collecteur sur le formulaire billet (le
+    // collecteur est un champ de la collecte).
 
     // Statut — demande #16 : dérivé si le billet porte des collectes, manuel sinon.
     // L'état réel du select est posé par refreshStatutBilletUI() une fois les
@@ -1650,7 +1623,9 @@ function creerPreCollecteAuto(billet) {
         nom: 'Collecte ' + (billet.Millesime || new Date().getFullYear()),
         scope: aVariante ? (aNormale ? 'les_deux' : 'variante') : 'normal',
         categorie: 'Pré collecte',
-        collecteur: billet.Collecteur || null,
+        // Demande #16 (bascule collecteur) — pré-collecte sans collecteur : il se
+        // règle sur la collecte quand elle passe en Collecte (facultatif en pré-collecte).
+        collecteur: null,
         date_pre: new Date().toISOString().slice(0, 10)
     };
     supabaseFetch('/rest/v1/collectes', {
@@ -1810,16 +1785,9 @@ function validateBilletForm() {
     // Les garder ici rendait le formulaire billet insauvegardable (les champs
     // n'existent plus, la date manquante bloquait toute création).
 
-    // Demande #16 / demande #32 — le collecteur n'est exigé que lorsqu'une collecte
-    // est ACTIVE (statut Collecte). En pré-collecte (et à la création), il reste
-    // facultatif : on ne sait pas encore forcément qui collectera.
-    var collecteur = document.getElementById('field-collecteur');
-    var aCollecteActive = currentBilletCollectes.some(function(c) { return c.categorie === 'Collecte'; });
-    if (aCollecteActive && collecteur && collecteur.value === '') {
-        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire quand une collecte est en cours');
-        valid = false;
-        if (!firstErrorField) firstErrorField = collecteur;
-    }
+    // Demande #16 (bascule collecteur) — le collecteur n'est plus un champ du billet ;
+    // il est validé sur le formulaire COLLECTE (obligatoire au statut Collecte,
+    // cf. validateCollecteForm).
 
     // Story 9.9 — Validation croisee : au moins un type (normale ou variante)
     var cbNormale = document.getElementById('field-version-normale');
@@ -1871,10 +1839,9 @@ function collectFormData() {
         Cp: getValue('field-cp'),
         Pays: getValue('field-pays'),
         Theme: getValue('field-theme'),
-        Collecteur: getValue('field-collecteur'),
-        // Demande #16 — Prix / PrixVariante / PayerFDP / FDP_Com / DatePre /
-        // DateColl / DateFin ne sont plus écrits ici : ils appartiennent à la
-        // collecte (les colonnes du billet sont renommées *_deprecated en base).
+        // Demande #16 — Collecteur (bascule) + Prix / PrixVariante / PayerFDP /
+        // FDP_Com / DatePre / DateColl / DateFin ne sont plus écrits ici : ils
+        // appartiennent à la collecte (colonnes billet supprimées / *_deprecated).
         ImageUrl: getValue('field-image-url'),
         ImageId: getValue('field-image-id'),
         // Story 5.2 — Ne collecter les champs Google que si le panel est en mode edition
@@ -1904,8 +1871,7 @@ function collectFormData() {
         billetData.Millesime,
         billetData.Dep,
         billetData.Pays,
-        billetData.Theme,
-        billetData.Collecteur
+        billetData.Theme
     ].join(' ').toLowerCase();
 
     return billetData;
@@ -2810,7 +2776,7 @@ function showCollecteQuickForm(docId, billetData, cible, collecte) {
     billetData = billetData || {};
     quickCollecteContext[docId] = { cible: cible || 'Collecte', collecte: collecte || null };
 
-    var existingCollecteur = (collecte && collecte.collecteur) || billetData.Collecteur || '';
+    var existingCollecteur = (collecte && collecte.collecteur) || '';
     var existingPrix = (collecte && collecte.prix) || '';
     var existingPrixVariante = (collecte && collecte.prix_variante) || '';
     var scope = collecte ? collecte.scope : scopeDepuisBillet(billetData);
@@ -3103,9 +3069,13 @@ function adminApplyFilters() {
 
         // Recherche textuelle
         if (searchText) {
+            // Demande #16 — le collecteur (bascule) est ajouté depuis les collectes
+            // du billet (adminCollectesByBillet), plus de billet.Collecteur.
+            var collecteursBillet = (adminCollectesByBillet[billet._id] || adminCollectesByBillet[billet.id] || [])
+                .map(function(c) { return c.collecteur; }).filter(Boolean).join(' ');
             var fields = [
                 billet.NomBillet, billet.Ville, billet.Reference,
-                billet.Millesime, billet.Collecteur, billet.Dep,
+                billet.Millesime, collecteursBillet, billet.Dep,
                 billet.Cp, billet.Pays, billet.Categorie,
                 billet.Theme, billet.Commentaire
             ];
@@ -3258,9 +3228,12 @@ function openShareModal(billetId) {
     topLines.push('🎫 ' + pays + ' - ' + ref + ' - ' + nom);
 
     var statutLine = '📌 Statut : ' + statut;
-    if (statut === 'Collecte' && billet.Collecteur) {
-        statutLine += ' | Collecteur : ' + billet.Collecteur;
-        var collecteurObj = collecteursList.find(function(c) { return c.alias === billet.Collecteur; });
+    // Demande #16 — le collecteur affiché vient de la collecte principale du billet
+    var colPrincTip = collectePrincipaleBilletAdmin(billet.id);
+    var collecteurTip = colPrincTip && colPrincTip.collecteur;
+    if (statut === 'Collecte' && collecteurTip) {
+        statutLine += ' | Collecteur : ' + collecteurTip;
+        var collecteurObj = collecteursList.find(function(c) { return c.alias === collecteurTip; });
         if (collecteurObj && collecteurObj.paypal_email) {
             statutLine += ' (' + collecteurObj.paypal_email + ')';
         }
@@ -4072,7 +4045,8 @@ function validateCollecteForm() {
         setFieldError('field-collecte-prix-variante', 'error-collecte-prix-variante', 'Le prix variante doit être un nombre positif');
         valid = false;
     }
-    // À partir de « Collecte », le prix de chaque version ouverte est obligatoire
+    // À partir de « Collecte », le prix de chaque version ouverte est obligatoire,
+    // et le collecteur aussi (demande #16 : le collecteur vit sur la collecte).
     if (categorie === 'Collecte') {
         if (scope !== 'variante' && (!prixEl || prixEl.value === '')) {
             setFieldError('field-collecte-prix', 'error-collecte-prix', 'Le prix est obligatoire à partir du statut Collecte');
@@ -4080,6 +4054,11 @@ function validateCollecteForm() {
         }
         if (scope === 'variante' && (!prixVarEl || prixVarEl.value === '')) {
             setFieldError('field-collecte-prix-variante', 'error-collecte-prix-variante', 'Le prix variante est obligatoire à partir du statut Collecte');
+            valid = false;
+        }
+        var collEl = document.getElementById('field-collecte-collecteur');
+        if (!collEl || collEl.value === '') {
+            setFieldError('field-collecte-collecteur', 'error-collecte-collecteur', 'Le collecteur est obligatoire à partir du statut Collecte');
             valid = false;
         }
     }
