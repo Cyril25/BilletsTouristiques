@@ -1636,30 +1636,42 @@ function togglePrixVarianteField() {
     if (errorVariante) errorVariante.textContent = '';
 }
 // --- Fermeture du panel ---
-// Demande #16 (B6) — après création d'un billet, on rouvre le panel en édition
-// sur ce billet et on pré-remplit sa pré-collecte : c'est elle qui déclenchera
-// les auto-inscriptions et donnera son statut au billet.
-function ouvrirPanelPourPreCollecte(billet) {
-    openBilletPanel(billet, billet.id);
-
-    var nomEl = document.getElementById('field-collecte-nom');
-    if (nomEl && !nomEl.value) nomEl.value = 'Collecte ' + (billet.Millesime || new Date().getFullYear());
-
-    var catEl = document.getElementById('field-collecte-categorie');
-    if (catEl) catEl.value = 'Pré collecte';
-
-    // Scope déduit des versions déclarées sur le billet
-    var scopeEl = document.getElementById('field-collecte-scope');
-    if (scopeEl) {
-        var aVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
-        var aNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-        scopeEl.value = aVariante ? (aNormale ? 'les_deux' : 'variante') : 'normal';
-    }
-    toggleCollectePrixFields();
-
-    var section = document.getElementById('admin-collectes-supplementaires');
-    if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showToast('Renseignez la pré-collecte, puis « Ajouter cette collecte »', 'info');
+// Demande #16 (B6) / demande #31 — après création d'un billet, sa pré-collecte est
+// créée DIRECTEMENT : scope déduit des versions déclarées, pas de prix (on est en
+// pré-collecte), collecteur repris du billet s'il a été saisi (facultatif). C'est
+// elle qui déclenche les auto-inscriptions et donne son statut « Pré collecte » au
+// billet. Si le billet ne doit pas être collecté, on supprime la pré-collecte
+// ensuite (bouton « Supprimer la pré-collecte »).
+function creerPreCollecteAuto(billet) {
+    var aVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+    var aNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
+    var body = {
+        billet_id: billet.id,
+        nom: 'Collecte ' + (billet.Millesime || new Date().getFullYear()),
+        scope: aVariante ? (aNormale ? 'les_deux' : 'variante') : 'normal',
+        categorie: 'Pré collecte',
+        collecteur: billet.Collecteur || null,
+        date_pre: new Date().toISOString().slice(0, 10)
+    };
+    supabaseFetch('/rest/v1/collectes', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify(body)
+    })
+    .then(function(data) {
+        var col = Array.isArray(data) ? data[0] : data;
+        showToast('Billet créé avec sa pré-collecte', 'success');
+        if (col && col.id) creerAutoInscriptions(billet, col);
+        closeBilletPanel();
+        loadAdminBillets();
+        loadAdminCollectes();
+    })
+    .catch(function(error) {
+        console.error('Erreur création pré-collecte auto:', error);
+        showToast('Billet créé, mais échec de la pré-collecte : ' + error.message, 'error');
+        loadAdminBillets();
+        closeBilletPanel();
+    });
 }
 
 function closeBilletPanel() {
@@ -1798,10 +1810,13 @@ function validateBilletForm() {
     // Les garder ici rendait le formulaire billet insauvegardable (les champs
     // n'existent plus, la date manquante bloquait toute création).
 
-    // Collecteur obligatoire dès qu'une collecte est ouverte sur le billet
+    // Demande #16 / demande #32 — le collecteur n'est exigé que lorsqu'une collecte
+    // est ACTIVE (statut Collecte). En pré-collecte (et à la création), il reste
+    // facultatif : on ne sait pas encore forcément qui collectera.
     var collecteur = document.getElementById('field-collecteur');
-    if (!billetAucuneCollecte() && collecteur && collecteur.value === '') {
-        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire dès qu\'une collecte existe');
+    var aCollecteActive = currentBilletCollectes.some(function(c) { return c.categorie === 'Collecte'; });
+    if (aCollecteActive && collecteur && collecteur.value === '') {
+        setFieldError('field-collecteur', 'error-collecteur', 'Le collecteur est obligatoire quand une collecte est en cours');
         valid = false;
         if (!firstErrorField) firstErrorField = collecteur;
     }
@@ -1918,11 +1933,15 @@ function saveBillet(billetData) {
             // d'une pré-collecte : sans collecte, le billet reste en « Pas de
             // collecte » et aucune pré-inscription n'est générée (le hook
             // d'auto-inscription vit maintenant dans saveCollecte).
-            showToast('Billet ajouté — créez sa pré-collecte', 'success');
-            loadAdminBillets();
-            if (newBillet && newBillet.id) {
-                ouvrirPanelPourPreCollecte(newBillet);
+            // Demande #16 / demande #31 — flux nominal : la pré-collecte est créée
+            // DIRECTEMENT, sans étape manuelle. Sauf si l'admin a explicitement
+            // choisi un statut « sans collecte » (Masqué / Jamais édité, projet).
+            var sansCollecte = newBillet && (newBillet.Categorie === 'Masqué' || newBillet.Categorie === 'Jamais édité, projet');
+            if (newBillet && newBillet.id && !sansCollecte) {
+                creerPreCollecteAuto(newBillet);
             } else {
+                showToast('Billet créé', 'success');
+                loadAdminBillets();
                 closeBilletPanel();
             }
         })
