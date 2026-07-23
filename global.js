@@ -23,8 +23,21 @@ if (typeof firebase === 'undefined') {
 // ============================================================
 // 1b. CONFIGURATION SUPABASE
 // ============================================================
-var SUPABASE_URL = 'https://lhwcoybugdsggcclhtgb.supabase.co';
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
+// Demande #16 — TEST-ONLY : le GitHub Pages de test (BilletsTouristiques-TestEnv)
+// partage le hostname de la prod (cyril25.github.io) ; seul le CHEMIN diffère.
+// On aiguille donc sur la copie Supabase migrée quand on est servi sous
+// /BilletsTouristiques-TestEnv/, la prod restant intacte partout ailleurs.
+// ⚠ À RETIRER à la bascule prod (E1) une fois la copie jetable supprimée :
+// remettre en dur l'URL/clé de prod. La clé anon est publique (RLS), safe en clair.
+var BT_IS_TESTENV = window.location.pathname.indexOf('/BilletsTouristiques-TestEnv/') === 0;
+var SUPABASE_URL = BT_IS_TESTENV
+    ? 'https://ijxajtxnhbczgiarkefo.supabase.co'
+    : 'https://lhwcoybugdsggcclhtgb.supabase.co';
+var SUPABASE_ANON_KEY = BT_IS_TESTENV
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqeGFqdHhuaGJjemdpYXJrZWZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjY0MTMsImV4cCI6MjA5MTY0MjQxM30.5t-P56E4QfJpDooveaYp6zEW1vqMsmnD3ejQ9ZhU8rg'
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
+
+if (BT_IS_TESTENV) console.info('[BT] Environnement TEST — Supabase copie migrée (' + SUPABASE_URL + ')');
 
 // --- Impersonation globale (superadmin uniquement) ---
 window.impersonatedEmail = sessionStorage.getItem('impersonatedEmail') || '';
