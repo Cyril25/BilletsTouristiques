@@ -755,24 +755,27 @@ function renderAdminCards() {
         var statut = billet.Categorie || '';
         var statusLabel = statut || 'Non defini';
         var statusColor = getStatusColor(statut);
-        // Demande #40 — statut billet dérivé (lecture seule) s'il porte des collectes.
+        // Demande #40 — cohérence visuelle : UN seul tag dans le cas courant (0 ou 1
+        // collecte) ; les pastilles par collecte n'apparaissent que si le billet porte
+        // PLUSIEURS collectes (cas rare). À 2+ collectes le tag billet est dérivé (lecture
+        // seule) ; à 1 collecte le tag change directement cette collecte.
         var billetCollectesCarte = collectesDuBillet(docId);
-        var statutDerive = billetCollectesCarte.length > 0;
+        var nbCollectes = billetCollectesCarte.length;
 
         html += '<div class="admin-card-billet" data-doc-id="' + docId + '">' +
             '<div class="admin-card-header">' +
                 '<h3 class="admin-card-title">' + escapeHtml(nom) + ' <span style="font-size:10px; color:#ccc; font-weight:normal;">(n\u00b0' + docId + ')</span></h3>' +
                 '<div class="card-badge-wrapper">' +
-                    (statutDerive
-                        // Demande #40 — statut dérivé : lecture seule (on change par collecte)
+                    (nbCollectes >= 2
+                        // 2+ collectes : statut billet dérivé, lecture seule (on change par collecte)
                         ? '<span class="admin-badge-status admin-badge-status--derive" ' +
                             'data-doc-id="' + docId + '" ' +
                             'data-current-status="' + escapeAttr(statut) + '" ' +
-                            'title="Statut dérivé des collectes (se change par collecte)" ' +
+                            'title="Statut dérivé des collectes (se change par collecte ci-dessous)" ' +
                             'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
                             escapeHtml(statusLabel) +
                           '</span>'
-                        // Billet sans collecte : tag cliquable (statut manuel + création 1re collecte)
+                        // 0 ou 1 collecte : UN seul tag cliquable
                         : '<span class="admin-badge-status clickable" ' +
                             'data-doc-id="' + docId + '" ' +
                             'data-current-status="' + escapeAttr(statut) + '" ' +
@@ -781,7 +784,11 @@ function renderAdminCards() {
                           '</span>' +
                           '<div class="quick-status-popup" id="quick-status-popup-' + docId + '" style="display: none;">' +
                             '<div class="quick-status-chips">' +
-                                buildStatusChipsHtml(docId, statut) +
+                                // 1 collecte → pastilles de LA collecte (change son statut) ;
+                                // 0 collecte → statuts manuels du billet (+ crée la 1re collecte).
+                                (nbCollectes === 1
+                                    ? buildCollecteStatusChipsHtml(docId, billetCollectesCarte[0].id, billetCollectesCarte[0].categorie || 'Pré collecte')
+                                    : buildStatusChipsHtml(docId, statut)) +
                             '</div>' +
                           '</div>'
                     ) +
@@ -834,7 +841,9 @@ function renderAdminCards() {
             // seule). Remplace les anciens badges d'inscriptions par collecte.
             (function() {
                 var cols = billetCollectesCarte;
-                if (!cols || cols.length === 0) return '';
+                // Demande #40 — pastilles par collecte UNIQUEMENT en multi-collecte (rare) :
+                // à 0/1 collecte, le tag du billet ci-dessus suffit (cohérence visuelle).
+                if (!cols || cols.length < 2) return '';
                 var principale = collectePrincipaleBilletAdmin(docId);
                 var ordered = cols.slice().sort(function(a, b) {
                     return (a === principale) ? -1 : (b === principale) ? 1 : 0;
