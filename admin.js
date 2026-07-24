@@ -1964,8 +1964,16 @@ function collectFormData() {
     // c'est-à-dire si le billet n'a aucune collecte. Sinon elle est dérivée et
     // la base refuse l'écriture (même valeur inchangée : autant ne pas l'envoyer).
     var statutSaisi = getValue('field-categorie');
-    if (billetAucuneCollecte() && STATUTS_MANUELS.indexOf(statutSaisi) !== -1) {
-        billetData.Categorie = statutSaisi;
+    if (billetAucuneCollecte()) {
+        if (STATUTS_MANUELS.indexOf(statutSaisi) !== -1) {
+            billetData.Categorie = statutSaisi;
+        } else if (statutSaisi === CATEGORIE_HERITE) {
+            // Demande #41 — « Hérité » : à l'insertion le billet n'a pas encore de
+            // collecte, or la base exige un statut manuel VALIDE (elle rejette ''
+            // avec « statut "" inconnu »). On pose un placeholder ; la pré-collecte
+            // créée juste après (saveBillet) fait dériver le statut vers « Pré collecte ».
+            billetData.Categorie = CATEGORIE_DEFAULT;
+        }
     }
 
     // Champ Recherche (concatenation des champs cles en minuscules)
@@ -1996,6 +2004,14 @@ function saveBillet(billetData) {
         saveBtn.textContent = 'Enregistrement...';
     }
 
+    // Demande #41 — on décide de créer (ou non) la pré-collecte auto d'après le CHOIX
+    // du formulaire (« Hérité » vs statut manuel), pas d'après le statut inséré : en
+    // « Hérité » on insère un placeholder manuel valide, donc newBillet.Categorie ne
+    // permet plus de distinguer les deux cas.
+    var catEl = document.getElementById('field-categorie');
+    var statutChoisi = catEl ? catEl.value : '';
+    var choixManuel = STATUTS_MANUELS.indexOf(statutChoisi) !== -1;
+
     supabaseFetch('/rest/v1/billets', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
@@ -2003,17 +2019,10 @@ function saveBillet(billetData) {
     })
         .then(function(data) {
             var newBillet = Array.isArray(data) ? data[0] : data;
-            // Demande #16 (B6/Q2bis) — le flux nominal enchaîne sur la création
-            // d'une pré-collecte : sans collecte, le billet reste en « Pas de
-            // collecte » et aucune pré-inscription n'est générée (le hook
-            // d'auto-inscription vit maintenant dans saveCollecte).
-            // Demande #16 / demande #31 — flux nominal : la pré-collecte est créée
-            // DIRECTEMENT, sans étape manuelle. Sauf si l'admin a explicitement
-            // choisi un statut « sans collecte » (Masqué / Jamais édité, projet).
-            // Demande #41 — un statut MANUEL a été explicitement choisi (Pas de
-            // collecte / Jamais édité, projet / Masqué) ⇒ billet sans collecte, pas de
-            // pré-collecte auto. Sinon (« Hérité des collectes ») ⇒ pré-collecte auto.
-            var sansCollecte = newBillet && STATUTS_MANUELS.indexOf(newBillet.Categorie) !== -1;
+            // Demande #41 — statut MANUEL explicite (Pas de collecte / Jamais édité,
+            // projet / Masqué) ⇒ billet sans collecte, pas de pré-collecte auto.
+            // Sinon (« Hérité des collectes ») ⇒ pré-collecte auto (statut dérivé).
+            var sansCollecte = choixManuel;
             if (newBillet && newBillet.id && !sansCollecte) {
                 creerPreCollecteAuto(newBillet);
             } else {
