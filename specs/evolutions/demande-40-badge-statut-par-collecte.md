@@ -47,4 +47,12 @@ statut ; le statut du billet dépend de l'état de ses collectes — pré-collec
 - Remplace les anciens badges d'inscriptions par collecte → clôt aussi définitivement
   #36 (plus de collecte de base en double).
 
-- **Commits** : `0e6e5f4` (page), `d584acb` (carte / Option A)
+**Ajustement lisibilité** (`d459c6d`, retour Cyril) : Option A affichait une pastille
+par collecte sur CHAQUE carte, or la quasi-totalité des billets n'ont qu'une collecte →
+doublon visuel (tag billet + pastille). Simplifié :
+- **0 collecte** : tag billet cliquable (statuts manuels).
+- **1 collecte** (courant) : **un seul** tag cliquable = le statut, qui change
+  directement la collecte (pastilles Pré collecte / Collecte / Terminé).
+- **2+ collectes** (rare) : tag billet dérivé (lecture seule) + une pastille par collecte.
+
+- **Commits** : `0e6e5f4` (page), `d584acb` (carte / Option A), `d459c6d` (lisibilité)
