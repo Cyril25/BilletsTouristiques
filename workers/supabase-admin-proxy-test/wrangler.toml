@@ -1,0 +1,7 @@
+name = "supabase-admin-proxy-test"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# TEST-ONLY (demande #16) — pointe sur la copie Supabase migrée (ijxajtxnhbczgiarkefo).
+# Secrets Cloudflare : SUPABASE_URL, SUPABASE_SERVICE_KEY, PROXY_API_KEY.
+# À SUPPRIMER à la bascule prod (npx wrangler delete) avec le projet copie.
