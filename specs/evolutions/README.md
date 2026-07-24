@@ -60,3 +60,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#29](demande-29-tag-cible-notifications.md) | Badge de cible sur les cartes de nouveautés | S | À tester | ✅ | `0d92625` |
 | [#30](demande-30-pagination-notifications.md) | Pagination de la page Nouveautés | S | À tester | ✅ | `5c1f1e1` |
 | [#38](demande-38-modifier-collecte.md) | Modifier une collecte existante (page d'édition billet) | S | À tester | ✅ | `2ba34c5` |
+| [#39](demande-39-filtre-collecteur-billets.md) | Bug : filtre collecteur vide sur billets.html | S | À tester | ✅ | `e3d1301` |
+| [#40](demande-40-badge-statut-par-collecte.md) | Badge de statut cliquable par collecte + statut billet dérivé | M | À tester | ✅ | `0e6e5f4` |
+| [#41](demande-41-page-billet-statut-modale.md) | Statut « hérité » à la création + édition collecte en modale | M | À tester | ✅ | `0e6e5f4` |
+| [#43](demande-43-affichage-billets.md) | Cadrage affichage billets.html (unicité, surfaçage, multi-collecte) | L | À tester | ✅ | — |
