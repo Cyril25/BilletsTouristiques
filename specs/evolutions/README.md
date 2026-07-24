@@ -65,3 +65,4 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#40](demande-40-badge-statut-par-collecte.md) | Badge de statut cliquable par collecte + statut billet dérivé | M | À tester | ✅ | `0e6e5f4` |
 | [#41](demande-41-page-billet-statut-modale.md) | Statut « hérité » à la création + édition collecte en modale | M | À tester | ✅ | `0e6e5f4` |
 | [#43](demande-43-affichage-billets.md) | Cadrage affichage billets.html (unicité, surfaçage, multi-collecte) | L | À tester | ✅ | — |
+| [#44](demande-44-affichage-billet-vs-collecte.md) | Dissocier billet / collecte(s) : 2 plans, accordéon multi-collecte, anti-double-inscription, composant unique | L | Prêt à dev | ✅ | — |
