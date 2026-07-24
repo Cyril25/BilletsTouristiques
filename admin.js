@@ -84,6 +84,9 @@ var CATEGORIE_FLOW = {
 // statut manuel. « Pré collecte » est désormais un statut DÉRIVÉ, refusé par la
 // base à la création (il découle de la collecte, créée juste après le billet).
 var CATEGORIE_DEFAULT = 'Pas de collecte';
+// Demande #41 — valeur sentinelle du select statut = « hérité des collectes » :
+// à la création, le billet reçoit sa pré-collecte auto et son statut est dérivé.
+var CATEGORIE_HERITE = '__herite__';
 // Les seuls statuts saisissables à la main, et uniquement quand le billet n'a
 // aucune collecte. Pré collecte / Collecte / Terminé sont dérivés par la base.
 var STATUTS_MANUELS = ['Pas de collecte', 'Jamais édité, projet', 'Masqué'];
@@ -489,7 +492,7 @@ function initBilletPage() {
         openBilletPanel(null, null);        // mode ajout
         prefillForm(stash);                 // puis pré-remplir avec la copie
         var cf = document.getElementById('field-categorie');
-        if (cf) cf.value = CATEGORIE_DEFAULT;
+        if (cf) cf.value = CATEGORIE_HERITE;  // demande #41 — copie = billet neuf → hérité
         return;
     }
     if (id) {
@@ -1067,7 +1070,8 @@ function initPanel() {
     var categorieSelect = document.getElementById('field-categorie');
     if (categorieSelect) {
         categorieSelect.addEventListener('change', function() {
-            var newCat = categorieSelect.value;
+            // Demande #41 — bascule le message d'aide (hérité / manuel) selon le choix
+            if (typeof refreshStatutBilletUI === 'function') refreshStatutBilletUI();
         });
     }
 
@@ -1211,10 +1215,15 @@ function initPanel() {
     var collectesList = document.getElementById('collectes-list');
     if (collectesList) {
         collectesList.addEventListener('click', function(e) {
-            // Demande #38 — modifier une collecte
+            // Demande #38 / #40 — modifier une collecte (bouton « Modifier » ou badge de statut)
             var btnModifier = e.target.closest('.btn-modifier-collecte');
             if (btnModifier) {
                 editerCollecte(btnModifier.dataset.collecteId);
+                return;
+            }
+            var badgeStatut = e.target.closest('.collecte-badge-status--clickable');
+            if (badgeStatut) {
+                editerCollecte(badgeStatut.dataset.collecteId);
                 return;
             }
             var btnCloturer = e.target.closest('.btn-cloturer-collecte');
@@ -1254,11 +1263,33 @@ function initPanel() {
         });
     }
 
-    // Demande #38 — annuler l'édition d'une collecte (retour au mode ajout)
+    // Demande #41 — modale d'ajout / édition d'une collecte : ouverture / fermeture.
+    var btnOpenAddCollecte = document.getElementById('btn-open-add-collecte');
+    if (btnOpenAddCollecte) {
+        btnOpenAddCollecte.addEventListener('click', function() { ouvrirAjoutCollecte(); });
+    }
     var btnCancelEditCollecte = document.getElementById('btn-cancel-edit-collecte');
     if (btnCancelEditCollecte) {
-        btnCancelEditCollecte.addEventListener('click', function() {
-            sortirEditionCollecte();
+        btnCancelEditCollecte.addEventListener('click', function() { fermerCollecteModal(); });
+    }
+    var btnCloseCollecteModal = document.getElementById('btn-close-collecte-modal');
+    if (btnCloseCollecteModal) {
+        btnCloseCollecteModal.addEventListener('click', function() { fermerCollecteModal(); });
+    }
+    var collecteModalOverlay = document.getElementById('collecte-modal-overlay');
+    if (collecteModalOverlay) {
+        // Clic sur le fond (hors dialogue) → fermer
+        collecteModalOverlay.addEventListener('click', function(e) {
+            if (e.target === collecteModalOverlay) fermerCollecteModal();
+        });
+        // Échap → fermer ; Entrée → valider (et NE PAS soumettre le formulaire billet)
+        collecteModalOverlay.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { fermerCollecteModal(); return; }
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                var b = document.getElementById('btn-add-collecte');
+                if (b) b.click();
+            }
         });
     }
 
@@ -1458,9 +1489,9 @@ function openBilletPanel(billetData, docId) {
         // Story 4.4 — Millesime en mode creation (N-3 a N+1, defaut N)
         populateMillesimeSelect('create');
 
-        // Statut par defaut
+        // Statut par defaut — demande #41 : « hérité des collectes » (pré-collecte auto)
         var categorieField = document.getElementById('field-categorie');
-        if (categorieField) categorieField.value = CATEGORIE_DEFAULT;
+        if (categorieField) categorieField.value = CATEGORIE_HERITE;
 
         // Auto-remplir la date de pré-collecte pour un nouveau billet
 
@@ -1512,7 +1543,7 @@ function copyBillet(billetData) {
     delete copy.ImageUrl;
     delete copy.ImageId;
     copy.NomBillet = (copy.NomBillet || '') + ' (copie)';
-    copy.Categorie = CATEGORIE_DEFAULT;
+    copy.Categorie = CATEGORIE_HERITE;  // demande #41 — la copie est un billet neuf
 
     // Demande #16 (#35) — la duplication se fait sur la PAGE dédiée : on stashe la
     // copie (objet en mémoire, non passable par l'URL) et on y navigue.
@@ -1973,7 +2004,10 @@ function saveBillet(billetData) {
             // Demande #16 / demande #31 — flux nominal : la pré-collecte est créée
             // DIRECTEMENT, sans étape manuelle. Sauf si l'admin a explicitement
             // choisi un statut « sans collecte » (Masqué / Jamais édité, projet).
-            var sansCollecte = newBillet && (newBillet.Categorie === 'Masqué' || newBillet.Categorie === 'Jamais édité, projet');
+            // Demande #41 — un statut MANUEL a été explicitement choisi (Pas de
+            // collecte / Jamais édité, projet / Masqué) ⇒ billet sans collecte, pas de
+            // pré-collecte auto. Sinon (« Hérité des collectes ») ⇒ pré-collecte auto.
+            var sansCollecte = newBillet && STATUTS_MANUELS.indexOf(newBillet.Categorie) !== -1;
             if (newBillet && newBillet.id && !sansCollecte) {
                 creerPreCollecteAuto(newBillet);
             } else {
@@ -4005,10 +4039,16 @@ function refreshStatutBilletUI() {
     var select = document.getElementById('field-categorie');
     var msgDerive = document.getElementById('statut-derive-msg');
     var msgManuel = document.getElementById('statut-manuel-msg');
+    var msgHerite = document.getElementById('statut-herite-msg');
     var derive = !billetAucuneCollecte();
     if (select) select.disabled = derive;
+    // Statut réellement dérivé (le billet porte des collectes) : message dérivé.
+    // Sinon (0 collecte) : « hérité » si l'option sentinelle est choisie (cas création),
+    // « manuel » si un des 3 statuts sans collecte est sélectionné.
+    var herite = !derive && select && select.value === CATEGORIE_HERITE;
     if (msgDerive) msgDerive.style.display = derive ? '' : 'none';
-    if (msgManuel) msgManuel.style.display = derive ? 'none' : '';
+    if (msgHerite) msgHerite.style.display = (!derive && herite) ? '' : 'none';
+    if (msgManuel) msgManuel.style.display = (!derive && !herite) ? '' : 'none';
 }
 
 function loadCollectesForBillet(billetId) {
@@ -4066,7 +4106,9 @@ function renderCollectesList(collectes, billetId) {
         }
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
-            '<span class="collecte-badge-status ' + statusClass + '">' + escapeHtml(statusLabel) + '</span>' +
+            // Demande #40 — le badge de statut est cliquable : il ouvre la modale
+            // d'édition de la collecte (on y change le statut, dates, etc.).
+            '<button type="button" class="collecte-badge-status collecte-badge-status--clickable ' + statusClass + '" data-collecte-id="' + c.id + '" title="Modifier le statut de la collecte">' + escapeHtml(statusLabel) + '</button>' +
             capaciteHtml +
             '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
             prixHtml +
@@ -4208,6 +4250,7 @@ function saveCollecte(billetId) {
     .then(function(data) {
         var nouvelleCollecte = Array.isArray(data) ? data[0] : data;
         showToast('Collecte ajoutée', 'success');
+        fermerCollecteModal();   // demande #41 — referme la modale d'ajout
 
         // Demande #16 (D5/B1) — c'est ici que naissent les pré-inscriptions,
         // masquées par le scope de la collecte et dédupliquées (N1).
@@ -4312,11 +4355,9 @@ function editerCollecte(collecteId) {
     if (title) title.textContent = 'Modifier la collecte « ' + (c.nom || '') + ' »';
     var btnAdd = document.getElementById('btn-add-collecte');
     if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications';
-    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
-    if (btnCancel) btnCancel.style.display = '';
 
-    var form = document.getElementById('collecte-add-form');
-    if (form && form.scrollIntoView) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Demande #41 — l'édition se fait en modale
+    ouvrirCollecteModalUI();
 }
 
 // Demande #38 — sort du mode édition et remet le formulaire en mode « ajout ».
@@ -4330,9 +4371,24 @@ function sortirEditionCollecte() {
     if (title) title.textContent = 'Ajouter une collecte';
     var btnAdd = document.getElementById('btn-add-collecte');
     if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter cette collecte';
-    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
-    if (btnCancel) btnCancel.style.display = 'none';
     resetCollecteForm();
+}
+
+// Demande #41 — ouverture / fermeture de la modale d'ajout/édition de collecte.
+function ouvrirCollecteModalUI() {
+    var ov = document.getElementById('collecte-modal-overlay');
+    if (ov) ov.style.display = 'flex';
+    var nom = document.getElementById('field-collecte-nom');
+    if (nom) setTimeout(function() { try { nom.focus(); } catch (e) {} }, 30);
+}
+function ouvrirAjoutCollecte() {
+    sortirEditionCollecte();   // repart d'un formulaire vierge en mode ajout
+    ouvrirCollecteModalUI();
+}
+function fermerCollecteModal() {
+    var ov = document.getElementById('collecte-modal-overlay');
+    if (ov) ov.style.display = 'none';
+    sortirEditionCollecte();   // nettoie l'état d'édition
 }
 
 // Demande #38 — enregistre les modifications d'une collecte existante (PATCH).
@@ -4366,7 +4422,7 @@ function modifierCollecte(collecteId, billetId) {
     })
     .then(function() {
         showToast('Collecte modifiée', 'success');
-        sortirEditionCollecte();
+        fermerCollecteModal();   // demande #41 — referme la modale d'édition
         loadCollectesForBillet(billetId);
         loadAdminCollectes();
     })

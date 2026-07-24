@@ -159,6 +159,7 @@
                     <div class="admin-form-group">
                         <label for="field-categorie">Statut du billet</label>
                         <select id="field-categorie" name="Categorie" class="admin-form-select">
+                            <option value="__herite__">Hérité des collectes (par défaut)</option>
                             <option value="Pas de collecte">Pas de collecte</option>
                             <option value="Jamais édité, projet">Jamais édité, projet</option>
                             <option value="Masqué">Masqué (non affiché publiquement)</option>
@@ -166,6 +167,11 @@
                         <small id="statut-derive-msg" class="field-hint-warning" style="display:none;">
                             Statut piloté par les collectes de ce billet — modifiable en créant,
                             clôturant ou supprimant une collecte ci-dessous.
+                        </small>
+                        <small id="statut-herite-msg" class="field-hint" style="display:none;">
+                            Par défaut, une pré-collecte est créée automatiquement et le statut
+                            suivra les collectes. Choisissez un statut manuel seulement pour un
+                            billet sans collecte (jamais édité, projet ou masqué).
                         </small>
                         <small id="statut-manuel-msg" class="field-hint" style="display:none;">
                             Ce billet n'a aucune collecte : son statut se saisit à la main.
@@ -216,8 +222,21 @@
                 <div id="admin-collectes-supplementaires" style="display:none" class="admin-collectes-section">
                     <h4 class="admin-collectes-title">Collectes</h4>
                     <div id="collectes-list"></div>
-                    <div id="collecte-add-form" class="collecte-add-form">
-                        <h5 id="collecte-form-title" class="collecte-form-title">Ajouter une collecte</h5>
+                    <!-- Demande #41 — l'ajout/édition d'une collecte se fait en modale -->
+                    <button type="button" id="btn-open-add-collecte" class="btn-admin-secondary">
+                        <i class="fa-solid fa-plus"></i> Ajouter une collecte
+                    </button>
+                </div>
+
+                <!-- Demande #41 — modale d'ajout / édition d'une collecte -->
+                <div id="collecte-modal-overlay" class="collecte-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="collecte-form-title">
+                    <div id="collecte-add-form" class="collecte-add-form collecte-modal-dialog">
+                        <div class="collecte-modal-head">
+                            <h5 id="collecte-form-title" class="collecte-form-title">Ajouter une collecte</h5>
+                            <button type="button" id="btn-close-collecte-modal" class="collecte-modal-close" aria-label="Fermer">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
                         <div class="admin-form-group">
                             <label for="field-collecte-nom">Nom *</label>
                             <input type="text" id="field-collecte-nom" autocomplete="off" placeholder="Rattrapage automne 2026">
@@ -293,12 +312,14 @@
                             <input type="number" id="field-collecte-nb-max" min="1" step="1" placeholder="Laisser vide = pas de plafond">
                             <small class="field-hint">Une fois ce total de billets atteint, l'inscription à cette collecte se ferme.</small>
                         </div>
-                        <button type="button" id="btn-add-collecte" class="btn-admin-secondary">
-                            <i class="fa-solid fa-plus"></i> Ajouter cette collecte
-                        </button>
-                        <button type="button" id="btn-cancel-edit-collecte" class="btn-admin-tertiary" style="display:none;">
-                            Annuler
-                        </button>
+                        <div class="collecte-modal-actions">
+                            <button type="button" id="btn-cancel-edit-collecte" class="btn-admin-tertiary">
+                                Annuler
+                            </button>
+                            <button type="button" id="btn-add-collecte" class="btn-admin-secondary">
+                                <i class="fa-solid fa-plus"></i> Ajouter cette collecte
+                            </button>
+                        </div>
                     </div>
                 </div>
 

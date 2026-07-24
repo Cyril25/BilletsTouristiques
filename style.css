@@ -8993,6 +8993,75 @@ body.is-superadmin .admin-card-ebay-btn {
     background: #f0f0f0;
     color: #888;
 }
+/* Demande #40 — badge de statut cliquable (ouvre la modale d'édition de la collecte) */
+button.collecte-badge-status {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.4;
+}
+.collecte-badge-status--clickable {
+    position: relative;
+}
+.collecte-badge-status--clickable:hover {
+    filter: brightness(0.95);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Demande #41 — modale d'ajout / édition d'une collecte */
+.collecte-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+    z-index: 3000;
+}
+.collecte-modal-overlay .collecte-modal-dialog {
+    width: 100%;
+    max-width: 560px;
+    margin: auto;
+    background: var(--color-bg-white, #fff);
+    border: 1px solid var(--color-border, #e2e2e2);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    padding: 20px 22px;
+}
+.collecte-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.collecte-modal-head .collecte-form-title {
+    margin: 0;
+}
+.collecte-modal-close {
+    border: none;
+    background: transparent;
+    color: var(--color-text-light, #666);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.collecte-modal-close:hover {
+    background: var(--color-bg-light, #f0f0f0);
+    color: var(--color-text, #333);
+}
+.collecte-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #eee);
+}
 
 /* Demande #24 — Badge capacité (plafond de billets) */
 .collecte-badge-capacite {
