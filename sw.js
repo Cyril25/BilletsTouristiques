@@ -7,7 +7,7 @@
 //   - Network Only  : API données (supabase, workers.dev, google)
 // ============================================================
 
-const CACHE_NAME = 'billets-v264';
+const CACHE_NAME = 'billets-v265';
 
 const STATIC_ASSETS = [
     './',

@@ -823,8 +823,14 @@ function renderAdminCards() {
                 // collecte : on ne détaille que s'il y en a plusieurs, sinon le
                 // badge du dessus (total du billet) dit déjà tout.
                 if (collectes.length < 2) return '';
+                // Demande #36 — la collecte PRINCIPALE (de base) est déjà représentée
+                // par le badge total ci-dessus : on ne liste ici QUE les collectes
+                // supplémentaires, sinon la collecte de base apparaît deux fois.
+                var principale = collectePrincipaleBilletAdmin(docId);
+                var supplementaires = collectes.filter(function(c) { return c !== principale; });
+                if (supplementaires.length === 0) return '';
                 var today = new Date().toISOString().slice(0, 10);
-                return collectes.map(function(c) {
+                return supplementaires.map(function(c) {
                     var isOpen = !c.date_fin || c.date_fin > today;
                     var cData = adminCollecteInscriptionCounts[c.id] || { count: 0, normaux: 0, variantes: 0 };
                     var statusIcon = isOpen ? 'fa-layer-group' : 'fa-circle-check';
