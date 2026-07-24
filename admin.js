@@ -444,9 +444,23 @@ function clearImageUpload() {
 // ============================================================
 // 3. INITIALISATION
 // ============================================================
+// Demande #16 (#35) — deux pages partagent admin.js :
+//  - admin.html : la LISTE des billets (cartes, filtres, chips) ;
+//  - admin-billet.html : la PAGE dédiée d'ajout/édition (le panneau, rendu pleine
+//    page). La liste navigue vers elle ; enregistrer/annuler y ramènent.
+var IS_BILLET_PAGE = !!(document.body && document.body.classList.contains('admin-billet-page'));
+
 if (typeof firebase !== 'undefined') {
     firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
+        if (!user) return;
+        if (IS_BILLET_PAGE) {
+            // Page dédiée : uniquement ce qu'il faut au formulaire
+            loadPays();
+            loadCollecteurs();
+            initPanel();
+            initImageUpload();
+            initBilletPage();
+        } else {
             showAdminOnboarding();
             loadAdminBillets();
             loadAdminInscriptionCounts();
@@ -457,6 +471,44 @@ if (typeof firebase !== 'undefined') {
             initImageUpload();
         }
     });
+}
+
+// Ouvre la page dédiée dans le bon mode selon l'URL (?id= / ?new= / ?dup=).
+function initBilletPage() {
+    var params = new URLSearchParams(window.location.search);
+    var id = params.get('id');
+    if (params.get('new') === '1') {
+        openBilletPanel();
+        return;
+    }
+    if (params.get('dup') === '1') {
+        var stash = null;
+        try { stash = JSON.parse(sessionStorage.getItem('bt_billet_dup') || 'null'); } catch (e) {}
+        sessionStorage.removeItem('bt_billet_dup');
+        if (!stash) { window.location.href = 'admin.html'; return; }
+        openBilletPanel(null, null);        // mode ajout
+        prefillForm(stash);                 // puis pré-remplir avec la copie
+        var cf = document.getElementById('field-categorie');
+        if (cf) cf.value = CATEGORIE_DEFAULT;
+        return;
+    }
+    if (id) {
+        // Édition : on recharge le billet à jour (pas de dépendance à une liste)
+        supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(id) + '&select=*')
+            .then(function(rows) {
+                var b = (rows && rows[0]) ? rows[0] : null;
+                if (!b) { window.location.href = 'admin.html'; return; }
+                b._id = b.id;
+                // La page n'a pas de liste : on garnit adminBillets avec le billet
+                // courant pour que saveCollecte / la réconciliation le retrouvent.
+                adminBillets = [b];
+                openBilletPanel(b, String(b.id));
+            })
+            .catch(function() { window.location.href = 'admin.html'; });
+        return;
+    }
+    // URL sans paramètre → retour liste
+    window.location.href = 'admin.html';
 }
 
 // ============================================================
@@ -970,11 +1022,11 @@ function getPaginationRange(current, total) {
 // ============================================================
 
 function initPanel() {
-    // Bouton "Ajouter un billet"
+    // Bouton "Ajouter un billet" (présent sur la liste) → page dédiée (#35)
     var addBtn = document.getElementById('btn-add-billet');
     if (addBtn) {
         addBtn.addEventListener('click', function() {
-            openBilletPanel();
+            window.location.href = 'admin-billet.html?new=1';
         });
     }
 
@@ -1114,16 +1166,13 @@ function initPanel() {
                 return;
             }
 
-            // Story 2.3 — Clic sur le bouton modifier
+            // Story 2.3 / #35 — Clic sur « Modifier » → page dédiée d'édition
             var editBtn = event.target.closest('.admin-card-edit-btn');
             if (editBtn) {
                 event.stopPropagation();
                 var editDocId = editBtn.getAttribute('data-doc-id');
                 if (editDocId) {
-                    var billetEditData = findBilletById(editDocId);
-                    if (billetEditData) {
-                        openBilletPanel(billetEditData, editDocId);
-                    }
+                    window.location.href = 'admin-billet.html?id=' + encodeURIComponent(editDocId);
                 }
                 return;
             }
@@ -1406,11 +1455,13 @@ function openBilletPanel(billetData, docId) {
 
     // Ouvrir le panel
     panel.classList.add('open');
-    if (overlay) overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Focus trap
-    initFocusTrap(panel);
+    // Demande #16 (#35) — sur la page dédiée, le panneau EST la page : pas de
+    // verrou de scroll ni d'overlay ni de focus trap (le CSS le rend statique).
+    if (!IS_BILLET_PAGE) {
+        if (overlay) overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        initFocusTrap(panel);
+    }
 
     // Focus sur le premier champ
     var firstInput = document.getElementById('field-nom-billet');
@@ -1444,17 +1495,10 @@ function copyBillet(billetData) {
     copy.NomBillet = (copy.NomBillet || '') + ' (copie)';
     copy.Categorie = CATEGORIE_DEFAULT;
 
-    // Ouvrir le panel en mode ajout (pas de docId)
-    openBilletPanel(null, null);
-
-    // Pré-remplir avec les données copiées
-    prefillForm(copy);
-
-    // Remettre le statut par défaut après prefill
-    var categorieField = document.getElementById('field-categorie');
-    if (categorieField) categorieField.value = CATEGORIE_DEFAULT;
-
-    showToast('Billet dupliqué — modifiez puis sauvegardez', 'info');
+    // Demande #16 (#35) — la duplication se fait sur la PAGE dédiée : on stashe la
+    // copie (objet en mémoire, non passable par l'URL) et on y navigue.
+    try { sessionStorage.setItem('bt_billet_dup', JSON.stringify(copy)); } catch (e) {}
+    window.location.href = 'admin-billet.html?dup=1';
 }
 
 // Story 2.3 — Pre-remplir le formulaire avec les donnees du billet
@@ -1637,6 +1681,12 @@ function creerPreCollecteAuto(billet) {
         var col = Array.isArray(data) ? data[0] : data;
         showToast('Billet créé avec sa pré-collecte', 'success');
         if (col && col.id) creerAutoInscriptions(billet, col);
+        // Demande #16 (#35) — sur la page dédiée, on reste sur le billet fraîchement
+        // créé (en édition) pour configurer sa collecte ; sinon (drawer) on ferme.
+        if (IS_BILLET_PAGE) {
+            window.location.href = 'admin-billet.html?id=' + billet.id;
+            return;
+        }
         closeBilletPanel();
         loadAdminBillets();
         loadAdminCollectes();
@@ -1650,6 +1700,8 @@ function creerPreCollecteAuto(billet) {
 }
 
 function closeBilletPanel() {
+    // Demande #16 (#35) — sur la page dédiée, « fermer » = revenir à la liste
+    if (IS_BILLET_PAGE) { window.location.href = 'admin.html'; return; }
     var panel = document.getElementById('admin-panel');
     if (!panel) return;
     var overlay = document.getElementById('admin-panel-overlay');
@@ -3943,6 +3995,9 @@ function loadCollectesForBillet(billetId) {
     supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&order=created_at.asc')
         .then(function(data) {
             currentBilletCollectes = data || [];
+            // #35 — sur la page dédiée, adminCollectesByBillet n'est pas chargé
+            // (pas de liste) : on le garnit pour ce billet (collectePrincipaleBilletAdmin).
+            adminCollectesByBillet[billetId] = currentBilletCollectes;
             refreshStatutBilletUI();
             renderCollectesList(currentBilletCollectes, billetId);
         })

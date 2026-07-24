@@ -10181,3 +10181,34 @@ body.is-superadmin .admin-card-ebay-btn {
     .admin-sig-date { align-self: flex-start; }
     .admin-sig-actions { margin-left: 0; }
 }
+
+/* ============================================================
+   Demande #16 (#35) — Page dédiée d'édition d'un billet
+   Le panneau latéral (#admin-panel), réutilisé tel quel, est rendu
+   en PLEINE PAGE sur admin-billet.html (body.admin-billet-page).
+   ============================================================ */
+.admin-billet-page .admin-panel-overlay { display: none !important; }
+.admin-billet-page .admin-panel {
+    position: static;
+    width: 100%;
+    max-width: 860px;
+    height: auto;
+    transform: none !important;
+    box-shadow: none;
+    margin: 0 auto 48px;
+    border: 1px solid var(--color-border, #e2e2e2);
+    border-radius: 12px;
+}
+.admin-billet-page .admin-panel-body {
+    flex: none;
+    overflow: visible;
+}
+.admin-billet-page .admin-panel-footer {
+    position: static;
+}
+.admin-billet-page-topbar {
+    max-width: 860px;
+    margin: 16px auto 0;
+    padding: 0 16px;
+}
+/* Le bouton croix du header ferme = retour à la liste (piloté par JS) */
