@@ -217,6 +217,7 @@
                     <h4 class="admin-collectes-title">Collectes</h4>
                     <div id="collectes-list"></div>
                     <div id="collecte-add-form" class="collecte-add-form">
+                        <h5 id="collecte-form-title" class="collecte-form-title">Ajouter une collecte</h5>
                         <div class="admin-form-group">
                             <label for="field-collecte-nom">Nom *</label>
                             <input type="text" id="field-collecte-nom" autocomplete="off" placeholder="Rattrapage automne 2026">
@@ -241,6 +242,9 @@
                                 <option value="les_deux">Les deux</option>
                             </select>
                             <span class="admin-form-error" id="error-collecte-scope"></span>
+                            <small id="collecte-scope-edit-hint" class="field-hint" style="display:none;">
+                                Le scope n'est pas modifiable après création (il détermine les inscriptions). Pour le changer : supprimer puis recréer la collecte.
+                            </small>
                         </div>
                         <div class="admin-form-group">
                             <label for="field-collecte-collecteur">Collecteur</label>
@@ -291,6 +295,9 @@
                         </div>
                         <button type="button" id="btn-add-collecte" class="btn-admin-secondary">
                             <i class="fa-solid fa-plus"></i> Ajouter cette collecte
+                        </button>
+                        <button type="button" id="btn-cancel-edit-collecte" class="btn-admin-tertiary" style="display:none;">
+                            Annuler
                         </button>
                     </div>
                 </div>

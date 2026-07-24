@@ -9045,6 +9045,52 @@ body.is-superadmin .admin-card-ebay-btn {
     border: 1px dashed var(--color-accent);
 }
 
+/* Demande #38 — titre du formulaire de collecte (ajout / édition) */
+.collecte-form-title {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text, #333);
+}
+
+/* Demande #38 — bouton « Annuler » (édition d'une collecte), discret */
+.btn-admin-tertiary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    margin-left: 8px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-light, #666);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-admin-tertiary:hover {
+    background: var(--color-bg-light, #f0f0f0);
+    color: var(--color-text, #333);
+}
+
+/* Demande #38 — bouton « Modifier » d'une collecte dans la liste */
+.btn-modifier-collecte {
+    padding: 4px 10px;
+    border: 1px solid var(--color-primary);
+    background: var(--color-bg-white, #fff);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm, 4px);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-modifier-collecte:hover {
+    background: var(--color-primary);
+    color: var(--color-text-inverse, #fff);
+}
+
 /* ============================================================
    STORY 12.4 — Collectes supplémentaires (catalogue billets)
    ============================================================ */

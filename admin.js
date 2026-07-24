@@ -1211,6 +1211,12 @@ function initPanel() {
     var collectesList = document.getElementById('collectes-list');
     if (collectesList) {
         collectesList.addEventListener('click', function(e) {
+            // Demande #38 — modifier une collecte
+            var btnModifier = e.target.closest('.btn-modifier-collecte');
+            if (btnModifier) {
+                editerCollecte(btnModifier.dataset.collecteId);
+                return;
+            }
             var btnCloturer = e.target.closest('.btn-cloturer-collecte');
             if (btnCloturer) {
                 cloturerCollecte(btnCloturer.dataset.collecteId, btnCloturer.dataset.billetId);
@@ -1239,7 +1245,20 @@ function initPanel() {
             var billetId = section.dataset.billetId;
             if (!billetId) return;
             if (!validateCollecteForm()) return;
-            saveCollecte(billetId);
+            // Demande #38 — même formulaire : PATCH si on édite, POST sinon.
+            if (editingCollecteId) {
+                modifierCollecte(editingCollecteId, billetId);
+            } else {
+                saveCollecte(billetId);
+            }
+        });
+    }
+
+    // Demande #38 — annuler l'édition d'une collecte (retour au mode ajout)
+    var btnCancelEditCollecte = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancelEditCollecte) {
+        btnCancelEditCollecte.addEventListener('click', function() {
+            sortirEditionCollecte();
         });
     }
 
@@ -3973,6 +3992,10 @@ function confirmAdminDeleteInscription(inscriptionId) {
 // savoir si le statut du billet est encore saisissable (0 collecte) ou dérivé.
 var currentBilletCollectes = [];
 
+// Demande #38 — id de la collecte en cours d'édition dans le formulaire réutilisé
+// (null = mode « ajout d'une collecte »).
+var editingCollecteId = null;
+
 function billetAucuneCollecte() {
     return currentBilletCollectes.length === 0;
 }
@@ -4047,6 +4070,8 @@ function renderCollectesList(collectes, billetId) {
             capaciteHtml +
             '<span class="collecte-meta">' + escapeHtml(c.collecteur || '—') + '</span>' +
             prixHtml +
+            // Demande #38 — modifier une collecte existante (prix, dates, collecteur, statut…)
+            '<button type="button" class="btn-modifier-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Modifier</button>' +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
             // B6 / AM4 — abandon d'une pré-collecte : on la supprime, le billet
             // retombe en « Pas de collecte » via la dérivation.
@@ -4217,6 +4242,137 @@ function saveCollecte(billetId) {
     .catch(function(error) {
         console.error('Erreur ajout collecte:', error);
         showToast('Erreur lors de l\'ajout', 'error');
+    });
+}
+
+// Demande #38 — remet le formulaire de collecte dans son état « ajout » vierge.
+function resetCollecteForm() {
+    var ids = ['field-collecte-nom', 'field-collecte-scope', 'field-collecte-collecteur',
+               'field-collecte-date-pre', 'field-collecte-date-coll', 'field-collecte-date-fin', 'field-collecte-nb-max',
+               'field-collecte-prix', 'field-collecte-prix-variante', 'field-collecte-fdp-com'];
+    ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    var cbFdp = document.getElementById('field-collecte-payer-fdp');
+    if (cbFdp) cbFdp.checked = false;
+    var selCat = document.getElementById('field-collecte-categorie');
+    if (selCat) selCat.value = 'Pré collecte';
+    toggleCollectePrixFields();
+    var elDatePre = document.getElementById('field-collecte-date-pre');
+    if (elDatePre) elDatePre.value = new Date().toISOString().slice(0, 10);
+    var section = document.getElementById('admin-collectes-supplementaires');
+    var defaultColl = section ? section.dataset.billetCollecteur : '';
+    var selColl = document.getElementById('field-collecte-collecteur');
+    if (selColl && defaultColl) selColl.value = defaultColl;
+    // vider les erreurs éventuelles
+    ['error-collecte-nom', 'error-collecte-scope', 'error-collecte-prix',
+     'error-collecte-prix-variante', 'error-collecte-collecteur'].forEach(function(id) {
+        var e = document.getElementById(id); if (e) e.textContent = '';
+    });
+}
+
+// Demande #38 — pré-remplit le formulaire avec une collecte existante et bascule en
+// mode édition (PATCH à l'enregistrement).
+function editerCollecte(collecteId) {
+    var c = null;
+    for (var i = 0; i < currentBilletCollectes.length; i++) {
+        if (String(currentBilletCollectes[i].id) === String(collecteId)) { c = currentBilletCollectes[i]; break; }
+    }
+    if (!c) return;
+    editingCollecteId = c.id;
+
+    var setVal = function(id, v) {
+        var el = document.getElementById(id);
+        if (el) el.value = (v === null || v === undefined) ? '' : v;
+    };
+    setVal('field-collecte-nom', c.nom);
+    setVal('field-collecte-categorie', c.categorie || 'Pré collecte');
+    setVal('field-collecte-scope', c.scope || '');
+    setVal('field-collecte-collecteur', c.collecteur || '');
+    setVal('field-collecte-prix', c.prix);
+    setVal('field-collecte-prix-variante', c.prix_variante);
+    setVal('field-collecte-fdp-com', c.fdp_com);
+    setVal('field-collecte-date-pre', c.date_pre);
+    setVal('field-collecte-date-coll', c.date_coll);
+    setVal('field-collecte-date-fin', c.date_fin);
+    setVal('field-collecte-nb-max', c.nb_max);
+    var cbFdp = document.getElementById('field-collecte-payer-fdp');
+    if (cbFdp) cbFdp.checked = (c.payer_fdp === 'oui');
+
+    // Le scope n'est pas modifiable après création (il fige les inscriptions).
+    var scopeEl = document.getElementById('field-collecte-scope');
+    if (scopeEl) scopeEl.disabled = true;
+    var scopeHint = document.getElementById('collecte-scope-edit-hint');
+    if (scopeHint) scopeHint.style.display = '';
+
+    toggleCollectePrixFields();
+
+    var title = document.getElementById('collecte-form-title');
+    if (title) title.textContent = 'Modifier la collecte « ' + (c.nom || '') + ' »';
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications';
+    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancel) btnCancel.style.display = '';
+
+    var form = document.getElementById('collecte-add-form');
+    if (form && form.scrollIntoView) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Demande #38 — sort du mode édition et remet le formulaire en mode « ajout ».
+function sortirEditionCollecte() {
+    editingCollecteId = null;
+    var scopeEl = document.getElementById('field-collecte-scope');
+    if (scopeEl) scopeEl.disabled = false;
+    var scopeHint = document.getElementById('collecte-scope-edit-hint');
+    if (scopeHint) scopeHint.style.display = 'none';
+    var title = document.getElementById('collecte-form-title');
+    if (title) title.textContent = 'Ajouter une collecte';
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter cette collecte';
+    var btnCancel = document.getElementById('btn-cancel-edit-collecte');
+    if (btnCancel) btnCancel.style.display = 'none';
+    resetCollecteForm();
+}
+
+// Demande #38 — enregistre les modifications d'une collecte existante (PATCH).
+function modifierCollecte(collecteId, billetId) {
+    var getValue = function(id) {
+        var el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    };
+    var nbMaxRaw = getValue('field-collecte-nb-max');
+    var nbMax = nbMaxRaw !== '' ? parseInt(nbMaxRaw, 10) : null;
+    if (nbMax !== null && (isNaN(nbMax) || nbMax < 1)) nbMax = null;
+    var payerFdpEl = document.getElementById('field-collecte-payer-fdp');
+    var body = {
+        nom: getValue('field-collecte-nom'),
+        // scope verrouillé en édition : on ne le renvoie pas (il ne change pas).
+        categorie: getValue('field-collecte-categorie') || 'Pré collecte',
+        prix: getValue('field-collecte-prix') ? parseFloat(getValue('field-collecte-prix')) : null,
+        prix_variante: getValue('field-collecte-prix-variante') ? parseFloat(getValue('field-collecte-prix-variante')) : null,
+        payer_fdp: payerFdpEl && payerFdpEl.checked ? 'oui' : '',
+        fdp_com: getValue('field-collecte-fdp-com'),
+        collecteur: getValue('field-collecte-collecteur') || null,
+        date_pre: getValue('field-collecte-date-pre') || null,
+        date_coll: getValue('field-collecte-date-coll') || null,
+        date_fin: getValue('field-collecte-date-fin') || null,
+        nb_max: nbMax
+    };
+    supabaseFetch('/rest/v1/collectes?id=eq.' + collecteId, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(body)
+    })
+    .then(function() {
+        showToast('Collecte modifiée', 'success');
+        sortirEditionCollecte();
+        loadCollectesForBillet(billetId);
+        loadAdminCollectes();
+    })
+    .catch(function(error) {
+        console.error('Erreur modification collecte:', error);
+        showToast('Erreur lors de la modification', 'error');
     });
 }
 
