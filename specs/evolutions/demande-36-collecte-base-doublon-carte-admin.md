@@ -38,4 +38,4 @@ supplémentaires, c.-à-d. **exclure la collecte principale**
 - `admin.js` : dans les badges collectes, filtrer `c !== collectePrincipaleBilletAdmin(docId)`
   avant le `map` ; ne rien afficher s'il n'y a pas de supplémentaire.
 - `sw.js` v265, `menu.html` v173.
-- **Commit** : _(complété après commit)_
+- **Commit** : `cae0736`
