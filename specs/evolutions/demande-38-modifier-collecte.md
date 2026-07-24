@@ -61,4 +61,4 @@ cliquera sur une collecte pour la modifier »).
     selon le mode.
   - `modifierCollecte(collecteId, billetId)` : PATCH des champs + rechargement.
 - `sw.js` / `global.js` : bump cache-busters.
-- **Commit** : _(complété après commit)_
+- **Commit** : `2ba34c5`
