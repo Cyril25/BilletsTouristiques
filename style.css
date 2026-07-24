@@ -3330,6 +3330,48 @@ body.login-page {
     opacity: 0.85;
 }
 
+/* Demande #40 — statut billet dérivé (lecture seule) : pas d'interaction */
+.admin-badge-status--derive {
+    cursor: default;
+}
+
+/* Demande #40 — statut par collecte sur la carte admin */
+.admin-card-collectes-statuts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 6px 0 2px;
+}
+.admin-card-collecte-ligne {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.admin-card-collecte-nom {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary, #555);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+.collecte-status-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border: none;
+    border-radius: 11px;
+    cursor: pointer;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.collecte-status-tag:hover {
+    opacity: 0.85;
+}
+
 /* Story 2.3/2.4 — Boutons action sur carte */
 .admin-card-actions {
     display: flex;

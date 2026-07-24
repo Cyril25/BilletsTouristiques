@@ -755,23 +755,36 @@ function renderAdminCards() {
         var statut = billet.Categorie || '';
         var statusLabel = statut || 'Non defini';
         var statusColor = getStatusColor(statut);
+        // Demande #40 — statut billet dérivé (lecture seule) s'il porte des collectes.
+        var billetCollectesCarte = collectesDuBillet(docId);
+        var statutDerive = billetCollectesCarte.length > 0;
 
         html += '<div class="admin-card-billet" data-doc-id="' + docId + '">' +
             '<div class="admin-card-header">' +
                 '<h3 class="admin-card-title">' + escapeHtml(nom) + ' <span style="font-size:10px; color:#ccc; font-weight:normal;">(n\u00b0' + docId + ')</span></h3>' +
                 '<div class="card-badge-wrapper">' +
-                    '<span class="admin-badge-status clickable" ' +
-                        'data-doc-id="' + docId + '" ' +
-                        'data-current-status="' + escapeAttr(statut) + '" ' +
-                        'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
-                        escapeHtml(statusLabel) +
-                    '</span>' +
-                    // Story 2.5 — popup de statut rapide (cache par defaut)
-                    '<div class="quick-status-popup" id="quick-status-popup-' + docId + '" style="display: none;">' +
-                        '<div class="quick-status-chips">' +
-                            buildStatusChipsHtml(docId, statut) +
-                        '</div>' +
-                    '</div>' +
+                    (statutDerive
+                        // Demande #40 — statut dérivé : lecture seule (on change par collecte)
+                        ? '<span class="admin-badge-status admin-badge-status--derive" ' +
+                            'data-doc-id="' + docId + '" ' +
+                            'data-current-status="' + escapeAttr(statut) + '" ' +
+                            'title="Statut dérivé des collectes (se change par collecte)" ' +
+                            'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
+                            escapeHtml(statusLabel) +
+                          '</span>'
+                        // Billet sans collecte : tag cliquable (statut manuel + création 1re collecte)
+                        : '<span class="admin-badge-status clickable" ' +
+                            'data-doc-id="' + docId + '" ' +
+                            'data-current-status="' + escapeAttr(statut) + '" ' +
+                            'style="background-color: ' + statusColor + '; color: ' + getTextColorForBg(statusColor) + ';">' +
+                            escapeHtml(statusLabel) +
+                          '</span>' +
+                          '<div class="quick-status-popup" id="quick-status-popup-' + docId + '" style="display: none;">' +
+                            '<div class="quick-status-chips">' +
+                                buildStatusChipsHtml(docId, statut) +
+                            '</div>' +
+                          '</div>'
+                    ) +
                 '</div>' +
             '</div>' +
             '<div class="admin-card-meta">' +
@@ -816,39 +829,36 @@ function renderAdminCards() {
                     '<i class="fa-solid fa-users"></i> ' + count + ' inscription' + (count !== 1 ? 's' : '') + detail +
                     '</button>';
             })() +
-            // Badges collectes supplémentaires
+            // Demande #40 — statut PAR COLLECTE : chaque collecte porte un tag de statut
+            // CLIQUABLE qui change SON statut (le statut du billet en découle, lecture
+            // seule). Remplace les anciens badges d'inscriptions par collecte.
             (function() {
-                var collectes = adminCollectesByBillet[docId] || [];
-                // Demande #16 — après la migration chaque billet a au moins une
-                // collecte : on ne détaille que s'il y en a plusieurs, sinon le
-                // badge du dessus (total du billet) dit déjà tout.
-                if (collectes.length < 2) return '';
-                // Demande #36 — la collecte PRINCIPALE (de base) est déjà représentée
-                // par le badge total ci-dessus : on ne liste ici QUE les collectes
-                // supplémentaires, sinon la collecte de base apparaît deux fois.
+                var cols = billetCollectesCarte;
+                if (!cols || cols.length === 0) return '';
                 var principale = collectePrincipaleBilletAdmin(docId);
-                var supplementaires = collectes.filter(function(c) { return c !== principale; });
-                if (supplementaires.length === 0) return '';
-                var today = new Date().toISOString().slice(0, 10);
-                return supplementaires.map(function(c) {
-                    var isOpen = !c.date_fin || c.date_fin > today;
-                    var cData = adminCollecteInscriptionCounts[c.id] || { count: 0, normaux: 0, variantes: 0 };
-                    var statusIcon = isOpen ? 'fa-layer-group' : 'fa-circle-check';
-                    var detail = '';
-                    if (cData.count > 0) {
-                        var parts = [];
-                        if (cData.normaux > 0) parts.push(cData.normaux + ' billet' + (cData.normaux > 1 ? 's' : '') + ' normaux');
-                        if (cData.variantes > 0 && hasVarianteActive(billet.HasVariante)) {
-                            var varLabel = varianteLabel(billet.HasVariante);
-                            parts.push(cData.variantes + ' billet' + (cData.variantes > 1 ? 's' : '') + ' ' + varLabel);
-                        }
-                        if (parts.length > 0) detail = ' (' + parts.join(', ') + ')';
-                    }
-                    return '<button class="admin-card-inscriptions-badge admin-card-collecte-supp-badge" onclick="openInscriptionsModal(' + docId + ')" title="Collecte supplémentaire : ' + escapeAttr(c.nom) + '">' +
-                        '<i class="fa-solid ' + statusIcon + '"></i> ' + escapeHtml(c.nom) + ' : ' + cData.count + ' inscription' + (cData.count !== 1 ? 's' : '') + detail +
-                        (isOpen ? '' : ' <em>(clôturée)</em>') +
-                        '</button>';
-                }).join('');
+                var ordered = cols.slice().sort(function(a, b) {
+                    return (a === principale) ? -1 : (b === principale) ? 1 : 0;
+                });
+                return '<div class="admin-card-collectes-statuts">' + ordered.map(function(c) {
+                    var cstatut = c.categorie || 'Pré collecte';
+                    var ccolor = getStatusColor(cstatut);
+                    return '<div class="admin-card-collecte-ligne">' +
+                        '<span class="admin-card-collecte-nom" title="' + escapeAttr(c.nom || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
+                        '<span class="card-badge-wrapper">' +
+                            '<button type="button" class="collecte-status-tag clickable" ' +
+                                'data-doc-id="' + docId + '" data-collecte-id="' + escapeAttr(String(c.id)) + '" ' +
+                                'data-current-status="' + escapeAttr(cstatut) + '" ' +
+                                'style="background-color: ' + ccolor + '; color: ' + getTextColorForBg(ccolor) + ';">' +
+                                escapeHtml(cstatut) +
+                            '</button>' +
+                            '<div class="quick-status-popup collecte-status-popup" id="quick-collecte-popup-' + escapeAttr(String(c.id)) + '" style="display: none;">' +
+                                '<div class="quick-status-chips">' +
+                                    buildCollecteStatusChipsHtml(docId, c.id, cstatut) +
+                                '</div>' +
+                            '</div>' +
+                        '</span>' +
+                    '</div>';
+                }).join('') + '</div>';
             })() +
             // Story 2.3/2.4 — Boutons d'action
             '<div class="admin-card-actions">' +
@@ -920,6 +930,25 @@ function buildStatusChipsHtml(docId, currentStatus) {
     });
 
     return html;
+}
+
+// Demande #40 — les statuts qu'une COLLECTE peut prendre (les 3 dérivés).
+var COLLECTE_STATUTS = ['Pré collecte', 'Collecte', 'Terminé'];
+
+// Demande #40 — pastilles de changement de statut d'UNE collecte (carte admin).
+function buildCollecteStatusChipsHtml(docId, collecteId, currentStatus) {
+    return COLLECTE_STATUTS.map(function(statut) {
+        var color = getStatusColor(statut);
+        var cls = 'status-chip' + (statut === currentStatus ? ' status-chip--active' : '');
+        return '<button class="' + cls + '" ' +
+            'data-status="' + escapeAttr(statut) + '" ' +
+            'data-doc-id="' + docId + '" ' +
+            'data-collecte-id="' + escapeAttr(String(collecteId)) + '" ' +
+            'style="background-color: ' + color + '; color: ' + getTextColorForBg(color) + ';" ' +
+            'aria-pressed="' + (statut === currentStatus ? 'true' : 'false') + '">' +
+            escapeHtml(statut) +
+            '</button>';
+    }).join('');
 }
 
 // Utilitaires d'echappement
@@ -1148,15 +1177,27 @@ function initPanel() {
     var cardsGrid = document.getElementById('admin-cards-grid');
     if (cardsGrid) {
         cardsGrid.addEventListener('click', function(event) {
-            // Story 2.5 — Clic sur un chip de statut rapide
+            // Story 2.5 — Clic sur un chip de statut rapide (billet OU collecte, demande #40)
             var chip = event.target.closest('.status-chip');
             if (chip) {
                 event.stopPropagation();
-                handleQuickStatusChange(chip);
+                if (chip.getAttribute('data-collecte-id')) {
+                    handleCollecteStatusChange(chip);
+                } else {
+                    handleQuickStatusChange(chip);
+                }
                 return;
             }
 
-            // Story 2.5 — Clic sur le badge de statut
+            // Demande #40 — clic sur le tag de statut d'une collecte → ouvrir sa popup
+            var ctag = event.target.closest('.collecte-status-tag.clickable');
+            if (ctag) {
+                event.stopPropagation();
+                handleCollecteTagClick(ctag);
+                return;
+            }
+
+            // Story 2.5 — Clic sur le badge de statut (billet sans collecte uniquement)
             var badge = event.target.closest('.admin-badge-status.clickable');
             if (badge) {
                 event.stopPropagation();
@@ -1205,7 +1246,8 @@ function initPanel() {
 
     // Story 2.5 — Fermer les popups au clic en dehors
     document.addEventListener('click', function(event) {
-        if (!event.target.closest('.quick-status-popup') && !event.target.closest('.admin-badge-status')) {
+        if (!event.target.closest('.quick-status-popup') && !event.target.closest('.admin-badge-status')
+            && !event.target.closest('.collecte-status-tag')) {
             closeAllStatusPopups();
         }
     });
@@ -2861,6 +2903,73 @@ function handleQuickStatusChange(chip) {
         .catch(function(error) {
             console.error('Erreur changement statut collecte:', error);
             updateBadgeUI(badge, previousStatus);
+            showToast('Erreur : ' + error.message, 'error');
+        });
+}
+
+// Demande #40 — ouvre la popup de statut d'une collecte (carte admin).
+function handleCollecteTagClick(tag) {
+    var collecteId = tag.getAttribute('data-collecte-id');
+    if (!collecteId) return;
+    closeAllStatusPopups();
+    var popup = document.getElementById('quick-collecte-popup-' + collecteId);
+    if (!popup) return;
+    popup.style.display = 'block';
+    var card = tag.closest('.admin-card-billet');
+    if (card) card.classList.add('popup-open');
+}
+
+// Demande #40 — change le statut d'UNE collecte depuis la carte admin (le statut du
+// billet en découle, dérivé). Reprend la logique « cas 4 » de handleQuickStatusChange,
+// scopée à la collecte cliquée.
+function handleCollecteStatusChange(chip) {
+    var newStatus = chip.getAttribute('data-status');
+    var docId = chip.getAttribute('data-doc-id');
+    var collecteId = chip.getAttribute('data-collecte-id');
+    if (!newStatus || !docId || !collecteId) return;
+
+    var collectes = collectesDuBillet(docId);
+    var collecte = null;
+    for (var i = 0; i < collectes.length; i++) {
+        if (String(collectes[i].id) === String(collecteId)) { collecte = collectes[i]; break; }
+    }
+    if (!collecte) return;
+    if (collecte.categorie === newStatus) { closeAllStatusPopups(); return; }
+
+    // Passage en Collecte : prix de la version ouverte + collecteur obligatoires. S'ils
+    // manquent, on renvoie vers la page d'édition (la modale collecte les saisit).
+    var prixManquant = (collecte.scope !== 'variante')
+        ? (collecte.prix === null || collecte.prix === undefined || collecte.prix === '')
+        : (collecte.prix_variante === null || collecte.prix_variante === undefined || collecte.prix_variante === '');
+    if (newStatus === 'Collecte' && (prixManquant || !collecte.collecteur)) {
+        closeAllStatusPopups();
+        showToast('Pour passer « ' + (collecte.nom || '') + ' » en Collecte, renseignez son prix et son collecteur.', 'info');
+        window.location.href = 'admin-billet.html?id=' + encodeURIComponent(docId);
+        return;
+    }
+
+    var patchBody = Object.assign({ categorie: newStatus },
+                                  getCollecteDateUpdates(collecte.categorie, newStatus, collecte));
+    closeAllStatusPopups();
+
+    supabaseFetch('/rest/v1/collectes?id=eq.' + collecte.id, {
+        method: 'PATCH',
+        body: JSON.stringify(patchBody)
+    })
+        .then(function() {
+            for (var dk in patchBody) { collecte[dk] = patchBody[dk]; }
+            return rafraichirStatutBillet(docId);
+        })
+        .then(function(statut) {
+            // Re-render : le tag de la collecte ET le statut dérivé du billet changent.
+            return loadAdminCollectes().then(function() {
+                renderAdminCards();
+                showToast('Collecte « ' + (collecte.nom || '') + ' » : ' + newStatus
+                    + (statut && statut !== newStatus ? ' (billet : ' + statut + ')' : ''), 'success');
+            });
+        })
+        .catch(function(error) {
+            console.error('Erreur changement statut collecte:', error);
             showToast('Erreur : ' + error.message, 'error');
         });
 }
