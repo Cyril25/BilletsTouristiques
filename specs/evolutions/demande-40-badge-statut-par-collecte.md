@@ -30,7 +30,21 @@ statut ; le statut du billet dépend de l'état de ses collectes — pré-collec
 
 ## Réalisation
 
+**Page d'édition** (`0e6e5f4`) :
 - `admin.js` : `renderCollectesList` — badge `.collecte-badge-status--clickable`
   (bouton) par collecte ; délégation clic → `editerCollecte` (ouvre la modale #41).
 - `style.css` : style du badge cliquable.
-- **Commit** : `0e6e5f4`
+
+**Carte admin.html — Option A** (`d584acb`, décision Cyril 2026-07-24) :
+- Chaque collecte de la carte porte son **tag de statut cliquable** (Pré collecte /
+  Collecte / Terminé) qui change SON statut (popup de pastilles + PATCH + re-render).
+- Le tag du billet (haut à droite) devient le **statut dérivé, lecture seule**
+  (`.admin-badge-status--derive`) quand le billet a des collectes ; il reste le
+  changeur manuel uniquement pour un billet **sans** collecte.
+- Passage en « Collecte » sans prix/collecteur → renvoi vers la page d'édition (la
+  modale les saisit).
+- `buildCollecteStatusChipsHtml`, `handleCollecteTagClick`, `handleCollecteStatusChange`.
+- Remplace les anciens badges d'inscriptions par collecte → clôt aussi définitivement
+  #36 (plus de collecte de base en double).
+
+- **Commits** : `0e6e5f4` (page), `d584acb` (carte / Option A)
