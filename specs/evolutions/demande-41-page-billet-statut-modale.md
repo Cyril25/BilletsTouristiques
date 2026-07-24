@@ -37,3 +37,8 @@ Deux points sur la page d'édition/création d'un billet (page dédiée #35) :
 - **Lien #38** : l'édition d'une collecte (créée en #38 en inline) est **conservée**,
   mais présentée en modale. **Lien #40** : le badge de statut ouvre cette même modale.
 - **Commit** : `0e6e5f4`
+- **Correctif** `8315dac` : en « Hérité », l'insertion n'envoyait aucun statut → la
+  base (qui exige un statut manuel valide tant qu'il n'y a pas de collecte) rejetait
+  avec « statut "" inconnu », donc le billet n'était pas créé. On insère désormais un
+  placeholder manuel valide (`Pas de collecte`) puis la pré-collecte fait dériver le
+  statut ; la décision « pré-collecte auto ou non » se base sur le choix du formulaire.
