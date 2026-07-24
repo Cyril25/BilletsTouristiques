@@ -45,6 +45,19 @@ var BT_ON_PROD = (SUPABASE_URL === SUPABASE_URL_PROD);
 
 if (!BT_ON_PROD) console.warn('[BT] ENVIRONNEMENT DE TEST — base : ' + SUPABASE_URL + ' (PAS la production)');
 
+// ============================================================
+// 1c. DESTINATION D'EXPÉDITION (frais de port)
+// ============================================================
+// Règle métier unique : la destination des frais de port est « france » ou
+// « international », déterminée par le pays du membre. Un pays VIDE = France :
+// c'est la valeur par défaut, la plupart des membres français ne renseignent
+// jamais leur pays (voir profil.html). La comparaison est tolérante à la casse
+// et aux espaces. Utilisée partout (catalogue, mes-inscriptions, mes-collectes).
+function destinationPays(pays) {
+    return (!pays || String(pays).trim().toLowerCase() === 'france') ? 'france' : 'international';
+}
+window.destinationPays = destinationPays;
+
 // Bandeau visible quand on n'est pas sur la prod (test / copie migrée / autre).
 function showEnvBanner() {
     if (BT_ON_PROD) return;                                  // prod → aucun bandeau
@@ -512,7 +525,7 @@ function loadSommeDue() {
         var pays = (res[2] && res[2][0]) ? res[2][0].pays : '';
         var fraisPort = res[3] || [];
         var enveloppesPort = res[4] || [];
-        var dest = (pays === 'France') ? 'france' : 'international';
+        var dest = destinationPays(pays);
 
         function findFdp(nb, typeEnvoi) {
             for (var i = 0; i < fraisPort.length; i++) {
@@ -563,7 +576,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=170")
+    fetch("menu.html?v=171")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

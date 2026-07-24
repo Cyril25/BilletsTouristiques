@@ -416,7 +416,7 @@ function renderInscriptions() {
         var fdpMontant = 0;
         if (tarif.payerFdp === 'oui' && exigible) {
             var nbTotal = nbNormaux + nbVariantes;
-            var dest = (membrePays === 'France') ? 'france' : 'international';
+            var dest = destinationPays(membrePays);
             var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
             fdpMontant = findFdpPrice(nbTotal, dest, typeEnvoi);
         }
@@ -527,7 +527,7 @@ function renderInscriptions() {
             var montant = (prix * nbN) + (prixVar * nbV);
             var fdp = 0;
             if (tarifI.payerFdp === 'oui' && montantExigible(insc)) {
-                var dest = (membrePays === 'France') ? 'france' : 'international';
+                var dest = destinationPays(membrePays);
                 fdp = findFdpPrice(nbN + nbV, dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
             var total = montant + fdp;
@@ -671,7 +671,7 @@ function renderInscriptions() {
         var m = (t.prix * (insc.nb_normaux || 0)) + (t.prixVar * (insc.nb_variantes || 0));
         var fdp = 0;
         if (t.payerFdp === 'oui' && exigible) {
-            var d = (membrePays === 'France') ? 'france' : 'international';
+            var d = destinationPays(membrePays);
             fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), d, (insc.mode_envoi || 'Normal').toLowerCase());
         }
         var total = m + fdp;
@@ -769,7 +769,7 @@ function declarerPaiementGroupe(idsCsv, portIdsCsv) {
             var m = (t.prix * (insc.nb_normaux || 0)) + (t.prixVar * (insc.nb_variantes || 0));
             var fdp = 0;
             if (t.payerFdp === 'oui' && montantExigible(insc)) {
-                var dest = (membrePays === 'France') ? 'france' : 'international';
+                var dest = destinationPays(membrePays);
                 fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
             totalGlobal += m + fdp;

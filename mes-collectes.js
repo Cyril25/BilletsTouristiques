@@ -682,7 +682,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             var fdpMontantIns = 0;
             if (payerFdpVue === 'oui') {
                 var nbTotalIns = (ins.nb_normaux || 0) + (ins.nb_variantes || 0);
-                var destIns = (snap.pays === 'France') ? 'france' : 'international';
+                var destIns = destinationPays(snap.pays);
                 var typeEnvoiIns = (ins.mode_envoi || 'Normal').toLowerCase();
                 fdpMontantIns = findFdpPriceCollecte(nbTotalIns, destIns, typeEnvoiIns);
             }
@@ -2231,7 +2231,7 @@ function ouvrirFormulaireExpedition(enveloppeId) {
                 nbBillets += (ins.nb_normaux || 0) + (ins.nb_variantes || 0);
                 if (!pays && ins.adresse_snapshot && ins.adresse_snapshot.pays) pays = ins.adresse_snapshot.pays;
             });
-            var destination = (pays === 'France') ? 'france' : 'international';
+            var destination = destinationPays(pays);
 
             // Modes d'envoi disponibles pour cette destination (d'après frais_port)
             var modesDispo = EXP_MODES_ORDRE.filter(function(m) {
