@@ -26,6 +26,19 @@ if (typeof firebase === 'undefined') {
 var SUPABASE_URL = 'https://lhwcoybugdsggcclhtgb.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxod2NveWJ1Z2RzZ2djY2xodGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODY5MzQsImV4cCI6MjA4ODU2MjkzNH0.I1CvqdFT4XPCCfIzJRlYNwKay2MVQ9YBB1_8qfJmQqQ';
 
+// ============================================================
+// 1c. DESTINATION D'EXPÉDITION (frais de port)
+// ============================================================
+// Règle métier unique : la destination des frais de port est « france » ou
+// « international », déterminée par le pays du membre. Un pays VIDE = France :
+// c'est la valeur par défaut, la plupart des membres français ne renseignent
+// jamais leur pays (voir profil.html). La comparaison est tolérante à la casse
+// et aux espaces. Utilisée partout (catalogue, mes-inscriptions, mes-collectes).
+function destinationPays(pays) {
+    return (!pays || String(pays).trim().toLowerCase() === 'france') ? 'france' : 'international';
+}
+window.destinationPays = destinationPays;
+
 // --- Impersonation globale (superadmin uniquement) ---
 window.impersonatedEmail = sessionStorage.getItem('impersonatedEmail') || '';
 window.getActiveEmail = function() {
@@ -461,7 +474,7 @@ function loadSommeDue() {
         var pays = (res[2] && res[2][0]) ? res[2][0].pays : '';
         var fraisPort = res[3] || [];
         var enveloppesPort = res[4] || [];
-        var dest = (pays === 'France') ? 'france' : 'international';
+        var dest = destinationPays(pays);
 
         function findFdp(nb, typeEnvoi) {
             for (var i = 0; i < fraisPort.length; i++) {
@@ -513,7 +526,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=167")
+    fetch("menu.html?v=168")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

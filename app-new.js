@@ -713,7 +713,7 @@ function showMore() {
                     // Calcul FDP si demandé
                     var fdpInfo = '';
                     if (item.PayerFDP === 'oui' && membrePaysCatalogue) {
-                        var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
+                        var destCat = destinationPays(membrePaysCatalogue);
                         var fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
                         if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
                     }
@@ -1046,7 +1046,7 @@ function declarerPaiementCatalogue(inscriptionId) {
     var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
     var fdpMontant = 0;
     if (billet && billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && membrePaysCatalogue && insc) {
-        var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
+        var destCat = destinationPays(membrePaysCatalogue);
         var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
         fdpMontant = findFdpPriceCatalogue(nbNormaux + nbVariantes, destCat, typeEnvoi);
     }
@@ -1133,7 +1133,7 @@ function buildInscriptionHtml(item) {
         var fdpMontant = 0;
         if (item.PayerFDP === 'oui' && item.Categorie !== 'Pré collecte' && membrePaysCatalogue) {
             var nbTotal = nbNormaux + nbVariantes;
-            var destCat = (membrePaysCatalogue === 'France') ? 'france' : 'international';
+            var destCat = destinationPays(membrePaysCatalogue);
             var typeEnvoi = (inscription.mode_envoi || 'Normal').toLowerCase();
             fdpMontant = findFdpPriceCatalogue(nbTotal, destCat, typeEnvoi);
         }

@@ -375,7 +375,7 @@ function renderInscriptions() {
         var fdpMontant = 0;
         if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
             var nbTotal = nbNormaux + nbVariantes;
-            var dest = (membrePays === 'France') ? 'france' : 'international';
+            var dest = destinationPays(membrePays);
             var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
             fdpMontant = findFdpPrice(nbTotal, dest, typeEnvoi);
         }
@@ -482,7 +482,7 @@ function renderInscriptions() {
             var montant = (prix * nbN) + (prixVar * nbV);
             var fdp = 0;
             if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
-                var dest = (membrePays === 'France') ? 'france' : 'international';
+                var dest = destinationPays(membrePays);
                 fdp = findFdpPrice(nbN + nbV, dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
             var total = montant + fdp;
@@ -625,7 +625,7 @@ function renderInscriptions() {
         var m = (p * (insc.nb_normaux || 0)) + (pv * (insc.nb_variantes || 0));
         var fdp = 0;
         if (b.PayerFDP === 'oui' && b.Categorie !== 'Pré collecte' && b.Categorie !== 'Pas de collecte') {
-            var d = (membrePays === 'France') ? 'france' : 'international';
+            var d = destinationPays(membrePays);
             fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), d, (insc.mode_envoi || 'Normal').toLowerCase());
         }
         var total = m + fdp;
@@ -724,7 +724,7 @@ function declarerPaiementGroupe(idsCsv, portIdsCsv) {
             var m = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
             var fdp = 0;
             if (billet.PayerFDP === 'oui' && billet.Categorie !== 'Pré collecte' && billet.Categorie !== 'Pas de collecte') {
-                var dest = (membrePays === 'France') ? 'france' : 'international';
+                var dest = destinationPays(membrePays);
                 fdp = findFdpPrice((insc.nb_normaux || 0) + (insc.nb_variantes || 0), dest, (insc.mode_envoi || 'Normal').toLowerCase());
             }
             totalGlobal += m + fdp;
