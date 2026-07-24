@@ -372,7 +372,9 @@ function populateFilters() {
     var maps = [
         { id: 'sel-year', key: 'Millesime' },
         { id: 'sel-theme', key: 'Theme' },
-        { id: 'sel-coll', key: 'Collecteur' }
+        // Demande #39 (bascule collecteur) — billets.Collecteur supprimé : le
+        // collecteur du billet vient de sa collecte principale.
+        { id: 'sel-coll', valFn: collecteurPrincipalCatalogue }
     ];
     maps.forEach(function(m) {
         var select = document.getElementById(m.id);
@@ -383,7 +385,7 @@ function populateFilters() {
         var unique = [];
         var seen = {};
         allData.forEach(function(item) {
-            var v = item[m.key];
+            var v = m.valFn ? m.valFn(item) : item[m.key];
             if (v && !seen[v]) {
                 seen[v] = true;
                 unique.push(v);
@@ -1572,6 +1574,10 @@ function loadCollectesByBillet() {
             // Demande #16 — prix, dates et état d'inscription dépendent désormais des
             // collectes : re-render une fois qu'elles sont chargées (ce loader tourne
             // en parallèle de fetchData/loadMesInscriptions).
+            // Demande #39 — la liste du filtre « collecteur » vient de la collecte
+            // principale : on la reconstruit ici, une fois collectePrincipaleByBillet prêt
+            // (populateFilters a d'abord tourné dans fetchData, collectes non encore chargées).
+            if (typeof populateFilters === 'function' && allData && allData.length) populateFilters();
             if (typeof applyFilters === 'function' && allData && allData.length) applyFilters(false);
         })
         .catch(function(error) {
