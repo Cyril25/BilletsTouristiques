@@ -308,6 +308,11 @@ function renderDemandeRow(d) {
 // 9. CHANGEMENT D'ÉTAT RAPIDE (depuis la carte)
 // ============================================================
 function changerEtat(id, nouvelEtat) {
+    // Snapshot (demandeur + état d'avant) pour la notif de suivi au demandeur (#33).
+    var demande = null, ancienEtat = null;
+    for (var j = 0; j < demandesList.length; j++) {
+        if (demandesList[j].id === id) { demande = demandesList[j]; ancienEtat = demande.etat; break; }
+    }
     supabaseFetch('/rest/v1/demandes?id=eq.' + id, {
         method: 'PATCH',
         body: JSON.stringify({ etat: nouvelEtat })
@@ -319,11 +324,64 @@ function changerEtat(id, nouvelEtat) {
             renderEtatFilter();
             renderDemandes();
             showToast('État mis à jour : ' + getEtatDef(nouvelEtat).label, 'success');
+            notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat);
         })
         .catch(function(error) {
             showToast('Erreur mise à jour : ' + error.message, 'error');
             renderDemandes();
         });
+}
+
+// ============================================================
+// 9b. NOTIFICATION AU DEMANDEUR (Demande #33)
+// ------------------------------------------------------------
+// Quand une demande passe « À cadrer » (précision attendue) ou « À tester »
+// (développée), prévenir son auteur via une notification PRIVÉE (cible_email) :
+// visible de lui seul dans la cloche et sur la page Nouveautés.
+// Best-effort : un échec (p.ex. migration `cible_email` pas encore jouée, ou
+// demandeur non nominatif) ne doit jamais bloquer le changement d'état.
+// ============================================================
+function estEmailValide(s) {
+    return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
+
+function resumeDemande(d) {
+    var txt = (d && d.description ? String(d.description) : '').trim().replace(/\s+/g, ' ');
+    if (!txt) txt = (d && d.ecran) ? ('écran ' + d.ecran) : 'votre demande';
+    return txt.length > 70 ? (txt.slice(0, 69) + '…') : txt;
+}
+
+function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
+    if (!demande || nouvelEtat === ancienEtat) return;
+    if (nouvelEtat !== 'a_cadrer' && nouvelEtat !== 'a_tester') return;
+    var email = (demande.demandeur || '').trim();
+    if (!estEmailValide(email)) return; // demandeur non nominatif (import, vide…)
+
+    var resume = resumeDemande(demande);
+    var titre, texte;
+    if (nouvelEtat === 'a_cadrer') {
+        titre = 'Votre demande a besoin d\'une précision';
+        texte = 'Votre demande « ' + resume + ' » est passée « À cadrer » : une précision '
+              + 'est nécessaire avant de pouvoir la développer. Un admin reviendra vers vous'
+              + (demande.commentaire ? ' (voir le commentaire ajouté).' : '.');
+    } else {
+        titre = 'Votre demande est prête à tester';
+        texte = 'Votre demande « ' + resume + ' » a été développée et passe « À tester ». '
+              + 'Merci de vérifier qu\'elle répond bien à votre besoin.';
+    }
+
+    supabaseFetch('/rest/v1/notifications', {
+        method: 'POST',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+            type: 'demande_suivi',
+            titre: titre,
+            texte: texte,
+            cible_email: email
+        })
+    }).catch(function(e) {
+        console.warn('Notif demandeur (#33) : échec — migration cible_email jouée ?', e);
+    });
 }
 
 // ============================================================
@@ -403,7 +461,13 @@ function sauverDemande() {
     };
 
     var promesse;
+    // Snapshot (demandeur + état d'avant) pour la notif de suivi au demandeur (#33),
+    // capturé avant fermerModaleDemande() qui remet editingDemandeId à null.
+    var demandeAvant = null, etatAvant = null;
     if (editingDemandeId !== null) {
+        for (var k = 0; k < demandesList.length; k++) {
+            if (demandesList[k].id === editingDemandeId) { demandeAvant = demandesList[k]; etatAvant = demandeAvant.etat; break; }
+        }
         promesse = supabaseFetch('/rest/v1/demandes?id=eq.' + editingDemandeId, {
             method: 'PATCH',
             body: JSON.stringify(data)
@@ -421,6 +485,7 @@ function sauverDemande() {
             showToast(editingDemandeId !== null ? 'Demande mise à jour' : 'Demande ajoutée', 'success');
             fermerModaleDemande();
             loadDemandes();
+            if (demandeAvant) notifierDemandeurSiSuivi(demandeAvant, data.etat, etatAvant);
         })
         .catch(function(error) {
             showToast('Erreur enregistrement : ' + error.message, 'error');
