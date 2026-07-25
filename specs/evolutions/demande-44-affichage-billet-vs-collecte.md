@@ -134,13 +134,18 @@ En plusieurs incréments, surface par surface (chacun testable sur le TestEnv).
 > `.more`) sous l'en-tête « Collecte » ; une séparation DOM plus stricte (déplacer le
 > commentaire hors de la zone collecte) pourra être faite en polish si besoin.
 
-**Reste :**
-- Incrément 3 — fiche `billet.html` (aujourd'hui minimale : n'affiche qu'un badge
-  `Categorie`, pas de collecte — décider si on y ajoute une vraie section collecte(s)).
-- Incrément 4 — carte `admin.html` (déjà refondue en #40 ; à aligner sur le même
-  langage visuel / couleur collecte).
-- (à terme) factoriser un vrai composant `collecte-block` partagé.
+**Incrément 3 — fiche `billet.html` : section collecte(s) en lecture seule** (`606aa63`) :
+- La fiche charge les collectes du billet et affiche la plus récente (statut coloré +
+  collecteur + prix + dates), les plus anciennes en accordéon `<details>`.
+- Le badge `Categorie` du billet est **masqué dès qu'il y a une collecte** (le statut
+  vit sur la collecte). Couleurs de statut répliquées localement (la fiche ne charge
+  pas app-new.js).
 
-**Checkpoint recommandé** : valider visuellement le catalogue (incr. 1+2) avant de
-répliquer le langage visuel sur la fiche et l'admin (éviter de multiplier une UI non
-encore validée sur 3 surfaces critiques).
+**Statut global : les 3 surfaces sont couvertes** — catalogue (incr. 1+2), fiche
+(incr. 3), carte admin (déjà refondue en **#40** : statut par collecte). → **À tester**.
+
+**Reste (non bloquant, différé) :**
+- Aligner finement la carte admin sur la couleur « collecte affichée » (cosmétique).
+- Factoriser un vrai composant `collecte-block` partagé (refacto DRY des 3
+  implémentations) — **pas fait volontairement en autonomie** : refacto pur, risqué sans
+  test visuel, sans valeur utilisateur immédiate. À planifier séparément si souhaité.
