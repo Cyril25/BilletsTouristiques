@@ -9214,6 +9214,30 @@ button.collecte-badge-status {
     border-radius: 0 6px 6px 0;
 }
 
+/* ===== Demande #44 — en-tête de la zone collecte (catalogue) ===== */
+.collecte-zone-tete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 4px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--color-border, #ddd);
+}
+.collecte-zone-titre {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--color-text-light, #888);
+}
+.collecte-zone-statut {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 11px;
+    white-space: nowrap;
+}
+
 /* ===== Demande #44 — accordéon des collectes plus anciennes (catalogue) ===== */
 .collectes-accordeon-groupe {
     margin-top: 12px;

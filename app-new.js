@@ -730,18 +730,26 @@ function showMore() {
             // RENDU MODE COLLECTE (par défaut)
             var inscriptionHtml = buildInscriptionHtml(item);
             var pasInteresse = estPasInteresse(item.id);
+            // Demande #44 — le statut vit sur la COLLECTE : couleur/statut affichés
+            // suivent la collecte la plus récente ; à défaut (aucune collecte), l'état
+            // propre du billet (Projet / Masqué / Pas de collecte).
+            var colPrinc = collectePrincipaleByBillet[item.id];
+            var statutAffiche = colPrinc ? (colPrinc.categorie || '') : (item.Categorie || '');
+            var couleurAffichee = getCategorieColor(statutAffiche);
+            var texteStatut = (statutAffiche === 'Pré collecte' ? 'var(--color-text-light, #9e9e9e)' : '#fff');
             html +=
-                '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleur + ';">' +
+                '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleurAffichee + ';">' +
                 '<div class="header-container">' +
                 '<div class="image-bg" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url(' + escapeAttr(imgUrl) + ') no-repeat;"></div>' +
-                '<div class="category" style="background-color: ' + couleur + '; color: ' + (item.Categorie === 'Pré collecte' ? 'var(--color-text-light, #9e9e9e)' : '#fff') + ';">' +
-                escapeHtml(item.Categorie || '') +
+                // Demande #44 — marqueur d'état billet UNIQUEMENT hors campagne (aucune
+                // collecte : Projet / Masqué / Pas de collecte). En campagne, le statut est
+                // porté par la zone collecte (pastille au-dessus du prix). Badge
+                // « Collecte en cours » également retiré (redondant).
+                (!colPrinc
+                    ? '<div class="category" style="background-color: ' + couleurAffichee + '; color: ' + texteStatut + ';">' + escapeHtml(statutAffiche) + '</div>'
+                    : '') +
                 '</div>' +
-                // Demande #44 — badge « Collecte en cours » retiré : redondant avec le
-                // statut porté par la (les) collecte(s) ; le multi-collecte est signalé
-                // par l'accordéon plus bas.
-                '</div>' +
-                '<div class="city-strip" style="color: ' + couleur + '; background-color: color-mix(in srgb, ' + couleur + ', #e0e0e0 70%);">' +
+                '<div class="city-strip" style="color: ' + couleurAffichee + '; background-color: color-mix(in srgb, ' + couleurAffichee + ', #e0e0e0 70%);">' +
                 escapeHtml(item.Ville || '') +
                 '</div>' +
                 '<div class="content">' +
@@ -751,6 +759,14 @@ function showMore() {
                 escapeHtml(item.NomBillet || '') +
                 '</div>' +
                 buildVersionBadgesHtml(item) +
+                // Demande #44 — en-tête de la zone COLLECTE (séparateur + statut de la
+                // collecte affichée). Le prix/les dates qui suivent sont l'info collecte.
+                (colPrinc
+                    ? '<div class="collecte-zone-tete">'
+                        + '<span class="collecte-zone-titre">Collecte</span>'
+                        + '<span class="collecte-zone-statut" style="background-color: ' + couleurAffichee + '; color: ' + texteStatut + ';">' + escapeHtml(statutAffiche) + '</span>'
+                      + '</div>'
+                    : '') +
                 (function() {
                     var parts = [];
                     var _colr = collecteurPrincipalCatalogue(item); if (_colr) parts.push('Par ' + escapeHtml(_colr));
