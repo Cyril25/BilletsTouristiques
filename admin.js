@@ -669,6 +669,10 @@ function loadCollecteurs() {
         .then(function(data) {
             collecteursList = (data || []).filter(function(c) { return !c.masque; });
             populateCollecteurSelect();
+            // Demande #16 — sur la page dédiée le panneau s'ouvre AVANT que ce fetch
+            // ne réponde : on regarnit le select collecteur de la collecte dès que la
+            // liste arrive, sinon il reste vide (race à l'ouverture auto).
+            populateCollecteCollecteurSelect();
         })
         .catch(function(error) {
             console.warn('Erreur chargement collecteurs:', error);
@@ -4466,6 +4470,10 @@ function editerCollecte(collecteId) {
         var el = document.getElementById(id);
         if (el) el.value = (v === null || v === undefined) ? '' : v;
     };
+    // Garnir le select AVANT de poser la valeur : sinon setVal cible une <option>
+    // inexistante et la sélection est silencieusement ignorée (collecteur non affiché).
+    populateCollecteCollecteurSelect();
+
     setVal('field-collecte-nom', c.nom);
     setVal('field-collecte-categorie', c.categorie || 'Pré collecte');
     setVal('field-collecte-scope', c.scope || '');
@@ -4638,6 +4646,9 @@ function supprimerPreCollecte(collecteId, billetId, nomCollecte) {
 function populateCollecteCollecteurSelect() {
     var select = document.getElementById('field-collecte-collecteur');
     if (!select) return;
+    // Préserver la valeur déjà sélectionnée : ce select peut être regarni après coup
+    // (quand loadCollecteurs répond), on ne doit pas perdre le collecteur en cours.
+    var current = select.value;
     select.length = 1;
     (collecteursList || []).forEach(function(coll) {
         var option = document.createElement('option');
@@ -4645,4 +4656,5 @@ function populateCollecteCollecteurSelect() {
         option.textContent = coll.alias;
         select.appendChild(option);
     });
+    if (current) select.value = current;
 }
