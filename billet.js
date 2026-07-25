@@ -147,10 +147,106 @@
                     return;
                 }
                 renderBillet(rows[0]);
+                loadCollectesFiche(id);
             })
             .catch(function() {
                 showError();
             });
+    }
+
+    // ============================================================
+    // Demande #44 — section collecte(s) sur la fiche (lecture seule)
+    // ============================================================
+    var CATEGORIE_COLORS_FICHE = {
+        'Collecte': '#A4C2F4',
+        'Pré collecte': '#FFFF00',
+        'Terminé': '#C27BA0',
+        'Pas de collecte': '#FF0000',
+        'Jamais édité, projet': '#CECECE',
+        'Non defini': '#F57C00',
+        'Masqué': '#555555'
+    };
+    function couleurStatut(cat) {
+        return CATEGORIE_COLORS_FICHE[cat || 'Non defini'] || CATEGORIE_COLORS_FICHE['Non defini'];
+    }
+    function texteSurStatut(cat) {
+        return (cat === 'Pré collecte' ? '#6b6b00' : '#fff');
+    }
+    function fmtDate(d) {
+        return (window.formatDateFr ? window.formatDateFr(d) : (d || '—')) || '—';
+    }
+    function collecteDateDebutFiche(c) { return (c && (c.date_pre || c.created_at)) || ''; }
+    function prixTexteFiche(c) {
+        if (!c) return '';
+        var p = (c.prix !== null && c.prix !== undefined && c.prix !== '') ? parseFloat(c.prix) : 0;
+        var pv = (c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '') ? parseFloat(c.prix_variante) : 0;
+        var parts = [];
+        if (p) parts.push(p.toFixed(2) + ' €');
+        if (pv && pv !== p) parts.push(pv.toFixed(2) + ' € (variante)');
+        return parts.join(' / ');
+    }
+    // Corps commun d'une collecte (collecteur + prix + dates)
+    function corpsCollecteFiche(c) {
+        var prix = prixTexteFiche(c);
+        return '<div class="fiche-collecte-corps">'
+            + '<div><i class="fa-solid fa-user"></i> Collecteur : <b>' + escapeHtml(c.collecteur || '—') + '</b></div>'
+            + (prix ? '<div><i class="fa-solid fa-tag"></i> ' + escapeHtml(prix) + '</div>' : '')
+            + '<div class="collecte-accordeon-dates">'
+            +   '<span>Pré-collecte : <b>' + escapeHtml(fmtDate(c.date_pre)) + '</b></span>'
+            +   '<span>Collecte : <b>' + escapeHtml(fmtDate(c.date_coll)) + '</b></span>'
+            +   '<span>Terminé : <b>' + escapeHtml(fmtDate(c.date_fin)) + '</b></span>'
+            + '</div>'
+            + '</div>';
+    }
+    function loadCollectesFiche(billetId) {
+        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + encodeURIComponent(billetId)
+            + '&select=id,nom,categorie,collecteur,prix,prix_variante,date_pre,date_coll,date_fin,created_at')
+            .then(function(cols) {
+                renderCollectesFiche(cols || []);
+            })
+            .catch(function() { /* silencieux : la fiche reste utilisable sans collectes */ });
+    }
+    function renderCollectesFiche(cols) {
+        var wrap = document.getElementById('billet-collectes');
+        if (!wrap) return;
+        if (!cols.length) { wrap.classList.add('hidden'); return; }
+
+        // Le statut vit sur la collecte : on masque le badge Categorie du billet.
+        var catRow = document.getElementById('billet-categorie');
+        if (catRow && catRow.parentNode) catRow.parentNode.style.display = 'none';
+
+        // Plus récente d'abord (date_pre, sinon created_at).
+        var ordered = cols.slice().sort(function(a, b) {
+            var da = collecteDateDebutFiche(a), db = collecteDateDebutFiche(b);
+            if (da === db) return 0; return da < db ? 1 : -1;
+        });
+        var principale = ordered[0];
+        var autres = ordered.slice(1);
+        var statut = principale.categorie || '';
+
+        var html = '<div class="collecte-zone-tete">'
+            + '<span class="collecte-zone-titre">Collecte</span>'
+            + '<span class="collecte-zone-statut" style="background-color:' + couleurStatut(statut) + '; color:' + texteSurStatut(statut) + ';">' + escapeHtml(statut) + '</span>'
+            + '</div>'
+            + corpsCollecteFiche(principale);
+
+        if (autres.length) {
+            html += '<div class="collectes-accordeon-groupe">'
+                + '<div class="collectes-accordeon-titre">Autres collectes de ce billet</div>'
+                + autres.map(function(c) {
+                    var st = c.categorie || '';
+                    return '<details class="collecte-accordeon">'
+                        + '<summary class="collecte-accordeon-tete">'
+                        +   '<span class="collecte-accordeon-statut" style="background-color:' + couleurStatut(st) + '; color:' + texteSurStatut(st) + ';">' + escapeHtml(st) + '</span>'
+                        +   '<span class="collecte-accordeon-nom">' + escapeHtml(c.nom || '') + '</span>'
+                        + '</summary>'
+                        + '<div class="collecte-accordeon-corps">' + corpsCollecteFiche(c) + '</div>'
+                        + '</details>';
+                }).join('')
+                + '</div>';
+        }
+        wrap.innerHTML = html;
+        wrap.classList.remove('hidden');
     }
 
     function renderBillet(b) {

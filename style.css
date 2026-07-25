@@ -9214,6 +9214,22 @@ button.collecte-badge-status {
     border-radius: 0 6px 6px 0;
 }
 
+/* ===== Demande #44 — section collecte(s) sur la fiche billet.html ===== */
+.billet-fiche-collectes {
+    margin-top: 8px;
+}
+.fiche-collecte-corps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--color-text, #333);
+    padding: 6px 0 2px;
+}
+.fiche-collecte-corps .collecte-accordeon-dates {
+    font-size: 0.82rem;
+}
+
 /* ===== Demande #44 — en-tête de la zone collecte (catalogue) ===== */
 .collecte-zone-tete {
     display: flex;
