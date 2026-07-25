@@ -260,7 +260,10 @@ function initSlider() {
 
     // 1. On récupère toutes les dates valides et on les convertit en Timestamp
     var dates = allData
-        .map(function(d) { return normalizeDate(d.Date); })
+        // Demande #16 — le tri du catalogue se fait sur date_effective ; le slider
+        // doit lire la même date (repli sur l'ancienne colonne Date pour le legacy),
+        // sinon les billets sans Date (flux #16) sont exclus de la plage.
+        .map(function(d) { return normalizeDate(d.date_effective || d.Date); })
         .filter(function(d) { return d.length > 0; })
         .map(function(d) { return new Date(d).getTime(); })
         .filter(function(t) { return !isNaN(t); });
@@ -570,7 +573,8 @@ function applyFilters(silent) {
             (item.Reference && item.Reference.toLowerCase().indexOf(s) !== -1) ||
             (item.Recherche && item.Recherche.toLowerCase().indexOf(s) !== -1);
 
-        var itemDate = normalizeDate(item.Date);
+        // Demande #16 — filtre aligné sur le tri : date_effective d'abord, Date en repli.
+        var itemDate = normalizeDate(item.date_effective || item.Date);
         var matchDate = (!fStart || (itemDate && itemDate >= fStart)) &&
             (!fEnd || (itemDate && itemDate <= fEnd));
 
