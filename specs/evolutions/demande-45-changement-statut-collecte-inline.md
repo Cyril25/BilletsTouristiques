@@ -34,4 +34,4 @@ sur la carte. Plus de saut vers l'édition du billet entier. Les transitions sim
   mini-formulaire dans la popup **où se trouve la pastille cliquée** (`chip.closest`),
   qu'elle soit celle du billet (mono) ou d'une collecte (multi). Plus de
   `window.location.href` vers admin-billet.html.
-- **Commit** : `<à compléter>`
+- **Commit** : `ea284c7`
