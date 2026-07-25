@@ -2946,14 +2946,24 @@ function handleCollecteStatusChange(chip) {
     if (collecte.categorie === newStatus) { closeAllStatusPopups(); return; }
 
     // Passage en Collecte : prix de la version ouverte + collecteur obligatoires. S'ils
-    // manquent, on renvoie vers la page d'édition (la modale collecte les saisit).
+    // manquent, on ouvre le MINI-FORMULAIRE inline dans la popup de CETTE collecte
+    // (demande #45 : même UX que le mono-collecte, plus de saut vers l'édition du billet).
     var prixManquant = (collecte.scope !== 'variante')
         ? (collecte.prix === null || collecte.prix === undefined || collecte.prix === '')
         : (collecte.prix_variante === null || collecte.prix_variante === undefined || collecte.prix_variante === '');
     if (newStatus === 'Collecte' && (prixManquant || !collecte.collecteur)) {
-        closeAllStatusPopups();
-        showToast('Pour passer « ' + (collecte.nom || '') + ' » en Collecte, renseignez son prix et son collecteur.', 'info');
-        window.location.href = 'admin-billet.html?id=' + encodeURIComponent(docId);
+        var billetData = null;
+        for (var b = 0; b < adminBillets.length; b++) {
+            if (String(adminBillets[b]._id) === String(docId)) { billetData = adminBillets[b]; break; }
+        }
+        // On injecte le mini-form dans la popup où se trouve la pastille cliquée :
+        // popup du billet (mono-collecte) ou popup de la collecte (multi). Déjà ouverte.
+        var popupEl = chip.closest ? chip.closest('.quick-status-popup') : null;
+        var popupId = popupEl ? popupEl.id : ('quick-collecte-popup-' + collecteId);
+        showCollecteQuickForm(docId, billetData, newStatus, collecte, {
+            key: 'col-' + collecteId,
+            popupId: popupId
+        });
         return;
     }
 
@@ -3008,11 +3018,16 @@ function updateInMemoryStatus(docId, newStatus) {
 // Demande #16 — ce formulaire crée (ou complète) LA COLLECTE du billet.
 // `cible` = statut visé ; `collecte` = collecte existante à compléter, sinon on
 // en crée une nouvelle.
-function showCollecteQuickForm(docId, billetData, cible, collecte) {
-    var popup = document.getElementById('quick-status-popup-' + docId);
+function showCollecteQuickForm(docId, billetData, cible, collecte, opts) {
+    // Demande #45 — le mini-formulaire peut s'ouvrir dans la popup du billet (mono,
+    // clé = docId) OU dans la popup d'une collecte précise (multi, clé = 'col-<id>').
+    opts = opts || {};
+    var key = opts.key || String(docId);
+    var popupId = opts.popupId || ('quick-status-popup-' + docId);
+    var popup = document.getElementById(popupId);
     if (!popup) return;
     billetData = billetData || {};
-    quickCollecteContext[docId] = { cible: cible || 'Collecte', collecte: collecte || null };
+    quickCollecteContext[key] = { cible: cible || 'Collecte', collecte: collecte || null, popupId: popupId, docId: String(docId) };
 
     var existingCollecteur = (collecte && collecte.collecteur) || '';
     var existingPrix = (collecte && collecte.prix) || '';
@@ -3033,16 +3048,16 @@ function showCollecteQuickForm(docId, billetData, cible, collecte) {
     // Champ prix normal (masqué si pas de version normale)
     var prixNormalHtml = versionNormaleExiste
         ? '<div class="quick-collecte-form__field">' +
-              '<label for="quick-prix-' + docId + '">Prix normal * (€)</label>' +
-              '<input type="number" id="quick-prix-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrix)) + '">' +
+              '<label for="quick-prix-' + key + '">Prix normal * (€)</label>' +
+              '<input type="number" id="quick-prix-' + key + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrix)) + '">' +
           '</div>'
         : '';
 
     // Champ prix variante (affiché si variante active)
     var prixVarianteHtml = varianteActive
         ? '<div class="quick-collecte-form__field">' +
-              '<label for="quick-prix-variante-' + docId + '">Prix ' + escapeHtml(varianteVal) + ' * (€)</label>' +
-              '<input type="number" id="quick-prix-variante-' + docId + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrixVariante)) + '">' +
+              '<label for="quick-prix-variante-' + key + '">Prix ' + escapeHtml(varianteVal) + ' * (€)</label>' +
+              '<input type="number" id="quick-prix-variante-' + key + '" class="quick-collecte-form__input" step="0.01" min="0" placeholder="2.00" value="' + escapeAttr(String(existingPrixVariante)) + '">' +
           '</div>'
         : '';
 
@@ -3050,22 +3065,22 @@ function showCollecteQuickForm(docId, billetData, cible, collecte) {
         ? 'Compléter la collecte « ' + escapeHtml(collecte.nom || '') + ' »'
         : 'Nouvelle collecte (' + escapeHtml(cible || 'Collecte') + ')';
     var formHtml =
-        '<div class="quick-collecte-form" id="quick-collecte-form-' + docId + '">' +
+        '<div class="quick-collecte-form" id="quick-collecte-form-' + key + '">' +
             '<p class="quick-collecte-form__title">' + titreForm + '</p>' +
             '<div class="quick-collecte-form__field">' +
-                '<label for="quick-collecteur-' + docId + '">Collecteur *</label>' +
-                '<select id="quick-collecteur-' + docId + '" class="quick-collecte-form__select">' +
+                '<label for="quick-collecteur-' + key + '">Collecteur *</label>' +
+                '<select id="quick-collecteur-' + key + '" class="quick-collecte-form__select">' +
                     collecteurOptions +
                 '</select>' +
             '</div>' +
             prixNormalHtml +
             prixVarianteHtml +
             '<div class="quick-collecte-form__field quick-collecte-form__field--checkbox">' +
-                '<label class="quick-collecte-form__checkbox-label"><input type="checkbox" id="quick-payer-fdp-' + docId + '"> Payer les frais de port</label>' +
+                '<label class="quick-collecte-form__checkbox-label"><input type="checkbox" id="quick-payer-fdp-' + key + '"> Payer les frais de port</label>' +
             '</div>' +
             '<div class="quick-collecte-form__actions">' +
-                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--cancel" onclick="cancelQuickCollecte(\'' + escapeAttr(String(docId)) + '\')">Annuler</button>' +
-                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--confirm" onclick="confirmQuickCollecte(\'' + escapeAttr(String(docId)) + '\')">Valider</button>' +
+                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--cancel" onclick="cancelQuickCollecte(\'' + escapeAttr(key) + '\')">Annuler</button>' +
+                '<button type="button" class="quick-collecte-form__btn quick-collecte-form__btn--confirm" onclick="confirmQuickCollecte(\'' + escapeAttr(key) + '\')">Valider</button>' +
             '</div>' +
         '</div>';
 
@@ -3080,8 +3095,10 @@ function showCollecteQuickForm(docId, billetData, cible, collecte) {
     popup.insertAdjacentHTML('beforeend', formHtml);
 }
 
-function cancelQuickCollecte(docId) {
-    var popup = document.getElementById('quick-status-popup-' + docId);
+function cancelQuickCollecte(key) {
+    // Demande #45 — la popup peut être celle du billet (mono) ou d'une collecte (multi)
+    var ctx = quickCollecteContext[key] || {};
+    var popup = document.getElementById(ctx.popupId || ('quick-status-popup-' + key));
     if (!popup) return;
 
     var form = popup.querySelector('.quick-collecte-form');
@@ -3093,14 +3110,16 @@ function cancelQuickCollecte(docId) {
     closeAllStatusPopups();
 }
 
-function confirmQuickCollecte(docId) {
-    var collecteurSelect = document.getElementById('quick-collecteur-' + docId);
-    var prixInput = document.getElementById('quick-prix-' + docId);
-    var prixVarianteInput = document.getElementById('quick-prix-variante-' + docId);
-    var payerFdpCheckbox = document.getElementById('quick-payer-fdp-' + docId);
+function confirmQuickCollecte(key) {
+    var collecteurSelect = document.getElementById('quick-collecteur-' + key);
+    var prixInput = document.getElementById('quick-prix-' + key);
+    var prixVarianteInput = document.getElementById('quick-prix-variante-' + key);
+    var payerFdpCheckbox = document.getElementById('quick-payer-fdp-' + key);
     if (!collecteurSelect) return;
 
-    var ctx = quickCollecteContext[docId] || { cible: 'Collecte', collecte: null };
+    var ctx = quickCollecteContext[key] || { cible: 'Collecte', collecte: null };
+    // Demande #45 — docId réel du billet (la clé peut être 'col-<id>' en multi)
+    var docId = ctx.docId || String(key);
     var cible = ctx.cible;
     var collecteExistante = ctx.collecte;
 
@@ -3170,14 +3189,19 @@ function confirmQuickCollecte(docId) {
             if (!collecteExistante && billetData && collecte && collecte.id) {
                 creerAutoInscriptions(billetData, collecte);
             }
-            var popup = document.getElementById('quick-status-popup-' + docId);
+            var popup = document.getElementById(ctx.popupId || ('quick-status-popup-' + docId));
             if (popup) {
                 var form = popup.querySelector('.quick-collecte-form');
                 if (form) form.remove();
                 var chipsContainer = popup.querySelector('.quick-status-chips');
                 if (chipsContainer) chipsContainer.style.display = '';
             }
-            return loadAdminCollectes().then(function() { return rafraichirStatutBillet(docId); });
+            // Demande #45 — re-render de la carte pour rafraîchir aussi les pastilles
+            // par collecte (multi), pas seulement le badge du billet.
+            return loadAdminCollectes().then(function() {
+                if (typeof renderAdminCards === 'function') renderAdminCards();
+                return rafraichirStatutBillet(docId);
+            });
         })
         .then(function() {
             var toastPrix = prix ? prix + '€' : '';
