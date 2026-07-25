@@ -145,6 +145,34 @@ function supabaseFetch(path, options) {
 }
 
 // ============================================================
+// 1c. COULEURS DE STATUT — SOURCE UNIQUE (demande #44)
+// ============================================================
+// Auparavant dupliquée dans app-new.js, admin.js et billet.js. global.js étant
+// chargé sur toutes les pages, on centralise ici la table + les helpers.
+var CATEGORIE_COLORS = {
+    'Collecte': '#A4C2F4',
+    'Pré collecte': '#FFFF00',
+    'Terminé': '#C27BA0',
+    'Pas de collecte': '#FF0000',
+    'Jamais édité, projet': '#CECECE',
+    'Non defini': '#F57C00',
+    'Masqué': '#555555'
+};
+function getCategorieColor(categorie) {
+    return CATEGORIE_COLORS[categorie || 'Non defini'] || CATEGORIE_COLORS['Non defini'];
+}
+// Alias historique (admin) — même source.
+function getStatusColor(categorie) { return getCategorieColor(categorie); }
+// Noir ou blanc selon la luminance du fond.
+function getTextColorForBg(hex) {
+    if (!hex || hex.charAt(0) !== '#') return '#000';
+    var r = parseInt(hex.substr(1, 2), 16);
+    var g = parseInt(hex.substr(3, 2), 16);
+    var b = parseInt(hex.substr(5, 2), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#000' : '#fff';
+}
+
+// ============================================================
 // 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
@@ -576,7 +604,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=181")
+    fetch("menu.html?v=182")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

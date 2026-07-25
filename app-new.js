@@ -136,28 +136,8 @@ var BILLETS_CATEGORIES = [
     'Masqué'
 ];
 
-// Couleurs des categories (meme mapping que admin.js)
-var CATEGORIE_COLORS = {
-    'Collecte': '#A4C2F4',
-    'Pré collecte': '#FFFF00',
-    'Terminé': '#C27BA0',
-    'Pas de collecte': '#FF0000',
-    'Jamais édité, projet': '#CECECE',
-    'Non defini': '#F57C00',
-    'Masqué': '#555555'
-};
-
-function getCategorieColor(categorie) {
-    return CATEGORIE_COLORS[categorie || 'Non defini'] || CATEGORIE_COLORS['Non defini'];
-}
-
-function getTextColorForBg(hex) {
-    if (!hex || hex.charAt(0) !== '#') return '#000';
-    var r = parseInt(hex.substr(1, 2), 16);
-    var g = parseInt(hex.substr(3, 2), 16);
-    var b = parseInt(hex.substr(5, 2), 16);
-    return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#000' : '#fff';
-}
+// Demande #44 — couleurs de statut (CATEGORIE_COLORS / getCategorieColor /
+// getTextColorForBg) centralisées dans global.js (source unique).
 
 // Resolution image — priorite ImageUrl (Cloudinary) > ImageId (Google Drive)
 // QR code overlay via Cloudinary fetch layer (bottom-right, semi-transparent)

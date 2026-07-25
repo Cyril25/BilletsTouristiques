@@ -91,16 +91,8 @@ var CATEGORIE_HERITE = '__herite__';
 // aucune collecte. Pré collecte / Collecte / Terminé sont dérivés par la base.
 var STATUTS_MANUELS = ['Pas de collecte', 'Jamais édité, projet', 'Masqué'];
 
-// Couleurs des categories
-var CATEGORIE_COLORS = {
-    'Collecte': '#A4C2F4',
-    'Pré collecte': '#FFFF00',
-    'Terminé': '#C27BA0',
-    'Pas de collecte': '#FF0000',
-    'Jamais édité, projet': '#CECECE',
-    'Non defini': '#F57C00',
-    'Masqué': '#555555'
-};
+// Demande #44 — couleurs de statut centralisées dans global.js (source unique) :
+// CATEGORIE_COLORS / getStatusColor / getTextColorForBg y sont définis.
 
 // Cloudinary — configuration upload unsigned
 var CLOUDINARY_CLOUD_NAME = 'dxoyqxben';
@@ -699,19 +691,7 @@ function populateCollecteurSelect() {
 // ============================================================
 // 5. RENDU DES CARTES BILLETS (Stories 2.1, 2.3, 2.4, 2.5)
 // ============================================================
-function getStatusColor(categorie) {
-    var key = categorie || 'Non defini';
-    return CATEGORIE_COLORS[key] || CATEGORIE_COLORS['Non defini'];
-}
-
-function getTextColorForBg(hex) {
-    hex = hex.replace('#', '');
-    var r = parseInt(hex.substring(0, 2), 16);
-    var g = parseInt(hex.substring(2, 4), 16);
-    var b = parseInt(hex.substring(4, 6), 16);
-    var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.55 ? '#333' : '#fff';
-}
+// getStatusColor / getTextColorForBg : centralisés dans global.js (demande #44).
 
 function renderAdminCards() {
     var grid = document.getElementById('admin-cards-grid');

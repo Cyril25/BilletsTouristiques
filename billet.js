@@ -157,17 +157,9 @@
     // ============================================================
     // Demande #44 — section collecte(s) sur la fiche (lecture seule)
     // ============================================================
-    var CATEGORIE_COLORS_FICHE = {
-        'Collecte': '#A4C2F4',
-        'Pré collecte': '#FFFF00',
-        'Terminé': '#C27BA0',
-        'Pas de collecte': '#FF0000',
-        'Jamais édité, projet': '#CECECE',
-        'Non defini': '#F57C00',
-        'Masqué': '#555555'
-    };
+    // Demande #44 — couleurs de statut : source unique dans global.js (getCategorieColor).
     function couleurStatut(cat) {
-        return CATEGORIE_COLORS_FICHE[cat || 'Non defini'] || CATEGORIE_COLORS_FICHE['Non defini'];
+        return (typeof getCategorieColor === 'function') ? getCategorieColor(cat) : '#F57C00';
     }
     function texteSurStatut(cat) {
         return (cat === 'Pré collecte' ? '#6b6b00' : '#fff');
