@@ -120,10 +120,27 @@ En plusieurs incréments, surface par surface (chacun testable sur le TestEnv).
   une autre collecte du billet (`collectesInscritesDuBillet`). On avertit, pas de blocage.
 - Badge « Collecte en cours » retiré. CSS : accordéon, marqueurs, avertissement.
 
+**Incrément 2 — catalogue : statut porté par la collecte, plus par le billet**
+(`0a44038`) :
+- Le badge de statut en haut de carte n'apparaît plus **qu'en l'absence de collecte**
+  (état propre du billet : Projet / Masqué / Pas de collecte). En campagne, il disparaît.
+- Le statut de campagne est porté par une **pastille** dans un **en-tête « Collecte »**
+  (séparateur + pastille) placé au-dessus du prix/dates.
+- La couleur de la carte (liseré, bandeau ville, pastille) suit la **collecte affichée**
+  (la plus récente) au lieu du rollup `Categorie` du billet.
+- Ajout accordéon (incr. 1) : dates de la collecte affichées au dépliage.
+
+> Note : le prix et les dates restent physiquement à leur place (dans `content` / un
+> `.more`) sous l'en-tête « Collecte » ; une séparation DOM plus stricte (déplacer le
+> commentaire hors de la zone collecte) pourra être faite en polish si besoin.
+
 **Reste :**
-- Incrément 2 — les **2 zones** (identité billet / zone collecte) + relocaliser le
-  statut billet (le retirer pour les états de campagne, le garder discret pour
-  Projet/Masqué/Pas de collecte).
-- Incrément 3 — fiche `billet.html`.
-- Incrément 4 — carte `admin.html` héritant du même composant.
+- Incrément 3 — fiche `billet.html` (aujourd'hui minimale : n'affiche qu'un badge
+  `Categorie`, pas de collecte — décider si on y ajoute une vraie section collecte(s)).
+- Incrément 4 — carte `admin.html` (déjà refondue en #40 ; à aligner sur le même
+  langage visuel / couleur collecte).
 - (à terme) factoriser un vrai composant `collecte-block` partagé.
+
+**Checkpoint recommandé** : valider visuellement le catalogue (incr. 1+2) avant de
+répliquer le langage visuel sur la fiche et l'admin (éviter de multiplier une UI non
+encore validée sur 3 surfaces critiques).
