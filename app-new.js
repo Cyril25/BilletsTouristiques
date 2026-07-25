@@ -71,6 +71,34 @@ function collecteurPrincipalCatalogue(item) {
     return (cp && cp.collecteur) || '';
 }
 
+// Demande #44 — critère UNIQUE et partagé de « collecte la plus récente » :
+// date de début de campagne (date_pre), sinon created_at. Récent d'abord.
+function collecteDateDebut(c) {
+    return (c && (c.date_pre || c.created_at)) || '';
+}
+function compareCollecteRecentDabord(a, b) {
+    var da = collecteDateDebut(a), db = collecteDateDebut(b);
+    if (da === db) return 0;
+    return da < db ? 1 : -1;
+}
+function collectesTrieesRecentDabord(list) {
+    return (list || []).slice().sort(compareCollecteRecentDabord);
+}
+
+// Demande #44 (anti-double-inscription) — ids des collectes du billet sur lesquelles
+// le membre est déjà inscrit (via mesInscriptions, clé « billet_id|collecte_id »).
+function collectesInscritesDuBillet(billetId) {
+    var ids = [];
+    var prefix = billetId + '|';
+    for (var key in mesInscriptions) {
+        if (mesInscriptions.hasOwnProperty(key) && key.indexOf(prefix) === 0) {
+            var cid = key.slice(prefix.length);
+            if (cid && cid !== 'principal') ids.push(cid);
+        }
+    }
+    return ids;
+}
+
 // Demande #16 — tarif normalisé d'une collecte (catalogue)
 function prixCollecteCatalogue(c) {
     var p = (c && c.prix !== null && c.prix !== undefined && c.prix !== '') ? parseFloat(c.prix) : 0;
@@ -709,9 +737,9 @@ function showMore() {
                 '<div class="category" style="background-color: ' + couleur + '; color: ' + (item.Categorie === 'Pré collecte' ? 'var(--color-text-light, #9e9e9e)' : '#fff') + ';">' +
                 escapeHtml(item.Categorie || '') +
                 '</div>' +
-                ((collectesByBillet[item.id] || []).length > 0
-                    ? '<div class="badge-collecte-supp-active"><i class="fa-solid fa-layer-group"></i> Collecte en cours</div>'
-                    : '') +
+                // Demande #44 — badge « Collecte en cours » retiré : redondant avec le
+                // statut porté par la (les) collecte(s) ; le multi-collecte est signalé
+                // par l'accordéon plus bas.
                 '</div>' +
                 '<div class="city-strip" style="color: ' + couleur + '; background-color: color-mix(in srgb, ' + couleur + ', #e0e0e0 70%);">' +
                 escapeHtml(item.Ville || '') +
@@ -1268,9 +1296,24 @@ function buildInscriptionHtml(item) {
                     + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-ban"></i> Inscription impossible</button>'
                     + '</div>';
             } else {
-                html = '<div class="inscription-badges">'
+                // Demande #44 — anti-double-inscription : si le membre est déjà inscrit
+                // à une AUTRE collecte de ce billet (forcément une plus ancienne, car ici
+                // il n'est pas inscrit à la principale), on l'avertit et le CTA devient
+                // secondaire (« S'inscrire quand même ») — on avertit, on ne bloque pas.
+                var autresInscrites = collectesInscritesDuBillet(item.id);
+                var avertDouble = '';
+                var classeSinscrire = 'btn-sinscrire';
+                var libelleSinscrire = 'S\'inscrire';
+                if (autresInscrites.length > 0) {
+                    var cAutre = collecteByIdCatalogue[autresInscrites[0]] || {};
+                    avertDouble = '<div class="avert-double-inscription"><i class="fa-solid fa-triangle-exclamation"></i> Vous êtes déjà inscrit à « ' + escapeHtml(cAutre.nom || 'une autre collecte') + ' » de ce billet.</div>';
+                    classeSinscrire = 'btn-sinscrire btn-sinscrire--secondaire';
+                    libelleSinscrire = 'S\'inscrire quand même';
+                }
+                html = avertDouble
+                    + '<div class="inscription-badges">'
                     + '<span class="badge-non-inscrit">Non inscrit</span>'
-                    + '<button onclick="ouvrirInscription(' + item.id + ')" class="btn-sinscrire"><i class="fa-solid fa-pen-to-square"></i> S\'inscrire</button>'
+                    + '<button onclick="ouvrirInscription(' + item.id + ')" class="' + classeSinscrire + '"><i class="fa-solid fa-pen-to-square"></i> ' + libelleSinscrire + '</button>'
                     + '<button onclick="marquerPasInteresse(' + item.id + ')" class="btn-pas-interesse">Pas intéressé</button>'
                     + '</div>';
             }
@@ -1519,11 +1562,10 @@ function handleDeepLinkBillet() {
 // ============================================================
 
 function loadCollectesByBillet() {
-    // Demande #16 — on charge TOUTES les collectes (prix/FDP/statut compris) et on
-    // sépare : la « Collecte initiale » de chaque billet pilote la carte principale,
-    // les autres ouvertes alimentent la section « collectes supplémentaires ».
-    // Sans ce split, la Collecte initiale s'afficherait deux fois (carte + section).
-    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,fdp_com,date_pre,date_coll,date_fin,nb_max&limit=10000')
+    // Demande #16/#44 — on charge TOUTES les collectes (prix/FDP/statut compris) et on
+    // sépare : la collecte la PLUS RÉCENTE de chaque billet pilote la carte (affichée),
+    // les autres (plus anciennes, terminées comprises) vont dans l'accordéon.
+    supabaseFetch('/rest/v1/collectes?select=id,billet_id,nom,scope,categorie,collecteur,prix,prix_variante,payer_fdp,fdp_com,date_pre,date_coll,date_fin,nb_max,created_at&limit=10000')
         .then(function(data) {
             collectesByBillet = {};
             collectePrincipaleByBillet = {};
@@ -1536,17 +1578,11 @@ function loadCollectesByBillet() {
                 parBillet[c.billet_id].push(c);
             });
             Object.keys(parBillet).forEach(function(bid) {
-                var list = parBillet[bid];
-                // Principale : « Collecte initiale » d'abord, sinon une ouverte, sinon la 1re
-                var principale = null;
-                for (var i = 0; i < list.length; i++) { if (list[i].nom === 'Collecte initiale') { principale = list[i]; break; } }
-                if (!principale) { for (var j = 0; j < list.length; j++) { if (list[j].categorie !== 'Terminé') { principale = list[j]; break; } } }
-                if (!principale) principale = list[0];
-                collectePrincipaleByBillet[bid] = principale;
-                // Section supplémentaire : les autres collectes OUVERTES
-                collectesByBillet[bid] = list.filter(function(c) {
-                    return c !== principale && c.categorie !== 'Terminé';
-                });
+                // Demande #44 — critère unique : la plus récente (date_pre/created_at) en tête.
+                var ordered = collectesTrieesRecentDabord(parBillet[bid]);
+                collectePrincipaleByBillet[bid] = ordered[0];
+                // Accordéon : les autres collectes, plus récente d'abord (terminées incluses).
+                collectesByBillet[bid] = ordered.slice(1);
                 if (collectesByBillet[bid].length === 0) delete collectesByBillet[bid];
             });
             // Demande #24 — pour les collectes supplémentaires avec plafond, calculer le total inscrit
@@ -1598,24 +1634,35 @@ function fetchCollecteTotalBillets(collecteId) {
 function buildCollectesSupplementairesHtml(item) {
     var collectes = collectesByBillet[item.id] || [];
     if (collectes.length === 0) return '';
-    var html = '';
-    collectes.forEach(function(c) {
+    // Demande #44 — les collectes plus anciennes en ACCORDÉON (repliées par défaut,
+    // dépliables au clic via <details> natif). Chaque tête montre le statut de la
+    // collecte + un marqueur « inscrit » (anti-double-inscription).
+    var lignes = collectes.map(function(c) {
+        var inscrit = !!getInscription(item.id, c.id);
+        var statutColor = getCategorieColor(c.categorie);
         var capaciteHtml = '';
         if (c.nb_max !== null && c.nb_max !== undefined) {
             var total = c._total || 0;
             capaciteHtml = '<span class="collecte-supp-capacite' + (c._full ? ' collecte-supp-capacite--plein' : '') + '">'
                 + total + ' / ' + c.nb_max + ' billet(s)' + (c._full ? ' — complète' : '') + '</span>';
         }
-        html += '<div class="collecte-supplementaire-section" data-collecte-id="' + escapeAttr(c.id) + '">'
-            + '<div class="collecte-supp-header">'
-            + '<span class="badge-nom-collecte">' + escapeHtml(c.nom || '') + '</span>'
+        return '<details class="collecte-accordeon"' + (inscrit ? ' data-inscrit="1"' : '') + ' data-collecte-id="' + escapeAttr(c.id) + '">'
+            + '<summary class="collecte-accordeon-tete">'
+            + '<span class="collecte-accordeon-statut" style="background-color:' + statutColor + ';">' + escapeHtml(c.categorie || '') + '</span>'
+            + '<span class="collecte-accordeon-nom">' + escapeHtml(c.nom || '') + '</span>'
+            + (inscrit ? '<span class="collecte-accordeon-inscrit"><i class="fa-solid fa-check"></i> Vous y êtes inscrit</span>' : '')
+            + '</summary>'
+            + '<div class="collecte-accordeon-corps">'
             + '<span class="collecte-supp-collecteur">Collecteur : ' + escapeHtml(c.collecteur || '—') + '</span>'
             + capaciteHtml
-            + '</div>'
             + buildInscriptionHtmlForCollecte(item, c)
-            + '</div>';
-    });
-    return html;
+            + '</div>'
+            + '</details>';
+    }).join('');
+    return '<div class="collectes-accordeon-groupe">'
+        + '<div class="collectes-accordeon-titre">Autres collectes de ce billet</div>'
+        + lignes
+        + '</div>';
 }
 
 function buildInscriptionHtmlForCollecte(item, collecte) {

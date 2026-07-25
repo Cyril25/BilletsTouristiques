@@ -9214,6 +9214,100 @@ button.collecte-badge-status {
     border-radius: 0 6px 6px 0;
 }
 
+/* ===== Demande #44 — accordéon des collectes plus anciennes (catalogue) ===== */
+.collectes-accordeon-groupe {
+    margin-top: 12px;
+    border-top: 1px dashed var(--color-border, #ddd);
+    padding-top: 8px;
+}
+.collectes-accordeon-titre {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-light, #888);
+    margin-bottom: 6px;
+}
+.collecte-accordeon {
+    background: var(--color-surface, #fafafa);
+    border: 1px solid var(--color-border, #e2e2e2);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.collecte-accordeon[data-inscrit="1"] {
+    border-color: var(--color-success, #2e7d32);
+}
+.collecte-accordeon-tete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.collecte-accordeon-tete::-webkit-details-marker { display: none; }
+.collecte-accordeon-tete::before {
+    content: "\25B8";           /* ▸ replié */
+    color: var(--color-text-light, #999);
+    font-size: 0.8rem;
+    transition: transform 0.15s ease;
+}
+.collecte-accordeon[open] .collecte-accordeon-tete::before {
+    transform: rotate(90deg);   /* ▾ ouvert */
+}
+.collecte-accordeon-statut {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 11px;
+    color: #fff;
+    white-space: nowrap;
+}
+.collecte-accordeon-nom {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text, #333);
+    flex: 1;
+    min-width: 0;
+}
+.collecte-accordeon-inscrit {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-success, #2e7d32);
+    white-space: nowrap;
+}
+.collecte-accordeon-corps {
+    padding: 4px 10px 10px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Demande #44 — avertissement anti-double-inscription (collecte principale) */
+.avert-double-inscription {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #8a6d00;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 6px 0;
+}
+/* CTA « S'inscrire quand même » : plus discret que le S'inscrire nominal */
+.btn-sinscrire--secondaire {
+    opacity: 0.75;
+    filter: grayscale(0.25);
+}
+.btn-sinscrire--secondaire:hover {
+    opacity: 1;
+    filter: none;
+}
+
 .collecte-supp-header {
     display: flex;
     align-items: center;
