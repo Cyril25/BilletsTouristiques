@@ -107,4 +107,23 @@ collecte → double affichage.
 
 ## Réalisation
 
-_(à compléter au dev — en plusieurs commits, surface par surface)_
+En plusieurs incréments, surface par surface (chacun testable sur le TestEnv).
+
+**Incrément 1 — catalogue billets.html : ordre + accordéon + anti-double-inscription**
+(`be1a9b0`) — sans toucher au prix/paiement :
+- Critère unique partagé « plus récente d'abord » (`collectesTrieesRecentDabord`,
+  `compareCollecteRecentDabord`, sur `date_pre` sinon `created_at`). La collecte
+  **affichée** = la plus récente (avant : « Collecte initiale »).
+- **Accordéon** (`<details>` natif) : collectes plus anciennes repliées, dépliables ;
+  tête = statut + marqueur « vous y êtes inscrit ».
+- **Anti-double-inscription** : bandeau + CTA « S'inscrire quand même » si inscrit sur
+  une autre collecte du billet (`collectesInscritesDuBillet`). On avertit, pas de blocage.
+- Badge « Collecte en cours » retiré. CSS : accordéon, marqueurs, avertissement.
+
+**Reste :**
+- Incrément 2 — les **2 zones** (identité billet / zone collecte) + relocaliser le
+  statut billet (le retirer pour les états de campagne, le garder discret pour
+  Projet/Masqué/Pas de collecte).
+- Incrément 3 — fiche `billet.html`.
+- Incrément 4 — carte `admin.html` héritant du même composant.
+- (à terme) factoriser un vrai composant `collecte-block` partagé.
