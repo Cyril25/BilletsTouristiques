@@ -144,8 +144,17 @@ En plusieurs incréments, surface par surface (chacun testable sur le TestEnv).
 **Statut global : les 3 surfaces sont couvertes** — catalogue (incr. 1+2), fiche
 (incr. 3), carte admin (déjà refondue en **#40** : statut par collecte). → **À tester**.
 
+**Factorisation — source unique des couleurs de statut** (`6295bed`) :
+- `CATEGORIE_COLORS` + `getCategorieColor` + `getStatusColor` + `getTextColorForBg`
+  étaient dupliqués dans app-new.js / admin.js / billet.js (valeurs identiques) →
+  centralisés dans `global.js` (chargé partout), les 3 copies retirées. Effet voulu :
+  le texte des pastilles devient cohérent partout (admin avait un `getTextColorForBg`
+  légèrement différent → aligné sur le catalogue). Couleur admin ↔ catalogue : déjà
+  identique (les maps l'étaient), donc rien d'autre à aligner.
+
 **Reste (non bloquant, différé) :**
-- Aligner finement la carte admin sur la couleur « collecte affichée » (cosmétique).
-- Factoriser un vrai composant `collecte-block` partagé (refacto DRY des 3
-  implémentations) — **pas fait volontairement en autonomie** : refacto pur, risqué sans
-  test visuel, sans valeur utilisateur immédiate. À planifier séparément si souhaité.
+- Factoriser un vrai composant HTML `collecte-block` unique across les 3 surfaces —
+  **volontairement non fait** : les 3 rendus sont trop divergents (CTA membre / édition
+  admin / lecture fiche) pour un monolithe sans le rendre pire ; la vraie valeur DRY
+  (table de couleurs + helpers) est faite ci-dessus. À rediscuter si un vrai besoin
+  émerge.
