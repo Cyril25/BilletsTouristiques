@@ -9284,6 +9284,14 @@ button.collecte-badge-status {
     flex-direction: column;
     gap: 6px;
 }
+/* Demande #44 — dates de l'ancienne collecte dans l'accordéon */
+.collecte-accordeon-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    font-size: 0.78rem;
+    color: var(--color-text-light, #666);
+}
 
 /* Demande #44 — avertissement anti-double-inscription (collecte principale) */
 .avert-double-inscription {

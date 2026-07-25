@@ -1654,6 +1654,12 @@ function buildCollectesSupplementairesHtml(item) {
             + '</summary>'
             + '<div class="collecte-accordeon-corps">'
             + '<span class="collecte-supp-collecteur">Collecteur : ' + escapeHtml(c.collecteur || '—') + '</span>'
+            // Demande #44 — dates de la collecte (comme la carte principale)
+            + '<div class="collecte-accordeon-dates">'
+            +   '<span>Pré-collecte : <b>' + escapeHtml(window.formatDateFr(c.date_pre)) + '</b></span>'
+            +   '<span>Collecte : <b>' + escapeHtml(window.formatDateFr(c.date_coll)) + '</b></span>'
+            +   '<span>Terminé : <b>' + escapeHtml(window.formatDateFr(c.date_fin)) + '</b></span>'
+            + '</div>'
             + capaciteHtml
             + buildInscriptionHtmlForCollecte(item, c)
             + '</div>'
