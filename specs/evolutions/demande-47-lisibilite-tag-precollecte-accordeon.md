@@ -35,7 +35,7 @@ centralisation que #44), utilisée par les trois pastilles du catalogue. La règ
 - `app-new.js` : la carte utilise ce helper au lieu du ternaire local ; la pastille de
   l'accordéon pose désormais une couleur de texte.
 - `sw.js` v277 / `global.js` menu v185.
-- **Commit** : `<à compléter>`
+- **Commit** : `2377ee1`
 
 ## Note (non traité)
 
