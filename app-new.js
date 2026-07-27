@@ -736,7 +736,7 @@ function showMore() {
             var colPrinc = collectePrincipaleByBillet[item.id];
             var statutAffiche = colPrinc ? (colPrinc.categorie || '') : (item.Categorie || '');
             var couleurAffichee = getCategorieColor(statutAffiche);
-            var texteStatut = (statutAffiche === 'Pré collecte' ? 'var(--color-text-light, #9e9e9e)' : '#fff');
+            var texteStatut = couleurTexteStatut(statutAffiche);   // #47 : source unique (global.js)
             html +=
                 '<div class="global-container' + (pasInteresse ? ' carte-pas-interesse' : '') + '" data-billet-id="' + item.id + '" style="border-top: 8px solid ' + couleurAffichee + ';">' +
                 '<div class="header-container">' +
@@ -1683,7 +1683,9 @@ function buildCollectesSupplementairesHtml(item) {
         }
         return '<details class="collecte-accordeon"' + (inscrit ? ' data-inscrit="1"' : '') + ' data-collecte-id="' + escapeAttr(c.id) + '">'
             + '<summary class="collecte-accordeon-tete">'
-            + '<span class="collecte-accordeon-statut" style="background-color:' + statutColor + ';">' + escapeHtml(c.categorie || '') + '</span>'
+            // Demande #47 — le CSS mettait du blanc en dur : illisible sur le jaune
+            // « Pré collecte ». Même règle de couleur de texte que les autres pastilles.
+            + '<span class="collecte-accordeon-statut" style="background-color:' + statutColor + '; color:' + couleurTexteStatut(c.categorie) + ';">' + escapeHtml(c.categorie || '') + '</span>'
             + '<span class="collecte-accordeon-nom">' + escapeHtml(c.nom || '') + '</span>'
             + (inscrit ? '<span class="collecte-accordeon-inscrit"><i class="fa-solid fa-check"></i> Vous y êtes inscrit</span>' : '')
             + '</summary>'

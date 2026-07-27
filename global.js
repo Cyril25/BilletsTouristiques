@@ -163,6 +163,13 @@ function getCategorieColor(categorie) {
 }
 // Alias historique (admin) — même source.
 function getStatusColor(categorie) { return getCategorieColor(categorie); }
+// Demande #47 — couleur du TEXTE d'une pastille de statut. Le jaune « Pré collecte »
+// est trop clair pour du blanc : gris clair dessus, blanc partout ailleurs. Source
+// unique pour que toutes les pastilles (carte, zone collecte, accordéon) s'accordent.
+function couleurTexteStatut(categorie) {
+    return (categorie === 'Pré collecte') ? 'var(--color-text-light, #9e9e9e)' : '#fff';
+}
+window.couleurTexteStatut = couleurTexteStatut;
 // Noir ou blanc selon la luminance du fond.
 function getTextColorForBg(hex) {
     if (!hex || hex.charAt(0) !== '#') return '#000';
@@ -641,7 +648,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=184")
+    fetch("menu.html?v=185")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
