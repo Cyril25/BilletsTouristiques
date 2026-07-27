@@ -111,14 +111,8 @@ function loadMesInscriptions() {
                 billets.forEach(function(b) { billetsMap[b.id] = b; });
             }
 
-            // Si le billet n'a pas de variante (HasVariante absent ou 'N'),
-            // ignorer toute valeur résiduelle de nb_variantes côté affichage/totaux
-            mesInscriptions.forEach(function(insc) {
-                var b = billetsMap[insc.billet_id];
-                if (b && (!b.HasVariante || b.HasVariante === 'N')) {
-                    insc.nb_variantes = 0;
-                }
-            });
+            // (La normalisation des quantités résiduelles a besoin du scope des
+            // collectes : elle se fait plus bas, une fois collectesMap chargée — #46.)
 
             // Étape 3 : charger collecteurs, pays du membre, frais de port, enveloppes dues en parallèle
             var promises = [
@@ -161,6 +155,17 @@ function loadMesInscriptions() {
             if (results[4]) {
                 results[4].forEach(function(c) { collectesMap[c.id] = c; });
             }
+
+            // Demande #46 — on ignore les quantités résiduelles hors du périmètre
+            // ouvert par LA COLLECTE (son scope), pas par les versions déclarées du
+            // billet : avant, une collecte « variante » sur un billet déclaré sans
+            // variante voyait son nb_variantes remis à 0, d'où des quantités et des
+            // montants nuls (seuls les « normaux » restaient comptés).
+            mesInscriptions.forEach(function(insc) {
+                var v = versionsOuvertesCollecte(billetsMap[insc.billet_id], collectesMap[insc.collecte_id]);
+                if (!v.normale) insc.nb_normaux = 0;
+                if (!v.variante) insc.nb_variantes = 0;
+            });
 
             renderInscriptions();
         })
@@ -987,15 +992,18 @@ function ouvrirModifierPreCollecte(inscId) {
     }
     if (!insc) return;
     var billet = billetsMap[insc.billet_id] || {};
-    modifierInscCurrent = { id: inscId, billet: billet };
 
     var titre = ((billet.Reference ? billet.Reference + ' ' : '') + (billet.Millesime || '') + (billet.Version ? '-' + billet.Version : '') + (billet.NomBillet ? ' - ' + billet.NomBillet : '')).trim();
     // Demande #16 — les champs proposés suivent le périmètre de la collecte : le
     // trigger D4 refuse en base un nb_variantes > 0 sur une collecte « normal »
     // (et inversement), donc l'UI ne doit pas laisser saisir l'impossible.
-    var scope = getTarif(insc).scope;
-    var hasNormale  = scope !== 'variante';
-    var hasVariante = scope !== 'normal' && !!(billet.HasVariante && billet.HasVariante !== 'N');
+    // Demande #46 — c'est le scope SEUL qui décide (une collecte « variante » sur un
+    // billet déclaré sans variante n'ouvrait aucun champ) ; le périmètre est mémorisé
+    // pour que la validation applique exactement la même règle.
+    var versions = versionsOuvertesCollecte(billet, collectesMap[insc.collecte_id]);
+    var hasNormale  = versions.normale;
+    var hasVariante = versions.variante;
+    modifierInscCurrent = { id: inscId, billet: billet, versions: versions };
 
     document.getElementById('modifier-preinsc-titre').textContent = titre || 'Billet inconnu';
 
@@ -1024,9 +1032,10 @@ function fermerModifierPreCollecte() {
 
 function confirmerModifierPreCollecte() {
     if (!modifierInscCurrent) return;
-    var billet = modifierInscCurrent.billet;
-    var hasNormale = billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
-    var hasVariante = !!(billet.HasVariante && billet.HasVariante !== 'N');
+    // Demande #46 — même périmètre que le formulaire ouvert (scope de la collecte).
+    var versions = modifierInscCurrent.versions || { normale: true, variante: false };
+    var hasNormale = versions.normale;
+    var hasVariante = versions.variante;
 
     var normauxEl = document.getElementById('modifier-preinsc-normaux');
     var variantesEl = document.getElementById('modifier-preinsc-variantes');

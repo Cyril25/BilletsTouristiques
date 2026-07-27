@@ -116,20 +116,10 @@ function prixCollecteCatalogue(c) {
     return { prix: p, prixVar: pv, prixVarSaisi: aPrixVar ? pv : 0, payerFdp: (c && c.payer_fdp) || '', fdpCom: (c && c.fdp_com) || '' };
 }
 
-// Demande #46 — périmètre de versions OUVERT par une collecte (catalogue).
-// Source de vérité = le `scope` de la collecte (« normal » / « variante » /
-// « les_deux »), comme la modale d'admin qui exige le prix correspondant ; le billet
-// ne fournit plus que le LIBELLÉ de la variante (HasVariante) et sert de repli
-// quand la collecte n'a pas de scope (données anciennes) ou n'existe pas.
+// Demande #46 — périmètre ouvert par une collecte : règle unique dans global.js
+// (versionsOuvertesCollecte), partagée avec mes-inscriptions et mes-collectes.
 function versionsOuvertesCatalogue(item, collecte) {
-    item = item || {};
-    var scope = (collecte && collecte.scope) || '';
-    var libelle = (item.HasVariante && item.HasVariante !== 'N') ? item.HasVariante : '';
-    return {
-        normale: scope ? (scope !== 'variante') : (item.VersionNormaleExiste !== false),
-        variante: scope ? (scope !== 'normal') : !!libelle,
-        libelleVariante: libelle
-    };
+    return versionsOuvertesCollecte(item, collecte);
 }
 
 // Frais de port dynamiques

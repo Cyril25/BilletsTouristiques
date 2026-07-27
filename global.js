@@ -173,6 +173,43 @@ function getTextColorForBg(hex) {
 }
 
 // ============================================================
+// 1d. PÉRIMÈTRE DE VERSIONS D'UNE COLLECTE — SOURCE UNIQUE (demande #46)
+// ============================================================
+// Depuis #16, ce qu'une collecte vend (version normale, variante, ou les deux)
+// est porté par son `scope`, pas par les versions déclarées du billet. Les écrans
+// qui testaient encore `billet.VersionNormaleExiste` / `billet.HasVariante`
+// ignoraient les quantités et le prix « variante » d'une collecte de scope
+// « variante » (ils retombaient sur les « normaux »).
+// Règle : le scope décide ; le billet ne fournit que le LIBELLÉ de la variante,
+// et sert de repli quand la collecte est inconnue ou n'a pas de scope.
+function versionsOuvertesCollecte(billet, collecte) {
+    billet = billet || {};
+    var scope = (collecte && collecte.scope) || '';
+    var libelle = (billet.HasVariante && billet.HasVariante !== 'N') ? billet.HasVariante : '';
+    return {
+        normale: scope ? (scope !== 'variante') : (billet.VersionNormaleExiste !== false),
+        variante: scope ? (scope !== 'normal') : !!libelle,
+        libelleVariante: libelle
+    };
+}
+// Union sur plusieurs collectes (un écran peut lister les inscriptions de
+// plusieurs collectes du même billet : une colonne s'affiche dès qu'UNE l'ouvre).
+function versionsOuvertesCollectes(billet, collectes) {
+    var liste = collectes || [];
+    if (liste.length === 0) return versionsOuvertesCollecte(billet, null);
+    var res = { normale: false, variante: false, libelleVariante: '' };
+    liste.forEach(function(c) {
+        var v = versionsOuvertesCollecte(billet, c);
+        res.normale = res.normale || v.normale;
+        res.variante = res.variante || v.variante;
+        res.libelleVariante = res.libelleVariante || v.libelleVariante;
+    });
+    return res;
+}
+window.versionsOuvertesCollecte = versionsOuvertesCollecte;
+window.versionsOuvertesCollectes = versionsOuvertesCollectes;
+
+// ============================================================
 // 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
@@ -604,7 +641,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=183")
+    fetch("menu.html?v=184")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

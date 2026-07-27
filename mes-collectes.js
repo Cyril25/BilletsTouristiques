@@ -72,6 +72,26 @@ function getCollectePourInsc(insc) {
     return (insc && insc.collecte_id && currentCollectesMap[insc.collecte_id]) || currentCollectePrincipale || {};
 }
 
+// Demande #46 — périmètre de versions ouvert par la COLLECTE d'une inscription
+// (règle unique : versionsOuvertesCollecte, global.js). Avant, ces écrans testaient
+// les versions déclarées du BILLET : sur une collecte « variante », les quantités et
+// le prix variante étaient ignorés et seuls les « normaux » (souvent 0) comptaient.
+function versionsInscription(insc, billet) {
+    var c = (insc && insc.collecte_id)
+        ? (currentCollectesMap[insc.collecte_id] || collectesMapGlobal[insc.collecte_id])
+        : null;
+    return versionsOuvertesCollecte(billet, c);
+}
+// Périmètre d'une vue « billet » = union des collectes concernées (un tableau peut
+// lister les inscriptions de plusieurs de mes collectes du même billet).
+function versionsVueBillet(billet, collectes) {
+    return versionsOuvertesCollectes(billet, collectes);
+}
+// Collectes de la vue détail ouverte, sous forme de liste.
+function collectesVueDetail() {
+    return Object.keys(currentCollectesMap).map(function(k) { return currentCollectesMap[k]; });
+}
+
 // Tarif applicable à une inscription (factorise les ~7 sites de calcul, tech-spec C3).
 function getPrixFromCollecte(insc) {
     return prixDepuisCollecte(getCollectePourInsc(insc));
@@ -349,8 +369,13 @@ function renderCollectesList() {
         h += '</div>';
         // Demande #16 — prix et date de collecte pris sur la collecte principale du billet
         var colPrinc = collectePrincipaleBillet(b.id);
-        var bVne = b.VersionNormaleExiste !== false;
-        var bVarActive = b.HasVariante && b.HasVariante !== 'N';
+        // Demande #46 — le prix affiché décrit la collecte principale : son scope dit
+        // quelles versions elle vend (une collecte « variante » n'a pas de prix normal).
+        var vCarte = versionsOuvertesCollecte(b, colPrinc);
+        var bVne = vCarte.normale;
+        var bVarActive = vCarte.variante;
+        // Les compteurs, eux, agrègent TOUTES mes collectes de ce billet.
+        var vStats = versionsVueBillet(b, collectesParBillet[b.id]);
         var bPrix = (colPrinc && colPrinc.prix !== null && colPrinc.prix !== undefined && colPrinc.prix !== '') ? parseFloat(colPrinc.prix) : null;
         var bPrixVar = (colPrinc && colPrinc.prix_variante !== null && colPrinc.prix_variante !== undefined && colPrinc.prix_variante !== '') ? parseFloat(colPrinc.prix_variante) : null;
         var bDateColl = colPrinc ? colPrinc.date_coll : null;
@@ -367,7 +392,7 @@ function renderCollectesList() {
         var stats = mesInscriptionsParBillet[b.id] || { total: 0, confirmes: 0, billetsTotal: { normaux: 0, variantes: 0 }, billetsEnvoyes: { normaux: 0, variantes: 0 } };
         if (stats.total > 0) {
             var allConfirmes = stats.confirmes === stats.total;
-            var envInfo = formatEnvoyesBillets(stats, bVne, bVarActive);
+            var envInfo = formatEnvoyesBillets(stats, vStats.normale, vStats.variante);
             h += '<div class="collecte-card-indicators">';
             h += '<span class="indicator ' + (allConfirmes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (allConfirmes ? 'check-circle' : 'clock') + '"></i> ' + stats.confirmes + '/' + stats.total + ' payés</span>';
             h += '<span class="indicator ' + (envInfo.allEnvoyes ? 'indicator-ok' : 'indicator-pending') + '"><i class="fa-solid fa-' + (envInfo.allEnvoyes ? 'check-circle' : 'clock') + '"></i> ' + envInfo.text + '</span>';
@@ -462,10 +487,14 @@ function openCollecteDetail(billetId) {
             currentCollectePrincipale = collectePrincipaleBillet(billetId);
             // Ne garder que les inscriptions de MES collectes de ce billet
             currentInscriptions = currentInscriptions.filter(function(ins) { return currentCollectesMap[ins.collecte_id]; });
-            // Si le billet n'a pas de variante, ignorer toute valeur résiduelle de nb_variantes
-            if (currentBillet && (!currentBillet.HasVariante || currentBillet.HasVariante === 'N')) {
-                currentInscriptions.forEach(function(ins) { ins.nb_variantes = 0; });
-            }
+            // Demande #46 — on ignore les quantités hors du périmètre ouvert par LA
+            // COLLECTE de chaque inscription (avant : les versions déclarées du billet,
+            // ce qui remettait à 0 les variantes d'une collecte « variante »).
+            currentInscriptions.forEach(function(ins) {
+                var v = versionsInscription(ins, currentBillet);
+                if (!v.normale) ins.nb_normaux = 0;
+                if (!v.variante) ins.nb_variantes = 0;
+            });
             // Enrichir les snapshots avec les noms actuels des membres
             var emails = [];
             currentInscriptions.forEach(function(ins) {
@@ -544,14 +573,16 @@ function renderCollecteDetail(billetId, inscriptions) {
     html += '<button class="btn-retour-liste" onclick="retourListe()"><i class="fa-solid fa-arrow-left"></i> Retour à la liste</button>';
 
     // Header avec prix
+    // Demande #46 — le prix d'en-tete suit le scope de la collecte de la vue :
+    // une collecte « variante » (prix normal vide) n'affichait aucun prix du tout.
     var prixHeader = '';
-    if (billet && prix > 0) {
-        var vne = billet.VersionNormaleExiste !== false;
-        if (vne && prixVariante !== prix) {
-            prixHeader = ' — ' + prix.toFixed(2) + ' \u20AC / ' + prixVariante.toFixed(2) + ' \u20AC var.';
-        } else {
-            prixHeader = ' — ' + prix.toFixed(2) + ' \u20AC';
-        }
+    var vPrinc = versionsOuvertesCollecte(billet, currentCollectePrincipale);
+    if (vPrinc.normale && prix > 0) {
+        prixHeader = (vPrinc.variante && prixVariante !== prix)
+            ? ' — ' + prix.toFixed(2) + ' \u20AC / ' + prixVariante.toFixed(2) + ' \u20AC var.'
+            : ' — ' + prix.toFixed(2) + ' \u20AC';
+    } else if (vPrinc.variante && prixVariante > 0) {
+        prixHeader = ' — ' + prixVariante.toFixed(2) + ' \u20AC var.';
     }
     html += '<div class="collecte-detail-header">';
     var titreDetail = '';
@@ -573,8 +604,13 @@ function renderCollecteDetail(billetId, inscriptions) {
     html += '</div>';
     html += '<div class="compteur-item">';
     html += '<span class="compteur-label">Billets</span>';
-    var vne = billet && billet.VersionNormaleExiste !== false;
-    var hasVar = billet && billet.HasVariante && billet.HasVariante !== 'N';
+    // Demande #46 — colonnes et compteurs : union des perimetres de MES collectes
+    // de ce billet (le tableau peut melanger les inscriptions de plusieurs d'entre
+    // elles). Avant : les versions declarees du billet, d'ou une colonne "Normaux"
+    // seule sur une collecte "variante".
+    var vDetail = versionsVueBillet(billet, collectesVueDetail());
+    var vne = vDetail.normale;
+    var hasVar = vDetail.variante;
     html += '<span class="compteur-value">' + (vne ? totalNormaux + ' normaux' : '') + (vne && hasVar ? ', ' : '') + (hasVar ? totalVariantes + ' variantes' : '') + '</span>';
     html += '</div>';
     html += '</div>';
@@ -887,8 +923,9 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
     var existing = document.getElementById('expedition-directe-form');
     if (existing) existing.remove();
 
-    var vne = currentBillet && currentBillet.VersionNormaleExiste !== false;
-    var colCount = (vne ? 9 : 8) + 2; // +2 pour FDP + Envoyé
+    // Demande #46 — le colspan suit les colonnes reellement affichees.
+    var vExp = versionsVueBillet(currentBillet, collectesVueDetail());
+    var colCount = 9 + (vExp.normale ? 1 : 0) + (vExp.variante ? 1 : 0);
 
     var formRow = document.createElement('tr');
     formRow.id = 'expedition-directe-form';
@@ -1044,8 +1081,11 @@ function updateCompteurs() {
     // Update counter display
     var compteurs = document.querySelectorAll('.compteur-value');
     if (compteurs.length >= 1) compteurs[0].textContent = totalConfirmes + '/' + totalInscrits + ' payés';
-    var vne = currentBillet && currentBillet.VersionNormaleExiste !== false;
-    if (compteurs.length >= 2) compteurs[1].textContent = (vne ? totalNormaux + ' normaux, ' : '') + totalVariantes + ' variantes';
+    // Demande #46 — meme perimetre que le rendu du detail.
+    var vMaj = versionsVueBillet(currentBillet, collectesVueDetail());
+    if (compteurs.length >= 2) compteurs[1].textContent = (vMaj.normale ? totalNormaux + ' normaux' : '')
+        + (vMaj.normale && vMaj.variante ? ', ' : '')
+        + (vMaj.variante ? totalVariantes + ' variantes' : '');
 
     var progressFill = document.querySelector('.progress-fill');
     if (progressFill) progressFill.style.width = progressPct + '%';
@@ -1234,8 +1274,9 @@ function countBillets(inscs, billetsMap) {
     for (var i = 0; i < inscs.length; i++) {
         var ins = inscs[i];
         var b = billetsMap ? billetsMap[ins.billet_id] : null;
-        var vne = !b || b.VersionNormaleExiste !== false;
-        var hasVar = b && b.HasVariante && b.HasVariante !== 'N';
+        var vC = versionsInscription(ins, b);   // #46 : perimetre de SA collecte
+        var vne = vC.normale;
+        var hasVar = vC.variante;
         if (vne) total += (ins.nb_normaux || 0);
         if (hasVar) total += (ins.nb_variantes || 0);
     }
@@ -1267,12 +1308,14 @@ function loadEnveloppes() {
                 .then(function(inscriptions) {
                     inscriptions = inscriptions || [];
 
-                    // Ignorer nb_variantes pour les billets sans variante
+                    // Demande #46 — ignorer les quantites hors du perimetre ouvert par
+                    // LA COLLECTE de l'inscription (avant : versions du billet).
                     var bMapEnv = {};
                     mesBillets.forEach(function(b) { bMapEnv[b.id] = b; });
                     inscriptions.forEach(function(ins) {
-                        var b = bMapEnv[ins.billet_id];
-                        if (b && (!b.HasVariante || b.HasVariante === 'N')) ins.nb_variantes = 0;
+                        var vE = versionsInscription(ins, bMapEnv[ins.billet_id]);
+                        if (!vE.normale) ins.nb_normaux = 0;
+                        if (!vE.variante) ins.nb_variantes = 0;
                     });
 
                     // Créer les enveloppes manquantes pour les membres avec des inscriptions à répartir
@@ -1611,8 +1654,9 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
         for (var i = 0; i < inscriptions.length; i++) {
             var insc = inscriptions[i];
             var billet = billetsMap[insc.billet_id] || {};
-            var envVne = billet.VersionNormaleExiste !== false;
-            var envHasVar = billet.HasVariante && billet.HasVariante !== 'N';
+            var vEnvH = versionsInscription(insc, billet);   // #46
+            var envVne = vEnvH.normale;
+            var envHasVar = vEnvH.variante;
             var envNbVar = envHasVar ? (insc.nb_variantes || 0) : 0;
             var envQty;
     if (!envHasVar) {
@@ -2025,8 +2069,9 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
 }
 
 function renderEnveloppeLigne(insc, billet, action) {
-    var envVne = billet.VersionNormaleExiste !== false;
-    var envHasVar = billet.HasVariante && billet.HasVariante !== 'N';
+    var vEnvL = versionsInscription(insc, billet);   // #46
+    var envVne = vEnvL.normale;
+    var envHasVar = vEnvL.variante;
     var envNbVar = envHasVar ? (insc.nb_variantes || 0) : 0;
     var envQty;
     if (!envHasVar) {
@@ -2613,12 +2658,13 @@ function loadVerificationPaiement() {
                 renderPaiementsVide();
                 return;
             }
-            // Ignorer nb_variantes pour les billets sans variante
+            // Demande #46 — perimetre de LA COLLECTE de chaque inscription.
             var bMap = {};
             mesBillets.forEach(function(b) { bMap[b.id] = b; });
             inscriptions.forEach(function(ins) {
-                var b = bMap[ins.billet_id];
-                if (b && (!b.HasVariante || b.HasVariante === 'N')) ins.nb_variantes = 0;
+                var vP = versionsInscription(ins, bMap[ins.billet_id]);
+                if (!vP.normale) ins.nb_normaux = 0;
+                if (!vP.variante) ins.nb_variantes = 0;
             });
             var emails = [];
             inscriptions.forEach(function(ins) {
@@ -2764,7 +2810,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
             var payNbN = insc.nb_normaux || 0;
             var payNbV = insc.nb_variantes || 0;
             var payDetailParts = [];
-            if (billet.VersionNormaleExiste !== false && payNbN > 0) {
+            if (versionsInscription(insc, billet).normale && payNbN > 0) {   // #46
                 payDetailParts.push(payNbN + (payNbN > 1 ? ' normaux' : ' normal') + ' × ' + prix.toFixed(2) + ' €');
             }
             if (payNbV > 0) {
@@ -2979,8 +3025,9 @@ function renderPaiementsConfirmes(inscriptions, port, membresMap) {
         groupes[email].inscriptions.forEach(function(insc) {
             var billet = bMap[insc.billet_id] || {};
             var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
-            var nbN = billet.VersionNormaleExiste !== false ? (insc.nb_normaux || 0) : 0;
-            var nbV = (billet.HasVariante && billet.HasVariante !== 'N') ? (insc.nb_variantes || 0) : 0;
+            var vHist = versionsInscription(insc, billet);   // #46
+            var nbN = vHist.normale ? (insc.nb_normaux || 0) : 0;
+            var nbV = vHist.variante ? (insc.nb_variantes || 0) : 0;
             var montant = (prix * nbN) + (prixVar * nbV);
             var refPrefix = billet.Reference ? billet.Reference + ' ' : '';
             lignes += '<div class="envoi-ligne">'
@@ -3148,7 +3195,7 @@ function renderRelanceModal(billet, impayes) {
         var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
         var objet = 'Relance paiement — ' + (billet.NomBillet || 'Collecte');
 
-        var relVne = billet.VersionNormaleExiste !== false;
+        var relVne = versionsInscription(insc, billet).normale;   // #46
         var corps = 'Bonjour ' + prenom + ',\n\n'
             + 'Je me permets de te relancer concernant ton inscription à la collecte "' + (billet.NomBillet || '') + '".\n\n'
             + 'Détails :\n'
@@ -3289,7 +3336,7 @@ function ouvrirRelanceGlobale() {
             var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
             totalMembre += montant;
 
-            var relVne = billet.VersionNormaleExiste !== false;
+            var relVne = versionsInscription(insc, billet).normale;   // #46
             detailsLignes += '\n• ' + refBilletLabel(billet);
             if (relVne) detailsLignes += ' — ' + (insc.nb_normaux || 0) + ' normal(aux)';
             if (insc.nb_variantes > 0) detailsLignes += ' — ' + insc.nb_variantes + ' variante(s)';
@@ -3492,8 +3539,10 @@ function exporterCSV(billetId) {
         return;
     }
 
-    var inclureVariantes = currentBillet.HasVariante && currentBillet.HasVariante !== 'N';
-    var csvVne = currentBillet.VersionNormaleExiste !== false;
+    // Demande #46 — colonnes exportees = perimetre des collectes de la vue.
+    var vCsv = versionsVueBillet(currentBillet, collectesVueDetail());
+    var inclureVariantes = vCsv.variante;
+    var csvVne = vCsv.normale;
 
     // En-têtes
     var headers = ['Nom', 'Prénom', 'Adresse', 'Code postal', 'Ville', 'Pays', 'Type de paiement', 'Type d\'envoi'];
@@ -3610,8 +3659,12 @@ function renderInscriptionModal(membres, editInscription) {
     var isEdit = !!editInscription;
     var titre = isEdit ? 'Modifier l\'inscription' : 'Inscrire un membre';
     var billet = currentBillet;
-    var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
-    var vne = billet.VersionNormaleExiste !== false;
+    // Demande #46 — les champs suivent le scope de la collecte visee (celle de
+    // l'inscription en edition, sinon la collecte principale de la vue).
+    var vModal = isEdit ? versionsInscription(editInscription, billet)
+                        : versionsOuvertesCollecte(billet, currentCollectePrincipale);
+    var varianteActive = vModal.variante;
+    var vne = vModal.normale;
 
     // Valeurs par défaut ou valeurs existantes
     var defEmail = isEdit ? editInscription.membre_email : '';
