@@ -155,7 +155,7 @@ mais devient symétrique et pilotée par le scope : hors périmètre `normale` �
   (individuelle et globale), export CSV, modale « inscrire un membre », colspan du
   formulaire d'expédition.
 - `sw.js` v276 / `global.js` menu v184.
-- **Commit** : `<à compléter>`
+- **Commit** : `b08331c`
 
 ## Suite éventuelle (hors périmètre)
 
