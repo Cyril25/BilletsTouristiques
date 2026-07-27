@@ -208,9 +208,15 @@
         if (catRow && catRow.parentNode) catRow.parentNode.style.display = 'none';
 
         // Plus récente d'abord (date_pre, sinon created_at).
+        // Demande #46 — même critère que le catalogue, created_at départage les
+        // collectes ouvertes le même jour (sinon la fiche et la carte pouvaient
+        // afficher des collectes différentes).
         var ordered = cols.slice().sort(function(a, b) {
             var da = collecteDateDebutFiche(a), db = collecteDateDebutFiche(b);
-            if (da === db) return 0; return da < db ? 1 : -1;
+            if (da !== db) return da < db ? 1 : -1;
+            var ca = (a && a.created_at) || '', cb = (b && b.created_at) || '';
+            if (ca === cb) return 0;
+            return ca < cb ? 1 : -1;
         });
         var principale = ordered[0];
         var autres = ordered.slice(1);

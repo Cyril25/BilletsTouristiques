@@ -78,8 +78,14 @@ function collecteDateDebut(c) {
 }
 function compareCollecteRecentDabord(a, b) {
     var da = collecteDateDebut(a), db = collecteDateDebut(b);
-    if (da === db) return 0;
-    return da < db ? 1 : -1;
+    if (da !== db) return da < db ? 1 : -1;
+    // Demande #46 — égalité de date_pre (2 collectes ouvertes le même jour) : on
+    // départage sur created_at, sinon l'ordre dépendait de celui rendu par l'API
+    // et la collecte « affichée » (prix, statut, dates) pouvait changer d'un
+    // chargement à l'autre.
+    var ca = (a && a.created_at) || '', cb = (b && b.created_at) || '';
+    if (ca === cb) return 0;
+    return ca < cb ? 1 : -1;
 }
 function collectesTrieesRecentDabord(list) {
     return (list || []).slice().sort(compareCollecteRecentDabord);
@@ -100,10 +106,30 @@ function collectesInscritesDuBillet(billetId) {
 }
 
 // Demande #16 — tarif normalisé d'une collecte (catalogue)
+// `prixVar` retombe sur le prix normal quand la variante n'a pas de prix propre
+// (calcul des montants) ; `prixVarSaisi` garde l'info brute « une variante a bien
+// un prix » (demande #46 : ne pas annoncer un prix variante qui n'existe pas).
 function prixCollecteCatalogue(c) {
+    var aPrixVar = !!(c && c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '');
     var p = (c && c.prix !== null && c.prix !== undefined && c.prix !== '') ? parseFloat(c.prix) : 0;
-    var pv = (c && c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '') ? parseFloat(c.prix_variante) : p;
-    return { prix: p, prixVar: pv, payerFdp: (c && c.payer_fdp) || '', fdpCom: (c && c.fdp_com) || '' };
+    var pv = aPrixVar ? parseFloat(c.prix_variante) : p;
+    return { prix: p, prixVar: pv, prixVarSaisi: aPrixVar ? pv : 0, payerFdp: (c && c.payer_fdp) || '', fdpCom: (c && c.fdp_com) || '' };
+}
+
+// Demande #46 — périmètre de versions OUVERT par une collecte (catalogue).
+// Source de vérité = le `scope` de la collecte (« normal » / « variante » /
+// « les_deux »), comme la modale d'admin qui exige le prix correspondant ; le billet
+// ne fournit plus que le LIBELLÉ de la variante (HasVariante) et sert de repli
+// quand la collecte n'a pas de scope (données anciennes) ou n'existe pas.
+function versionsOuvertesCatalogue(item, collecte) {
+    item = item || {};
+    var scope = (collecte && collecte.scope) || '';
+    var libelle = (item.HasVariante && item.HasVariante !== 'N') ? item.HasVariante : '';
+    return {
+        normale: scope ? (scope !== 'variante') : (item.VersionNormaleExiste !== false),
+        variante: scope ? (scope !== 'normal') : !!libelle,
+        libelleVariante: libelle
+    };
 }
 
 // Frais de port dynamiques
@@ -755,32 +781,47 @@ function showMore() {
                     var parts = [];
                     var _colr = collecteurPrincipalCatalogue(item); if (_colr) parts.push('Par ' + escapeHtml(_colr));
 
-                    var versionNormaleExiste = item.VersionNormaleExiste !== false;
-                    var varianteVal = item.HasVariante || '';
-                    var varianteActive = varianteVal && varianteVal !== 'N';
-
-                    // Demande #16 — prix / FDP viennent de la collecte principale du billet
-                    var tarifP = prixCollecteCatalogue(collectePrincipaleByBillet[item.id]);
+                    // Demande #16 — prix / FDP viennent de la collecte affichée du billet.
+                    // Demande #46 — le PÉRIMÈTRE aussi : une collecte « variante » (prix
+                    // normal vide) n'affichait plus que « Par <collecteur> », parce qu'on
+                    // testait les versions déclarées du BILLET au lieu du scope de la COLLECTE.
+                    var tarifP = prixCollecteCatalogue(colPrinc);
                     var prixNormal = tarifP.prix;
+                    // Variante : prix effectif (repli sur le prix normal quand la collecte
+                    // n'en déclare pas — cas historique « les_deux » sans prix variante),
+                    // et prix réellement saisi (pour ne rien inventer sur une collecte nue).
                     var prixVar = tarifP.prixVar;
+                    var prixVarSaisi = tarifP.prixVarSaisi;
+                    var versions = versionsOuvertesCatalogue(item, colPrinc);
+                    var libVariante = versions.libelleVariante
+                        ? 'version ' + escapeHtml(versions.libelleVariante)
+                        : 'version variante';
 
                     // Calcul FDP si demandé
                     var fdpInfo = '';
-                    if (tarifP.payerFdp === 'oui' && membrePaysCatalogue) {
-                        var destCat = destinationPays(membrePaysCatalogue);
-                        var fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
-                        if (fdpBase > 0) fdpInfo = ' + ' + fdpBase.toFixed(2) + '\u20AC fdp';
+                    if (tarifP.payerFdp === 'oui') {
+                        var fdpBase = 0;
+                        if (membrePaysCatalogue) {
+                            var destCat = destinationPays(membrePaysCatalogue);
+                            fdpBase = findFdpPriceCatalogue(1, destCat, 'normal');
+                        }
+                        // Le fait de payer les FDP doit rester visible même quand le montant
+                        // n'est pas calculable (pays du membre inconnu, grille non chargée).
+                        fdpInfo = fdpBase > 0 ? ' + ' + fdpBase.toFixed(2) + '\u20AC fdp' : ' + frais de port';
                     }
 
-                    if (!versionNormaleExiste && varianteActive && prixVar) {
-                        // Uniquement variante
-                        parts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + varianteVal);
-                    } else if (versionNormaleExiste && varianteActive && prixNormal) {
-                        // Normale + variante
-                        parts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros version ' + varianteVal + fdpInfo);
+                    if (versions.normale && versions.variante && prixNormal && prixVar) {
+                        // Normale + variante, les deux tarifées
+                        parts.push('au prix de ' + prixNormal.toFixed(2) + ' euros version normale & ' + prixVar.toFixed(2) + ' euros ' + libVariante + fdpInfo);
+                    } else if (versions.variante && !versions.normale && prixVar) {
+                        // Collecte « variante » uniquement
+                        parts.push('au prix de ' + prixVar.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + libVariante);
                     } else if (prixNormal) {
-                        // Normale seule
+                        // Normale seule (ou variante sans prix propre : même tarif que la normale)
                         parts.push('au prix de ' + prixNormal.toFixed(2) + ' euros' + fdpInfo);
+                    } else if (prixVarSaisi) {
+                        // Repli : seule la variante porte un prix
+                        parts.push('au prix de ' + prixVarSaisi.toFixed(2) + ' euros' + fdpInfo + ' uniquement ' + libVariante);
                     }
 
                     if (parts.length === 0) return '';
@@ -1338,13 +1379,17 @@ function ouvrirInscription(billetId) {
         }
         var billet = allData.find(function(b) { return b.id === billetId; });
         if (!billet) return;
-        var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
-        var versionNormaleExiste = billet.VersionNormaleExiste !== false;
-        var champNormaux = (!varianteActive || versionNormaleExiste)
-            ? '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="' + (varianteActive ? '0' : '1') + '" min="0"></div>'
+        // Demande #46 — le formulaire suit le périmètre de la COLLECTE affichée
+        // (scope), comme le message de prix de la carte et comme les collectes de
+        // l'accordéon : une collecte « variante » ne propose pas la version normale.
+        var versions = versionsOuvertesCatalogue(billet, collectePrincipaleByBillet[billetId]);
+        var showNormaux = versions.normale;
+        var showVariantes = versions.variante;
+        var champNormaux = showNormaux
+            ? '<div class="mini-form-field"><label>Nb normaux</label><input type="number" id="insc-nb-normaux-' + billetId + '" value="' + (showVariantes ? '0' : '1') + '" min="0"></div>'
             : '';
-        var champVariantes = varianteActive
-            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (!versionNormaleExiste ? '1' : '0') + '" min="' + (!versionNormaleExiste ? '1' : '0') + '"></div>'
+        var champVariantes = showVariantes
+            ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (!showNormaux ? '1' : '0') + '" min="' + (!showNormaux ? '1' : '0') + '"></div>'
             : '';
         // Demande #9 — en pré-collecte, pré-remplir le commentaire avec la préférence "terminaisons" du profil
         var estPreCollecte = billet.Categorie === 'Pré collecte';
@@ -1728,12 +1773,11 @@ function ouvrirInscriptionCollecte(billetId, collecteId) {
         }
         if (!collecte) return;
 
-        var scope = collecte.scope || 'les_deux';
-        var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
-        var versionNormaleExiste = billet.VersionNormaleExiste !== false;
-
-        var showNormaux = (scope === 'normal' || scope === 'les_deux') && (!varianteActive || versionNormaleExiste);
-        var showVariantes = (scope === 'variante' || scope === 'les_deux') && varianteActive;
+        // Demande #46 — règle commune à tout le catalogue : le scope de la collecte
+        // décide du périmètre ouvert (versionsOuvertesCatalogue).
+        var versionsC = versionsOuvertesCatalogue(billet, collecte);
+        var showNormaux = versionsC.normale;
+        var showVariantes = versionsC.variante;
 
         var suffix = billetId + '-' + collecteId;
         var champNormaux = showNormaux
