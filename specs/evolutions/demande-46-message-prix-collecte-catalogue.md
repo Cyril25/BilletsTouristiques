@@ -81,7 +81,7 @@ l'affichage, comme il le fait déjà pour le calcul des montants.
   - `compareCollecteRecentDabord` : départage `created_at` à `date_pre` égale.
 - `billet.js` : même départage `created_at` dans le tri de la fiche.
 - `sw.js` v275 / `global.js` menu v183.
-- **Commit** : `<à compléter>`
+- **Commit** : `22257a0`
 
 ## Suite éventuelle (hors périmètre)
 

@@ -69,4 +69,4 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#43](demande-43-affichage-billets.md) | Cadrage affichage billets.html (unicité, surfaçage, multi-collecte) | L | À tester | ✅ | — |
 | [#44](demande-44-affichage-billet-vs-collecte.md) | Dissocier billet / collecte(s) : 2 plans, accordéon multi-collecte, anti-double-inscription | L | À tester | ✅ | `be1a9b0`, `0a44038`, `606aa63` |
 | [#45](demande-45-changement-statut-collecte-inline.md) | Changement de statut collecte : mini-formulaire inline cohérent (mono & multi) | M | À tester | ✅ | `ea284c7` |
-| [#46](demande-46-message-prix-collecte-catalogue.md) | Bug : message prix / version / FDP absent sur les collectes « variante » (billets.html) | S | À tester | ✅ | — |
+| [#46](demande-46-message-prix-collecte-catalogue.md) | Bug : message prix / version / FDP absent sur les collectes « variante » (billets.html) | S | À tester | ✅ | `22257a0` |
