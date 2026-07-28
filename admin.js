@@ -835,8 +835,16 @@ function renderAdminCards() {
                 return '<div class="admin-card-collectes-statuts">' + ordered.map(function(c) {
                     var cstatut = c.categorie || 'Pré collecte';
                     var ccolor = getStatusColor(cstatut);
+                    // Demande #48 — nombre d'inscriptions DE CETTE collecte, cliquable :
+                    // ouvre la modale positionnee sur sa section.
+                    var cInsc = adminCollecteInscriptionCounts[c.id] || { count: 0 };
                     return '<div class="admin-card-collecte-ligne">' +
                         '<span class="admin-card-collecte-nom" title="' + escapeAttr(c.nom || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
+                        '<button type="button" class="admin-card-collecte-insc" ' +
+                            'onclick="event.stopPropagation(); openInscriptionsModal(' + docId + ', \'' + escapeAttr(String(c.id)) + '\')" ' +
+                            'title="Voir les inscriptions de cette collecte">' +
+                            '<i class="fa-solid fa-users"></i> ' + cInsc.count +
+                        '</button>' +
                         '<span class="card-badge-wrapper">' +
                             '<button type="button" class="collecte-status-tag clickable" ' +
                                 'data-doc-id="' + docId + '" data-collecte-id="' + escapeAttr(String(c.id)) + '" ' +
@@ -3733,8 +3741,46 @@ if (inscOverlayEl) {
 var adminCurrentInscriptions = [];
 var adminCurrentBilletId = null;
 var adminRecalculEnCoursBilletId = null; // billet dont le recalcul des inscriptions est en cours
+// Demande #48 — collecte a mettre en avant a l'ouverture (clic sur son compteur) et
+// collecte visee par le formulaire d'ajout/edition ouvert.
+var adminInscriptionsFocusCollecteId = null;
+var adminInscFormCollecteId = null;
 
-function openInscriptionsModal(billetId) {
+// Demande #48 — une inscription appartient a sa COLLECTE : la modale groupe par
+// collecte au lieu d'afficher un tableau a plat ou toutes se melangeaient.
+function adminCollectesDuBillet(billetId) {
+    var cols = (adminCollectesByBillet[billetId] || []).slice();
+    var principale = collectePrincipaleBilletAdmin(billetId);
+    cols.sort(function(a, b) { return (a === principale) ? -1 : (b === principale) ? 1 : 0; });
+    return cols;
+}
+// Demande #48 — refuse AVANT l'appel reseau une quantite hors du perimetre de la
+// collecte (le trigger D4 la refuserait en base, avec un message illisible).
+function adminQuantitesCompatibles(billet, collecte, nbNormaux, nbVariantes) {
+    var v = versionsOuvertesCollecte(billet, collecte);
+    if (!v.normale && nbNormaux > 0) {
+        return 'La collecte \u00ab ' + (collecte && collecte.nom ? collecte.nom : 'cible') + ' \u00bb ne vend que la variante : le nombre de normaux doit \u00eatre 0.';
+    }
+    if (!v.variante && nbVariantes > 0) {
+        return 'La collecte \u00ab ' + (collecte && collecte.nom ? collecte.nom : 'cible') + ' \u00bb ne vend pas de variante : le nombre de variantes doit \u00eatre 0.';
+    }
+    return '';
+}
+function adminInscriptionsDeCollecte(collecteId) {
+    if (!collecteId) return [];
+    return adminCurrentInscriptions.filter(function(ins) {
+        return String(ins.collecte_id) === String(collecteId);
+    });
+}
+function adminCollecteDuBillet(billetId, collecteId) {
+    var cols = adminCollectesByBillet[billetId] || [];
+    for (var i = 0; i < cols.length; i++) {
+        if (String(cols[i].id) === String(collecteId)) return cols[i];
+    }
+    return null;
+}
+
+function openInscriptionsModal(billetId, focusCollecteId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
 
@@ -3743,6 +3789,14 @@ function openInscriptionsModal(billetId) {
     var overlayEl = document.getElementById('inscriptions-modal-overlay');
     if (!titleEl || !bodyEl || !overlayEl) return;
 
+    // Demande #48 — la collecte mise en avant ne vaut que pour SON billet : on la
+    // conserve lors des rechargements de la modale (après un ajout), on l'oublie si
+    // on ouvre un autre billet sans en préciser une.
+    if (focusCollecteId !== undefined) {
+        adminInscriptionsFocusCollecteId = focusCollecteId || null;
+    } else if (String(adminCurrentBilletId) !== String(billetId)) {
+        adminInscriptionsFocusCollecteId = null;
+    }
     adminCurrentBilletId = billetId;
     titleEl.innerHTML =
         '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
@@ -3784,38 +3838,10 @@ function closeInscriptionsModal() {
 
 function renderInscriptionsModalContent(billet) {
     var body = document.getElementById('inscriptions-modal-body');
-    var vne = billet.VersionNormaleExiste !== false;
-    var varianteVal = billet.HasVariante || '';
-    var varianteActive = varianteVal && varianteVal !== 'N';
+    var billetId = adminCurrentBilletId;
+    var collectes = adminCollectesDuBillet(billetId);
 
-    var html = '';
-
-    // Bouton ajouter
-    html += '<div class="admin-insc-toolbar">' +
-        '<button class="admin-modal-btn admin-modal-btn-primary" onclick="openAdminAddInscription()">' +
-        '<i class="fa-solid fa-user-plus"></i> Ajouter une inscription</button>' +
-        '</div>';
-
-    // Résumé des totaux
-    if (adminCurrentInscriptions.length > 0) {
-        var totalNormaux = 0, totalVariantes = 0;
-        adminCurrentInscriptions.forEach(function(i) {
-            totalNormaux += (i.nb_normaux || 0);
-            totalVariantes += (i.nb_variantes || 0);
-        });
-        var summaryParts = [];
-        summaryParts.push(adminCurrentInscriptions.length + ' inscription' + (adminCurrentInscriptions.length > 1 ? 's' : ''));
-        var detailParts = [];
-        if (totalNormaux > 0) detailParts.push(totalNormaux + ' billet' + (totalNormaux > 1 ? 's' : '') + ' normaux');
-        if (totalVariantes > 0) {
-            var vLabel = varianteLabelShort(varianteVal) || varianteVal;
-            detailParts.push(totalVariantes + ' billet' + (totalVariantes > 1 ? 's' : '') + ' ' + vLabel);
-        }
-        if (detailParts.length > 0) summaryParts.push('(' + detailParts.join(', ') + ')');
-        html += '<p class="admin-insc-summary"><i class="fa-solid fa-chart-simple"></i> ' + summaryParts.join(' ') + '</p>';
-    }
-
-    // Tri par nom puis prénom
+    // Tri des inscriptions par nom puis prénom (une seule fois, avant regroupement)
     if (adminMembresCache) {
         adminCurrentInscriptions.sort(function(a, b) {
             var ma = adminMembresCache.find(function(m) { return m.email === a.membre_email; }) || {};
@@ -3828,29 +3854,38 @@ function renderInscriptionsModalContent(billet) {
         });
     }
 
-    if (adminCurrentInscriptions.length === 0) {
-        html += '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);">Aucune inscription pour ce billet</p>';
-    } else {
-        html += '<div class="admin-insc-table-wrapper"><table class="admin-insc-table">';
+    // Demande #48 — regroupement par COLLECTE (une inscription appartient à sa
+    // collecte ; avant, tout était fondu dans un seul tableau et l'ajout visait
+    // toujours la collecte principale).
+    var parCollecte = {};
+    var orphelines = [];
+    adminCurrentInscriptions.forEach(function(insc) {
+        var c = insc.collecte_id ? adminCollecteDuBillet(billetId, insc.collecte_id) : null;
+        if (!c) { orphelines.push(insc); return; }
+        if (!parCollecte[c.id]) parCollecte[c.id] = [];
+        parCollecte[c.id].push(insc);
+    });
+
+    function nomMembreDe(insc) {
+        var m = adminMembresCache ? adminMembresCache.find(function(x) { return x.email === insc.membre_email; }) : null;
+        return m ? (((m.nom || '') + ' ' + (m.prenom || '')).trim() || insc.membre_email) : insc.membre_email;
+    }
+
+    function tableauHtml(list, versions) {
+        var html = '<div class="admin-insc-table-wrapper"><table class="admin-insc-table">';
         html += '<thead><tr><th>Membre</th>';
-        if (vne) html += '<th>Normaux</th>';
-        if (varianteActive) html += '<th>Variantes</th>';
+        if (versions.normale) html += '<th>Normaux</th>';
+        if (versions.variante) html += '<th>Variantes</th>';
         html += '<th>Actions</th></tr></thead><tbody>';
-
-        adminCurrentInscriptions.forEach(function(insc) {
-            var membreObj = adminMembresCache ? adminMembresCache.find(function(m) { return m.email === insc.membre_email; }) : null;
-            var nomMembre = membreObj ? ((membreObj.nom || '') + ' ' + (membreObj.prenom || '')).trim() || insc.membre_email : insc.membre_email;
-
+        list.forEach(function(insc) {
             html += '<tr id="admin-insc-row-' + insc.id + '">';
-            html += '<td title="' + escapeAttr(insc.membre_email) + '">' + escapeHtml(nomMembre) + '</td>';
-
-            if (vne) {
+            html += '<td title="' + escapeAttr(insc.membre_email) + '">' + escapeHtml(nomMembreDe(insc)) + '</td>';
+            if (versions.normale) {
                 html += '<td class="admin-insc-qty" id="admin-insc-normaux-' + insc.id + '">' + (insc.nb_normaux || 0) + '</td>';
             }
-            if (varianteActive) {
+            if (versions.variante) {
                 html += '<td class="admin-insc-qty" id="admin-insc-variantes-' + insc.id + '">' + (insc.nb_variantes || 0) + '</td>';
             }
-
             html += '<td class="admin-insc-actions">' +
                 '<button class="btn-modifier-inscription" onclick="openAdminEditInscription(' + insc.id + ')" title="Modifier">' +
                 '<i class="fa-solid fa-pen"></i></button>' +
@@ -3859,14 +3894,98 @@ function renderInscriptionsModalContent(billet) {
                 '</td>';
             html += '</tr>';
         });
-
         html += '</tbody></table></div>';
+        return html;
+    }
+
+    function sectionHtml(c) {
+        var list = parCollecte[c.id] || [];
+        // Demande #46/#48 — les colonnes suivent le SCOPE de la collecte, pas les
+        // versions déclarées du billet.
+        var versions = versionsOuvertesCollecte(billet, c);
+        var totN = 0, totV = 0;
+        list.forEach(function(i) { totN += (i.nb_normaux || 0); totV += (i.nb_variantes || 0); });
+
+        var detailParts = [];
+        if (versions.normale && totN > 0) detailParts.push(totN + ' billet' + (totN > 1 ? 's' : '') + ' normaux');
+        if (versions.variante && totV > 0) {
+            var vLabel = varianteLabelShort(billet.HasVariante) || versions.libelleVariante || 'variante';
+            detailParts.push(totV + ' billet' + (totV > 1 ? 's' : '') + ' ' + vLabel);
+        }
+
+        var prixTxt = '';
+        if (c.prix !== null && c.prix !== undefined && c.prix !== '') {
+            prixTxt = parseFloat(c.prix).toFixed(2) + ' \u20AC';
+        }
+        if (c.prix_variante !== null && c.prix_variante !== undefined && c.prix_variante !== '') {
+            prixTxt += (prixTxt ? ' / ' : '') + parseFloat(c.prix_variante).toFixed(2) + ' \u20AC var.';
+        }
+
+        var estFocus = adminInscriptionsFocusCollecteId && String(adminInscriptionsFocusCollecteId) === String(c.id);
+        var statutColor = getStatusColor(c.categorie || '');
+
+        var html = '<div class="admin-insc-collecte-bloc' + (estFocus ? ' admin-insc-collecte-bloc--focus' : '') +
+            '" id="admin-insc-bloc-' + escapeAttr(String(c.id)) + '">';
+        html += '<div class="admin-insc-collecte-tete">' +
+            '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || 'Collecte') + '</span>' +
+            '<span class="admin-insc-collecte-statut" style="background-color:' + statutColor + '; color:' + getTextColorForBg(statutColor) + ';">' + escapeHtml(c.categorie || '') + '</span>' +
+            '<span class="collecte-meta">' + escapeHtml(c.collecteur || 'Sans collecteur') + '</span>' +
+            (prixTxt ? '<span class="collecte-meta">' + escapeHtml(prixTxt) + '</span>' : '') +
+            '<button class="admin-modal-btn admin-modal-btn-primary admin-insc-add-btn" onclick="openAdminAddInscription(\'' + escapeAttr(String(c.id)) + '\')">' +
+            '<i class="fa-solid fa-user-plus"></i> Ajouter</button>' +
+            '</div>';
+        html += '<p class="admin-insc-summary"><i class="fa-solid fa-chart-simple"></i> ' +
+            list.length + ' inscription' + (list.length > 1 ? 's' : '') +
+            (detailParts.length > 0 ? ' (' + detailParts.join(', ') + ')' : '') + '</p>';
+        html += list.length === 0
+            ? '<p class="admin-insc-vide">Aucune inscription sur cette collecte</p>'
+            : tableauHtml(list, versions);
+        html += '</div>';
+        return html;
+    }
+
+    var html = '';
+
+    if (collectes.length === 0) {
+        html += '<p class="admin-insc-vide">Ce billet n\'a aucune collecte : créez-en une pour pouvoir inscrire des membres.</p>';
+    } else {
+        // Rappel du total du billet quand il y a plusieurs collectes
+        if (collectes.length > 1) {
+            html += '<p class="admin-insc-total-billet"><i class="fa-solid fa-layer-group"></i> ' +
+                collectes.length + ' collectes sur ce billet, ' +
+                adminCurrentInscriptions.length + ' inscription' + (adminCurrentInscriptions.length > 1 ? 's' : '') + ' au total</p>';
+        }
+        html += collectes.map(sectionHtml).join('');
+    }
+
+    // Défensif : inscriptions dont la collecte n'est pas (ou plus) celle du billet
+    if (orphelines.length > 0) {
+        html += '<div class="admin-insc-collecte-bloc admin-insc-collecte-bloc--orphelin">';
+        html += '<div class="admin-insc-collecte-tete"><span class="collecte-badge-nom">Collecte inconnue</span></div>';
+        html += '<p class="admin-insc-summary"><i class="fa-solid fa-triangle-exclamation"></i> ' +
+            orphelines.length + ' inscription(s) rattachée(s) à une collecte absente de ce billet</p>';
+        html += tableauHtml(orphelines, { normale: true, variante: true });
+        html += '</div>';
     }
 
     // Zone formulaire ajout/modification (cachée par défaut)
     html += '<div id="admin-insc-form-container" style="display:none;"></div>';
 
     body.innerHTML = html;
+
+    // Demande #48 — compteurs par collecte rafraîchis depuis ce qu'on vient de lire
+    // (évite de rejouer le RPC global après chaque ajout/suppression).
+    collectes.forEach(function(c) {
+        var list = parCollecte[c.id] || [];
+        var n = 0, v = 0;
+        list.forEach(function(i) { n += (i.nb_normaux || 0); v += (i.nb_variantes || 0); });
+        adminCollecteInscriptionCounts[c.id] = { count: list.length, normaux: n, variantes: v };
+    });
+
+    if (adminInscriptionsFocusCollecteId) {
+        var bloc = document.getElementById('admin-insc-bloc-' + adminInscriptionsFocusCollecteId);
+        if (bloc && bloc.scrollIntoView) bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 // --- Chargement des membres (cache admin) ---
@@ -3879,13 +3998,19 @@ function chargerAdminMembres() {
         });
 }
 
-// --- Ajout inscription ---
-function openAdminAddInscription() {
+// --- Ajout inscription (demande #48 : sur UNE collecte precise) ---
+function openAdminAddInscription(collecteId) {
     var billet = adminBillets.find(function(b) { return b._id === adminCurrentBilletId; });
     if (!billet) return;
+    var collecte = adminCollecteDuBillet(adminCurrentBilletId, collecteId)
+        || collectePrincipaleBilletAdmin(adminCurrentBilletId);
+    if (!collecte) {
+        showToast('Ce billet n\'a pas de collecte : créez-en une avant d\'inscrire un membre', 'error');
+        return;
+    }
 
     chargerAdminMembres().then(function(membres) {
-        renderAdminInscriptionForm(billet, membres, null);
+        renderAdminInscriptionForm(billet, membres, null, collecte);
     }).catch(function(error) {
         console.error('Erreur chargement membres:', error);
         showToast('Erreur lors du chargement des membres', 'error');
@@ -3899,23 +4024,30 @@ function openAdminEditInscription(inscriptionId) {
 
     var inscription = adminCurrentInscriptions.find(function(i) { return i.id === inscriptionId; });
     if (!inscription) return;
+    // Demande #48 — on édite dans le contexte de SA collecte (périmètre, prix…).
+    var collecte = adminCollecteDuBillet(adminCurrentBilletId, inscription.collecte_id);
 
     chargerAdminMembres().then(function(membres) {
-        renderAdminInscriptionForm(billet, membres, inscription);
+        renderAdminInscriptionForm(billet, membres, inscription, collecte);
     }).catch(function(error) {
         console.error('Erreur chargement membres:', error);
         showToast('Erreur lors du chargement des membres', 'error');
     });
 }
 
-function renderAdminInscriptionForm(billet, membres, editInscription) {
+function renderAdminInscriptionForm(billet, membres, editInscription, collecte) {
     var container = document.getElementById('admin-insc-form-container');
     if (!container) return;
 
     var isEdit = !!editInscription;
-    var titre = isEdit ? 'Modifier l\'inscription' : 'Inscrire un membre';
-    var varianteActive = billet.HasVariante && billet.HasVariante !== 'N';
-    var vne = billet.VersionNormaleExiste !== false;
+    // Demande #48 — le formulaire vise UNE collecte : périmètre, filtrage des membres
+    // et création s'appuient dessus (avant : toujours la collecte principale).
+    adminInscFormCollecteId = collecte ? collecte.id : null;
+    var versions = versionsOuvertesCollecte(billet, collecte);
+    var varianteActive = versions.variante;
+    var vne = versions.normale;
+    var titre = (isEdit ? 'Modifier l\'inscription' : 'Inscrire un membre')
+        + (collecte ? ' \u2014 ' + (collecte.nom || 'collecte') : '');
 
     var defEmail = isEdit ? editInscription.membre_email : '';
     var defNormaux = isEdit ? (editInscription.nb_normaux || 0) : (varianteActive && vne ? 0 : (vne ? 1 : 0));
@@ -3924,10 +4056,11 @@ function renderAdminInscriptionForm(billet, membres, editInscription) {
     var defEnvoi = isEdit ? (editInscription.mode_envoi || 'Normal') : 'Normal';
     var defCommentaire = isEdit ? (editInscription.commentaire || '') : '';
 
-    // Filtrer les membres déjà inscrits
+    // Demande #48 — on ne filtre que les membres déjà inscrits À CETTE collecte : le
+    // même membre peut légitimement s'inscrire aux deux collectes d'un billet.
     var emailsInscrits = {};
     if (!isEdit) {
-        adminCurrentInscriptions.forEach(function(ins) {
+        adminInscriptionsDeCollecte(adminInscFormCollecteId).forEach(function(ins) {
             emailsInscrits[ins.membre_email] = true;
         });
     }
@@ -3952,6 +4085,27 @@ function renderAdminInscriptionForm(billet, membres, editInscription) {
         html += '<div class="admin-insc-form-field"><label>Membre</label>' +
             '<input type="text" id="admin-insc-membre-search" placeholder="Rechercher un membre..." oninput="filtrerAdminMembresModal()" autocomplete="off">' +
             '<select id="admin-insc-membre-email" size="5" class="admin-insc-membre-select">' + optionsMembres + '</select></div>';
+    }
+
+    // Demande #48 — en édition, permettre de RATTACHER l'inscription à une autre
+    // collecte du billet (correction d'un mauvais rattachement). On ne propose que
+    // les collectes où ce membre n'est pas déjà inscrit ; la cohérence avec le scope
+    // est vérifiée à la validation (le trigger D4 refuserait, avec un message obscur).
+    if (isEdit) {
+        var autresCollectes = adminCollectesDuBillet(adminCurrentBilletId).filter(function(c) {
+            if (String(c.id) === String(editInscription.collecte_id)) return true;
+            return !adminInscriptionsDeCollecte(c.id).some(function(ins) {
+                return ins.membre_email === editInscription.membre_email;
+            });
+        });
+        if (autresCollectes.length > 1) {
+            var optionsCollectes = autresCollectes.map(function(c) {
+                var sel = String(c.id) === String(editInscription.collecte_id) ? ' selected' : '';
+                return '<option value="' + escapeAttr(String(c.id)) + '"' + sel + '>' + escapeHtml(c.nom || 'Collecte') + '</option>';
+            }).join('');
+            html += '<div class="admin-insc-form-field"><label>Collecte</label>' +
+                '<select id="admin-insc-collecte">' + optionsCollectes + '</select></div>';
+        }
     }
 
     // Champs quantités
@@ -3982,7 +4136,7 @@ function renderAdminInscriptionForm(billet, membres, editInscription) {
     if (isEdit) {
         html += '<button onclick="submitAdminEditInscription(' + editInscription.id + ')" class="admin-modal-btn admin-modal-btn-primary"><i class="fa-solid fa-check"></i> Enregistrer</button>';
     } else {
-        html += '<button onclick="submitAdminAddInscription()" class="admin-modal-btn admin-modal-btn-primary"><i class="fa-solid fa-check"></i> Inscrire</button>';
+        html += '<button onclick="submitAdminAddInscription(\'' + escapeAttr(String(adminInscFormCollecteId || '')) + '\')" class="admin-modal-btn admin-modal-btn-primary"><i class="fa-solid fa-check"></i> Inscrire</button>';
     }
     html += '<button onclick="cancelAdminInscriptionForm()" class="admin-modal-btn admin-modal-btn-secondary">Annuler</button>';
     html += '</div>';
@@ -4000,8 +4154,9 @@ function filtrerAdminMembresModal() {
     if (!searchInput || !selectEl || !adminMembresCache) return;
 
     var terme = searchInput.value.toLowerCase().trim();
+    // Demande #48 — exclusion par collecte visée, pas par billet.
     var emailsInscrits = {};
-    adminCurrentInscriptions.forEach(function(ins) {
+    adminInscriptionsDeCollecte(adminInscFormCollecteId).forEach(function(ins) {
         emailsInscrits[ins.membre_email] = true;
     });
 
@@ -4024,7 +4179,7 @@ function cancelAdminInscriptionForm() {
     }
 }
 
-function submitAdminAddInscription() {
+function submitAdminAddInscription(collecteId) {
     var selectEl = document.getElementById('admin-insc-membre-email');
     if (!selectEl || !selectEl.value) {
         showToast('Veuillez sélectionner un membre', 'error');
@@ -4041,10 +4196,18 @@ function submitAdminAddInscription() {
         return;
     }
 
-    // Demande #16 — l'inscription porte sur la collecte principale du billet
-    var collecteInsc = collectePrincipaleBilletAdmin(adminCurrentBilletId);
+    // Demande #48 — l'inscription porte sur LA collecte choisie (section de la modale),
+    // et non plus systématiquement sur la collecte principale du billet.
+    var collecteInsc = adminCollecteDuBillet(adminCurrentBilletId, collecteId || adminInscFormCollecteId)
+        || collectePrincipaleBilletAdmin(adminCurrentBilletId);
     if (!collecteInsc) {
         showToast('Ce billet n\'a pas de collecte : créez-en une avant d\'inscrire un membre', 'error');
+        return;
+    }
+    var billetAdd = adminBillets.find(function(b) { return b._id === adminCurrentBilletId; }) || {};
+    var erreurScopeAdd = adminQuantitesCompatibles(billetAdd, collecteInsc, nbNormaux, nbVariantes);
+    if (erreurScopeAdd) {
+        showToast(erreurScopeAdd, 'error');
         return;
     }
 
@@ -4118,6 +4281,20 @@ function submitAdminEditInscription(inscriptionId) {
         return;
     }
 
+    // Demande #48 — la collecte de rattachement peut avoir été changée dans le
+    // formulaire (correction d'un mauvais rattachement) ; on vérifie la cohérence
+    // avec le périmètre de la collecte VISÉE avant d'envoyer.
+    var inscEdit = adminCurrentInscriptions.find(function(i) { return i.id === inscriptionId; }) || {};
+    var collecteSelectEl = document.getElementById('admin-insc-collecte');
+    var collecteCibleId = collecteSelectEl ? collecteSelectEl.value : inscEdit.collecte_id;
+    var collecteCible = adminCollecteDuBillet(adminCurrentBilletId, collecteCibleId);
+    var billetEdit = adminBillets.find(function(b) { return b._id === adminCurrentBilletId; }) || {};
+    var erreurScopeEdit = adminQuantitesCompatibles(billetEdit, collecteCible, nbNormaux, nbVariantes);
+    if (erreurScopeEdit) {
+        showToast(erreurScopeEdit, 'error');
+        return;
+    }
+
     var body = {
         nb_normaux: nbNormaux,
         nb_variantes: nbVariantes,
@@ -4125,6 +4302,9 @@ function submitAdminEditInscription(inscriptionId) {
         mode_envoi: document.getElementById('admin-insc-envoi').value,
         commentaire: (document.getElementById('admin-insc-commentaire').value || '').trim()
     };
+    if (collecteCible && String(collecteCible.id) !== String(inscEdit.collecte_id)) {
+        body.collecte_id = collecteCible.id;
+    }
 
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'PATCH',
@@ -4133,6 +4313,7 @@ function submitAdminEditInscription(inscriptionId) {
     .then(function() {
         showToast('Inscription modifiée !', 'success');
         cancelAdminInscriptionForm();
+        loadAdminInscriptionCounts();
         openInscriptionsModal(adminCurrentBilletId);
     })
     .catch(function(error) {
@@ -4204,11 +4385,37 @@ function loadCollectesForBillet(billetId) {
             adminCollectesByBillet[billetId] = currentBilletCollectes;
             refreshStatutBilletUI();
             renderCollectesList(currentBilletCollectes, billetId);
+            // Demande #48 — compteur d'inscriptions par collecte : sur cette page le
+            // RPC global n'est pas joue, on compte les inscriptions de CE billet.
+            chargerCompteursInscriptionsBillet(billetId);
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
             var c = document.getElementById('collectes-list');
             if (c) c.innerHTML = '<p style="color: var(--color-danger);">Erreur de chargement.</p>';
+        });
+}
+
+// Demande #48 — compteurs d'inscriptions par collecte pour un seul billet (page
+// dediee). Une requete courte, puis re-rendu de la liste des collectes.
+function chargerCompteursInscriptionsBillet(billetId) {
+    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+        .then(function(rows) {
+            (adminCollectesByBillet[billetId] || []).forEach(function(c) {
+                adminCollecteInscriptionCounts[c.id] = { count: 0, normaux: 0, variantes: 0 };
+            });
+            (rows || []).forEach(function(r) {
+                if (!r.collecte_id) return;
+                var cur = adminCollecteInscriptionCounts[r.collecte_id] || { count: 0, normaux: 0, variantes: 0 };
+                cur.count += 1;
+                cur.normaux += (r.nb_normaux || 0);
+                cur.variantes += (r.nb_variantes || 0);
+                adminCollecteInscriptionCounts[r.collecte_id] = cur;
+            });
+            renderCollectesList(adminCollectesByBillet[billetId] || [], billetId);
+        })
+        .catch(function(error) {
+            console.warn('Erreur compteurs inscriptions du billet:', error);
         });
 }
 
@@ -4245,8 +4452,13 @@ function renderCollectesList(collectes, billetId) {
                 + (totalBillets !== null ? totalBillets + ' / ' : 'max ') + c.nb_max + ' billet(s)'
                 + (plein ? ' — complète' : '') + '</span>';
         }
+        // Demande #48 — nombre d'inscriptions de la collecte (RPC deja charge pour #24).
+        var inscCnt = adminCollecteInscriptionCounts[c.id] || { count: 0 };
+        var inscHtml = '<span class="collecte-badge-insc" title="Inscriptions sur cette collecte">'
+            + '<i class="fa-solid fa-users"></i> ' + inscCnt.count + '</span>';
         return '<div class="collecte-item" data-collecte-id="' + c.id + '">' +
             '<span class="collecte-badge-nom collecte-scope-' + escapeAttr(c.scope || '') + '">' + escapeHtml(c.nom || '') + '</span>' +
+            inscHtml +
             // Demande #40 — le badge de statut est cliquable : il ouvre la modale
             // d'édition de la collecte (on y change le statut, dates, etc.).
             '<button type="button" class="collecte-badge-status collecte-badge-status--clickable ' + statusClass + '" data-collecte-id="' + c.id + '" title="Modifier le statut de la collecte">' + escapeHtml(statusLabel) + '</button>' +

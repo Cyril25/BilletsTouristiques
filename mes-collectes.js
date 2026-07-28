@@ -92,6 +92,18 @@ function collectesVueDetail() {
     return Object.keys(currentCollectesMap).map(function(k) { return currentCollectesMap[k]; });
 }
 
+// Demande #48 — une inscription appartient à sa COLLECTE, pas au billet. Plusieurs
+// chargements filtrent côté serveur par `billet_id` (court et indexé) : il FAUT ensuite
+// écarter les inscriptions des collectes des autres collecteurs sur le même billet,
+// sinon elles apparaissent dans mes paiements, mes enveloppes et mes relances.
+// Le filtre serveur par `collecte_id=in.(…)` n'est pas praticable : le plus gros
+// collecteur a ~1 600 collectes, soit une URL de plusieurs dizaines de ko.
+function inscriptionsDeMesCollectes(inscriptions) {
+    return (inscriptions || []).filter(function(ins) {
+        return !!(ins && ins.collecte_id && collectesMapGlobal[ins.collecte_id]);
+    });
+}
+
 // Tarif applicable à une inscription (factorise les ~7 sites de calcul, tech-spec C3).
 function getPrixFromCollecte(insc) {
     return prixDepuisCollecte(getCollectePourInsc(insc));
@@ -1306,7 +1318,8 @@ function loadEnveloppes() {
             }
             return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&or=(statut_livraison.is.null,statut_livraison.eq.non_reparti,statut_livraison.eq.pret_a_envoyer)&select=*')
                 .then(function(inscriptions) {
-                    inscriptions = inscriptions || [];
+                    // Demande #48 — ne garder que les inscriptions de MES collectes.
+                    inscriptions = inscriptionsDeMesCollectes(inscriptions);
 
                     // Demande #46 — ignorer les quantites hors du perimetre ouvert par
                     // LA COLLECTE de l'inscription (avant : versions du billet).
@@ -1954,7 +1967,9 @@ function openEnveloppeDetail(enveloppeId) {
             var membreEmail = encodeURIComponent(currentEnveloppeData.membre_email);
             return supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&membre_email=eq.' + membreEmail + '&pas_interesse=eq.false&or=(statut_livraison.is.null,statut_livraison.eq.non_reparti,statut_livraison.eq.pret_a_envoyer)&select=*')
                 .then(function(inscriptions) {
-                    inscriptions = inscriptions || [];
+                    // Demande #48 — idem : les collectes des autres collecteurs sur le
+                    // meme billet n'ont rien a faire dans mon enveloppe.
+                    inscriptions = inscriptionsDeMesCollectes(inscriptions);
                     var billetsMap = {};
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
                     // Enrichir adresse_snapshot depuis la table membres (comme dans loadEnveloppes)
@@ -2649,8 +2664,11 @@ function loadVerificationPaiement() {
     var pEnveloppesPort = supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,date_expedition.asc');
     Promise.all([pInscriptions, pEnveloppesPort])
         .then(function(results) {
-            var inscriptions = results[0] || [];
-            // Ne garder que les frais de port réellement dus (prix > 0)
+            // Demande #48 — les inscriptions d'un autre collecteur sur le meme billet
+            // apparaissaient dans ma verification des paiements (je reclamais un
+            // paiement qui ne m'etait pas du).
+            var inscriptions = inscriptionsDeMesCollectes(results[0]);
+            // Ne garder que les frais de port reellement dus (prix > 0)
             var enveloppesPort = (results[1] || []).filter(function(e) {
                 return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
             });
@@ -2965,7 +2983,8 @@ function loadPaiementsConfirmes() {
 
     Promise.all([pInsc, pPort])
         .then(function(results) {
-            var inscriptions = results[0] || [];
+            // Demande #48 — seulement MES collectes (cf. inscriptionsDeMesCollectes).
+            var inscriptions = inscriptionsDeMesCollectes(results[0]);
             var port = (results[1] || []).filter(function(e) { return parseFloat(e.prix_envoi_reel || 0) > 0; });
             if (inscriptions.length === 0 && port.length === 0) {
                 container.innerHTML = '<p class="paiements-confirmes-vide">Aucun paiement confirmé.</p>';
@@ -3143,7 +3162,10 @@ function ouvrirRelance(billetId) {
 
     supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&statut_paiement=neq.confirme&pas_interesse=eq.false&membre_email=neq.' + encodeURIComponent(monCollecteur.email_membre) + '&select=*')
         .then(function(impayes) {
-            if (!impayes || impayes.length === 0) {
+            // Demande #48 — relancer uniquement les inscrits de MES collectes de ce
+            // billet (un autre collecteur peut en avoir une dessus).
+            impayes = inscriptionsDeMesCollectes(impayes);
+            if (impayes.length === 0) {
                 showToast('Aucun impayé à relancer');
                 return;
             }

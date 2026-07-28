@@ -10511,3 +10511,86 @@ button.collecte-badge-status {
     padding: 0 16px;
 }
 /* Le bouton croix du header ferme = retour à la liste (piloté par JS) */
+
+
+/* ============================================================
+   Demande #48 — Inscriptions groupées PAR COLLECTE
+   ============================================================ */
+
+/* Modale : un bloc par collecte */
+.admin-insc-total-billet {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-text-light, #666);
+    margin-bottom: var(--spacing-md);
+}
+.admin-insc-collecte-bloc {
+    border: 1px solid var(--color-border-lighter, #eee);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    background: var(--color-background, #fff);
+}
+.admin-insc-collecte-bloc--focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.04);
+}
+.admin-insc-collecte-bloc--orphelin {
+    border-color: var(--color-danger, #c62828);
+}
+.admin-insc-collecte-tete {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: var(--spacing-sm);
+}
+.admin-insc-collecte-statut {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.admin-insc-add-btn {
+    margin-left: auto;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+}
+.admin-insc-vide {
+    text-align: center;
+    padding: 12px;
+    color: var(--color-text-light, #666);
+    font-size: 0.9rem;
+}
+.admin-insc-collecte-bloc .admin-insc-summary {
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Compteur d'inscriptions par collecte : liste des collectes (page billet) */
+.collecte-badge-insc {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+    background: var(--color-surface, #f5f5f5);
+    color: var(--color-text-secondary, #555);
+    white-space: nowrap;
+}
+
+/* … et sur la carte admin en multi-collecte */
+.admin-card-collecte-insc {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border, #e2e2e2);
+    background: var(--color-surface, #f5f5f5);
+    color: var(--color-text-secondary, #555);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.admin-card-collecte-insc:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
