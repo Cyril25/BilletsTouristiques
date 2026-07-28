@@ -109,4 +109,4 @@ dérivé, `hasInscriptions` (gel des champs d'un billet), contrôle d'anti-doubl
 - `mes-collectes.js` : `billetOuvertPourMoi` / `statutBilletPourMoi` (compteur, tri,
   cartes, en-tête du détail).
 - `sw.js` v280 / `global.js` menu v188.
-- **Commit** : `<à compléter>`
+- **Commit** : `5b21f3b`

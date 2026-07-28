@@ -72,4 +72,4 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#46](demande-46-message-prix-collecte-catalogue.md) | Bug : message prix / version / FDP absent sur les collectes « variante » + quantites/montants (mes-inscriptions, mes-collectes) | S → M | À tester | ✅ | `22257a0`, `b08331c` |
 | [#47](demande-47-lisibilite-tag-precollecte-accordeon.md) | Bug : tag « Pré collecte » illisible dans l'accordéon « autres collectes » (+ couleur unifiée sur les 3 surfaces) | S | À tester | ✅ | `2377ee1`, `c060ce3` |
 | [#48](demande-48-inscriptions-par-collecte.md) | Inscriptions par collecte côté admin + fin du rattachement au billet dans les vues collecteur | M | À tester | ✅ | `91055d1` |
-| [#49](demande-49-audit-billet-vs-collecte.md) | Audit « billet vs collecte » : blacklist destructive, bénéficiaire, gardes de paiement, ouvert/fermé, formulaire rapide | M | À tester | ✅ | — |
+| [#49](demande-49-audit-billet-vs-collecte.md) | Audit « billet vs collecte » : blacklist destructive, bénéficiaire, gardes de paiement, ouvert/fermé, formulaire rapide | M | À tester | ✅ | `5b21f3b` |
