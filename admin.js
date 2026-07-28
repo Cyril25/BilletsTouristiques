@@ -2443,6 +2443,10 @@ function recalculerAutoInscriptions(billet) {
     // Demande #16 — le recalcul cible la collecte principale du billet et masque
     // par SON scope (source de vérité du périmètre ouvert), pas par les versions
     // déclarées du billet. Sans collecte, rien à recalculer.
+    // Demande #48 (audit) — ici on GARDE l'intersection scope ∩ versions du billet :
+    // c'est une écriture AUTOMATIQUE de quantités, et créer des variantes sur un
+    // billet qui n'en déclare pas serait pire que de n'en créer aucune. L'affichage
+    // et les formulaires, eux, suivent le seul scope (versionsOuvertesCollecte).
     var collecte = collectePrincipaleBilletAdmin(billet.id);
     if (!collecte) return;
     var scope = collecte.scope || 'normal';
@@ -3024,11 +3028,15 @@ function showCollecteQuickForm(docId, billetData, cible, collecte, opts) {
     var existingCollecteur = (collecte && collecte.collecteur) || '';
     var existingPrix = (collecte && collecte.prix) || '';
     var existingPrixVariante = (collecte && collecte.prix_variante) || '';
+    // Demande #48 (audit billet/collecte) — le SCOPE decide seul des prix a saisir
+    // (meme regle que la modale de collecte). Avant, la variante exigeait en plus que
+    // le billet en declare une : sur un billet HasVariante='N' portant une collecte
+    // « variante », le formulaire n'ouvrait aucun champ de prix — impasse.
     var scope = collecte ? collecte.scope : scopeDepuisBillet(billetData);
-    // Le périmètre de la collecte décide des prix à saisir
-    var versionNormaleExiste = (scope !== 'variante');
-    var varianteVal = billetData.HasVariante || '';
-    var varianteActive = (scope !== 'normal') && varianteVal && varianteVal !== 'N';
+    var versionsQuick = versionsOuvertesCollecte(billetData, { scope: scope });
+    var versionNormaleExiste = versionsQuick.normale;
+    var varianteVal = versionsQuick.libelleVariante || 'variante';
+    var varianteActive = versionsQuick.variante;
 
     // Construire les options du select collecteur
     var collecteurOptions = '<option value="">— Collecteur —</option>';
@@ -3213,14 +3221,21 @@ function confirmQuickCollecte(key) {
 
 // Supprime les inscriptions de membres blacklistés quand un collecteur est assigné
 function nettoyerInscriptionsBlacklist(collecteurAlias, billetId) {
-    // Charger la blacklist du collecteur
-    supabaseFetch('/rest/v1/collecteur_blacklist?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&select=membre_email')
-        .then(function(blacklist) {
-            if (!blacklist || blacklist.length === 0) return;
-            var emails = blacklist.map(function(e) { return e.membre_email; });
-            // Supprimer les inscriptions blacklistées sur ce billet
-            var emailsFilter = 'membre_email=in.(' + emails.map(function(e) { return '"' + e + '"'; }).join(',') + ')';
-            return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&' + emailsFilter, {
+    // Demande #48 (suite de l'audit billet/collecte) — une blacklist appartient à UN
+    // collecteur : on ne supprime que sur SES collectes de ce billet. Avant, le DELETE
+    // portait sur `billet_id` et effaçait aussi les inscriptions d'un autre collecteur
+    // ayant une collecte sur le même billet (destructif et silencieux).
+    Promise.all([
+        supabaseFetch('/rest/v1/collecteur_blacklist?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&select=membre_email'),
+        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&collecteur=eq.' + encodeURIComponent(collecteurAlias) + '&select=id')
+    ])
+        .then(function(res) {
+            var blacklist = res[0] || [];
+            var collectes = res[1] || [];
+            if (blacklist.length === 0 || collectes.length === 0) return;
+            var emailsFilter = 'membre_email=in.(' + blacklist.map(function(e) { return '"' + e.membre_email + '"'; }).join(',') + ')';
+            var idsFilter = 'collecte_id=in.(' + collectes.map(function(c) { return c.id; }).join(',') + ')';
+            return supabaseFetch('/rest/v1/inscriptions?' + idsFilter + '&' + emailsFilter, {
                 method: 'DELETE'
             });
         })

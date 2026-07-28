@@ -994,12 +994,18 @@ function loadMaCollectionPasInteresse(email) {
         });
 }
 
-function estBeneficiaireCatalogue(item) {
+// Demande #48 (audit billet/collecte) — le benefice se juge sur LA collecte
+// concernee : sur un billet porte par deux collecteurs, le collecteur de la
+// collecte B n'est pas beneficiaire de la collecte A.
+function estBeneficiaireCollecte(collecte) {
     var email = window.getActiveEmail && window.getActiveEmail();
-    var colr = collecteurPrincipalCatalogue(item);
+    var colr = (collecte && collecte.collecteur) || '';
     if (!email || !colr) return false;
     var col = collecteursMap[colr];
     return !!(col && col.email_membre && col.email_membre === email);
+}
+function estBeneficiaireCatalogue(item) {
+    return estBeneficiaireCollecte(item && collectePrincipaleByBillet[item.id]);
 }
 
 // --- Chargement des collecteurs pour liens contact ---
@@ -1169,7 +1175,7 @@ function declarerPaiementCatalogue(inscriptionId) {
     var nbVariantes = insc ? (insc.nb_variantes || 0) : 0;
     var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
     var fdpMontant = 0;
-    if (tarifD.payerFdp === 'oui' && billet && billet.Categorie !== 'Pré collecte' && membrePaysCatalogue && insc) {
+    if (tarifD.payerFdp === 'oui' && colD && colD.categorie !== 'Pré collecte' && membrePaysCatalogue && insc) {
         var destCat = destinationPays(membrePaysCatalogue);
         var typeEnvoi = (insc.mode_envoi || 'Normal').toLowerCase();
         fdpMontant = findFdpPriceCatalogue(nbNormaux + nbVariantes, destCat, typeEnvoi);
@@ -1242,8 +1248,11 @@ function buildInscriptionHtml(item) {
     // Demande #16 — la carte principale porte sur la « Collecte initiale » du billet
     var colPrinc = collectePrincipaleByBillet[item.id];
     var inscription = getInscription(item.id, null);
-    var collecteOuverte = (item.Categorie === 'Pré collecte' || item.Categorie === 'Collecte') &&
-        (colPrinc && colPrinc.categorie !== 'Terminé');
+    // Demande #48 (audit) — c'est le statut de LA collecte qui dit si elle est
+    // ouverte : le statut du billet est derive de toutes ses collectes (un billet
+    // affiche « Collecte » alors que la collecte montree est « Terminé »).
+    var statutColPrinc = (colPrinc && colPrinc.categorie) || '';
+    var collecteOuverte = (statutColPrinc === 'Pré collecte' || statutColPrinc === 'Collecte');
 
     var html = '';
     if (inscription) {
@@ -1258,7 +1267,7 @@ function buildInscriptionHtml(item) {
 
         // Calcul FDP si applicable
         var fdpMontant = 0;
-        if (tarifI.payerFdp === 'oui' && item.Categorie !== 'Pré collecte' && membrePaysCatalogue) {
+        if (tarifI.payerFdp === 'oui' && statutColPrinc !== 'Pré collecte' && membrePaysCatalogue) {
             var nbTotal = nbNormaux + nbVariantes;
             var destCat = destinationPays(membrePaysCatalogue);
             var typeEnvoi = (inscription.mode_envoi || 'Normal').toLowerCase();
@@ -1268,7 +1277,7 @@ function buildInscriptionHtml(item) {
 
         var badgeStatut = isBeneficiaire
             ? '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>'
-            : badgePaiementCatalogue(inscription.statut_paiement, montantAvecFdp, inscription.id, item.Categorie);
+            : badgePaiementCatalogue(inscription.statut_paiement, montantAvecFdp, inscription.id, statutColPrinc);
         html = '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit</span>'
             + badgeStatut
@@ -1276,8 +1285,8 @@ function buildInscriptionHtml(item) {
 
         // Lien PayPal si non payé et mode_paiement = PayPal (jamais pour le bénéficiaire)
         var statut = inscription.statut_paiement || 'non_paye';
-        var collecteurInfo = collecteursMap[collecteurPrincipalCatalogue(item)] || {};
-        if (!isBeneficiaire && statut === 'non_paye' && inscription.mode_paiement === 'PayPal' && item.Categorie !== 'Pré collecte') {
+        var collecteurInfo = collecteursMap[(colPrinc && colPrinc.collecteur) || ''] || {};
+        if (!isBeneficiaire && statut === 'non_paye' && inscription.mode_paiement === 'PayPal' && statutColPrinc !== 'Pré collecte') {
             var refPart = (item.Reference || '') + ' ' + (item.Millesime || '') + (item.Version ? '-' + item.Version : '');
             var noteparts = [refPart.trim(), item.NomBillet || ''];
             var detailParts = [];
@@ -1318,7 +1327,7 @@ function buildInscriptionHtml(item) {
         var isInscriptionSite = !item.LinkSheet && !item.Sondage;
         if (isInscriptionSite) {
             // Bloqué par un admin (toutes collectes) ou blacklisté par le collecteur de ce billet
-            var isBlackliste = blacklistCollecteurs[collecteurPrincipalCatalogue(item)];
+            var isBlackliste = blacklistCollecteurs[(colPrinc && colPrinc.collecteur) || ''];
             if (membreBloqueInscription) {
                 html = buildBlocageInscriptionHtml(true);
             } else if (isBlackliste) {
@@ -1382,7 +1391,9 @@ function ouvrirInscription(billetId) {
             ? '<div class="mini-form-field"><label>Nb variantes</label><input type="number" id="insc-nb-variantes-' + billetId + '" value="' + (!showNormaux ? '1' : '0') + '" min="' + (!showNormaux ? '1' : '0') + '"></div>'
             : '';
         // Demande #9 — en pré-collecte, pré-remplir le commentaire avec la préférence "terminaisons" du profil
-        var estPreCollecte = billet.Categorie === 'Pré collecte';
+        // Demande #48 (audit) — « en pré-collecte » se lit sur la collecte visée.
+        var colInsc = collectePrincipaleByBillet[billetId];
+        var estPreCollecte = !!(colInsc && colInsc.categorie === 'Pré collecte');
         var commentaireLabel = estPreCollecte ? 'Commentaire (terminaisons souhaitées)' : 'Commentaire';
         var commentaireDefaut = estPreCollecte ? (membreTerminaisonsCatalogue || '') : '';
         var formHtml = '<div class="mini-inscription-form" id="inscription-form-' + billetId + '">'
@@ -1711,10 +1722,12 @@ function buildCollectesSupplementairesHtml(item) {
 function buildInscriptionHtmlForCollecte(item, collecte) {
     var inscription = getInscription(item.id, collecte.id);
     if (inscription) {
-        var isBeneficiaire = estBeneficiaireCatalogue(item);
+        // Demande #48 (audit) — bénéficiaire et statut de paiement se jugent sur CETTE
+        // collecte (avant : le collecteur principal et le statut dérivé du billet).
+        var isBeneficiaire = estBeneficiaireCollecte(collecte);
         var badgeStatut = isBeneficiaire
             ? '<span class="badge-paiement badge-beneficiaire">Bénéficiaire</span>'
-            : badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, item.Categorie);
+            : badgePaiementCatalogue(inscription.statut_paiement, 0, inscription.id, collecte.categorie || '');
         return '<div class="inscription-badges">'
             + '<span class="badge-inscrit">Inscrit à cette collecte</span>'
             + badgeStatut
@@ -1729,7 +1742,8 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
             + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-lock"></i> Collecte complète</button>'
             + '</div>';
     }
-    var isBlackliste = blacklistCollecteurs[collecteurPrincipalCatalogue(item)];
+    // Demande #48 (audit) — la blacklist est celle du collecteur DE CETTE collecte.
+    var isBlackliste = blacklistCollecteurs[collecte.collecteur || ''];
     if (isBlackliste) {
         return '<div class="inscription-badges">'
             + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-ban"></i> Inscription impossible</button>'

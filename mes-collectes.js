@@ -98,6 +98,31 @@ function collectesVueDetail() {
 // sinon elles apparaissent dans mes paiements, mes enveloppes et mes relances.
 // Le filtre serveur par `collecte_id=in.(…)` n'est pas praticable : le plus gros
 // collecteur a ~1 600 collectes, soit une URL de plusieurs dizaines de ko.
+// Demande #48 (audit billet/collecte) — un billet est « en cours » POUR MOI si l'une
+// de MES collectes dessus est ouverte. Le statut du billet, lui, est derive de TOUTES
+// ses collectes : sur les billets multi-collecteurs de la copie de test, il affiche
+// « Collecte » alors que ma collecte a moi est deja « Terminé ».
+function mesCollectesOuvertes(billetId) {
+    return (collectesParBillet[billetId] || []).filter(function(c) {
+        return c.categorie === 'Collecte' || c.categorie === 'Pré collecte';
+    });
+}
+function billetOuvertPourMoi(billet) {
+    if (!billet) return false;
+    var mesCols = collectesParBillet[billet.id] || [];
+    // Repli sur le statut du billet tant que mes collectes ne sont pas chargees.
+    if (mesCols.length === 0) return billet.Categorie === 'Collecte' || billet.Categorie === 'Pré collecte';
+    return mesCollectesOuvertes(billet.id).length > 0;
+}
+function statutBilletPourMoi(billet) {
+    var mesCols = collectesParBillet[billet.id] || [];
+    if (mesCols.length === 0) return billet.Categorie || 'Terminé';
+    // Statut affiche = celui de ma collecte ouverte, sinon de la plus recente fermee.
+    var ouvertes = mesCollectesOuvertes(billet.id);
+    if (ouvertes.length > 0) return ouvertes[0].categorie;
+    return mesCols[mesCols.length - 1].categorie || 'Terminé';
+}
+
 function inscriptionsDeMesCollectes(inscriptions) {
     return (inscriptions || []).filter(function(ins) {
         return !!(ins && ins.collecte_id && collectesMapGlobal[ins.collecte_id]);
@@ -310,7 +335,7 @@ function renderCollectesList() {
     var onboardingHtml = getOnboardingHtml();
 
     // #12 — Compteurs sur l'onglet "Mes collectes"
-    var enCours = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
+    var enCours = mesBillets.filter(billetOuvertPourMoi);   // #48 : MES collectes
     var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
     if (tabs[0]) tabs[0].innerHTML = 'Mes collectes <span class="tab-badge">' + mesBillets.length + '</span>';
 
@@ -322,12 +347,12 @@ function renderCollectesList() {
     var today = new Date().toISOString().slice(0, 10);
 
     // Séparer billets principaux ouverts / fermés
-    var billetsOpenAll   = mesBillets.filter(function(b) { return b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte'; });
-    var billetsClosedAll = mesBillets.filter(function(b) { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; });
+    var billetsOpenAll   = mesBillets.filter(billetOuvertPourMoi);            // #48
+    var billetsClosedAll = mesBillets.filter(function(b) { return !billetOuvertPourMoi(b); });
     // Demande #14 — sortir les collectes réparties de la liste, quelle que soit la catégorie :
     // en pratique la répartition se fait surtout après le passage en « Terminé ».
     // Deux paliers demandés : tout en enveloppe, puis tout expédié.
-    function estFermee(b)   { return b.Categorie !== 'Collecte' && b.Categorie !== 'Pré collecte'; }
+    function estFermee(b)   { return !billetOuvertPourMoi(b); }   // #48
     function estRepartie(b) { var s = mesInscriptionsParBillet[b.id]; return !!(s && s.tousRepartis); }
     // Une collecte fermée sans aucun inscrit (hors bénéficiaire) n'a plus rien à envoyer :
     // c'est le cas des anciennes collectes de l'ex-système → palier « billets envoyés ».
@@ -358,9 +383,10 @@ function renderCollectesList() {
     suppClosed.sort(suppDateDesc);
 
     function renderBilletCard(b) {
-        var isOpen = b.Categorie === 'Collecte' || b.Categorie === 'Pré collecte';
+        // Demande #48 (audit) — l'etat affiche est celui de MES collectes du billet.
+        var isOpen = billetOuvertPourMoi(b);
         var statusClass = isOpen ? 'collecte-status-open' : 'collecte-status-closed';
-        var statusLabel = isOpen ? 'En cours' : (b.Categorie || 'Terminé');
+        var statusLabel = isOpen ? 'En cours' : (statutBilletPourMoi(b) || 'Terminé');
         var refParts = [];
         if (b.Reference) refParts.push(b.Reference);
         var milVersion = '';
@@ -554,7 +580,9 @@ function renderCollecteDetail(billetId, inscriptions) {
     container.style.display = '';
 
     var billet = currentBillet;
-    var isOpen = billet && (billet.Categorie === 'Collecte' || billet.Categorie === 'Pré collecte');
+    // Demande #48 (audit) — ouvert = l'une de MES collectes de ce billet est ouverte
+    // (le bouton « Clôturer » ne porte de toute facon que sur les miennes).
+    var isOpen = billetOuvertPourMoi(billet);
     // Demande #16 — prix/FDP « niveau billet » = collecte principale de la vue.
     // Le montant de chaque ligne utilise getPrixFromCollecte(insc) (sa propre collecte).
     var tarifPrincipal = prixDepuisCollecte(currentCollectePrincipale);
