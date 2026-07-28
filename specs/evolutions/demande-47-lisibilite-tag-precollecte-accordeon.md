@@ -47,7 +47,7 @@ pour l'**olive `#6b6b00`**, la plus lisible sur le jaune.
 - `billet.js` : `texteSurStatut` délègue au helper (plus de valeur locale) — les 3
   surfaces (carte, zone collecte, accordéons catalogue **et** fiche) sont alignées.
 - `sw.js` v278 / `global.js` menu v186.
-- **Commit** : `<à compléter>`
+- **Commit** : `c060ce3`
 
 Hors périmètre : les pastilles d'`admin.html` gardent leur propre règle
 (`getTextColorForBg`, noir/blanc selon la luminance → noir sur le jaune), cohérente et
