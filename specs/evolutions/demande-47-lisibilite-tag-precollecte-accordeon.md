@@ -37,9 +37,18 @@ centralisation que #44), utilisée par les trois pastilles du catalogue. La règ
 - `sw.js` v277 / `global.js` menu v185.
 - **Commit** : `2377ee1`
 
-## Note (non traité)
+## Suite — unification des 3 surfaces (décision Cyril)
 
-`billet.js` (fiche du billet) utilise une troisième valeur pour ce même cas :
-`#6b6b00` (olive foncé) au lieu du gris. C'est **plus** lisible sur le jaune, mais
-différent des deux autres surfaces. Laissé tel quel : à trancher visuellement par Cyril
-plutôt qu'à uniformiser à l'aveugle.
+Trois valeurs coexistaient pour ce même cas : `#fff` (accordéon du catalogue, le bug),
+`#9e9e9e` (pastilles de la carte) et `#6b6b00` (fiche `billet.html`). Cyril a tranché
+pour l'**olive `#6b6b00`**, la plus lisible sur le jaune.
+
+- `global.js` : `couleurTexteStatut` renvoie désormais `#6b6b00` pour « Pré collecte ».
+- `billet.js` : `texteSurStatut` délègue au helper (plus de valeur locale) — les 3
+  surfaces (carte, zone collecte, accordéons catalogue **et** fiche) sont alignées.
+- `sw.js` v278 / `global.js` menu v186.
+- **Commit** : `<à compléter>`
+
+Hors périmètre : les pastilles d'`admin.html` gardent leur propre règle
+(`getTextColorForBg`, noir/blanc selon la luminance → noir sur le jaune), cohérente et
+déjà lisible.

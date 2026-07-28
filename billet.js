@@ -161,8 +161,10 @@
     function couleurStatut(cat) {
         return (typeof getCategorieColor === 'function') ? getCategorieColor(cat) : '#F57C00';
     }
+    // Demande #47 — couleur de texte des pastilles : source unique dans global.js
+    // (l'olive de la fiche est devenue la valeur commune aux 3 surfaces).
     function texteSurStatut(cat) {
-        return (cat === 'Pré collecte' ? '#6b6b00' : '#fff');
+        return couleurTexteStatut(cat);
     }
     function fmtDate(d) {
         return (window.formatDateFr ? window.formatDateFr(d) : (d || '—')) || '—';
