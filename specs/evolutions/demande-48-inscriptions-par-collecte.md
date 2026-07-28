@@ -1,7 +1,7 @@
 # Demande #48 — Inscriptions par collecte (admin) + fin du rattachement au billet
 
 - **Table `demandes`** : #48 (priorité haute, complexité M).
-- **Statut** : En cours
+- **Statut** : À tester
 
 ## Contexte
 
@@ -140,4 +140,4 @@ bonnes colonnes ; le garde-fou refuse 1 normal sur une collecte « variante » e
 inversement ; Laura voit 11 inscriptions au lieu de 37, Antoine 26 au lieu de 37.
 
 - `sw.js` v279 / `global.js` menu v187.
-- **Commit** : `<à compléter>`
+- **Commit** : `91055d1`
