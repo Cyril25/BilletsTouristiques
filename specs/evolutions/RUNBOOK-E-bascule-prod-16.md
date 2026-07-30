@@ -94,8 +94,16 @@ ton seul plan B. Un dump jamais restauré n'est pas une sauvegarde, c'est une in
    C'est le point de l'exercice : on n'éprouve pas une procédure voisine, on éprouve
    **exactement** le code qui tournera en cas de rollback. Le script affiche sa durée en
    fin d'exécution — **la noter**, c'est ton temps de rollback le jour J.
-3. Y rejouer les scripts 1 puis 2, dérouler la checklist §6.
-4. Noter les chiffres du jour (billets / inscriptions / collectes) : ils serviront de
+3. **Rejouer `scripts/_marqueur-testenv.sql` sur le jetable.** Le restore a fait
+   `DROP SCHEMA public CASCADE` : le marqueur `public._bt_env` est parti avec. Sans lui,
+   le garde-fou TEST-ONLY en tête du script 2 refusera de tourner — et le message
+   ressemblera à s'y méprendre à un échec de la migration.
+4. Y rejouer les scripts 1 puis 2, dérouler la checklist §6.
+
+   Entre le restore et le script 1, le TestEnv est momentanément cassé : il sert le front
+   #16 par-dessus une base revenue à l'état d'avant. C'est normal, ça se résorbe au
+   script 1.
+5. Noter les chiffres du jour (billets / inscriptions / collectes) : ils serviront de
    référence pour les contrôles de §4.
 
 ---
