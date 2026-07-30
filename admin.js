@@ -27,6 +27,28 @@ function showToast(message, type) {
     }
 }
 
+// Demande #16 (#35) — un toast est un nœud du DOM : il ne survit pas à un
+// changement de page. Quand une action se termine par une navigation, on dépose
+// le message ici et la page d'arrivée le rejoue.
+function stashToast(message, type) {
+    try {
+        sessionStorage.setItem('bt_admin_toast', JSON.stringify({ message: message, type: type || 'success' }));
+    } catch (e) {}
+}
+
+function flushStashedToast() {
+    var raw = null;
+    try {
+        raw = sessionStorage.getItem('bt_admin_toast');
+        sessionStorage.removeItem('bt_admin_toast');
+    } catch (e) {}
+    if (!raw) return;
+    try {
+        var t = JSON.parse(raw);
+        if (t && t.message) showToast(t.message, t.type || 'success');
+    } catch (e) {}
+}
+
 // ============================================================
 // 2. CONSTANTES & CONFIGURATION
 // ============================================================
@@ -456,6 +478,7 @@ if (typeof firebase !== 'undefined') {
             initImageUpload();
             initBilletPage();
         } else {
+            flushStashedToast();   // message déposé par la page dédiée avant sa navigation
             showAdminOnboarding();
             loadAdminBillets();
             loadAdminInscriptionCounts();
@@ -1778,21 +1801,35 @@ function creerPreCollecteAuto(billet) {
     })
     .then(function(data) {
         var col = Array.isArray(data) ? data[0] : data;
-        showToast('Billet créé avec sa pré-collecte', 'success');
-        if (col && col.id) creerAutoInscriptions(billet, col);
-        // Demande #16 (#35) — sur la page dédiée, on reste sur le billet fraîchement
-        // créé (en édition) pour configurer sa collecte ; sinon (drawer) on ferme.
-        if (IS_BILLET_PAGE) {
-            window.location.href = 'admin-billet.html?id=' + billet.id;
-            return;
-        }
-        closeBilletPanel();
-        loadAdminBillets();
-        loadAdminCollectes();
+        // Demande #16 — la navigation doit ATTENDRE la fin des pré-inscriptions.
+        // window.location.href décharge la page et tue les requêtes en vol : depuis
+        // la page dédiée (#35), le POST des inscriptions n'était jamais émis et les
+        // billets créés restaient sans aucun inscrit, silencieusement.
+        var autoDone = (col && col.id) ? creerAutoInscriptions(billet, col) : Promise.resolve(0);
+        return autoDone.then(function(nbCrees) {
+            var msg = 'Billet créé avec sa pré-collecte';
+            if (nbCrees > 0) msg += ' — ' + nbCrees + ' membre(s) pré-inscrit(s)';
+            // Création terminée : retour à la gestion des billets.
+            if (IS_BILLET_PAGE) {
+                stashToast(msg, 'success');
+                window.location.href = 'admin.html';
+                return;
+            }
+            showToast(msg, 'success');
+            closeBilletPanel();
+            loadAdminBillets();
+            loadAdminCollectes();
+        });
     })
     .catch(function(error) {
         console.error('Erreur création pré-collecte auto:', error);
-        showToast('Billet créé, mais échec de la pré-collecte : ' + error.message, 'error');
+        var msgErr = 'Billet créé, mais échec de la pré-collecte : ' + error.message;
+        if (IS_BILLET_PAGE) {
+            stashToast(msgErr, 'error');
+            window.location.href = 'admin.html';
+            return;
+        }
+        showToast(msgErr, 'error');
         loadAdminBillets();
         closeBilletPanel();
     });
@@ -2118,7 +2155,9 @@ function creerAutoInscriptions(billet, collecte) {
 
     // Charger les paramétrages pour cette année + les membres bloqués
     // + (N1) les membres déjà inscrits sur une autre collecte recouvrante du billet
-    Promise.all([
+    // Retourne une promesse résolue avec le nombre d'inscriptions créées : tout
+    // appelant qui navigue ensuite DOIT l'attendre.
+    return Promise.all([
         supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
         chargerEmailsBloques(),
         chargerDejaInscrits(billet.id, collecte)
@@ -2127,7 +2166,7 @@ function creerAutoInscriptions(billet, collecte) {
             var autoData = res[0];
             var emailsBloques = res[1] || {};
             var dejaInscrits = res[2] || {};
-            if (!autoData || autoData.length === 0) return;
+            if (!autoData || autoData.length === 0) return 0;
 
             // Filtrer selon type de billet, en excluant les membres bloqués et
             // (N1) ceux déjà inscrits sur une collecte au périmètre recouvrant.
@@ -2141,24 +2180,26 @@ function creerAutoInscriptions(billet, collecte) {
                 qualifies = autoData.filter(function(a) { return a.etranger && eligible(a); });
             }
 
-            if (qualifies.length === 0) return;
+            if (qualifies.length === 0) return 0;
 
             if (isFrance) {
                 // Billet FR : on a toutes les infos, créer les inscriptions
-                creerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
+                return creerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
             } else {
                 // Billet étranger : charger les sélections pays pour vérifier la sélection fine
-                supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
+                return supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
                     .then(function(paysData) {
-                        creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
+                        return creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
                     })
                     .catch(function(err) {
                         console.warn('Erreur chargement pays auto-inscriptions:', err);
+                        return 0;
                     });
             }
         })
         .catch(function(err) {
             console.warn('Erreur auto-inscriptions:', err);
+            return 0;
         });
 }
 
@@ -2286,20 +2327,22 @@ function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFra
         });
     }
 
-    if (inscriptions.length === 0) return;
+    if (inscriptions.length === 0) return Promise.resolve(0);
 
     // POST batch (Supabase accepte un array)
     // Demande #16 — cible de conflit alignée sur la nouvelle UK (corrige FR31)
-    supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
+    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
         method: 'POST',
         body: JSON.stringify(inscriptions),
         headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
     })
     .then(function() {
         showToast(inscriptions.length + ' membre(s) pré-inscrit(s) automatiquement', 'info');
+        return inscriptions.length;
     })
     .catch(function(err) {
         console.warn('Erreur batch auto-inscriptions:', err);
+        return 0;
     });
 }
 
@@ -2319,12 +2362,18 @@ function updateBillet(docId, billetData, forcedTypeChange) {
         body: JSON.stringify(billetData)
     })
         .then(function() {
-            showToast('Billet modifie avec succes', 'success');
             updateCardInList(docId, billetData);
-            if (forcedTypeChange) {
-                reconcilierTypeChangement(docId, billetData, forcedTypeChange);
-            }
-            closeBilletPanel();
+            // Demande #16 — la réconciliation SUPPRIME et MODIFIE des inscriptions.
+            // Fermer sans l'attendre équivaut, sur la page dédiée, à naviguer : les
+            // requêtes en vol étaient annulées et le travail restait à moitié fait.
+            var recon = forcedTypeChange
+                ? reconcilierTypeChangement(docId, billetData, forcedTypeChange)
+                : Promise.resolve();
+            return recon.then(function() {
+                if (IS_BILLET_PAGE) stashToast('Billet modifie avec succes', 'success');
+                else showToast('Billet modifie avec succes', 'success');
+                closeBilletPanel();
+            });
         })
         .catch(function(error) {
             showToast('Erreur lors de la modification : ' + error.message, 'error');
@@ -2414,15 +2463,15 @@ function reconcilierTypeChangement(billetId, billet, typeChange) {
         );
     }
 
-    Promise.all(promesses)
+    return Promise.all(promesses)
         .then(function() {
             if (typeChange.ajouteNormale || typeChange.ajouteVariante) {
                 // Recalculer les pré-inscriptions avec le nouveau type (merge sur l'existant)
                 billet.id = billet.id || billetId;
-                recalculerAutoInscriptions(billet);
+                return recalculerAutoInscriptions(billet);
             } else if (typeChange.supprimeNormale || typeChange.supprimeVariante) {
                 showToast('Inscriptions mises à jour après changement de type', 'info');
-                loadAdminInscriptionCounts().then(function() {
+                return loadAdminInscriptionCounts().then(function() {
                     if (String(adminCurrentBilletId) === String(billetId)) openInscriptionsModal(adminCurrentBilletId);
                 });
             }
@@ -2454,28 +2503,28 @@ function recalculerAutoInscriptions(billet) {
         && billet.VersionNormaleExiste !== false && billet.VersionNormaleExiste !== 'false';
     var hasVariante = (scope !== 'normal') && !!(billet.HasVariante && billet.HasVariante !== 'N');
 
-    Promise.all([
+    return Promise.all([
         supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + annee + '&select=*'),
         chargerEmailsBloques()
     ])
         .then(function(res) {
             var autoData = res[0];
             var emailsBloques = res[1] || {};
-            if (!autoData || autoData.length === 0) return;
+            if (!autoData || autoData.length === 0) return 0;
             var qualifies = autoData.filter(function(a) { return (isFrance ? a.france : a.etranger) && !emailsBloques[a.membre_email]; });
-            if (qualifies.length === 0) return;
+            if (qualifies.length === 0) return 0;
 
             if (isFrance) {
-                recalculerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
+                return recalculerAutoInscriptionsBatch(billet, collecte, qualifies, [], isFrance, hasNormale, hasVariante);
             } else {
-                supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
+                return supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + annee + '&select=*')
                     .then(function(paysData) {
-                        recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
+                        return recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData || [], isFrance, hasNormale, hasVariante);
                     })
-                    .catch(function(err) { console.warn('Erreur paysData recalcul:', err); });
+                    .catch(function(err) { console.warn('Erreur paysData recalcul:', err); return 0; });
             }
         })
-        .catch(function(err) { console.warn('Erreur recalculerAutoInscriptions:', err); });
+        .catch(function(err) { console.warn('Erreur recalculerAutoInscriptions:', err); return 0; });
 }
 
 // Collecte principale d'un billet côté admin (depuis adminCollectesByBillet,
@@ -2526,11 +2575,11 @@ function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, 
         });
     }
 
-    if (updates.length === 0) return;
+    if (updates.length === 0) return Promise.resolve(0);
 
     // Demande #16 — merge sur la nouvelle UK (collecte_id, membre_email) : corrige
     // nativement FR31 (merge-duplicates ne réinitialise plus les lignes existantes).
-    supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
+    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
         method: 'POST',
         body: JSON.stringify(updates),
         headers: { 'Prefer': 'return=minimal, resolution=merge-duplicates' }
@@ -2538,13 +2587,15 @@ function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, 
     .then(function() {
         adminRecalculEnCoursBilletId = null;
         showToast('Quantités recalculées d\'après les pré-inscriptions', 'info');
-        loadAdminInscriptionCounts().then(function() {
+        return loadAdminInscriptionCounts().then(function() {
             if (String(adminCurrentBilletId) === String(billet.id)) openInscriptionsModal(adminCurrentBilletId);
+            return updates.length;
         });
     })
     .catch(function(err) {
         adminRecalculEnCoursBilletId = null;
         console.warn('Erreur recalculerAutoInscriptionsBatch:', err);
+        return 0;
     });
 }
 
