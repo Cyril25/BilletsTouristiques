@@ -60,9 +60,21 @@ enveloppe) est perdu. C'est pourquoi la fenêtre doit être courte et annoncée.
 ### 1.3 Le point faible actuel : une seule copie des scripts
 
 `scripts/` est gitignoré (à cause de `service-account.json`). Les migrations #16, le
-rollback du script 2, `backup-supabase.ps1` et `restore-supabase.ps1` n'existent donc
-**qu'ici**. Avant le jour J : copier `scripts/*.sql` et `*.ps1` ailleurs (clé USB, Drive,
-peu importe — ils ne contiennent pas de données personnelles, contrairement au dump).
+rollback du script 2, `backup-supabase.ps1`, `restore-supabase.ps1` et
+`restore-prod-supabase.ps1` n'existent donc **qu'ici**. Avant le jour J : copier
+`scripts/*.sql` et `*.ps1` ailleurs (clé USB, Drive, peu importe — ils ne contiennent pas
+de données personnelles, contrairement au dump).
+
+### 1.4 Les trois scripts de dump/restore, et lequel sert à quoi
+
+| Script | Cible | Rôle |
+|---|---|---|
+| `backup-supabase.ps1` | prod (lecture) | produit le dump : `roles.sql` + `schema.sql` + `data.sql` horodatés dans `Documents\Perso\Backups\BilletsTouristiques\<horodatage>` |
+| `restore-supabase.ps1` | **jamais la prod** | restaure vers un projet de test ; refuse catégoriquement la référence de prod |
+| `restore-prod-supabase.ps1` | **prod uniquement** | c'est le rollback (§5). En `-Repetition`, il vise le jetable : c'est ainsi qu'on le teste avant le jour J |
+
+Le dump est en **trois fichiers SQL**, pas une archive `pg_dump --format=custom` : les
+scripts de restauration attendent `schema.sql` et `data.sql` et refusent tout autre format.
 
 ---
 
@@ -72,9 +84,16 @@ peu importe — ils ne contiennent pas de données personnelles, contrairement a
 ton seul plan B. Un dump jamais restauré n'est pas une sauvegarde, c'est une intention.
 
 1. Dump de la prod (§4.2) — **hors VPN Canton**.
-2. Restaurer ce dump sur le projet jetable (`ijxajtxnhbczgiarkefo`), procédure §4 du
-   runbook E0 (`DROP SCHEMA public CASCADE` puis `pg_restore`).
-   **Noter la durée** : c'est ton temps de rollback le jour J.
+2. Restaurer ce dump sur le projet jetable (`ijxajtxnhbczgiarkefo`) **avec le script de
+   rollback lui-même**, en mode répétition :
+
+   ```powershell
+   .\scripts\restore-prod-supabase.ps1 -Repetition
+   ```
+
+   C'est le point de l'exercice : on n'éprouve pas une procédure voisine, on éprouve
+   **exactement** le code qui tournera en cas de rollback. Le script affiche sa durée en
+   fin d'exécution — **la noter**, c'est ton temps de rollback le jour J.
 3. Y rejouer les scripts 1 puis 2, dérouler la checklist §6.
 4. Noter les chiffres du jour (billets / inscriptions / collectes) : ils serviront de
    référence pour les contrôles de §4.
@@ -116,18 +135,22 @@ SELECT COUNT(*) AS doit_etre_zero FROM information_schema.tables
 
 ### 4.2 Dump de sécurité — **hors VPN Canton NE**
 
-```bash
-mkdir -p /c/Users/csamson/Documents/dumps-billets
-cd /c/Users/csamson/Documents/dumps-billets
+Docker Desktop démarré, puis :
 
-MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd):/dump" postgres:16-alpine \
-  pg_dump "postgresql://postgres:<MDP_PROD>@db.lhwcoybugdsggcclhtgb.supabase.co:5432/postgres" \
-  --schema=public --no-owner --format=custom \
-  --file=/dump/prod-avant-16-$(date +%Y%m%d-%H%M).dump
+```powershell
+.\scripts\backup-supabase.ps1
 ```
 
-**Contrôle :** le fichier fait plusieurs Mo (pas quelques Ko). Le dump contient des données
-personnelles : il reste **hors du repo** et se supprime une fois la bascule stabilisée.
+Le script écrit `roles.sql`, `schema.sql` et `data.sql` dans un dossier horodaté sous
+`Documents\Perso\Backups\BilletsTouristiques\`. Il lit la chaîne de connexion dans
+`~\.claude\secrets\billets-supabase-db-url.txt` (Session pooler).
+
+**Contrôle :** `data.sql` fait plusieurs Mo (~4 Mo à date), pas quelques Ko. Le dump
+contient des données personnelles : il reste **hors du repo** et se supprime une fois la
+bascule stabilisée.
+
+⚠ Ne pas fabriquer le dump à la main avec `pg_dump --format=custom` : les scripts de
+restauration attendent les trois fichiers SQL et ne savent pas relire une archive custom.
 
 > À partir d'ici, l'horloge tourne : tout ce qui sera écrit en prod ne survivra pas à un
 > restore.
@@ -215,9 +238,20 @@ Rollbacker coûte le dump + le temps mesuré en §2 ; ne pas rollbacker sur un d
 - **On corrige en avant** si : c'est un affichage, un écran admin, ou un cas isolé. Le
   correctif se pousse en minutes, le restore coûte les écritures de la journée.
 
-Procédure de restore : `DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT USAGE ON
-SCHEMA public TO anon, authenticated, service_role;` puis `pg_restore` du dump (§4 du
-runbook E0), puis redéployer `main` (l'ancien front) sur GitHub Pages.
+Procédure de restore — **hors VPN Canton**, Docker démarré :
+
+```powershell
+.\scripts\restore-prod-supabase.ps1          # dernier dump en date
+```
+
+Le script ne prend que la prod pour cible (il refuse toute autre référence), affiche l'âge
+du dump — donc la fenêtre d'écritures perdues — et demande deux confirmations : la
+référence du projet, puis la phrase `RESTAURER LA PRODUCTION`. Il termine par un contrôle
+qui doit montrer `collectes` disparue et les colonnes `Prix` / `Collecteur` revenues sur
+`billets` : c'est la preuve qu'on est bien repassé avant le script 1.
+
+Ensuite seulement : redéployer `main` (l'ancien front) sur GitHub Pages, bumper `sw.js` et
+`menu.html`, et prévenir l'équipe que les écritures postérieures au dump sont perdues.
 
 ---
 
