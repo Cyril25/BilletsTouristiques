@@ -287,3 +287,13 @@ Avec les **3 personas** — un membre lambda, un collecteur, l'admin :
 - La suppression du code mort « collectes supplémentaires » (dette #49).
 - Le sprint sécurité RLS (`inscriptions_auto`, `membres`) — indépendant de #16.
 - La revue de `security-findings.md`.
+- **L'unification des deux règles de « collecte principale »** (décision du 2026-07-31 :
+  après la bascule). Le catalogue prend la collecte **la plus récente**
+  (`app-new.js:1627`) ; l'admin, `mes-collectes` et les pré-inscriptions prennent
+  **« Collecte initiale » d'abord, même terminée** (`admin.js:2532`). Sur un billet dont
+  la « Collecte initiale » est terminée et qui reçoit une nouvelle collecte, le membre
+  s'inscrit sur la nouvelle pendant que le hook de pré-inscription vise l'ancienne.
+  **Sans effet le jour J** : la migration crée exactement une collecte par billet, donc
+  les deux règles coïncident (mesuré sur la copie : 0 billet à plusieurs collectes). Le
+  défaut apparaît à la première seconde collecte ajoutée — donc au premier billet
+  recollecté après la bascule. Détail dans la fiche notes.
