@@ -19,24 +19,33 @@
 BEGIN;
 
 -- ============================================================================
--- 0. GARDE-FOU TEST-ONLY — refuse de s'exécuter hors de la copie de test.
---    La copie porte le marqueur public._bt_env(name='TESTENV')
---    (cf. scripts/_marqueur-testenv.sql, à jouer une fois sur la copie).
---    Sur la PROD ce marqueur est absent → to_regclass NULL → refus propre,
---    la transaction est annulée et RIEN n'est modifié.
+-- 0. GARDE-FOU PROD — sens INVERSÉ le 2026-07-31 pour la bascule.
+--
+--    Pendant la phase de test, ce bloc refusait de tourner AILLEURS que sur la
+--    copie jetable marquée public._bt_env(name='TESTENV'). Cette phase est
+--    terminée : le script est désormais destiné à la PRODUCTION, où ce marqueur
+--    est absent → il s'exécute normalement.
+--
+--    On ne supprime pas le garde-fou pour autant, on le retourne : il refuse
+--    maintenant de tourner SUR une base marquée TESTENV. Un script de prod n'a
+--    plus rien à faire sur la copie, et le jour d'une bascule mieux vaut un
+--    filet dans chaque sens qu'aucun (cf. incident du 2026-07-24 : mauvaise base
+--    sélectionnée dans l'éditeur SQL).
+--
+--    Refus = EXCEPTION dans la transaction → ROLLBACK, RIEN n'est modifié.
 -- ============================================================================
 DO $$
 DECLARE marque BOOLEAN := false;
 BEGIN
     -- Vérif dynamique (EXECUTE) : si la table n'existe pas, pas d'erreur de
-    -- planification — on tombe simplement sur le refus au message clair.
+    -- planification — on tombe simplement sur le test à false.
     IF to_regclass('public._bt_env') IS NOT NULL THEN
         EXECUTE 'SELECT EXISTS (SELECT 1 FROM public._bt_env WHERE name = ''TESTENV'')'
           INTO marque;
     END IF;
-    IF NOT marque THEN
+    IF marque THEN
         RAISE EXCEPTION
-          'REFUS (garde-fou TEST-ONLY) : base non marquee TESTENV — c''est probablement la PROD. Aucune modification appliquee.';
+          'REFUS (garde-fou PROD) : cette base porte le marqueur TESTENV, c''est la copie de test. Ce script est destine a la PRODUCTION. Aucune modification appliquee.';
     END IF;
 END $$;
 
