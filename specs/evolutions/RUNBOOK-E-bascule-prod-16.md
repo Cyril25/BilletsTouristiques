@@ -57,13 +57,26 @@ testable que contre une copie restaurée… c'est-à-dire exactement la manœuvr
 dump. Tout ce qui a été écrit entre-temps (inscriptions, déclarations de paiement, mises en
 enveloppe) est perdu. C'est pourquoi la fenêtre doit être courte et annoncée.
 
-### 1.3 Le point faible actuel : une seule copie des scripts
+### 1.3 Les scripts sont versionnés (résolu le 2026-07-31)
 
-`scripts/` est gitignoré (à cause de `service-account.json`). Les migrations #16, le
-rollback du script 2, `backup-supabase.ps1`, `restore-supabase.ps1` et
-`restore-prod-supabase.ps1` n'existent donc **qu'ici**. Avant le jour J : copier
-`scripts/*.sql` et `*.ps1` ailleurs (clé USB, Drive, peu importe — ils ne contiennent pas
-de données personnelles, contrairement au dump).
+`scripts/` reste ignoré par défaut — il contient `service-account.json`, des scripts pleins
+d'emails de membres et `node_modules`. Mais le **kit de bascule** en est excepté et vit
+désormais dans le dépôt, donc sur GitHub :
+
+`migration-demande-16-1.sql`, `migration-demande-16-2.sql`,
+`rollback-prod-demande-16-2.sql`, `migration-demande-33-notif-ciblee-membre.sql`,
+`_marqueur-testenv.sql`, `backup-supabase.ps1`, `restore-supabase.ps1`,
+`restore-prod-supabase.ps1`, `RUNBOOK-E0-demande-16.md`.
+
+Vérifié avant publication (le dépôt est **public**) : aucun email, aucune clé, aucun mot de
+passe — ceux-ci restent dans `~/.claude/secrets/` et ne sont que *référencés par chemin*.
+Les seules chaînes de connexion présentes sont des placeholders (`MDP_PROD`, `<motdepasse>`).
+
+**Conséquence pratique le jour J :** plus besoin de clé USB, et si la machine lâche en
+cours de bascule, les scripts — y compris **celui du rollback** — se récupèrent par un
+`git clone` depuis n'importe quel poste. Le **dump**, lui, reste hors dépôt (données
+personnelles) : c'est le seul élément qui n'existe qu'en local, à copier ailleurs si tu
+veux une vraie redondance.
 
 ### 1.4 Les trois scripts de dump/restore, et lequel sert à quoi
 

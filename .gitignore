@@ -9,8 +9,26 @@ _bmad-output/
 .wrangler/
 workers/**/.wrangler/
 
-# Migration scripts (outils locaux, credentials sensibles)
-scripts/
+# Migration scripts : ignorés par défaut (service-account.json, scripts contenant
+# des emails de membres, node_modules…). On utilise `scripts/*` et non `scripts/`
+# pour que git descende dans le dossier : une exclusion de RÉPERTOIRE ne peut pas
+# être annulée fichier par fichier.
+scripts/*
+
+# Exception — le « kit de bascule » #16. Sans données personnelles ni secrets
+# (vérifié : aucun email, aucune clé ; les mots de passe restent dans
+# ~/.claude/secrets/ et ne sont que RÉFÉRENCÉS par chemin). Versionnés parce
+# qu'ils n'existaient qu'en un exemplaire sur la machine de Cyril, alors que ce
+# sont eux qui permettent de revenir en arrière un jour de bascule.
+!scripts/migration-demande-16-1.sql
+!scripts/migration-demande-16-2.sql
+!scripts/rollback-prod-demande-16-2.sql
+!scripts/migration-demande-33-notif-ciblee-membre.sql
+!scripts/_marqueur-testenv.sql
+!scripts/backup-supabase.ps1
+!scripts/restore-supabase.ps1
+!scripts/restore-prod-supabase.ps1
+!scripts/RUNBOOK-E0-demande-16.md
 
 # Documentation vide
 docs/
