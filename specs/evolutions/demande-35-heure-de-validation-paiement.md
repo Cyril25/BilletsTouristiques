@@ -6,7 +6,7 @@
 - **Concerne :** collecteurs
 - **Écran :** Mes collectes → Historique des paiements validés
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `b482cc0`
 
 ## Contexte (demande)
 
@@ -47,4 +47,4 @@
 - **Fichiers :** `mes-collectes.js` (`labelDateValidation`).
 - **Migration :** aucune (colonnes posées par #11).
 - **Cache-buster :** `sw.js` v284 + `menu.html?v=192`.
-- **Commit :** _(à compléter)_
+- **Commit :** `b482cc0`
