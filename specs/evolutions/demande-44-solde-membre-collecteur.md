@@ -237,5 +237,15 @@ puisque tout le test passe par SQL direct.
 - **Migration :** `scripts/migration-demande-44-dettes.sql` — **jouée sur la copie de test**,
   pas en prod.
 - **Test :** `scripts/test-demande-44-trigger.sql` (transaction annulée, 6 scénarios).
-- **Fichiers :** _à compléter_
+- **Fichiers :** `mes-inscriptions.js` (lignes côté membre, déclaration, annulation, total),
+  `mes-collectes.js` (validation d'un complément, refus, solde d'un avoir),
+  `global.js` (somme due du menu), `style.css`.
+- **Déploiement de test :** branche **`testenv-44`**, poussée sur le dépôt
+  `BilletsTouristiques-TestEnv`. ⚠ Elle rouvre l'aiguillage `BT_IS_TESTENV` que E1 avait
+  retiré, plus l'URL de la copie dans le `connect-src` des 26 CSP — **à ne jamais
+  fusionner dans `main`**. Sans cet aiguillage, le front de test taperait la production.
+- **Le front est déjà sur `main` et donc en production, mais inerte** : les trois requêtes
+  vers `dettes` sont protégées par un `.catch` qui rend une liste vide, et la table
+  n'existe pas en prod (vérifié : 404 PGRST205). Rien n'est visible pour les membres tant
+  que la migration n'y est pas jouée — c'est ce qui permet de tester sans figer le code.
 - **Commit :** _(à compléter)_
