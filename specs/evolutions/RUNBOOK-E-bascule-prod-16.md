@@ -4,7 +4,8 @@
 inutilisable) · **Prérequis :** la répétition (§2) a été faite au moins une fois.
 
 Suite du `scripts/RUNBOOK-E0-demande-16.md` (copie jetable + test). Celui-ci couvre la
-**vraie** bascule : prod Supabase `lhwcoybugdsggcclhtgb` + GitHub Pages `cyril25.github.io`.
+**vraie** bascule : prod Supabase `lhwcoybugdsggcclhtgb` + GitHub Pages
+`cyril25.github.io/BilletsTouristiques/` (l'URL porte le nom du dépôt — la racine est un 404).
 
 > Ce fichier est **versionné** (le dossier `scripts/` est gitignoré, donc les `.sql` de
 > migration n'existent qu'en un exemplaire sur ta machine — voir §1.3). Il ne contient
@@ -217,7 +218,7 @@ l'ancien front ne survit pas au script 1. Les deux étapes s'enchaînent donc **
 2. Merger `demande-16-refonte-collectes` dans `main`, bumper `sw.js` + `menu.html`.
 3. Pousser sur `origin` → GitHub Pages redéploie (~1 min).
 4. Vérifier que le JS servi est bien le neuf :
-   `curl -s https://cyril25.github.io/global.js | grep -c versionsOuvertesCollecte`
+   `curl -s https://cyril25.github.io/BilletsTouristiques/global.js | grep -c versionsOuvertesCollecte`
 
 ### 4.5 Script 2 — RLS et collecteur
 

@@ -3,7 +3,13 @@
 Le **pourquoi** de chaque étape est dans [RUNBOOK-E-bascule-prod-16.md](RUNBOOK-E-bascule-prod-16.md).
 Ce fichier-ci ne dit que **quoi faire, dans quel ordre**. Les `§` renvoient au runbook.
 
-Base de prod : `lhwcoybugdsggcclhtgb` · Front : `cyril25.github.io` (branche `main`)
+Base de prod : `lhwcoybugdsggcclhtgb` · Front : **`cyril25.github.io/BilletsTouristiques/`** (branche `main`)
+
+> ⚠ **L'URL porte le nom du dépôt.** `cyril25.github.io/` tout court renvoie un 404 —
+> corrigé le 06/09/2026, après avoir constaté que les deux `curl` de l'étape 4 tapaient
+> cette adresse-là. Sur une page 404, `grep -c` rend `0` : le premier contrôle aurait donc
+> échoué et le second réussi **pour la mauvaise raison**, juste après le point de
+> non-retour.
 
 ---
 
@@ -95,8 +101,8 @@ git push origin main
 - [ ] Vérifier que le JS servi est bien le neuf :
 
 ```
-curl -s https://cyril25.github.io/global.js | grep -c versionsOuvertesCollecte
-curl -s https://cyril25.github.io/global.js | grep -c ijxajtxnhbczgiarkefo
+curl -s https://cyril25.github.io/BilletsTouristiques/global.js | grep -c versionsOuvertesCollecte
+curl -s https://cyril25.github.io/BilletsTouristiques/global.js | grep -c ijxajtxnhbczgiarkefo
 ```
 
 - [ ] Le premier renvoie **≥ 1**, le second **0** (aucune trace de la copie de test).
