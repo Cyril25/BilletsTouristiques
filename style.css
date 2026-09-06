@@ -10662,3 +10662,19 @@ button.collecte-badge-status {
     color: var(--color-text-muted, #666);
     font-weight: bold;
 }
+
+/* Demande #44 — lignes de dette et d'avoir (écart de prix) */
+.inscription-card-dette {
+    border-left: 4px solid #c77700;
+}
+.inscription-card-avoir {
+    border-left-color: #1b7f5a;
+}
+.badge-avoir {
+    background: #e6f4ee;
+    color: #1b7f5a;
+}
+.montant-avoir {
+    color: #1b7f5a;
+    font-weight: 600;
+}

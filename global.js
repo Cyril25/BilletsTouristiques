@@ -582,7 +582,11 @@ function loadSommeDue() {
         supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + e + '&select=alias'),
         supabaseFetch('/rest/v1/membres?email=eq.' + e + '&select=pays'),
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=destination,type_envoi,qte_min,qte_max,prix'),
-        supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + e + '&prix_envoi_reel=not.is.null&statut_paiement_port=eq.non_paye&select=prix_envoi_reel')
+        supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + e + '&prix_envoi_reel=not.is.null&statut_paiement_port=eq.non_paye&select=prix_envoi_reel'),
+        // Demande #44 — les écarts de prix non réglés. Seules les DETTES comptent :
+        // un avoir n'est pas une somme due, le retrancher reviendrait à compenser.
+        supabaseFetch('/rest/v1/dettes?membre_email=eq.' + e + '&statut_paiement=eq.non_paye&montant=gt.0&select=montant')
+            .catch(function() { return []; })   // migration pas encore jouée : la pastille ne doit pas disparaître
     ])
     .then(function(res) {
         var inscriptions = res[0] || [];
@@ -590,6 +594,7 @@ function loadSommeDue() {
         var pays = (res[2] && res[2][0]) ? res[2][0].pays : '';
         var fraisPort = res[3] || [];
         var enveloppesPort = res[4] || [];
+        var dettesDues = res[5] || [];   // #44
         var dest = destinationPays(pays);
 
         function findFdp(nb, typeEnvoi) {
@@ -625,6 +630,7 @@ function loadSommeDue() {
             total += montant;
         });
         enveloppesPort.forEach(function(env) { total += parseFloat(env.prix_envoi_reel || 0); });
+        dettesDues.forEach(function(d) { total += parseFloat(d.montant || 0); });   // #44
 
         var montantEl = document.getElementById('somme-due-montant');
         if (total > 0) {

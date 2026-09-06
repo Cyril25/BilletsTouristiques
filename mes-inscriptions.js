@@ -12,6 +12,9 @@ var collectesMap = {};
 var membrePays = '';
 var fraisPortData = [];
 var mesFraisPort = []; // Frais de port dus (enveloppes expédiées avec prix saisi, non confirmés)
+// Demande #44 — écarts nés d'un changement de prix. montant > 0 : je dois au collecteur ;
+// montant < 0 : avoir, le collecteur me doit. Les lignes réglées ne sont pas chargées.
+var mesDettes = [];
 var currentInscFilter = 'tous'; // #9 — filtre actif
 var currentInscSearch = ''; // Recherche texte (billet / référence / collecteur / collecte)
 var modifierInscCurrent = null; // Inscription en cours de modification (pré-collecte)
@@ -120,7 +123,10 @@ function loadMesInscriptions() {
                 supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays'),
                 supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
                 // Frais de port dus : enveloppes avec prix saisi, non encore confirmé payé
-                supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc')
+                supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc'),
+                // Demande #44 — mes lignes de dette/avoir encore ouvertes.
+                supabaseFetch('/rest/v1/dettes?membre_email=eq.' + encodeURIComponent(email) + '&statut_paiement=neq.confirme&select=*&order=date_creation.asc')
+                    .catch(function() { return []; })   // migration pas encore jouée : on n'empêche pas la page de s'afficher
             ];
             // Demande #16 — la collecte porte prix/FDP/statut : on la charge toujours,
             // et en entier (avant, seulement le nom, pour les collectes supplémentaires).
@@ -139,6 +145,7 @@ function loadMesInscriptions() {
             var membres = results[1];
             var fraisPort = results[2];
             var enveloppesPort = results[3] || [];
+            mesDettes = results[4] || [];   // #44
 
             if (collecteurs) {
                 collecteursMap = {};
@@ -150,10 +157,10 @@ function loadMesInscriptions() {
             mesFraisPort = enveloppesPort.filter(function(e) {
                 return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
             });
-            // Demande #16 — collectesMap stocke l'objet complet (index 4)
+            // Demande #16 — collectesMap stocke l'objet complet (index 5 depuis #44)
             collectesMap = {};
-            if (results[4]) {
-                results[4].forEach(function(c) { collectesMap[c.id] = c; });
+            if (results[5]) {
+                results[5].forEach(function(c) { collectesMap[c.id] = c; });
             }
 
             // Demande #46 — on ignore les quantités résiduelles hors du périmètre
@@ -300,6 +307,59 @@ function makePortItem(env) {
     };
 }
 
+// Demande #44 — une ligne de dette se présente comme une ligne de frais de port : même
+// forme, même parcours de paiement. Un avoir (montant < 0) n'a pas de bouton : ce n'est
+// pas au membre de payer.
+function makeDetteItem(d) {
+    return {
+        _isDette: true,
+        dette: d,
+        collecteur: d.collecteur_alias || '(sans collecteur)',
+        statut: d.statut_paiement || 'non_paye',
+        montant: parseFloat(d.montant || 0)
+    };
+}
+
+function badgePaiementDetteMembre(statut, detteId, montant) {
+    if (montant < 0) {
+        return '<span class="badge-paiement badge-avoir" title="Le collecteur vous doit cette somme">'
+            + 'À vous rembourser</span>';
+    }
+    if (statut === 'confirme') return '<span class="badge-paiement badge-paye">Payé</span>';
+    if (statut === 'declare') {
+        return '<span class="badge-paiement badge-declare" title="En attente de vérification par le collecteur">En attente</span>'
+            + '<button class="btn-annuler-declaration" title="Déclaré par erreur ? Annuler la déclaration" onclick="annulerDeclaration(' + detteId + ', false, true)"><i class="fa-solid fa-rotate-left"></i> Annuler</button>';
+    }
+    return '<button class="btn-jai-paye" title="Cliquez pour déclarer le paiement" onclick="declarerPaiementDette(' + detteId + ')"><i class="fa-solid fa-hand-holding-dollar"></i> J\'ai payé</button>';
+}
+
+function renderDetteCard(item) {
+    var d = item.dette;
+    var montant = item.montant;
+    var estAvoir = montant < 0;
+    var absMontant = Math.abs(montant);
+    var detail = '';
+    if (d.prix_avant !== null && d.prix_apres !== null) {
+        detail = 'Prix passé de ' + Number(d.prix_avant).toFixed(2) + ' € à ' + Number(d.prix_apres).toFixed(2) + ' €'
+               + ' sur ' + ((d.nb_normaux || 0) + (d.nb_variantes || 0)) + ' billet(s)';
+    }
+    return '<div class="inscription-card inscription-card-dette' + (estAvoir ? ' inscription-card-avoir' : '') + '">'
+        + '<div class="inscription-card-header">'
+        + '<strong><i class="fa-solid fa-scale-balanced"></i> ' + escapeHtml(d.libelle || 'Écart de prix') + '</strong>'
+        + '<span class="badge-frais-port">' + (estAvoir ? 'Avoir' : 'Complément') + '</span>'
+        + (item.collecteur ? '<span class="inscription-collecteur"><i class="fa-solid fa-user"></i> ' + escapeHtml(item.collecteur) + '</span>' : '')
+        + '</div>'
+        + '<div class="inscription-card-details">'
+        + '<span class="' + (estAvoir ? 'montant-avoir' : 'montant-non-paye') + '"><i class="fa-solid fa-euro-sign"></i> ' + absMontant.toFixed(2) + ' €</span>'
+        + (detail ? '<span class="frais-port-info"><i class="fa-solid fa-circle-info"></i> ' + escapeHtml(detail) + '</span>' : '')
+        + (estAvoir ? '<span class="frais-port-info"><i class="fa-solid fa-circle-info"></i> Le collecteur vous remboursera ou déduira cette somme d\'une prochaine collecte</span>' : '')
+        + '</div>'
+        + '<div class="inscription-card-statuts">'
+        + badgePaiementDetteMembre(item.statut, d.id, montant)
+        + '</div>'
+        + '</div>';
+}
+
 // Badge / bouton de paiement des frais de port (côté membre)
 function badgePaiementPortMembre(statut, enveloppeId) {
     if (statut === 'confirme') return '<span class="badge-paiement badge-paye">Payé</span>';
@@ -367,7 +427,7 @@ function renderPortCard(item) {
 var inscSort = 'date';
 
 function cleAmorceInsc(insc) {
-    if (insc && insc._isPort) return '\uFFFF\uFFFF';
+    if (insc && (insc._isPort || insc._isDette)) return '\uFFFF\uFFFF';   // #44
     var b = billetsMap[insc.billet_id] || {};
     return ((b.Reference || '\uFFFF') + ' ' + (b.Millesime || '') + '-' + (b.Version || '')
         + ' ' + (b.NomBillet || '')).toLowerCase();
@@ -641,6 +701,26 @@ function renderInscriptions() {
         else                                 statGroups[0].items.push(item);
     });
 
+    // Demande #44 — mêmes groupes de statut que le reste. Un avoir n'est jamais « à payer » :
+    // il reste dans le premier groupe tant que le collecteur ne l'a pas soldé, mais sans bouton.
+    var filteredDettes = mesDettes.filter(function(d) {
+        var s = d.statut_paiement || 'non_paye';
+        if (currentInscFilter === 'prix_non_defini' || currentInscFilter === 'pas_de_collecte') return false;
+        if (currentInscSearch) {
+            var hay = ((d.libelle || '') + ' ' + (d.collecteur_alias || '')).toLowerCase();
+            if (hay.indexOf(currentInscSearch.toLowerCase()) === -1) return false;
+        }
+        if (currentInscFilter === 'tous') return true;
+        if (currentInscFilter === 'non_paye') return s === 'non_paye';
+        return s === currentInscFilter;
+    });
+    filteredDettes.forEach(function(d) {
+        var item = makeDetteItem(d);
+        if (item.statut === 'declare')       statGroups[1].items.push(item);
+        else if (item.statut === 'confirme') statGroups[2].items.push(item);
+        else                                 statGroups[0].items.push(item);
+    });
+
     var html = '';
     statGroups.forEach(function(group) {
         if (group.items.length === 0) return;
@@ -667,7 +747,7 @@ function renderInscriptions() {
             group.items.forEach(function(insc) {
                 // Demande #16 — on regroupe par le collecteur de la COLLECTE (c'est
                 // lui qu'on paie), avec repli sur celui du billet.
-                var col = insc._isPort
+                var col = (insc._isPort || insc._isDette)   // #44
                     ? insc.collecteur
                     : (getTarif(insc).collecteur || '(sans collecteur)');
                 if (!byCollecteur[col]) { byCollecteur[col] = []; colOrder.push(col); }
@@ -684,7 +764,9 @@ function renderInscriptions() {
                     + headerExtra
                     + '</div>';
                 byCollecteur[col].forEach(function(insc) {
-                    html += insc._isPort ? renderPortCard(insc) : renderInscriptionCard(insc);
+                    html += insc._isPort ? renderPortCard(insc)
+                          : insc._isDette ? renderDetteCard(insc)   // #44
+                          : renderInscriptionCard(insc);
                 });
                 html += '</div>';
             });
@@ -717,6 +799,16 @@ function renderInscriptions() {
             else if (s === 'declare') totalEnAttenteGlobal += total;
         }
     });
+    // Demande #44 — une dette EST due, elle entre dans le total. Un avoir n'est pas une
+    // somme due : le retrancher reviendrait à compenser, ce que la décision R1 exclut.
+    mesDettes.forEach(function(d) {
+        var m = parseFloat(d.montant || 0);
+        if (m <= 0) return;
+        var s = d.statut_paiement || 'non_paye';
+        if (s === 'non_paye') totalDuGlobal += m;
+        else if (s === 'declare') totalEnAttenteGlobal += m;
+    });
+
     // Inclure les frais de port dus dans le total
     mesFraisPort.forEach(function(env) {
         if (estBeneficiairePort(env, activeEmail)) return;
@@ -788,6 +880,8 @@ function badgePaiementMembre(statut, inscriptionId, categorie, isBeneficiaire) {
 var pendingDeclarationId = null;
 var pendingDeclarationIds = null; // mode groupé
 var pendingDeclarationPortIds = null; // frais de port (enveloppes)
+var pendingDeclarationDetteIds = null; // #44 — lignes d'écart de prix
+var pendingAnnulationIsDette = false;  // #44
 
 function declarerPaiementGroupe(idsCsv, portIdsCsv) {
     var ids = String(idsCsv || '').split(',').map(function(s) { return parseInt(s, 10); }).filter(function(n) { return !isNaN(n); });
@@ -856,6 +950,31 @@ function declarerPaiementPort(enveloppeId) {
     if (modal) modal.style.display = 'flex';
 }
 
+// Demande #44 — même modale de confirmation que pour une inscription ou des frais de
+// port : le membre ne doit pas avoir l'impression d'un troisième circuit.
+function declarerPaiementDette(detteId) {
+    var d = null;
+    for (var i = 0; i < mesDettes.length; i++) {
+        if (mesDettes[i].id === detteId) { d = mesDettes[i]; break; }
+    }
+    if (!d) return;
+    var montant = parseFloat(d.montant || 0);
+    if (montant <= 0) return;   // un avoir ne se paie pas
+
+    pendingDeclarationDetteIds = [detteId];
+    pendingDeclarationPortIds = null;
+    pendingDeclarationIds = null;
+    pendingDeclarationId = null;
+    var modal = document.getElementById('confirm-paiement-modal');
+    var msgEl = document.getElementById('confirm-paiement-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Confirmez-vous avoir payé <strong>' + montant.toFixed(2) + ' €</strong> pour «&nbsp;'
+            + escapeHtml(d.libelle || 'écart de prix') + '&nbsp;»'
+            + (d.collecteur_alias ? ' à <strong>' + escapeHtml(d.collecteur_alias) + '</strong>' : '') + ' ?';
+    }
+    if (modal) modal.style.display = 'flex';
+}
+
 function declarerPaiement(inscriptionId) {
     // Trouver le billet associé pour afficher le montant
     var insc = null;
@@ -888,10 +1007,12 @@ function confirmerDeclarationPaiement() {
         ids = [pendingDeclarationId];
     }
     var portIds = (pendingDeclarationPortIds && pendingDeclarationPortIds.length > 0) ? pendingDeclarationPortIds.slice() : [];
+    var detteIds = (pendingDeclarationDetteIds && pendingDeclarationDetteIds.length > 0) ? pendingDeclarationDetteIds.slice() : [];   // #44
     pendingDeclarationId = null;
     pendingDeclarationIds = null;
     pendingDeclarationPortIds = null;
-    if (ids.length === 0 && portIds.length === 0) return;
+    pendingDeclarationDetteIds = null;
+    if (ids.length === 0 && portIds.length === 0 && detteIds.length === 0) return;
 
     var tasks = [];
     if (ids.length > 0) {
@@ -908,6 +1029,13 @@ function confirmerDeclarationPaiement() {
             body: JSON.stringify({ statut_paiement_port: 'declare' })
         }));
     }
+    if (detteIds.length > 0) {   // #44
+        var detteQuery = detteIds.length === 1 ? 'id=eq.' + detteIds[0] : 'id=in.(' + detteIds.join(',') + ')';
+        tasks.push(supabaseFetch('/rest/v1/dettes?' + detteQuery, {
+            method: 'PATCH',
+            body: JSON.stringify({ statut_paiement: 'declare' })
+        }));
+    }
 
     Promise.all(tasks)
     .then(function() {
@@ -919,6 +1047,11 @@ function confirmerDeclarationPaiement() {
         for (var j = 0; j < mesFraisPort.length; j++) {
             if (portIds.indexOf(mesFraisPort[j].id) !== -1) {
                 mesFraisPort[j].statut_paiement_port = 'declare';
+            }
+        }
+        for (var k = 0; k < mesDettes.length; k++) {   // #44
+            if (detteIds.indexOf(mesDettes[k].id) !== -1) {
+                mesDettes[k].statut_paiement = 'declare';
             }
         }
         renderInscriptions();
@@ -944,9 +1077,13 @@ function annulerDeclarationPaiement() {
 var pendingAnnulationId = null;
 var pendingAnnulationIsPort = false;
 
-function annulerDeclaration(id, isPort) {
+function annulerDeclaration(id, isPort, isDette) {
     var statut = null;
-    if (isPort) {
+    if (isDette) {   // #44
+        for (var d = 0; d < mesDettes.length; d++) {
+            if (mesDettes[d].id === id) { statut = mesDettes[d].statut_paiement; break; }
+        }
+    } else if (isPort) {
         for (var i = 0; i < mesFraisPort.length; i++) {
             if (mesFraisPort[i].id === id) { statut = mesFraisPort[i].statut_paiement_port; break; }
         }
@@ -959,6 +1096,7 @@ function annulerDeclaration(id, isPort) {
 
     pendingAnnulationId = id;
     pendingAnnulationIsPort = !!isPort;
+    pendingAnnulationIsDette = !!isDette;   // #44
     var modal = document.getElementById('annuler-declaration-modal');
     if (modal) modal.style.display = 'flex';
 }
@@ -974,13 +1112,17 @@ function confirmerAnnulationDeclaration() {
     if (modal) modal.style.display = 'none';
     var id = pendingAnnulationId;
     var isPort = pendingAnnulationIsPort;
+    var isDette = pendingAnnulationIsDette;   // #44
     pendingAnnulationId = null;
+    pendingAnnulationIsDette = false;
     if (!id) return;
 
-    var url = isPort
-        ? '/rest/v1/enveloppes?id=eq.' + id + '&statut_paiement_port=eq.declare'
-        : '/rest/v1/inscriptions?id=eq.' + id + '&statut_paiement=eq.declare';
-    var body = isPort ? { statut_paiement_port: 'non_paye' } : { statut_paiement: 'non_paye' };
+    var url = isDette
+        ? '/rest/v1/dettes?id=eq.' + id + '&statut_paiement=eq.declare'
+        : (isPort
+            ? '/rest/v1/enveloppes?id=eq.' + id + '&statut_paiement_port=eq.declare'
+            : '/rest/v1/inscriptions?id=eq.' + id + '&statut_paiement=eq.declare');
+    var body = (isPort && !isDette) ? { statut_paiement_port: 'non_paye' } : { statut_paiement: 'non_paye' };
 
     supabaseFetch(url, {
         method: 'PATCH',
