@@ -10648,3 +10648,17 @@ button.collecte-badge-status {
     white-space: nowrap;
     text-align: right;
 }
+
+/* Demande #32 — barre de tri des listes (Mes collectes, Mes inscriptions) */
+.liste-tri {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    flex-wrap: wrap;
+}
+.liste-tri-label {
+    font-size: 0.8em;
+    color: var(--color-text-muted, #666);
+    font-weight: bold;
+}

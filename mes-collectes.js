@@ -322,6 +322,36 @@ function dismissOnboarding() {
     if (el) el.remove();
 }
 
+// ============================================================
+// Demande #32 — TRI DES LISTES : par date (défaut, comportement historique) ou par
+// amorce. « Amorce » = le préfixe Reference du billet (UEBU…) ; à amorce égale on
+// départage par millésime-version puis par nom, sans quoi l'ordre de deux billets de
+// la même amorce changerait d'un rendu à l'autre. Un billet sans amorce part en fin
+// de liste plutôt qu'en tête.
+// ============================================================
+var collectesSort = 'date';
+
+function cleAmorceBillet(b) {
+    return (((b && b.Reference) || '\uFFFF') + ' ' + ((b && b.Millesime) || '') + '-'
+        + ((b && b.Version) || '') + ' ' + ((b && b.NomBillet) || '')).toLowerCase();
+}
+
+function setCollectesSort(mode) {
+    collectesSort = mode;
+    renderCollectesList();
+}
+
+function barreTriCollectesHtml() {
+    function btn(mode, icone, libelle) {
+        return '<button onclick="setCollectesSort(\'' + mode + '\')" class="btn-mode'
+            + (collectesSort === mode ? ' btn-mode--active' : '') + '">'
+            + '<i class="fa-solid ' + icone + '"></i> ' + libelle + '</button>';
+    }
+    return '<div class="liste-tri"><span class="liste-tri-label">Trier par</span>'
+        + btn('date', 'fa-calendar-days', 'Date') + btn('amorce', 'fa-arrow-down-a-z', 'Amorce')
+        + '</div>';
+}
+
 function renderCollectesList() {
     var container = document.getElementById('collectes-list');
     if (!container) return;
@@ -366,10 +396,13 @@ function renderCollectesList() {
     var billetsRepartis = mesBillets.filter(function(b) { return estRepartie(b) && !estEnvoyee(b); });
     var billetsEnvoyes  = mesBillets.filter(estEnvoyee);
     var dateDesc = function(a, b) { return (b.Date || '').localeCompare(a.Date || ''); };
-    billetsOpen.sort(dateDesc);
-    billetsRepartis.sort(dateDesc);
-    billetsEnvoyes.sort(dateDesc);
-    billetsClosed.sort(dateDesc);
+    // Demande #32 — le tri choisi s'applique à toutes les sections d'un coup.
+    var amorceAsc = function(a, b) { return cleAmorceBillet(a).localeCompare(cleAmorceBillet(b)); };
+    var triBillets = (collectesSort === 'amorce') ? amorceAsc : dateDesc;
+    billetsOpen.sort(triBillets);
+    billetsRepartis.sort(triBillets);
+    billetsEnvoyes.sort(triBillets);
+    billetsClosed.sort(triBillets);
 
     // Séparer collectes supplémentaires ouvertes / fermées
     var suppOpen   = mesCollectesSupp.filter(function(e) { return !e.collecte.date_fin || e.collecte.date_fin > today; });
@@ -379,8 +412,11 @@ function renderCollectesList() {
         var dB = b.collecte.date_fin || b.collecte.date_coll || b.collecte.date_pre || '';
         return dB.localeCompare(dA);
     };
-    suppOpen.sort(suppDateDesc);
-    suppClosed.sort(suppDateDesc);
+    var triSupp = (collectesSort === 'amorce')
+        ? function(a, b) { return cleAmorceBillet(a.billet).localeCompare(cleAmorceBillet(b.billet)); }
+        : suppDateDesc;
+    suppOpen.sort(triSupp);
+    suppClosed.sort(triSupp);
 
     function renderBilletCard(b) {
         // Demande #48 (audit) — l'etat affiche est celui de MES collectes du billet.
@@ -476,7 +512,7 @@ function renderCollectesList() {
     html += sectionArchive('collectes-reparties', 'fa-box-archive', 'Billets reçus et répartis — envois à faire', billetsRepartis, true);
     html += sectionArchive('collectes-envoyees', 'fa-circle-check', 'Collectes terminées — billets envoyés', billetsEnvoyes, false);
 
-    container.innerHTML = onboardingHtml + html;
+    container.innerHTML = onboardingHtml + barreTriCollectesHtml() + html;   // #32
 }
 
 // Demande #14 — replier/déplier une section de collectes archivées

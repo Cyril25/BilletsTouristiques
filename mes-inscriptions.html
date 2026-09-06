@@ -40,6 +40,12 @@
                     <button class="inscriptions-filter-btn" onclick="filterInscriptions('prix_non_defini')"><i class="fa-solid fa-tag"></i> Prix non défini</button>
                     <button class="inscriptions-filter-btn" onclick="filterInscriptions('pas_de_collecte')"><i class="fa-solid fa-ban"></i> Pas de collecte</button>
                 </div>
+                <!-- Demande #32 — tri de la liste (date par défaut, ou amorce) -->
+                <div class="liste-tri">
+                    <span class="liste-tri-label">Trier par</span>
+                    <button id="btn-tri-insc-date" class="btn-mode btn-mode--active" onclick="setInscriptionsSort('date')"><i class="fa-solid fa-calendar-days"></i> Date</button>
+                    <button id="btn-tri-insc-amorce" class="btn-mode" onclick="setInscriptionsSort('amorce')"><i class="fa-solid fa-arrow-down-a-z"></i> Amorce</button>
+                </div>
                 <div id="inscriptions-list"></div>
                 <div id="inscriptions-empty" style="display:none">
                     <div class="inscriptions-empty-state">

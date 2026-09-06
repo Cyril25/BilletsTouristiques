@@ -357,6 +357,31 @@ function renderPortCard(item) {
         + '</div>';
 }
 
+// ============================================================
+// Demande #32 — TRI DE LA LISTE : date (défaut : ordre d'inscription renvoyé par le
+// serveur) ou amorce. Le tri est appliqué AVANT le regroupement par collecteur, donc
+// en mode amorce les groupes de collecteurs suivent eux aussi l'ordre des amorces —
+// c'est ce qu'on veut quand on cherche un billet précis dans une longue liste.
+// Les lignes de frais de port n'ont pas d'amorce : elles restent en fin de groupe.
+// ============================================================
+var inscSort = 'date';
+
+function cleAmorceInsc(insc) {
+    if (insc && insc._isPort) return '\uFFFF\uFFFF';
+    var b = billetsMap[insc.billet_id] || {};
+    return ((b.Reference || '\uFFFF') + ' ' + (b.Millesime || '') + '-' + (b.Version || '')
+        + ' ' + (b.NomBillet || '')).toLowerCase();
+}
+
+function setInscriptionsSort(mode) {
+    inscSort = mode;
+    var bDate = document.getElementById('btn-tri-insc-date');
+    var bAmorce = document.getElementById('btn-tri-insc-amorce');
+    if (bDate) bDate.classList.toggle('btn-mode--active', mode === 'date');
+    if (bAmorce) bAmorce.classList.toggle('btn-mode--active', mode === 'amorce');
+    renderInscriptions();
+}
+
 function renderInscriptions() {
     var container = document.getElementById('inscriptions-list');
     var emptyState = document.getElementById('inscriptions-empty');
@@ -619,6 +644,12 @@ function renderInscriptions() {
     var html = '';
     statGroups.forEach(function(group) {
         if (group.items.length === 0) return;
+        // Demande #32 — tri choisi par le membre (le mode « date » garde l'ordre serveur).
+        if (inscSort === 'amorce') {
+            group.items = group.items.slice().sort(function(a, b) {
+                return cleAmorceInsc(a).localeCompare(cleAmorceInsc(b));
+            });
+        }
         html += '<div class="insc-statut-section">'
             + '<div class="insc-statut-header" role="heading" aria-level="2">'
             + '<i class="fa-solid ' + group.icon + '"></i> '

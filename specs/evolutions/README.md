@@ -81,6 +81,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#39 (prod)](demande-39-date-du-statut-carte-admin.md) | Date du statut courant sur la carte billet (admin) | S | À tester | ✅ | `e27c519` |
 | [#41 (prod)](demande-41-pays-obligatoire-creation-billet.md) | Pays obligatoire à la création d'un billet | S | À tester | ✅ | `e27c519` |
 | [#43 (prod)](demande-43-export-xlsx-billets-filtres.md) | Export Excel de la liste de billets affichée | S | À tester | ✅ | `e27c519` |
+| [#32 (prod)](demande-32-tri-par-amorce.md) | Trier par amorce dans Mes collectes et Mes inscriptions | M | À tester | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
