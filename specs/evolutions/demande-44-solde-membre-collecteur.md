@@ -48,16 +48,20 @@ chantier — et ce qui rend toute reprise de données inutile.
 
 ## Décisions validées
 
+> Numérotées **R1–R8** et non D1–D8 : « invariant D4 » désigne déjà une règle de #16 (le
+> périmètre de versions), et le test du déclencheur s'est heurté au garde-fou qui la porte.
+> Deux « D4 » dans le même dossier auraient fini par se croiser.
+
 | | Décision | Motif |
 |---|---|---|
-| **D1** | Solde **informatif**, pas de compensation automatique | Le système n'a jamais enregistré un montant ; qu'il apprenne à compter juste avant de payer à notre place. |
-| **D2** | **Billets seulement**, pas les frais de port | Le port a sa propre logique de paiement ; mélanger rendrait le solde illisible. |
-| **D3** | **Aucune reprise de l'existant** | Le modèle rend la reprise inutile : l'état actuel est la référence. Vérifié — sur 5 359 collectes « Collecte initiale », 2 seules divergent du prix d'origine (billets 824/825, arrondis connus de la migration, collectes terminées). Aucun prix édité depuis la bascule. |
-| **D4** | **La ligne suit le paiement** | Annuler un paiement annule les lignes non réglées qui en découlent ; une ligne déjà réglée n'est jamais touchée automatiquement. |
-| **D5** | **Pas de seuil** sur les petits montants, mais un bouton « solder » en un clic | Une dette est une dette ; c'est la liquidation qui doit être facile, pas la règle qui doit mentir. |
-| **D6** | **Notification automatique** au membre à la création d'une ligne | C'est de l'argent : personne ne surveille l'écran. Mécanique #33, déjà en service. |
-| **D7** | Visible : membre → Mes inscriptions, collecteur → Mes collectes, admin → stats. **Les dettes entrent dans la somme due du menu (#4), pas les avoirs** | Une dette *est* due. Un avoir n'est pas une somme due : le retrancher reviendrait à compenser, ce que D1 exclut. |
-| **D8** | **Validation sur l'environnement de test avant la prod** | Décision de Cyril : trop gros pour aller directement en production. |
+| **R1** | Solde **informatif**, pas de compensation automatique | Le système n'a jamais enregistré un montant ; qu'il apprenne à compter juste avant de payer à notre place. |
+| **R2** | **Billets seulement**, pas les frais de port | Le port a sa propre logique de paiement ; mélanger rendrait le solde illisible. |
+| **R3** | **Aucune reprise de l'existant** | Le modèle rend la reprise inutile : l'état actuel est la référence. Vérifié — sur 5 359 collectes « Collecte initiale », 2 seules divergent du prix d'origine (billets 824/825, arrondis connus de la migration, collectes terminées). Aucun prix édité depuis la bascule. |
+| **R4** | **La ligne suit le paiement** | Annuler un paiement annule les lignes non réglées qui en découlent ; une ligne déjà réglée n'est jamais touchée automatiquement. |
+| **R5** | **Pas de seuil** sur les petits montants, mais un bouton « solder » en un clic | Une dette est une dette ; c'est la liquidation qui doit être facile, pas la règle qui doit mentir. |
+| **R6** | **Notification automatique** au membre à la création d'une ligne | C'est de l'argent : personne ne surveille l'écran. Mécanique #33, déjà en service. |
+| **R7** | Visible : membre → Mes inscriptions, collecteur → Mes collectes, admin → stats. **Les dettes entrent dans la somme due du menu (#4), pas les avoirs** | Une dette *est* due. Un avoir n'est pas une somme due : le retrancher reviendrait à compenser, ce que R1 exclut. |
+| **R8** | **Validation sur l'environnement de test avant la prod** | Décision de Cyril : trop gros pour aller directement en production. |
 
 ## Règles de gestion
 
@@ -111,7 +115,7 @@ Trois précisions qui comptent :
 | `collecteur_alias` | `text` NOT NULL | envers qui (même clé que `enveloppes.collecteur_alias`) |
 | `collecte_id` | `uuid` NOT NULL | d'où ça vient |
 | `billet_id` | `int` | pour le libellé, et si l'inscription disparaît |
-| `inscription_id` | `int` NULL | lien pour D4 (`ON DELETE SET NULL`) |
+| `inscription_id` | `int` NULL | lien pour R4 (`ON DELETE SET NULL`) |
 | `montant` | `numeric(10,2)` NOT NULL | **> 0 = le membre doit ; < 0 = le collecteur doit** |
 | `libelle` | `text` NOT NULL | « Augmentation du prix — UEBK 2026-14 NAUSICAA » |
 | `motif` | `text` NOT NULL | `changement_prix` (laisse la porte ouverte à d'autres origines) |
@@ -137,7 +141,7 @@ Pas du code dans `admin.js`, pour trois raisons vérifiées :
 3. C'est déjà le choix de #16 : `Categorie` et `date_effective` sont dérivées par trigger. Une
    règle de cohérence qui vit en base ne peut pas être contournée par un chemin qu'on n'a pas prévu.
 
-Le trigger porte aussi **D4** : un second déclencheur sur `inscriptions` supprime les lignes
+Le trigger porte aussi la règle **R4** : un second déclencheur sur `inscriptions` supprime les lignes
 `statut_paiement = 'non_paye'` rattachées à une inscription qui repasse à `non_paye`.
 
 ### RLS
@@ -176,7 +180,7 @@ Le trigger porte aussi **D4** : un second déclencheur sur `inscriptions` suppri
 10. Un changement de prix fait **en SQL direct** crée les lignes comme depuis l'écran admin.
 11. Aucune ligne n'apparaît pour un membre qui n'est pas concerné, ni pour un autre collecteur.
 
-## Plan de validation sur l'environnement de test (D8)
+## Plan de validation sur l'environnement de test (R8)
 
 Cible : copie Supabase `ijxajtxnhbczgiarkefo` via le Worker `supabase-admin-proxy-test`, front
 `BilletsTouristiques-TestEnv` (remote `test`). **Les deux répondent (vérifié le 2026-09-06).**
@@ -200,8 +204,38 @@ Scénarios, dans cet ordre :
 
 Passage en production seulement après ces onze scénarios, avec la migration rejouée sur la prod.
 
+## Ce qui est déjà vérifié sur la copie de test
+
+Migration jouée le 2026-09-06 sur `ijxajtxnhbczgiarkefo` (psql 16, session pooler) : table
+créée **vide**, 2 déclencheurs, 4 policies — le contrôle post-migration du script le confirme.
+
+`scripts/test-demande-44-trigger.sql` rejoue ensuite six scénarios dans **une transaction
+annulée**, donc sans rien laisser derrière (vérifié : `dettes` est vide après coup). Tous
+passent :
+
+| Scénario | Attendu | Obtenu |
+|---|---|---|
+| Hausse de 0,20 € sur 2 billets | 2 lignes à +0,40 €, rien pour le non payé | ✅ 2 / 0 |
+| Baisse de 0,50 € ensuite | 2 avoirs à −1,00 €, sans écraser les précédentes | ✅ 4 lignes cumulées |
+| Déclaration de paiement annulée | sa ligne non réglée disparaît | ✅ 0 restante |
+| Ligne déjà réglée, paiement annulé | la ligne survit | ✅ conservée |
+| Première mise à prix (vide → 3,00 €) | aucune ligne | ✅ 0 |
+| Collecte « variante seule », 2 normaux fantômes | aucun montant | ✅ 0 |
+
+**Ce que le test a appris au passage :** le cas « variante seule avec des normaux » ne peut
+plus être *créé* — `trg_collecte_scope_vs_inscriptions` (#16) le refuse. Mais il **existe** dans
+les données héritées (142 inscriptions hors invariant en prod, dont 18 sur billets actifs), donc
+le test désactive le garde-fou le temps de reproduire cet état légataire. C'est bien sur lui que
+le calcul doit se tenir.
+
+Restent à valider **après le développement du front** : les scénarios 1, 7, 8 et 11 (parcours de
+règlement, clôture d'un avoir, cloisonnement entre membres), plus le scénario 10 déjà couvert ici
+puisque tout le test passe par SQL direct.
+
 ## Réalisation
 
-- **Migration :** `scripts/migration-demande-44-dettes.sql` (table, trigger, RLS) — _à écrire_
+- **Migration :** `scripts/migration-demande-44-dettes.sql` — **jouée sur la copie de test**,
+  pas en prod.
+- **Test :** `scripts/test-demande-44-trigger.sql` (transaction annulée, 6 scénarios).
 - **Fichiers :** _à compléter_
 - **Commit :** _(à compléter)_
