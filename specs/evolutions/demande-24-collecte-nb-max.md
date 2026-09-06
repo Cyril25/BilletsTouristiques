@@ -97,4 +97,4 @@ Autrement dit : un admin pouvait saisir un plafond sur la collecte initiale, il 
   `capaciteCollecteHtml()`, carte principale, `buildInscriptionHtml()`, `confirmerInscription()`
   + `inscrireSurCollectePrincipale()`.
 - **Migration :** aucune (`collectes.nb_max` existe depuis la première version).
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

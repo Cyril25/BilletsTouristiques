@@ -52,7 +52,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#19](demande-19-selection-multiple-envois-recus.md) | Sélection multiple + choix statut distribué/reçu (historique envois) | S | À tester | ✅ | `9d4786e`, `d6dbf0b` |
 | [#20](demande-20-annuler-paiement-confirme.md) | Annuler un paiement confirmé (+ refus déclaration existant) | S | À tester | ✅ | `f4b5cce` |
 | [#23](demande-23-mode-vacances-profil.md) | Mode « vacances / absent » sur le profil + badge collecteur | M | À tester | ✅ | `e4dde41` |
-| [#24](demande-24-collecte-nb-max.md) | Plafond de billets sur une collecte (initiale comprise) | M → S | À tester (repris le 2026-09-06) | ✅ | `87156d1` + série S |
+| [#24](demande-24-collecte-nb-max.md) | Plafond de billets sur une collecte (initiale comprise) | M → S | À tester (repris le 2026-09-06) | ✅ | `87156d1` + `e27c519` |
 | [#25](demande-25-envoi-mode-adresse-prix-auto.md) | Mode d'envoi selon l'adresse + prix auto à l'expédition | M | À tester | ✅ | `eea5267` |
 | [#26](demande-26-ecran-stats-admin.md) | Écran de statistiques (admin) | M | À tester | ✅ | `8660c38` |
 | [#27](demande-27-vacances-date-fin.md) | Date de fin optionnelle sur le mode vacances | M | À tester | ✅ | `5613657` |
@@ -73,14 +73,14 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#47](demande-47-lisibilite-tag-precollecte-accordeon.md) | Bug : tag « Pré collecte » illisible dans l'accordéon « autres collectes » (+ couleur unifiée sur les 3 surfaces) | S | À tester | ✅ | `2377ee1`, `c060ce3` |
 | [#48](demande-48-inscriptions-par-collecte.md) | Inscriptions par collecte côté admin + fin du rattachement au billet dans les vues collecteur | M | À tester | ✅ | `91055d1` |
 | [#49](demande-49-audit-billet-vs-collecte.md) | Audit « billet vs collecte » : blacklist destructive, bénéficiaire, gardes de paiement, ouvert/fermé, formulaire rapide | M | À tester | ✅ | `5b21f3b` |
-| [#40 (prod)](demande-40-valeur-enveloppe-assurance.md) | Valeur des billets de l'enveloppe, pour choisir l'assurance | S | À tester | ✅ | — |
-| [#34 (prod)](demande-34-ordre-fige-verification-paiement.md) | Ne pas re-trier la vérification paiement après une validation | S | À tester | ✅ | — |
-| [#36 (prod)](demande-36-entete-inscriptions-amorce-millesime.md) | Amorce + millésime-version + nom dans l'entête des inscriptions | S | À tester | ✅ | — |
-| [#37 (prod)](demande-37-numero-suivi-cliquable.md) | Numéro de suivi cliquable vers le suivi La Poste | S | À tester | ✅ | — |
-| [#38 (prod)](demande-38-liste-pays-drapeau.md) | Liste déroulante de pays + drapeau (profil et gestion des membres) | S | À tester | ✅ | — |
-| [#39 (prod)](demande-39-date-du-statut-carte-admin.md) | Date du statut courant sur la carte billet (admin) | S | À tester | ✅ | — |
-| [#41 (prod)](demande-41-pays-obligatoire-creation-billet.md) | Pays obligatoire à la création d'un billet | S | À tester | ✅ | — |
-| [#43 (prod)](demande-43-export-xlsx-billets-filtres.md) | Export Excel de la liste de billets affichée | S | À tester | ✅ | — |
+| [#40 (prod)](demande-40-valeur-enveloppe-assurance.md) | Valeur des billets de l'enveloppe, pour choisir l'assurance | S | À tester | ✅ | `e27c519` |
+| [#34 (prod)](demande-34-ordre-fige-verification-paiement.md) | Ne pas re-trier la vérification paiement après une validation | S | À tester | ✅ | `e27c519` |
+| [#36 (prod)](demande-36-entete-inscriptions-amorce-millesime.md) | Amorce + millésime-version + nom dans l'entête des inscriptions | S | À tester | ✅ | `e27c519` |
+| [#37 (prod)](demande-37-numero-suivi-cliquable.md) | Numéro de suivi cliquable vers le suivi La Poste | S | À tester | ✅ | `e27c519` |
+| [#38 (prod)](demande-38-liste-pays-drapeau.md) | Liste déroulante de pays + drapeau (profil et gestion des membres) | S | À tester | ✅ | `e27c519` |
+| [#39 (prod)](demande-39-date-du-statut-carte-admin.md) | Date du statut courant sur la carte billet (admin) | S | À tester | ✅ | `e27c519` |
+| [#41 (prod)](demande-41-pays-obligatoire-creation-billet.md) | Pays obligatoire à la création d'un billet | S | À tester | ✅ | `e27c519` |
+| [#43 (prod)](demande-43-export-xlsx-billets-filtres.md) | Export Excel de la liste de billets affichée | S | À tester | ✅ | `e27c519` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

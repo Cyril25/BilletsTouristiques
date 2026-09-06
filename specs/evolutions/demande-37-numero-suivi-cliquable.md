@@ -5,7 +5,7 @@
 - **Concerne :** collecteurs
 - **Écran :** Mes collectes → Historique des envois
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -41,4 +41,4 @@
   `renderEnveloppePasseeDetail()`, `buildHistoriqueCards()` et l'historique d'enveloppe ;
   `style.css` (`.lien-suivi`).
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

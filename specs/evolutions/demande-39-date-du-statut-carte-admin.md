@@ -5,7 +5,7 @@
 - **Concerne :** admins
 - **Écran :** Gestion Billets
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -37,4 +37,4 @@
 - **Fichiers :** `admin.js` — `CHAMP_DATE_PAR_STATUT`, `dateDuStatutCollecte()`,
   `dateStatutCarte()`, affichage dans la carte ; `style.css` (`.admin-card-statut-date`).
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

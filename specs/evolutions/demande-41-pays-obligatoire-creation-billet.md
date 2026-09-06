@@ -5,7 +5,7 @@
 - **Concerne :** admins
 - **Écran :** Gestion Billets → formulaire billet
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -38,4 +38,4 @@ sans pays passe entre les mailles de tous ces écrans.
   `admin.js` (`validateBilletForm`).
 - **Migration :** aucune (pas de contrainte SQL : la règle est de saisie, et l'existant est
   incomplet).
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

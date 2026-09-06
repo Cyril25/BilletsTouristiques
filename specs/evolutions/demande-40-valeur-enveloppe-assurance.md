@@ -9,7 +9,7 @@
 - **Concerne :** collecteurs
 - **Écran :** Mes collectes → Préparation des envois
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -71,10 +71,10 @@ billets ; le collecteur doit calculer la valeur de tête ou renoncer.
 - **Fichiers :** `mes-collectes.js` — helper `valeurBillets()` (pendant monétaire de
   `countBillets()`), affichage dans `renderEnveloppeDetail()`, `ouvrirFormulaireExpedition()`
   (+ `billet_id`/`collecte_id` dans le `select`) et le formulaire d'expédition directe de
-  `toggleEnvoye()`.
+  `demanderExpeditionDirecte()`.
 - **Migration :** aucune.
 - **Cache-buster :** `sw.js` + `menu.html` bumpés.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`
 
 ## Note — deux séries de numéros dans ce dossier
 

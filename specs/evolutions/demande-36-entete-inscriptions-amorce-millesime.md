@@ -5,7 +5,7 @@
 - **Concerne :** admins
 - **Écran :** Gestion Billets → modale Inscriptions
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -36,4 +36,4 @@ inscriptions du bon.
 
 - **Fichiers :** `admin.js` — `libelleBilletComplet()`, utilisé dans `openInscriptionsModal()`.
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

@@ -5,7 +5,7 @@
 - **Concerne :** membres
 - **Écran :** Les billets
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -42,4 +42,4 @@
 
 - **Fichiers :** `billets.html` (CSP + SheetJS + bouton), `app-new.js` (`exporterBilletsXlsx()`).
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

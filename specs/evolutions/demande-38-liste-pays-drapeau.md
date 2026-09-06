@@ -5,7 +5,7 @@
 - **Concerne :** membres, admins
 - **Écran :** Mon profil + Gestion des membres
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -43,4 +43,4 @@
 - **Fichiers :** `users.js` (`paysListe`, `optionsPaysHtml()`, `majDrapeauEditionMembre()`, champ
   de la modale), `profil.html` + `profil.js` (`majDrapeauProfil()`), `style.css`.
 - **Migration :** aucune (la table `pays` existe déjà).
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`

@@ -5,7 +5,7 @@
 - **Concerne :** collecteurs
 - **Écran :** Mes collectes → Vérification paiement
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `e27c519`
 
 ## Contexte (demande)
 
@@ -46,4 +46,4 @@ fini de traiter ses autres billets. Il doit le retrouver à la main après chaqu
   `showTab('paiements')`, application dans `renderVerificationPaiement()`, bouton
   `reordonnerVerificationPaiement()`.
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `e27c519`
