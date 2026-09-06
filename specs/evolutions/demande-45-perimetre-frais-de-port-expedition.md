@@ -6,7 +6,7 @@
 - **Concerne :** collecteurs
 - **Écran :** Mes collectes → Préparation des envois → Expédier l'enveloppe
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `00c6ce6`
 
 ## Contexte (demande)
 
@@ -66,4 +66,4 @@ douter de tout le reste de l'écran. C'est ce qui justifie le correctif, pas les
   (la carte des billets `bMapExp` sert aussi à #40, sa déclaration en double a été retirée).
 - **Migration :** aucune.
 - **Cache-buster :** `sw.js` v285 + `menu.html?v=193`.
-- **Commit :** _(à compléter)_
+- **Commit :** `00c6ce6`
