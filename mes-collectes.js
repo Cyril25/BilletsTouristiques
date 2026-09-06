@@ -2757,6 +2757,50 @@ function badgeVacances(jusquAu) {
     return '<span class="badge-vacances" title="Ce membre est en vacances : paiement plus tard, ne pas envoyer pour le moment"><i class="fa-solid fa-umbrella-beach"></i> En vacances' + suffix + '</span>';
 }
 
+// Demande #44 — valider le paiement d'un complément, le refuser, ou solder un avoir.
+// Même vocabulaire de statuts que partout : non_paye / declare / confirme.
+function majDette(detteId, corps, message) {
+    supabaseFetch('/rest/v1/dettes?id=eq.' + detteId, {
+        method: 'PATCH',
+        body: JSON.stringify(corps)
+    })
+    .then(function() {
+        showToast(message);
+        loadVerificationPaiement();
+    })
+    .catch(function(error) {
+        console.error('Erreur mise à jour de la ligne d\'écart :', error);
+        showToast('Erreur lors de la mise à jour', 'error');
+    });
+}
+
+function validerPaiementDette(detteId) {
+    majDette(detteId, { statut_paiement: 'confirme', date_validation: new Date().toISOString() },
+             'Complément marqué payé');
+}
+
+function refuserPaiementDette(detteId) {
+    majDette(detteId, { statut_paiement: 'non_paye', date_validation: null },
+             'Déclaration refusée');
+}
+
+// Un avoir se solde, il ne se « valide » pas : c'est le collecteur qui doit. Les deux
+// façons de le solder — remboursé, ou déduit d'une prochaine collecte — ferment la même
+// ligne ; c'est le libellé qui garde la trace de ce qui a été fait.
+function soldeAvoir(detteId, mode) {
+    var suffixe = (mode === 'deduit') ? ' (déduit d\'une prochaine collecte)' : ' (remboursé)';
+    var ligne = null;
+    if (verifPaiementData && verifPaiementData.dettes) {
+        for (var i = 0; i < verifPaiementData.dettes.length; i++) {
+            if (verifPaiementData.dettes[i].id === detteId) { ligne = verifPaiementData.dettes[i]; break; }
+        }
+    }
+    var libelle = (ligne && ligne.libelle) ? ligne.libelle : 'Écart de prix';
+    if (libelle.indexOf('(') === -1) libelle += suffixe;
+    majDette(detteId, { statut_paiement: 'confirme', date_validation: new Date().toISOString(), libelle: libelle },
+             mode === 'deduit' ? 'Avoir reporté sur une prochaine collecte' : 'Avoir marqué remboursé');
+}
+
 // Demande #34 — le collecteur reprend la main sur l'ordre.
 function reordonnerVerificationPaiement() {
     ordreVerifPaiement = null;
@@ -2814,7 +2858,11 @@ function loadVerificationPaiement() {
     // Inscriptions billets non soldées + enveloppes avec frais de port dus (prix saisi, non confirmé)
     var pInscriptions = supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=in.(non_paye,declare)&pas_interesse=eq.false&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,billet_id.asc,id.asc');
     var pEnveloppesPort = supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,date_expedition.asc');
-    Promise.all([pInscriptions, pEnveloppesPort])
+    // Demande #44 — écarts de prix non soldés dont je suis le collecteur. Le .catch
+    // garde l'écran fonctionnel tant que la migration n'est pas jouée.
+    var pDettes = supabaseFetch('/rest/v1/dettes?collecteur_alias=eq.' + alias + '&statut_paiement=neq.confirme&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,date_creation.asc')
+        .catch(function() { return []; });
+    Promise.all([pInscriptions, pEnveloppesPort, pDettes])
         .then(function(results) {
             // Demande #48 — les inscriptions d'un autre collecteur sur le meme billet
             // apparaissaient dans ma verification des paiements (je reclamais un
@@ -2824,7 +2872,8 @@ function loadVerificationPaiement() {
             var enveloppesPort = (results[1] || []).filter(function(e) {
                 return e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0;
             });
-            if (inscriptions.length === 0 && enveloppesPort.length === 0) {
+            var dettes = results[2] || [];   // #44
+            if (inscriptions.length === 0 && enveloppesPort.length === 0 && dettes.length === 0) {
                 renderPaiementsVide();
                 return;
             }
@@ -2842,6 +2891,9 @@ function loadVerificationPaiement() {
             });
             enveloppesPort.forEach(function(e) {
                 if (e.membre_email && emails.indexOf(e.membre_email) === -1) emails.push(e.membre_email);
+            });
+            dettes.forEach(function(d) {   // #44
+                if (d.membre_email && emails.indexOf(d.membre_email) === -1) emails.push(d.membre_email);
             });
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
             return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom,pseudo,rue,code_postal,ville,pays,en_vacances,vacances_jusqu_au')
@@ -2867,8 +2919,8 @@ function loadVerificationPaiement() {
                     });
                     var billetsMap = {};
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
-                    verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap, enveloppesPort: enveloppesPort, membresMap: membresMap };
-                    renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap);
+                    verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap, enveloppesPort: enveloppesPort, membresMap: membresMap, dettes: dettes };
+                    renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap, dettes);
                     // #12 — Compteur onglet paiements (billets déclarés + frais de port déclarés)
                     var declares = inscriptions.filter(function(i) { return i.statut_paiement === 'declare'; }).length
                         + enveloppesPort.filter(function(e) { return e.statut_paiement_port === 'declare'; }).length;
@@ -2881,13 +2933,14 @@ function loadVerificationPaiement() {
         });
 }
 
-function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap) {
+function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap, dettes) {
     enveloppesPort = enveloppesPort || [];
+    dettes = dettes || [];   // #44
     membresMap = membresMap || {};
     var groupes = {};
     function ensureGroupe(email) {
         if (!groupes[email]) {
-            groupes[email] = { email: email, adresse: null, inscriptions: [], port: [] };
+            groupes[email] = { email: email, adresse: null, inscriptions: [], port: [], dettes: [] };   // #44
         }
         return groupes[email];
     }
@@ -2898,6 +2951,9 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
     });
     enveloppesPort.forEach(function(env) {
         ensureGroupe(env.membre_email).port.push(env);
+    });
+    dettes.forEach(function(d) {   // #44
+        ensureGroupe(d.membre_email).dettes.push(d);
     });
     // Adresse de repli (membre sans inscription en attente mais avec frais de port)
     Object.keys(groupes).forEach(function(email) {
@@ -2916,6 +2972,11 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
     enveloppesPort.forEach(function(env) {
         totalEnAttente += parseFloat(env.prix_envoi_reel || 0);
     });
+    // Demande #44 — un avoir n'est pas « en attente de paiement » : c'est moi qui dois.
+    dettes.forEach(function(d) {
+        var m = parseFloat(d.montant || 0);
+        if (m > 0) totalEnAttente += m;
+    });
 
     var html = '<div class="paiement-total-attente">'
         + 'En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong>'
@@ -2927,7 +2988,8 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
     // Demande #10 — membre avec au moins un paiement déclaré (à valider) ?
     function groupeADeclare(gr) {
         return (gr.inscriptions || []).some(function(i) { return i.statut_paiement === 'declare'; })
-            || (gr.port || []).some(function(e) { return e.statut_paiement_port === 'declare'; });
+            || (gr.port || []).some(function(e) { return e.statut_paiement_port === 'declare'; })
+            || (gr.dettes || []).some(function(d) { return d.statut_paiement === 'declare'; });   // #44
     }
     // Tri : les déclarés (à valider) en tête, puis par nom / prénom
     emails.sort(function(a, b) {
@@ -3040,11 +3102,35 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
                 + '</div>';
         }
 
+        // Demande #44 — écarts de prix. Une dette se valide comme un paiement ; un avoir
+        // ne se valide pas, il se SOLDE : c'est le collecteur qui doit, et il déclare
+        // l'avoir réglé (remboursé, ou déduit d'une prochaine collecte). L'avoir n'entre
+        // pas dans le total du groupe : additionner une dette et un avoir reviendrait à
+        // compenser, ce que la décision R1 exclut.
+        for (var dd = 0; dd < groupe.dettes.length; dd++) {
+            var det = groupe.dettes[dd];
+            var mDet = parseFloat(det.montant || 0);
+            var estAvoirDet = mDet < 0;
+            if (!estAvoirDet) totalGroupe += mDet;
+            lignes += '<div class="envoi-ligne envoi-ligne-dette' + (estAvoirDet ? ' envoi-ligne-avoir' : '') + '">'
+                + '<span class="envoi-billet"><i class="fa-solid fa-scale-balanced"></i> ' + escapeHtmlMC(det.libelle || 'Écart de prix') + '</span>'
+                + '<span class="envoi-montant">' + Math.abs(mDet).toFixed(2) + ' €</span>'
+                + (estAvoirDet
+                    ? '<span class="badge-paiement badge-avoir">Vous devez</span>'
+                      + '<button onclick="soldeAvoir(' + det.id + ', \'rembourse\')" class="btn-marquer-envoye" title="Marquer comme remboursé"><i class="fa-solid fa-money-bill-transfer"></i></button>'
+                      + '<button onclick="soldeAvoir(' + det.id + ', \'deduit\')" class="btn-marquer-envoye" title="Sera déduit d\'une prochaine collecte"><i class="fa-solid fa-forward"></i></button>'
+                    : badgePaiementEnvoi(det.statut_paiement)
+                      + '<button onclick="validerPaiementDette(' + det.id + ')" class="btn-marquer-envoye" title="Confirmer le paiement de ce complément"><i class="fa-solid fa-check"></i></button>'
+                      + (det.statut_paiement === 'declare' ? '<button onclick="refuserPaiementDette(' + det.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Refuser la déclaration (repasse à non payé)"><i class="fa-solid fa-xmark"></i></button>' : ''))
+                + '</div>';
+        }
+
         var groupeIds = groupe.inscriptions.map(function(i) { return i.id; });
         var portIds = groupe.port.map(function(e) { return e.id; });
         var countParts = [];
         if (groupe.inscriptions.length > 0) countParts.push(groupe.inscriptions.length + ' billet(s)');
         if (groupe.port.length > 0) countParts.push(groupe.port.length + ' frais d\'envoi');
+        if (groupe.dettes.length > 0) countParts.push(groupe.dettes.length + ' écart(s) de prix');   // #44
         html += '<div class="envoi-groupe">'
             + '<div class="envoi-groupe-header">'
             + '<strong>' + escapeHtmlMC(nom) + '</strong>'

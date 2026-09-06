@@ -10678,3 +10678,11 @@ button.collecte-badge-status {
     color: #1b7f5a;
     font-weight: 600;
 }
+
+/* Demande #44 — lignes d'écart de prix dans la vérification paiement */
+.envoi-ligne-dette {
+    background: #fff7ec;
+}
+.envoi-ligne-avoir {
+    background: #eef8f3;
+}
