@@ -6,7 +6,7 @@
 - **Concerne :** membres, collecteurs
 - **Écran :** Mes collectes + Mes inscriptions
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `5b9c984`
 
 ## Contexte (demande)
 
@@ -62,4 +62,4 @@ déjà ce choix (« Trier par : Date / Référence ») depuis longtemps.
   `mes-inscriptions.html` (barre de tri), `style.css` (`.liste-tri`).
 - **Migration :** aucune.
 - **Cache-buster :** `sw.js` v283 + `menu.html?v=191`.
-- **Commit :** _(à compléter)_
+- **Commit :** `5b9c984`
