@@ -182,6 +182,13 @@ Le trigger porte aussi la règle **R4** : un second déclencheur sur `inscriptio
 
 ## Plan de validation sur l'environnement de test (R8)
 
+> **Le scénario se monte sur un billet créé pour l'occasion** (`scripts/scenario-test-demande-44.sql`,
+> amorce `ZZTEST`), pas sur un billet copié de la production. Première tentative faite sur un
+> vrai billet — le 4266, payé à 100 % en prod : il a fallu écraser 17 statuts de paiement et
+> des quantités réelles pour obtenir les trois cas. La copie cessait alors de refléter la prod,
+> ce qui est précisément ce à quoi elle sert. Le billet 4266 a été restauré depuis les valeurs
+> de production (17 `confirme`, 39 billets, collecte « Terminé »).
+
 Cible : copie Supabase `ijxajtxnhbczgiarkefo` via le Worker `supabase-admin-proxy-test`, front
 `BilletsTouristiques-TestEnv` (remote `test`). **Les deux répondent (vérifié le 2026-09-06).**
 
