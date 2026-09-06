@@ -83,6 +83,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#43 (prod)](demande-43-export-xlsx-billets-filtres.md) | Export Excel de la liste de billets affichée | S | À tester | ✅ | `e27c519` |
 | [#32 (prod)](demande-32-tri-par-amorce.md) | Trier par amorce dans Mes collectes et Mes inscriptions | M | À tester | ✅ | `5b9c984` |
 | [#35 (prod)](demande-35-heure-de-validation-paiement.md) | Heure de validation dans l'historique des paiements | S | À tester | ✅ | `b482cc0` |
+| [#45 (prod)](demande-45-perimetre-frais-de-port-expedition.md) | Périmètre des versions dans le formulaire d'expédition (nb de billets / frais de port) | S | À tester | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

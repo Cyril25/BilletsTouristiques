@@ -2407,6 +2407,21 @@ function ouvrirFormulaireExpedition(enveloppeId) {
         .then(function(results) {
             var inscriptions = results[0] || [];
 
+            // Demande #45 — appliquer la règle de périmètre (#46) DÈS LA LECTURE, comme le
+            // font déjà openCollecteDetail(), loadVerificationPaiement() et loadEnveloppes().
+            // C'était le dernier chargement d'inscriptions à ne pas le faire, et c'est celui
+            // qui pré-remplit le prix de port : sur une collecte « variante seule », des
+            // quantités « normales » qui n'ont pas lieu d'être gonflaient le nombre de billets,
+            // donc le tarif proposé au collecteur. Corriger ici plutôt qu'au point de calcul
+            // met tout ce qui suit d'accord : nombre affiché, prix de port et valeur (#40).
+            var bMapExp = {};
+            mesBillets.forEach(function(b) { bMapExp[b.id] = b; });
+            inscriptions.forEach(function(ins) {
+                var vExpEnv = versionsInscription(ins, bMapExp[ins.billet_id]);
+                if (!vExpEnv.normale) ins.nb_normaux = 0;
+                if (!vExpEnv.variante) ins.nb_variantes = 0;
+            });
+
             // Nb de billets physiques dans l'enveloppe + pays du membre (pour la destination)
             var nbBillets = 0;
             var pays = '';
@@ -2435,9 +2450,8 @@ function ouvrirFormulaireExpedition(enveloppeId) {
             }).join('');
 
             // Demande #40 — valeur des billets, a cote du nombre : c'est ici que le mode
-            // d'envoi (donc le niveau d'assurance) se choisit.
-            var bMapExp = {};
-            mesBillets.forEach(function(b) { bMapExp[b.id] = b; });
+            // d'envoi (donc le niveau d'assurance) se choisit. bMapExp est construite plus
+            // haut, avec la mise au périmètre (#45).
             var labelValExp = labelValeurBillets(valeurBillets(inscriptions, bMapExp));
             var valExpHtml = labelValExp
                 ? ' &nbsp;·&nbsp; valeur des billets <strong>' + labelValExp + '</strong> <small>(hors port, pour l\'assurance)</small>'
