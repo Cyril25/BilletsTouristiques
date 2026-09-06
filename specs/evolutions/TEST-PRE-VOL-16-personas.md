@@ -61,7 +61,7 @@ C'est **ça** qu'il faut éprouver, et ça ne se voit qu'avec un vrai JWT — `U
 
 ## Les tests, dans l'ordre d'importance
 
-### 1. Membre — inscription puis désinscription réelles
+### 1. Membre — inscription réelle (le membre ne se désinscrit pas)
 
 Le test qui compte le plus : il traverse `inscriptions_insert_own`
 (`membre_email = auth.jwt() ->> 'email'`), les triggers de compteurs, et la policy de
@@ -70,10 +70,30 @@ suppression.
 - [ ] Se connecter avec un **compte de test membre**, catalogue → une collecte **ouverte**.
 - [ ] S'inscrire. L'inscription apparaît dans « Mes inscriptions », quantités et montant justes.
 - [ ] Le compteur d'inscrits de la collecte a bougé (côté admin).
-- [ ] Se désinscrire. La ligne disparaît, le compteur redescend.
+- [ ] **Le retrait se fait côté collecteur**, depuis « Mes collectes » : la ligne disparaît,
+      le compteur redescend. Un membre n'a pas à pouvoir se retirer seul — règle produit
+      rappelée par Cyril le 06/09/2026. Ce retrait exerce `inscriptions_delete_collecteur`.
 - [ ] **Recharger la page** avant de conclure : le bug `e8c7c92` était précisément une
       écriture perdue parce que la page se déchargeait avant l'envoi. Un écran juste ne
       prouve rien tant qu'on n'a pas rechargé.
+
+> ⚠ **À arbitrer — la règle « pas de désinscription » n'est portée que par l'interface.**
+> Constaté le 06/09/2026 en corrigeant ce document. La policy en base dit :
+>
+> ```sql
+> inscriptions_delete_own_or_admin [DELETE]
+>   USING (is_admin() OR membre_email = auth.jwt() ->> 'email')
+> ```
+>
+> Autrement dit **un membre peut supprimer sa propre inscription** — il n'y a simplement
+> pas de bouton pour le faire. Un appel direct à l'API depuis la console suffirait.
+> Ce n'est **pas une régression de #16** : cette policy date de `migration-5-4-inscriptions.sql`,
+> bien avant. Mais la règle produit et la règle technique ne disent pas la même chose, et
+> c'est le genre d'écart qu'on découvre le jour où quelqu'un l'exploite sans malice.
+> Si on veut aligner : retirer `membre_email = auth.jwt() ->> 'email'` de la clause `USING`,
+> ce qui laisse la suppression aux admins et aux collecteurs (`inscriptions_delete_collecteur`).
+> ⚠ Vérifier d'abord qu'aucun écran ne s'appuie dessus — l'annulation d'une inscription
+> juste après sa création, par exemple.
 
 ### 2. Collecteur — le périmètre d'écriture, dans les deux sens
 

@@ -137,7 +137,7 @@ SELECT column_name FROM information_schema.columns
 ## 7. Checklist de fumée complète (§6) — 3 personas
 
 - [ ] **Membre** : catalogue · fiche billet (statut, collecteur, prix, dates) · mes inscriptions (dont un billet **variante**) · bouton PayPal hors pré-collecte.
-- [ ] **Membre** : **s'inscrire sur une collecte ouverte puis se désinscrire**. *Seul test qui valide RLS + triggers de bout en bout.*
+- [ ] **Membre** : **s'inscrire sur une collecte ouverte**. *Seul test qui valide RLS + triggers de bout en bout.* ⚠ Le membre **ne se désinscrit pas** (règle produit) : c'est le **collecteur** qui le retire depuis « Mes collectes » — et ce retrait est du même coup le test de la policy `inscriptions_delete_collecteur`.
 - [ ] **Collecteur** : ses collectes **et elles seules** · détail · vérification des paiements limitée à ses inscrits.
 - [ ] **Admin** : carte avec statut et compteur · modale groupée par collecte · ajout d'une inscription sur une collecte précise · **création d'un billet** → retour à la liste avec le compte de pré-inscrits.
 

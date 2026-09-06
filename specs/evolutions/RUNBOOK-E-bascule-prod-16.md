@@ -290,8 +290,13 @@ Avec les **3 personas** — un membre lambda, un collecteur, l'admin :
    colonnes ; vérification des paiements limitée à ses inscrits.
 5. **Admin** : carte avec statut et compteur d'inscriptions ; modale groupée par collecte ;
    ajout d'une inscription sur une collecte précise ; création d'un billet + sa pré-collecte.
-6. **Inscription réelle** : s'inscrire sur une collecte ouverte avec un compte de test, puis
-   se désinscrire. C'est le seul test qui valide RLS + triggers de bout en bout.
+6. **Inscription réelle** : s'inscrire sur une collecte ouverte avec un compte de test.
+   C'est le seul test qui valide RLS + triggers de bout en bout.
+   ⚠ **Le membre ne se désinscrit PAS** — corrigé le 2026-09-06, ce document demandait
+   l'inverse. La désinscription est un geste de **collecteur** (bouton de « Mes collectes »)
+   ou d'admin ; on ne la laisse pas au membre, pour éviter les retraits après engagement.
+   Le retrait de l'inscription de test **est donc lui-même le test du collecteur** — il
+   exerce la policy `inscriptions_delete_collecteur`, neuve depuis #16.
 
 ---
 
