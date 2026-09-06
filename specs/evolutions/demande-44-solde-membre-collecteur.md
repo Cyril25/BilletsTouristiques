@@ -1,10 +1,11 @@
 # Demande #44 (prod) — Dette et avoir entre membre et collecteur après un changement de prix
 
-- **Épic :** chantier structurant (complexité **L** — spec détaillée obligatoire avant dev)
+- **Épic :** chantier structurant (complexité **L**)
 - **Demande :** #44 de la table `demandes` **de production** — Jean-Philippe, 2026-09-02,
   priorité **haute**.
 - **Concerne :** membres, collecteurs, admins
-- **Statut :** **En cours — phase d'analyse.** Aucune ligne de code avant accord.
+- **Statut :** **Analyse validée par Cyril le 2026-09-06.** Développement à faire, puis
+  **validation obligatoire sur l'environnement de test avant la prod** (décision de Cyril).
 - **Prise en premier** parce que c'est la seule demande de priorité haute restante. L'ordre acté
   le 2026-07-21 (#16 → #1 → #22) ne la concerne pas : elle est postérieure, et #1/#22 sont en
   priorité basse et normale.
@@ -15,131 +16,192 @@
 > membres pour avoir ou devoir de l'argent à un collecteur, idem pour le collecteur : il sait
 > qu'il doit rembourser ou attendre une future collecte pour régulariser le solde
 
-## Le constat de départ
+## En un exemple
+
+Billet à **3,00 €**, trois membres inscrits pour **2 billets chacun**. Le collecteur passe le prix
+à **3,20 €**.
+
+| Membre | État avant | Ce qui se passe | Ce qu'il voit après |
+|---|---|---|---|
+| Alice | payé, **validé** par le collecteur | ligne de dette **+0,40 €** | « Payé » sur son inscription, **plus** une ligne « Augmentation du prix — UEBK 2026-14 NAUSICAA : 0,40 € » à régler |
+| Bruno | a **déclaré** avoir payé, pas encore validé | ligne de dette **+0,40 €** | pareil qu'Alice : sa déclaration reste valable pour 6,00 €, la ligne porte le complément |
+| Chloé | **pas payé** | **rien** | son montant dû passe simplement de 6,00 € à 6,40 € |
+
+Si au lieu de monter le prix descend à **2,80 €**, c'est la même chose au signe près : Alice et
+Bruno reçoivent chacun un **avoir de 0,40 €** que le collecteur leur doit, et le montant de Chloé
+tombe à 5,60 €.
+
+Autrement dit : **on ne touche jamais à ce qui a déjà été payé, on crée une ligne à côté.** C'est
+la même mécanique que les frais de port, avec un libellé qui dit d'où vient la somme.
+
+## Le constat qui a orienté le modèle
 
 **La base ne conserve aucune trace d'un montant payé.** `inscriptions` porte `statut_paiement`
-(`non_paye` / `declare` / `confirme`) et `date_validation`, mais **aucun montant**. Ce que doit un
-membre est toujours recalculé :
+(`non_paye` / `declare` / `confirme`) et `date_validation`, mais aucun montant : ce qui est dû est
+toujours recalculé depuis `collectes.prix`. Vérifié sur les 19 tables du schéma — ni table de
+paiements, ni historique de prix. Le seul montant réel enregistré dans l'application est
+`enveloppes.prix_envoi_reel`.
 
-```
-montant dû = nb_normaux × collectes.prix + nb_variantes × collectes.prix_variante
-```
+Le modèle de la ligne de dette **n'a pas besoin de cette mémoire** : au moment du changement on
+connaît l'écart et on sait qui avait déjà réglé. C'est ce qui fait tomber le principal obstacle du
+chantier — et ce qui rend toute reprise de données inutile.
 
-Vérifié sur les 19 tables du schéma : ni table de paiements, ni historique de prix, ni colonne de
-montant. Le seul montant réel enregistré dans toute l'application est `enveloppes.prix_envoi_reel`.
-Cyril l'avait pressenti (« on a le flag payé, mais je ne crois pas qu'on ait le montant… ce
-montant se base directement sur le prix du billet non ? ») : c'est exactement ça, à ceci près que
-le flag a **trois** valeurs, et que ces trois valeurs sont précisément les trois cas à traiter.
+## Décisions validées
 
-Un changement de prix réécrit donc le passé en silence : un membre qui a payé 3,00 € sur une
-collecte passée à 3,20 € reste affiché « payé », et la différence n'existe nulle part.
-
-## Le modèle retenu : la ligne de dette (proposition de Cyril)
-
-Plutôt que d'enregistrer un montant payé et d'en dériver un solde abstrait, on **matérialise
-l'écart en une ligne nommée**, sur le modèle des frais de port : un objet visible, rattaché à un
-membre et à un collecteur, qui se paie et se valide avec la machinerie existante.
-
-C'est le bon modèle, et pour une raison de fond : **il n'a pas besoin de savoir ce qui a été
-payé.** Au moment où le prix change, on connaît l'écart (nouveau − ancien) et on sait qui avait
-déjà réglé. La dette se calcule donc sans mémoire du passé — ce qui fait tomber le seul vrai
-obstacle du chantier.
-
-### Les trois cas, au moment où le prix change
-
-| `statut_paiement` | Prix en hausse | Prix en baisse |
+| | Décision | Motif |
 |---|---|---|
-| `non_paye` | **Rien.** Le montant dû se recalcule au nouveau prix — c'est déjà le comportement actuel, et il est juste. | **Rien**, idem. |
-| `declare` (payé annoncé, pas validé) | **Ligne de dette** : « Augmentation du prix — UEBK 2026-14 NAUSICAA » | **Ligne d'avoir** |
-| `confirme` (validé par le collecteur) | **Ligne de dette** | **Ligne d'avoir** |
+| **D1** | Solde **informatif**, pas de compensation automatique | Le système n'a jamais enregistré un montant ; qu'il apprenne à compter juste avant de payer à notre place. |
+| **D2** | **Billets seulement**, pas les frais de port | Le port a sa propre logique de paiement ; mélanger rendrait le solde illisible. |
+| **D3** | **Aucune reprise de l'existant** | Le modèle rend la reprise inutile : l'état actuel est la référence. Vérifié — sur 5 359 collectes « Collecte initiale », 2 seules divergent du prix d'origine (billets 824/825, arrondis connus de la migration, collectes terminées). Aucun prix édité depuis la bascule. |
+| **D4** | **La ligne suit le paiement** | Annuler un paiement annule les lignes non réglées qui en découlent ; une ligne déjà réglée n'est jamais touchée automatiquement. |
+| **D5** | **Pas de seuil** sur les petits montants, mais un bouton « solder » en un clic | Une dette est une dette ; c'est la liquidation qui doit être facile, pas la règle qui doit mentir. |
+| **D6** | **Notification automatique** au membre à la création d'une ligne | C'est de l'argent : personne ne surveille l'écran. Mécanique #33, déjà en service. |
+| **D7** | Visible : membre → Mes inscriptions, collecteur → Mes collectes, admin → stats. **Les dettes entrent dans la somme due du menu (#4), pas les avoirs** | Une dette *est* due. Un avoir n'est pas une somme due : le retrancher reviendrait à compenser, ce que D1 exclut. |
+| **D8** | **Validation sur l'environnement de test avant la prod** | Décision de Cyril : trop gros pour aller directement en production. |
 
-Montant de la ligne :
-`(nouveau_prix − ancien_prix) × nb_normaux + (nouveau_prix_variante − ancien_prix_variante) × nb_variantes`
+## Règles de gestion
 
-⚠ **En appliquant la règle de périmètre (#46)** — les quantités hors du périmètre ouvert par la
-collecte ne comptent pas. Sans cette précaution on facturerait des billets fantômes : c'est
-exactement le défaut que #45 vient de corriger dans le calcul des frais de port. Autant ne pas le
-réintroduire dans un calcul de dette.
+### Quand une ligne est créée
 
-### La baisse de prix — « à voir comment faire »
+À chaque changement de `collectes.prix` ou `collectes.prix_variante`, pour chaque inscription
+active (`pas_interesse = false`) de cette collecte :
 
-C'est **la même ligne, signe inversé**. Ce qui change n'est pas le calcul mais le règlement, parce
-qu'un membre ne peut pas « payer » un montant négatif :
+| `statut_paiement` | Prix ↑ | Prix ↓ |
+|---|---|---|
+| `non_paye` | **rien** — le montant dû se recalcule au nouveau prix (comportement actuel, déjà juste) | **rien** |
+| `declare` | ligne de **dette** (montant > 0) | ligne d'**avoir** (montant < 0) |
+| `confirme` | ligne de **dette** | ligne d'**avoir** |
 
-- **côté membre**, la ligne s'affiche comme un avoir : « Le collecteur X vous doit 1,20 € » ;
-- **côté collecteur**, elle apparaît dans ses lignes à régler, avec un bouton qui la clôt —
-  « Remboursé » ou « Déduit d'une prochaine collecte » ;
-- **la ligne reste ouverte tant que le collecteur ne l'a pas close.** C'est très exactement le
-  « attendre une future collecte pour régulariser le solde » de la demande : rien n'est perdu,
-  rien n'est automatique, et les deux parties voient la même chose.
+```
+montant = (prix_après − prix_avant) × nb_normaux
+        + (prix_variante_après − prix_variante_avant) × nb_variantes
+```
 
-Symétriquement, une dette (montant positif) se paie comme une ligne de frais de port : le membre
-déclare, le collecteur valide. Mêmes statuts, mêmes écrans, rien de neuf à apprendre.
+Trois précisions qui comptent :
 
-### Pourquoi un déclencheur en base, et pas du code d'écran
+- **Le périmètre de versions (#46) s'applique** : une quantité hors du périmètre ouvert par la
+  collecte compte pour zéro. Sans ça on facturerait des billets fantômes — exactement le défaut
+  que #45 vient de corriger dans les frais de port ; autant ne pas le réintroduire dans un calcul
+  de dette.
+- **Le prix variante suit son repli habituel** : quand `prix_variante` est vide, c'est `prix` qui
+  s'applique. L'écart se calcule donc sur les prix *effectifs*, avant et après.
+- **La première mise à prix ne crée rien.** Passer de « pas de prix » à un prix n'est pas un
+  changement : c'est la saisie initiale, et les 62 collectes en pré-collecte sont dans ce cas.
+  *(Contrôle : 81 inscriptions payées existent sur des collectes sans prix — toutes sur des
+  collectes « Terminé », dont le prix ne bougera pas.)*
 
-La création des lignes doit se faire dans un **trigger PostgreSQL sur `collectes`**
-(`UPDATE OF prix, prix_variante`), pas dans `admin.js`. Trois raisons vérifiées :
+### Comment une ligne se règle
 
-1. Aujourd'hui seul `admin.js` écrit le prix (modale collecte, création et édition) — mais la
-   policy `collectes_update_own_collecteur` **autorise un collecteur à modifier sa propre
-   collecte, prix compris**, par appel direct à l'API. Aucun écran ne le propose ; la porte est
-   ouverte quand même (même famille que la policy de désinscription notée dans la fiche).
+- **Dette (montant > 0)** : exactement comme une ligne de frais de port. Le membre déclare avoir
+  payé, le collecteur valide. Mêmes statuts, mêmes gestes, rien de neuf à apprendre.
+- **Avoir (montant < 0)** : le membre ne peut pas « payer » un montant négatif. Côté membre, un
+  avoir affiché (« le collecteur X vous doit 0,40 € ») ; côté collecteur, une ligne à solder avec
+  un bouton **« Remboursé »** ou **« Déduit d'une prochaine collecte »**. **La ligne reste ouverte
+  tant que le collecteur ne la ferme pas** — c'est le « attendre une future collecte pour
+  régulariser » de la demande.
+
+## Modèle de données
+
+### Table `dettes`
+
+| Colonne | Type | Rôle |
+|---|---|---|
+| `id` | `int` identity | clé |
+| `membre_email` | `text` NOT NULL | qui |
+| `collecteur_alias` | `text` NOT NULL | envers qui (même clé que `enveloppes.collecteur_alias`) |
+| `collecte_id` | `uuid` NOT NULL | d'où ça vient |
+| `billet_id` | `int` | pour le libellé, et si l'inscription disparaît |
+| `inscription_id` | `int` NULL | lien pour D4 (`ON DELETE SET NULL`) |
+| `montant` | `numeric(10,2)` NOT NULL | **> 0 = le membre doit ; < 0 = le collecteur doit** |
+| `libelle` | `text` NOT NULL | « Augmentation du prix — UEBK 2026-14 NAUSICAA » |
+| `motif` | `text` NOT NULL | `changement_prix` (laisse la porte ouverte à d'autres origines) |
+| `nb_normaux`, `nb_variantes` | `int` | quantités retenues, **après** application du périmètre |
+| `prix_avant`, `prix_apres` | `numeric(10,2)` | traçabilité : pourquoi ce montant |
+| `prix_variante_avant`, `prix_variante_apres` | `numeric(10,2)` | idem |
+| `statut_paiement` | `text` NOT NULL default `non_paye` | `non_paye` / `declare` / `confirme` — même vocabulaire que partout |
+| `date_creation` | `timestamptz` default `now()` | |
+| `date_validation` | `timestamptz` | posée à la clôture, comme pour les inscriptions |
+
+Les colonnes `prix_*` et `nb_*` rendent chaque ligne **auditable** : on peut réafficher « 2 billets
+× +0,20 € » et répondre à un membre qui conteste, sans avoir à rejouer l'histoire des prix.
+
+### Déclencheur, et pourquoi en base
+
+Un **trigger PostgreSQL** sur `collectes`, `AFTER UPDATE OF prix, prix_variante`, crée les lignes.
+Pas du code dans `admin.js`, pour trois raisons vérifiées :
+
+1. Seul `admin.js` écrit le prix aujourd'hui — mais la policy `collectes_update_own_collecteur`
+   **autorise un collecteur à modifier sa propre collecte, prix compris**, par appel direct à
+   l'API. Aucun écran ne le propose ; la porte est ouverte quand même.
 2. Les prix sont parfois corrigés **en SQL** à la main.
 3. C'est déjà le choix de #16 : `Categorie` et `date_effective` sont dérivées par trigger. Une
    règle de cohérence qui vit en base ne peut pas être contournée par un chemin qu'on n'a pas prévu.
 
-## Ce que les réponses de Cyril ont tranché
+Le trigger porte aussi **D4** : un second déclencheur sur `inscriptions` supprime les lignes
+`statut_paiement = 'non_paye'` rattachées à une inscription qui repasse à `non_paye`.
 
-- **Périmètre : billets seulement.** Les frais de port gardent leur propre logique de paiement ;
-  les mélanger rendrait le solde illisible.
-- **Reprise de l'existant : rien à faire, et c'est vérifié.** La réponse « geler le montant
-  actuel » est satisfaite gratuitement par le modèle de la ligne de dette : puisque la dette naît
-  de l'écart au moment du changement, **l'état actuel est la référence**. Aucune colonne
-  `montant_paye`, aucune requête de reprise, aucune hypothèse sur qui a payé quoi.
-  Contrôle effectué le 2026-09-06 : sur les 5 359 collectes « Collecte initiale », **2 seules**
-  divergent du prix d'origine du billet (billets 824 et 825, 2,12 → 2,13), et ce sont les arrondis
-  connus de la migration, sur des collectes terminées. **Aucun prix n'a été édité depuis la
-  bascule** : la référence de départ est propre.
+### RLS
 
-## Exposition actuelle
+- lecture : le membre voit ses lignes (`membre_email = auth.jwt() ->> 'email'`), le collecteur
+  celles de son alias, l'admin tout ;
+- écriture : le membre ne peut que passer une de ses dettes à `declare` ; le collecteur valide ou
+  solde les siennes ; l'admin tout.
+- ⚠ **Jamais `TO authenticated`** (JWT Firebase → rôle `anon`), et utiliser
+  `is_admin_ou_superadmin()` et non `is_admin()`.
 
-Population qu'un changement de prix mettrait immédiatement en ligne de dette — inscriptions déjà
-payées ou déclarées, sur une collecte **encore ouverte** :
+## Écrans
 
-- **302 inscriptions**, **18 membres**, **41 collectes**, **5 collecteurs**
-- **532 billets**, **2 188,15 €** déjà engagés
+- **Mes inscriptions (membre)** — les lignes s'affichent comme les lignes de frais de port
+  (`makePortItem` / `renderPortCard` servent de modèle), groupées par collecteur. Une dette porte
+  le bouton « J'ai payé » ; un avoir s'affiche sans action, avec « en attente de remboursement ».
+- **Mes collectes (collecteur)** — les dettes déclarées rejoignent « Vérification paiement » pour
+  validation ; les avoirs apparaissent dans une section « À rembourser » avec les deux boutons de
+  clôture.
+- **Somme due du menu (#4)** — les dettes non réglées s'ajoutent, les avoirs non.
+- **Admin** — compteur des lignes ouvertes et total, dans l'écran de statistiques.
 
-Et pour cadrer ce que « changement de prix » veut dire : sur les 104 collectes ouvertes, **les 62
-en pré-collecte n'ont aucun prix**. Pour elles, renseigner le prix est une première saisie, pas un
-changement — personne n'a encore payé. Le cas visé est celui des **42 collectes ouvertes déjà
-tarifées**.
+## Critères d'acceptation
 
-## Points restant à trancher
+1. Augmenter le prix d'une collecte crée une ligne de dette pour chaque inscription `confirme` ou
+   `declare`, du bon montant, et **rien** pour les `non_paye`, dont le montant dû est recalculé.
+2. Baisser le prix crée les avoirs correspondants, du même montant au signe près.
+3. Les quantités hors périmètre de la collecte (#46) ne génèrent aucun montant.
+4. Renseigner le prix d'une collecte qui n'en avait pas ne crée aucune ligne.
+5. Deux changements de prix successifs créent deux lignes distinctes ; aucune n'est écrasée.
+6. Annuler un paiement supprime ses lignes non réglées et laisse intactes celles déjà réglées.
+7. Une dette se règle par le parcours habituel (le membre déclare, le collecteur valide) et sort
+   alors de la somme due du menu.
+8. Un avoir se clôt par le collecteur (« Remboursé » ou « Déduit d'une prochaine collecte »).
+9. Le membre concerné reçoit une notification à la création de sa ligne.
+10. Un changement de prix fait **en SQL direct** crée les lignes comme depuis l'écran admin.
+11. Aucune ligne n'apparaît pour un membre qui n'est pas concerné, ni pour un autre collecteur.
 
-**P1 — Une déclaration de paiement refusée doit annuler sa ligne de dette.**
-Un membre `declare` n'a pas été vérifié. Si le prix monte, on crée sa ligne ; si le collecteur
-**refuse ensuite** la déclaration, le membre redevient redevable du **plein** nouveau prix — et la
-ligne ferait double emploi. Règle proposée : **la ligne suit le paiement**. Annuler un paiement
-(#20) annule les lignes non encore réglées qui en découlent. Une ligne **déjà réglée**, elle,
-n'est jamais touchée automatiquement : le collecteur ajuste à la main.
+## Plan de validation sur l'environnement de test (D8)
 
-**P2 — Les écarts d'un centime.** Un changement de 0,005 € génère une ligne à 0,01 €. Proposition :
-pas de seuil dans les données (une dette est une dette), mais un bouton « solder » en un clic pour
-les liquider sans cérémonie. À confirmer, ou fixer un seuil.
+Cible : copie Supabase `ijxajtxnhbczgiarkefo` via le Worker `supabase-admin-proxy-test`, front
+`BilletsTouristiques-TestEnv` (remote `test`). **Les deux répondent (vérifié le 2026-09-06).**
 
-**P3 — Notifier ou non.** La mécanique de notification ciblée (#33) existe et fonctionne. Proposition :
-prévenir automatiquement les membres concernés lors de la création d'une ligne — c'est de l'argent,
-ils ne vont pas surveiller l'écran. À confirmer.
+⚠ **Le ménage post-bascule doit donc attendre** : la fiche notes prévoyait de supprimer ce projet
+jetable et son Worker « pas tout de suite ». C'est maintenant explicitement bloqué par #44.
 
-**P4 — Où le solde se voit.** Proposition : membre → « Mes inscriptions », près de ses lignes de
-frais de port ; collecteur → « Mes collectes », avec ses paiements à vérifier ; admin → écran de
-stats. Reste à décider s'il entre dans la **somme due du menu** (#4), ce qui le rendrait visible en
-permanence.
+Scénarios, dans cet ordre :
 
-## Suite
+1. **Montage** : une collecte de test, trois membres — un `confirme`, un `declare`, un `non_paye`.
+2. **Hausse** → deux lignes, montants exacts, rien pour le troisième, montant dû recalculé pour lui.
+3. **Baisse** → deux avoirs.
+4. **Collecte « variante seule »** avec des `nb_normaux` non nuls → aucun montant fantôme.
+5. **Première mise à prix** (vide → 3,00 €) → aucune ligne.
+6. **Annulation** de la déclaration de paiement → sa ligne non réglée disparaît.
+7. **Règlement** d'une dette de bout en bout → sortie de la somme due du menu.
+8. **Clôture** d'un avoir par le collecteur.
+9. **Deux hausses successives** → deux lignes.
+10. **Changement de prix en SQL direct** → lignes créées (c'est le test du trigger, pas de l'écran).
+11. **Cloisonnement** : se connecter en membre non concerné et vérifier qu'il ne voit rien.
 
-P1 à P4 tranchés, cette spec est complétée (schéma de la table, trigger, écrans, critères
-d'acceptation) et **le dev commence à ce moment-là, pas avant**. Le chantier reste dans le format
-« spec longue » ; il ne justifie pas un PRD BMAD tant qu'on s'en tient au solde informatif décrit
-ici.
+Passage en production seulement après ces onze scénarios, avec la migration rejouée sur la prod.
+
+## Réalisation
+
+- **Migration :** `scripts/migration-demande-44-dettes.sql` (table, trigger, RLS) — _à écrire_
+- **Fichiers :** _à compléter_
+- **Commit :** _(à compléter)_
