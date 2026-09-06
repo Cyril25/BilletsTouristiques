@@ -3171,13 +3171,21 @@ function loadPaiementsConfirmes() {
         });
 }
 
-// Demande #11 — libellé « validé le JJ/MM/AAAA » (historique de validation)
+// Demande #11 — libellé « validé le … » dans l'historique de validation.
+// Demande #35 — l'heure et la minute en plus : le but déclaré est de retrouver la
+// transaction correspondante sur PayPal, or sur 40 journées de validation en base, 39
+// portent plusieurs validations. La date seule ne désigne donc presque jamais un
+// paiement unique.
 function labelDateValidation(iso) {
     if (!iso) return '';
     var dStr;
-    try { dStr = new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    try {
+        var dVal = new Date(iso);
+        dStr = dVal.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            + ' à ' + dVal.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
     catch (e) { return ''; }
-    return '<span class="paiement-valide-date" title="Date de validation du paiement"><i class="fa-solid fa-clock-rotate-left"></i> validé le ' + dStr + '</span>';
+    return '<span class="paiement-valide-date" title="Date et heure de validation — pour retrouver la transaction sur PayPal"><i class="fa-solid fa-clock-rotate-left"></i> validé le ' + dStr + '</span>';
 }
 
 function renderPaiementsConfirmes(inscriptions, port, membresMap) {
