@@ -10594,3 +10594,57 @@ button.collecte-badge-status {
     border-color: var(--color-primary);
     color: #fff;
 }
+
+/* Demande #40 — valeur des billets d'une enveloppe (aide au choix de l'assurance) */
+.enveloppe-valeur {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #1b7f5a;
+    background: #e6f4ee;
+    border-radius: 10px;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+.expedition-form-valeur {
+    font-weight: 600;
+    color: #1b7f5a;
+    white-space: nowrap;
+}
+
+/* Demande #37 — numéro de suivi cliquable (suivi La Poste) */
+.lien-suivi {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.lien-suivi:hover {
+    color: var(--color-primary, #1b6ac9);
+}
+.lien-suivi .fa-arrow-up-right-from-square {
+    font-size: 0.75em;
+    opacity: 0.7;
+}
+
+/* Demande #38 — liste déroulante de pays + drapeau (profil et gestion des membres) */
+.profil-pays-row, .ue-pays-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.profil-pays-row select, .ue-pays-row select {
+    flex: 1;
+    min-width: 0;
+}
+.profil-pays-row .pays-flag, .ue-pays-row .pays-flag {
+    flex: none;
+}
+
+/* Demande #39 — date du statut courant sur la carte billet (admin) */
+.admin-card-statut-date {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--color-text-light, #666);
+    white-space: nowrap;
+    text-align: right;
+}

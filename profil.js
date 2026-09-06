@@ -359,6 +359,14 @@ function initProfilPage(user) {
 // ============================================================
 // 2b. CHARGEMENT DE LA LISTE DES PAYS
 // ============================================================
+// Demande #38 — drapeau à côté de la liste déroulante (même image que les cartes
+// membres : flags/<code>.svg, les emojis drapeaux ne sont pas rendus sous Windows).
+function majDrapeauProfil() {
+    var sel = document.getElementById('profil-pays');
+    var flag = document.getElementById('profil-pays-flag');
+    if (sel && flag) flag.innerHTML = window.flagImg(sel.value || '') || '';
+}
+
 function loadPaysList() {
     return supabaseFetch('/rest/v1/pays?select=nom&order=nom')
         .then(function(data) {

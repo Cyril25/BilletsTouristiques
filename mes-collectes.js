@@ -967,10 +967,17 @@ function demanderExpeditionDirecte(inscriptionId, checkbox) {
     var vExp = versionsVueBillet(currentBillet, collectesVueDetail());
     var colCount = 9 + (vExp.normale ? 1 : 0) + (vExp.variante ? 1 : 0);
 
+    // Demande #40 — meme aide au choix de l'assurance que dans le formulaire complet,
+    // ici pour la seule inscription expediee.
+    var bMapDir = {};
+    if (currentBillet) bMapDir[currentBillet.id] = currentBillet;
+    var labelValDir = inscription ? labelValeurBillets(valeurBillets([inscription], bMapDir)) : '';
+
     var formRow = document.createElement('tr');
     formRow.id = 'expedition-directe-form';
     formRow.innerHTML = '<td colspan="' + colCount + '">'
         + '<div class="expedition-form expedition-form-inline">'
+        + (labelValDir ? '<span class="expedition-form-valeur" title="Valeur au prix de collecte, hors frais de port">Valeur : ' + labelValDir + '</span>' : '')
         + '<span class="expedition-form-label">Mode d\'envoi :</span>'
         + '<select id="exp-direct-mode">'
         + '<option value="normal"' + (modeVal === 'normal' ? ' selected' : '') + '>Normal</option>'
@@ -1245,6 +1252,13 @@ function confirmerDesinscrire() {
 var currentEnveloppeId = null;
 var currentEnveloppeData = null;
 
+// Demande #34 — ordre d'affichage GELE de la verification paiement. Valider un
+// paiement recharge la vue : sans gel, le membre qui vient d'etre valide quitte la
+// tete de liste et repart dans l'ordre alphabetique, alors que le collecteur n'a pas
+// fini de traiter ses autres billets. On fige donc l'ordre tant qu'il ne demande pas
+// explicitement de reordonner (bouton) ou ne revient pas sur l'onglet.
+var ordreVerifPaiement = null;
+
 function showTab(tabName) {
     var collectesView = document.getElementById('collectes-list');
     var envoisView = document.getElementById('envois-view');
@@ -1269,6 +1283,7 @@ function showTab(tabName) {
     if (tabName === 'paiements') {
         if (paiementsView) paiementsView.style.display = '';
         if (tabs[1]) tabs[1].classList.add('active');
+        ordreVerifPaiement = null;   // #34 — revenir sur l'onglet reordonne
         loadVerificationPaiement();
     } else if (tabName === 'envois') {
         if (envoisView) envoisView.style.display = '';
@@ -1321,6 +1336,29 @@ function countBillets(inscs, billetsMap) {
         if (hasVar) total += (ins.nb_variantes || 0);
     }
     return total;
+}
+
+// Demande #40 — pendant monetaire de countBillets() : ce que valent les billets d'une
+// enveloppe, au prix de LEUR collecte (#16) et dans le perimetre de versions ouvert par
+// cette collecte (#46). Sert au collecteur a choisir son niveau de recommande.
+// Hors frais de port : on assure le contenu, pas l'affranchissement. Une collecte sans
+// prix compte pour 0, le total reste juste sur les autres lignes.
+function valeurBillets(inscs, billetsMap) {
+    var total = 0;
+    for (var i = 0; i < inscs.length; i++) {
+        var ins = inscs[i];
+        var b = billetsMap ? billetsMap[ins.billet_id] : null;
+        var vV = versionsInscription(ins, b);
+        var tV = tarifInsc(ins);
+        if (vV.normale) total += (ins.nb_normaux || 0) * tV.prix;
+        if (vV.variante) total += (ins.nb_variantes || 0) * tV.prixVar;
+    }
+    return total;
+}
+
+// Libelle « valeur X,XX € » — vide si on ne sait rien valoriser (collecte sans prix).
+function labelValeurBillets(valeur) {
+    return valeur > 0 ? valeur.toFixed(2) + ' €' : '';
 }
 
 function loadEnveloppes() {
@@ -1639,6 +1677,20 @@ function buildEnveloppeProgression(env) {
     return h;
 }
 
+// Demande #37 — le numéro de suivi devient un lien direct vers le suivi La Poste :
+// avant, il fallait le copier et aller le coller dans un moteur de recherche. Le champ
+// est du texte libre et aucun transporteur n'est stocké en base : on pointe La Poste,
+// comme le demandait la demande. stopPropagation parce que ces numéros sont posés dans
+// des cartes cliquables qui ouvrent le détail de l'envoi.
+function lienSuiviLaPoste(numero) {
+    var n = (numero || '').trim();
+    if (!n) return '';
+    return '<a href="https://www.laposte.fr/outils/suivre-vos-envois?code=' + encodeURIComponent(n) + '"'
+        + ' target="_blank" rel="noopener noreferrer" class="lien-suivi" onclick="event.stopPropagation()"'
+        + ' title="Suivre cet envoi sur laposte.fr">'
+        + escapeHtmlMC(n) + ' <i class="fa-solid fa-arrow-up-right-from-square"></i></a>';
+}
+
 function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     var container = _retourDepuisHistorique ? document.getElementById('historique-view') : document.getElementById('envois-view');
     if (!container) container = document.getElementById('envois-view');
@@ -1656,7 +1708,7 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
     html += '<span><i class="fa-solid fa-calendar"></i> Expédié le ' + dateExp + '</span>';
     html += '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>';
     if (env.numero_suivi) {
-        html += '<span><i class="fa-solid fa-barcode"></i> N° suivi : ' + escapeHtmlMC(env.numero_suivi) + '</span>';
+        html += '<span><i class="fa-solid fa-barcode"></i> N° suivi : ' + lienSuiviLaPoste(env.numero_suivi) + '</span>';   // #37
     }
     var prixLabel = (env.prix_envoi_reel !== null && env.prix_envoi_reel !== undefined)
         ? Number(env.prix_envoi_reel).toFixed(2) + ' €'
@@ -1867,7 +1919,7 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
             + '<strong>' + escapeHtmlMC(nomH) + '</strong>'
             + '<span class="envoi-date"><i class="fa-solid fa-calendar"></i> ' + dateExp + '</span>'
             + '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>'
-            + (envH.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + escapeHtmlMC(envH.numero_suivi) + '</span>' : '')
+            + (envH.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + lienSuiviLaPoste(envH.numero_suivi) + '</span>' : '')   // #37
             + (prixH ? '<span><i class="fa-solid fa-euro-sign"></i> ' + prixH + '</span>' : '')
             + statutHtml
             + '</div>'
@@ -2069,8 +2121,13 @@ function renderEnveloppeDetail(inscriptions, billetsMap) {
 
     // Section : Dans l'enveloppe (prêts à envoyer)
     var nbBilletsDansEnv = countBillets(dansEnveloppe, billetsMap);
+    // Demande #40 — valeur du contenu, pour choisir le niveau de recommande.
+    var labelValEnv = labelValeurBillets(valeurBillets(dansEnveloppe, billetsMap));
+    var valEnvHtml = labelValEnv
+        ? ' <span class="enveloppe-valeur" title="Valeur des billets au prix de collecte, hors frais de port — estimation pour l\'assurance">valeur ' + labelValEnv + '</span>'
+        : '';
     html += '<div class="enveloppe-section">';
-    html += '<h3><i class="fa-solid fa-box"></i> Dans l\'enveloppe (' + nbBilletsDansEnv + ')</h3>';
+    html += '<h3><i class="fa-solid fa-box"></i> Dans l\'enveloppe (' + nbBilletsDansEnv + ')' + valEnvHtml + '</h3>';
     if (dansEnveloppe.length === 0) {
         html += '<p class="enveloppe-vide">Aucun billet dans l\'enveloppe</p>';
     } else {
@@ -2260,7 +2317,7 @@ function renderHistoriqueEnveloppes(enveloppes, inscByEnv, billetsMap, container
             + '<div class="historique-envoi-header">'
             + '<span><i class="fa-solid fa-calendar"></i> ' + dateExp + '</span>'
             + '<span><i class="fa-solid fa-truck"></i> ' + modeLabel + '</span>'
-            + (env.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + escapeHtmlMC(env.numero_suivi) + '</span>' : '')
+            + (env.numero_suivi ? '<span><i class="fa-solid fa-barcode"></i> ' + lienSuiviLaPoste(env.numero_suivi) + '</span>' : '')   // #37
             + '<span>' + inscs.length + ' billet(s)</span>'
             + statutHtml
             + '</div>'
@@ -2306,7 +2363,9 @@ function ouvrirFormulaireExpedition(enveloppeId) {
         });
 
     Promise.all([
-        supabaseFetch('/rest/v1/inscriptions?enveloppe_id=eq.' + enveloppeId + '&statut_livraison=eq.pret_a_envoyer&select=mode_envoi,nb_normaux,nb_variantes,adresse_snapshot'),
+        // Demande #40 — billet_id/collecte_id en plus : ils portent le prix (collecte) et
+        // le perimetre de versions, necessaires pour valoriser le contenu.
+        supabaseFetch('/rest/v1/inscriptions?enveloppe_id=eq.' + enveloppeId + '&statut_livraison=eq.pret_a_envoyer&select=mode_envoi,nb_normaux,nb_variantes,adresse_snapshot,billet_id,collecte_id'),
         fraisPromise
     ])
         .then(function(results) {
@@ -2339,13 +2398,22 @@ function ouvrirFormulaireExpedition(enveloppeId) {
                 return '<option value="' + m + '"' + (m === modeVal ? ' selected' : '') + '>' + EXP_MODES_LABELS[m] + '</option>';
             }).join('');
 
+            // Demande #40 — valeur des billets, a cote du nombre : c'est ici que le mode
+            // d'envoi (donc le niveau d'assurance) se choisit.
+            var bMapExp = {};
+            mesBillets.forEach(function(b) { bMapExp[b.id] = b; });
+            var labelValExp = labelValeurBillets(valeurBillets(inscriptions, bMapExp));
+            var valExpHtml = labelValExp
+                ? ' &nbsp;·&nbsp; valeur des billets <strong>' + labelValExp + '</strong> <small>(hors port, pour l\'assurance)</small>'
+                : '';
+
             var destLabel = (destination === 'france')
                 ? 'France'
                 : 'International' + (pays ? ' (' + escapeHtmlMC(pays) + ')' : '');
 
             var html = '<div class="expedition-form">'
                 + '<h3><i class="fa-solid fa-paper-plane"></i> Expédier l\'enveloppe</h3>'
-                + '<p class="expedition-info">Destination : <strong>' + destLabel + '</strong> &nbsp;·&nbsp; <strong>' + nbBillets + '</strong> billet(s)</p>'
+                + '<p class="expedition-info">Destination : <strong>' + destLabel + '</strong> &nbsp;·&nbsp; <strong>' + nbBillets + '</strong> billet(s)' + valExpHtml + '</p>'
                 + '<div class="insc-form-field"><label>Mode d\'envoi réel</label>'
                 + '<select id="mode-envoi-reel" onchange="majPrixExpedition(' + nbBillets + ', \'' + destination + '\')">'
                 + optionsHtml
@@ -2639,6 +2707,12 @@ function badgeVacances(jusquAu) {
     return '<span class="badge-vacances" title="Ce membre est en vacances : paiement plus tard, ne pas envoyer pour le moment"><i class="fa-solid fa-umbrella-beach"></i> En vacances' + suffix + '</span>';
 }
 
+// Demande #34 — le collecteur reprend la main sur l'ordre.
+function reordonnerVerificationPaiement() {
+    ordreVerifPaiement = null;
+    loadVerificationPaiement();
+}
+
 function changerStatutPaiement(inscriptionId, nouveauStatut) {
     supabaseFetch('/rest/v1/inscriptions?id=eq.' + inscriptionId, {
         method: 'PATCH',
@@ -2797,6 +2871,7 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
         + 'En attente de paiement : <strong>' + totalEnAttente.toFixed(2) + ' €</strong>'
         + ' <button onclick="ouvrirRecapPaiementGlobal()" class="btn-relance" style="margin-left:12px;"><i class="fa-solid fa-list"></i> Récapitulatif global</button>'
         + ' <button onclick="ouvrirRelanceGlobale()" class="btn-relance" style="margin-left:8px;"><i class="fa-solid fa-envelope"></i> Relancer individuellement</button>'
+        + '{{BTN_REORDONNER}}'
         + '</div>';
     var emails = Object.keys(groupes);
     // Demande #10 — membre avec au moins un paiement déclaré (à valider) ?
@@ -2816,6 +2891,29 @@ function renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, me
         if (pa < pb) return -1; if (pa > pb) return 1;
         return 0;
     });
+
+    // Demande #34 — on garde l'ordre deja affiche : chaque email conserve son rang,
+    // les arrivants se rangent a la fin dans l'ordre naturel calcule ci-dessus (le tri
+    // JS est stable, les rangs egaux ne bougent pas). Le tableau est ensuite mis a jour
+    // pour que les arrivants gardent a leur tour leur place au prochain rendu.
+    var ordreNaturel = emails.slice();
+    if (ordreVerifPaiement) {
+        var rangVP = {};
+        ordreVerifPaiement.forEach(function(e, i) { rangVP[e] = i; });
+        emails.sort(function(a, b) {
+            var ra = (rangVP[a] === undefined) ? Number.MAX_VALUE : rangVP[a];
+            var rb = (rangVP[b] === undefined) ? Number.MAX_VALUE : rangVP[b];
+            return ra - rb;
+        });
+    }
+    ordreVerifPaiement = emails.slice();
+    // Le bouton n'apparait que si l'ordre affiche a effectivement divergé du tri naturel.
+    var ordreFige = emails.join('|') !== ordreNaturel.join('|');
+
+    html = html.replace('{{BTN_REORDONNER}}', ordreFige
+        ? ' <button onclick="reordonnerVerificationPaiement()" class="btn-relance" style="margin-left:8px;" title="La liste garde l\'ordre d\'avant vos validations. Cliquez pour la reclasser."><i class="fa-solid fa-arrow-down-a-z"></i> Réordonner</button>'
+        : '');
+
     for (var g = 0; g < emails.length; g++) {
         var email = emails[g];
         var groupe = groupes[email];

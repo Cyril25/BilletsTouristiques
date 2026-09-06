@@ -765,6 +765,7 @@ function showMore() {
                     ? '<div class="collecte-zone-tete">'
                         + '<span class="collecte-zone-titre">Collecte</span>'
                         + '<span class="collecte-zone-statut" style="background-color: ' + couleurAffichee + '; color: ' + texteStatut + ';">' + escapeHtml(statutAffiche) + '</span>'
+                        + capaciteCollecteHtml(colPrinc)   // #24 — plafond de la collecte affichée
                       + '</div>'
                     : '') +
                 (function() {
@@ -1330,6 +1331,12 @@ function buildInscriptionHtml(item) {
             var isBlackliste = blacklistCollecteurs[(colPrinc && colPrinc.collecteur) || ''];
             if (membreBloqueInscription) {
                 html = buildBlocageInscriptionHtml(true);
+            } else if (colPrinc && colPrinc._full) {
+                // Demande #24 — plafond atteint : même rendu que dans l'accordéon.
+                html = '<div class="inscription-badges">'
+                    + '<span class="badge-non-inscrit">Non inscrit</span>'
+                    + '<button class="btn-inscription-impossible" disabled><i class="fa-solid fa-lock"></i> Collecte complète</button>'
+                    + '</div>';
             } else if (isBlackliste) {
                 html = '<div class="inscription-badges">'
                     + '<span class="badge-non-inscrit">Non inscrit</span>'
@@ -1360,6 +1367,60 @@ function buildInscriptionHtml(item) {
         }
     }
     return html;
+}
+
+// ============================================================
+// Demande #43 — EXPORT EXCEL DE LA LISTE AFFICHÉE
+// ------------------------------------------------------------
+// La demande veut « les billets publiés après une date que l'on spécifie ». La page a
+// déjà ce filtre (Période, sur date_effective) : on exporte donc ce qui est affiché,
+// filtres compris, plutôt que d'ajouter une seconde saisie de date qui pourrait
+// contredire l'écran. Les colonnes de collecte (statut, prix, collecteur) viennent de
+// la collecte affichée sur la carte, comme partout depuis #16.
+// ============================================================
+function exporterBilletsXlsx() {
+    if (typeof XLSX === 'undefined') {
+        showToast('Librairie Excel non chargée', 'error');
+        return;
+    }
+    if (!currentData || currentData.length === 0) {
+        showToast('Aucun billet à exporter avec ces filtres', 'error');
+        return;
+    }
+
+    var rows = currentData.map(function(b) {
+        var colP = collectePrincipaleByBillet[b.id] || {};
+        var tarif = prixCollecteCatalogue(colP);
+        return {
+            'Référence': b.Reference || '',
+            'Millésime': b.Millesime || '',
+            'Version': b.Version || '',
+            'Nom': b.NomBillet || '',
+            'Ville': b.Ville || '',
+            'Code postal': b.Cp || '',
+            'Dep': b.Dep || '',
+            'Pays': b.Pays || '',
+            'Thème': b.Theme || '',
+            'Statut': colP.categorie || b.Categorie || '',
+            'Date': normalizeDate(b.date_effective || b.Date) || '',
+            'Collecteur': collecteurPrincipalCatalogue(b) || '',
+            'Prix': tarif.prix || '',
+            'Prix variante': tarif.prixVarSaisi ? tarif.prixVar : ''
+        };
+    });
+
+    var ws = XLSX.utils.json_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Billets');
+
+    // Le nom du fichier rappelle la période demandée : c'est tout l'intérêt de l'export.
+    var dStart = (document.getElementById('date-start') || {}).value || '';
+    var dEnd = (document.getElementById('date-end') || {}).value || '';
+    var nom = 'billets';
+    if (dStart) nom += '-du-' + dStart;
+    if (dEnd) nom += '-au-' + dEnd;
+    XLSX.writeFile(wb, nom + '.xlsx');
+    showToast(rows.length + ' billet(s) exporté(s)');
 }
 
 // --- Ouverture du mini-formulaire inline ---
@@ -1442,6 +1503,31 @@ function confirmerInscription(billetId) {
         return;
     }
 
+    // Demande #24 — plafond de billets : la carte principale s'arrête comme les collectes
+    // de l'accordéon. On revérifie le total courant juste avant d'insérer (deux membres
+    // peuvent s'inscrire en même temps près du plafond) ; un recomptage impossible ne doit
+    // jamais bloquer une inscription légitime.
+    if (colPrinc.nb_max !== null && colPrinc.nb_max !== undefined) {
+        fetchCollecteTotalBillets(colPrinc.id)
+            .then(function(total) {
+                if (total >= colPrinc.nb_max) {
+                    colPrinc._total = total;
+                    colPrinc._full = true;
+                    showToast('Cette collecte est complète (' + total + '/' + colPrinc.nb_max + ' billets).', 'error');
+                    if (typeof applyFilters === 'function') applyFilters(false);
+                    return;
+                }
+                inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes);
+            })
+            .catch(function() { inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes); });
+        return;
+    }
+    inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes);
+}
+
+// Demande #24 — corps de l'inscription sur la collecte principale, extrait de
+// confirmerInscription() pour que la garde de plafond puisse le lancer après recomptage.
+function inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes) {
     // Charger l'adresse du profil pour le snapshot
     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
         .then(function(membreData) {
@@ -1471,6 +1557,7 @@ function confirmerInscription(billetId) {
             if (form) form.remove();
             loadMesInscriptions();
             loadCompteursInscriptions();
+            loadCollectesByBillet(); // Demande #24 — rafraîchir le total/plafond de la collecte
             // Créer l'enveloppe en_cours si elle n'existe pas encore (collecteur de
             // la collecte principale, sur laquelle porte cette inscription)
             if (colPrinc && colPrinc.collecteur) {
@@ -1631,8 +1718,14 @@ function loadCollectesByBillet() {
                 collectesByBillet[bid] = ordered.slice(1);
                 if (collectesByBillet[bid].length === 0) delete collectesByBillet[bid];
             });
-            // Demande #24 — pour les collectes supplémentaires avec plafond, calculer le total inscrit
+            // Demande #24 — plafond : la collecte PRINCIPALE (celle de la carte) compte
+            // autant que celles de l'accordéon. Elle était oubliée ici, si bien que le
+            // plafond saisi côté admin ne produisait aucun effet sur la carte.
             var avecMax = [];
+            Object.keys(collectePrincipaleByBillet).forEach(function(bid) {
+                var cp = collectePrincipaleByBillet[bid];
+                if (cp && cp.nb_max !== null && cp.nb_max !== undefined) avecMax.push(cp);
+            });
             Object.keys(collectesByBillet).forEach(function(bid) {
                 collectesByBillet[bid].forEach(function(c) {
                     if (c.nb_max !== null && c.nb_max !== undefined) avecMax.push(c);
@@ -1667,6 +1760,15 @@ function loadCollectesByBillet() {
         });
 }
 
+// Demande #24 — pastille « N / max billet(s) », commune à la carte principale et aux
+// collectes de l'accordéon (même règle, même rendu).
+function capaciteCollecteHtml(c) {
+    if (!c || c.nb_max === null || c.nb_max === undefined) return '';
+    var totalCap = c._total || 0;
+    return '<span class="collecte-supp-capacite' + (c._full ? ' collecte-supp-capacite--plein' : '') + '">'
+        + totalCap + ' / ' + c.nb_max + ' billet(s)' + (c._full ? ' — complète' : '') + '</span>';
+}
+
 // Demande #24 — Total de billets déjà inscrits à une collecte (frais)
 function fetchCollecteTotalBillets(collecteId) {
     return supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&pas_interesse=eq.false&select=nb_normaux,nb_variantes')
@@ -1686,12 +1788,7 @@ function buildCollectesSupplementairesHtml(item) {
     var lignes = collectes.map(function(c) {
         var inscrit = !!getInscription(item.id, c.id);
         var statutColor = getCategorieColor(c.categorie);
-        var capaciteHtml = '';
-        if (c.nb_max !== null && c.nb_max !== undefined) {
-            var total = c._total || 0;
-            capaciteHtml = '<span class="collecte-supp-capacite' + (c._full ? ' collecte-supp-capacite--plein' : '') + '">'
-                + total + ' / ' + c.nb_max + ' billet(s)' + (c._full ? ' — complète' : '') + '</span>';
-        }
+        var capaciteHtml = capaciteCollecteHtml(c);   // #24
         return '<details class="collecte-accordeon"' + (inscrit ? ' data-inscrit="1"' : '') + ' data-collecte-id="' + escapeAttr(c.id) + '">'
             + '<summary class="collecte-accordeon-tete">'
             // Demande #47 — le CSS mettait du blanc en dur : illisible sur le jaune

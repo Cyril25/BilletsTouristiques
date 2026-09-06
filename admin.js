@@ -799,6 +799,14 @@ function renderAdminCards() {
                             '</div>' +
                           '</div>'
                     ) +
+                    // Demande #39 — date du statut courant, pour juger d'un coup d'œil
+                    // depuis combien de temps le billet est dans cet état.
+                    (function() {
+                        var dStatut = dateStatutCarte(billetCollectesCarte, statut);
+                        return dStatut
+                            ? '<span class="admin-card-statut-date" title="Date de ce statut">depuis le ' + dStatut + '</span>'
+                            : '';
+                    })() +
                 '</div>' +
             '</div>' +
             '<div class="admin-card-meta">' +
@@ -958,6 +966,33 @@ function buildStatusChipsHtml(docId, currentStatus) {
 
 // Demande #40 — les statuts qu'une COLLECTE peut prendre (les 3 dérivés).
 var COLLECTE_STATUTS = ['Pré collecte', 'Collecte', 'Terminé'];
+
+// Demande #39 — date du statut COURANT d'une collecte. C'est celle qui aide à décider
+// s'il est temps de clôturer (« en Collecte depuis le … ») ; afficher les trois dates
+// noierait l'information sur une carte déjà dense.
+var CHAMP_DATE_PAR_STATUT = { 'Pré collecte': 'date_pre', 'Collecte': 'date_coll', 'Terminé': 'date_fin' };
+
+function dateDuStatutCollecte(collecte) {
+    if (!collecte) return '';
+    var champ = CHAMP_DATE_PAR_STATUT[collecte.categorie || ''];
+    var val = champ ? collecte[champ] : '';
+    if (!val) return '';
+    try { return new Date(val).toLocaleDateString('fr-FR'); } catch (e) { return ''; }
+}
+
+// Carte billet : une seule collecte → sa date ; plusieurs → celle de la collecte qui
+// porte le statut dérivé affiché (sinon rien, plutôt qu'une date arbitraire).
+function dateStatutCarte(collectes, statutBillet) {
+    if (!collectes || collectes.length === 0) return '';
+    if (collectes.length === 1) return dateDuStatutCollecte(collectes[0]);
+    for (var i = 0; i < collectes.length; i++) {
+        if ((collectes[i].categorie || '') === statutBillet) {
+            var d = dateDuStatutCollecte(collectes[i]);
+            if (d) return d;
+        }
+    }
+    return '';
+}
 
 // Demande #40 — pastilles de changement de statut d'UNE collecte (carte admin).
 function buildCollecteStatusChipsHtml(docId, collecteId, currentStatus) {
@@ -1965,6 +2000,18 @@ function validateBilletForm() {
         setFieldError('field-version', 'error-version', 'Le champ Version est requis');
         valid = false;
         if (!firstErrorField) firstErrorField = version;
+    }
+
+    // Demande #41 (prod) — le pays est obligatoire à la CRÉATION. Volontairement pas en
+    // modification : des billets anciens ont été saisis sans pays, l'exiger ici les
+    // rendrait inéditables tant qu'on ne les corrige pas un par un.
+    var panelBillet = document.getElementById('admin-panel');
+    var enCreation = !(panelBillet && panelBillet.dataset.editId);
+    var paysEl = document.getElementById('field-pays');
+    if (enCreation && paysEl && paysEl.value.trim() === '') {
+        setFieldError('field-pays', 'error-pays', 'Le champ Pays est requis');
+        valid = false;
+        if (!firstErrorField) firstErrorField = paysEl;
     }
 
     // Demande #16 — les règles « au moins une date », « prix obligatoire en
@@ -3846,6 +3893,18 @@ function adminCollecteDuBillet(billetId, collecteId) {
     return null;
 }
 
+// Demande #36 — libellé complet d'un billet : « UEBK 2026-14 NAUSICAA ». Même forme
+// que l'entête du détail de collecte et que les récapitulatifs (#8) : l'amorce et le
+// millésime sont ce qui distingue deux billets qui portent le même nom.
+function libelleBilletComplet(billet) {
+    if (!billet) return '';
+    var parts = [];
+    if (billet.Reference) parts.push(billet.Reference);
+    if (billet.Millesime) parts.push(billet.Millesime + (billet.Version ? '-' + billet.Version : ''));
+    if (billet.NomBillet) parts.push(billet.NomBillet);
+    return parts.join(' ');
+}
+
 function openInscriptionsModal(billetId, focusCollecteId) {
     var billet = adminBillets.find(function(b) { return b._id === billetId; });
     if (!billet) return;
@@ -3865,7 +3924,7 @@ function openInscriptionsModal(billetId, focusCollecteId) {
     }
     adminCurrentBilletId = billetId;
     titleEl.innerHTML =
-        '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(billet.NomBillet || 'Sans nom');
+        '<i class="fa-solid fa-users"></i> Inscriptions — ' + escapeHtml(libelleBilletComplet(billet) || 'Sans nom');   // #36
     overlayEl.style.display = '';
 
     // Si un recalcul est en cours pour ce billet, attendre qu'il finisse

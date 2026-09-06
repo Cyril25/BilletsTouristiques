@@ -1,11 +1,11 @@
-# Demande #24 — Plafond de billets sur une collecte supplémentaire
+# Demande #24 — Plafond de billets sur une collecte
 
 - **Épic :** Corrections et évolutions
 - **Demande :** #24 (table `demandes`)
 - **Priorité / Complexité :** normale / M
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Admin (Gestion Billets → collectes supplémentaires) + Catalogue (membre)
-- **Statut :** À tester
+- **Statut :** À tester (repris le 2026-09-06, voir en fin de fichier)
 - **Commit :** `87156d1`
 
 ## Contexte (demande)
@@ -50,3 +50,51 @@
   « Collecte complète » dans `buildInscriptionHtmlForCollecte` ; re-contrôle dans
   `confirmerInscriptionCollecte`), `style.css` (badges capacité), `sw.js` (cache `billets-v237`).
 - **Commit :** `87156d1` — feat(collecte): plafond de billets sur une collecte supplementaire.
+
+## Reprise du 2026-09-06 — le plafond doit valoir aussi pour la collecte affichée
+
+**Retour de Cyril :** « ce n'est pas bon, tu l'as mis dans collectes supplémentaires, cela doit
+être mis dans la collecte initiale. »
+
+### Ce qui manquait vraiment
+
+La colonne `collectes.nb_max` n'a jamais été propre aux collectes supplémentaires, et depuis #16
+le champ « Nombre max de billets » est présent dans la modale admin de **n'importe quelle**
+collecte, initiale comprise. Le trou était côté **catalogue** :
+
+- le total inscrit (`_total` / `_full`) n'était calculé que pour les collectes de l'accordéon —
+  la collecte principale, celle que la carte affiche, était purement et simplement oubliée ;
+- la carte principale (`buildInscriptionHtml`, `confirmerInscription`) ne connaissait ni la
+  pastille de capacité, ni le bouton « Collecte complète », ni le re-contrôle avant insertion.
+
+Autrement dit : un admin pouvait saisir un plafond sur la collecte initiale, il ne se passait rien.
+
+### Décisions
+
+- **Le calcul des totaux couvre maintenant les deux** : collectes principales et collectes de
+  l'accordéon sont réunies avant le comptage, en une seule requête comme avant.
+- **Un helper unique `capaciteCollecteHtml()`** rend la pastille « N / max billet(s) », utilisé
+  par la carte et par l'accordéon : deux rendus identiques ne doivent pas vivre à deux endroits.
+- **Même garde à l'inscription** que sur l'accordéon : recomptage juste avant l'insertion
+  (deux membres peuvent s'inscrire en même temps près du plafond), et un recomptage impossible
+  ne bloque pas une inscription légitime.
+- `confirmerInscription()` a été scindée : la garde de plafond d'un côté,
+  `inscrireSurCollectePrincipale()` de l'autre — le corps de l'insertion est inchangé.
+
+### Critères d'acceptation (reprise)
+
+1. Un plafond saisi sur la collecte initiale affiche « N / max billet(s) » sur la carte du
+   catalogue.
+2. Plafond atteint : la carte montre « Collecte complète » et le bouton d'inscription disparaît.
+3. Une inscription lancée alors que le plafond vient d'être atteint est refusée avec un message,
+   sans créer de ligne.
+4. Une collecte sans plafond se comporte exactement comme avant.
+5. Le comportement des collectes de l'accordéon est inchangé.
+
+### Réalisation (reprise)
+
+- **Fichiers :** `app-new.js` — `loadCollectesByBillet()` (totaux des collectes principales),
+  `capaciteCollecteHtml()`, carte principale, `buildInscriptionHtml()`, `confirmerInscription()`
+  + `inscrireSurCollectePrincipale()`.
+- **Migration :** aucune (`collectes.nb_max` existe depuis la première version).
+- **Commit :** _(à compléter)_

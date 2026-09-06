@@ -58,9 +58,13 @@
 
                 <div class="profil-form-group">
                     <label for="profil-pays">Pays *</label>
-                    <select id="profil-pays" required autocomplete="country-name">
-                        <option value="">— Sélectionner un pays —</option>
-                    </select>
+                    <div class="profil-pays-row">
+                        <select id="profil-pays" required autocomplete="country-name" onchange="majDrapeauProfil()">
+                            <option value="">— Sélectionner un pays —</option>
+                        </select>
+                        <!-- Demande #38 — drapeau du pays choisi -->
+                        <span id="profil-pays-flag"></span>
+                    </div>
                 </div>
 
                 <div class="profil-form-group">

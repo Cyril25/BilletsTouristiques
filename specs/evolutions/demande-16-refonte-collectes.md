@@ -3,7 +3,10 @@
 - **Épic :** chantier structurant (complexité L — spec détaillée obligatoire avant dev)
 - **Demande :** #16 (table `demandes`) — priorité haute
 - **Concerne :** membres, collecteurs, admins
-- **Statut :** En cours — **phase analyse (re-challenge du PRD d'avril 2026)**
+- **Statut :** **Terminée — en production depuis le 2026-09-06** (bascule : dump, script 1
+  structure, merge front de `prepa-bascule-prod-16`, script 2 RLS ; 5 359 « Collecte initiale »
+  créées, 0 inscription orpheline, montants inchangés). Suites ouvertes hors périmètre :
+  142 inscriptions hors invariant D4, policy de désinscription, règle de « collecte principale ».
 - **Demandes liées :** #1 (vente du rab) et #22 (gestion des doubles) — **en attente**,
   à cadrer ensemble après #16 (modèle commun « offre/vente », #1 = première tranche de #22).
   Ordre acté avec Cyril le 2026-07-21 : **#16 → #1 → #22**.

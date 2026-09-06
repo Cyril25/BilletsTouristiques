@@ -15,6 +15,33 @@ function paysAffiche(user) {
 
 var activeCountryFilter = '';
 
+// Demande #38 — liste des pays (table `pays`), la même que celle de Mon profil.
+// Chargée une fois avec les membres : la modale d'édition est construite en HTML
+// synchrone, elle a besoin des options tout de suite.
+var paysListe = [];
+
+// Demande #38 — options du select pays. La valeur déjà enregistrée est conservée même
+// si elle ne figure pas dans la table (saisie libre historique) : on ne veut pas qu'une
+// simple ouverture de la modale efface le pays d'un membre.
+function optionsPaysHtml(valeur) {
+    var val = (valeur || '').trim();
+    var liste = paysListe.slice();
+    var connu = liste.some(function(p) { return _normPays(p) === _normPays(val); });
+    if (val && !connu) liste.unshift(val);
+    var html = '<option value=""' + (val ? '' : ' selected') + '>— Non renseigné —</option>';
+    liste.forEach(function(p) {
+        var sel = (_normPays(p) === _normPays(val) && val) ? ' selected' : '';
+        html += '<option value="' + escapeAttr(p) + '"' + sel + '>' + escapeHtml(p) + '</option>';
+    });
+    return html;
+}
+
+function majDrapeauEditionMembre() {
+    var sel = document.getElementById('ue-pays');
+    var flag = document.getElementById('ue-pays-flag');
+    if (sel && flag) flag.innerHTML = window.flagImg(sel.value || '') || '';
+}
+
 // ============================================================
 // 1. TOAST NOTIFICATIONS
 // ============================================================
@@ -98,11 +125,15 @@ function loadUsers() {
     Promise.all([
         supabaseFetch('/rest/v1/membres?select=email,role,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
         supabaseFetch('/rest/v1/membre_blocages?select=membre_email,motif,bloque_at', { method: 'GET' })
+            .catch(function() { return []; }),
+        // Demande #38 — un pays indisponible ne doit pas empêcher d'afficher les membres.
+        supabaseFetch('/rest/v1/pays?select=nom&order=nom', { method: 'GET' })
             .catch(function() { return []; })
     ])
         .then(function(results) {
             var rows = results[0] || [];
             var blocages = results[1] || [];
+            paysListe = (results[2] || []).map(function(p) { return p.nom; });
             var blocagesMap = {};
             blocages.forEach(function(b) { blocagesMap[b.membre_email] = b; });
 
@@ -487,7 +518,13 @@ function openUserEditModal(email) {
     html += '<div class="user-edit-modal-field"><label>Ville</label><input type="text" id="ue-ville" class="input-uppercase" value="' + escapeAttr(user.ville || '') + '" placeholder="Ville"></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
-    html += '<div class="user-edit-modal-field"><label>Pays</label><input type="text" id="ue-pays" value="' + escapeAttr(user.pays || '') + '" placeholder="Pays"></div>';
+    // Demande #38 — liste déroulante plutôt que saisie libre (fautes de frappe = drapeau
+    // absent et filtre par pays faussé), avec le drapeau à côté, comme sur les cartes.
+    html += '<div class="user-edit-modal-field"><label>Pays</label>'
+        + '<div class="ue-pays-row">'
+        + '<select id="ue-pays" onchange="majDrapeauEditionMembre()">' + optionsPaysHtml(user.pays) + '</select>'
+        + '<span id="ue-pays-flag">' + (window.flagImg(user.pays || '') || '') + '</span>'
+        + '</div></div>';
     html += '</div>';
     html += '<div class="user-edit-modal-row">';
     html += '<div class="user-edit-modal-field"><label>Indicatif</label><input type="text" id="ue-indicatif" value="' + escapeAttr(user.indicatif_tel || '') + '" placeholder="+33"></div>';

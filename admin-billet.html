@@ -122,10 +122,12 @@
                     <legend>Localisation & Description</legend>
 
                     <div class="admin-form-group">
-                        <label for="field-pays">Pays</label>
-                        <select id="field-pays" name="Pays" class="admin-form-select">
+                        <label for="field-pays">Pays *</label>
+                        <select id="field-pays" name="Pays" class="admin-form-select" required>
                             <option value="">— Sélectionner un pays —</option>
                         </select>
+                        <!-- Demande #41 (prod) — pays obligatoire à la création -->
+                        <span class="admin-form-error" id="error-pays"></span>
                     </div>
 
                     <div class="admin-form-group">
