@@ -102,15 +102,100 @@ C'est ce persona qui avait fait sortir `e8c7c92`. À reprendre rapidement :
 
 ---
 
-## Avant de commencer
+## Trouver les deux inscriptions du test collecteur
 
-- [ ] La base de test répond : `nslookup ijxajtxnhbczgiarkefo.supabase.co` doit résoudre
-      (au 06/09 elle était en NXDOMAIN, projet en pause).
-- [ ] Le marqueur TEST-ONLY est toujours là :
-      `SELECT * FROM public._bt_env;` → doit rendre `TESTENV`.
-      *(Un restore le supprimerait — `DROP SCHEMA public CASCADE`.)*
-- [ ] La copie est bien dans l'état **migré** : `SELECT COUNT(*) FROM collectes;` → ~5 292,
-      et `SELECT COUNT(*) FROM inscriptions WHERE collecte_id IS NULL;` → **0**.
+Le test « des deux côtés » demande deux cibles : une inscription **sur une collecte du
+collecteur testé**, une autre **sur la collecte de quelqu'un d'autre**. Cette requête les
+donne d'un coup — remplacer l'e-mail :
+
+```sql
+WITH moi AS (SELECT alias FROM collecteurs WHERE email_membre = 'EMAIL_DU_COLLECTEUR')
+SELECT 'A MOI (doit passer)' AS cas, i.id AS inscription_id, c.id AS collecte_id, c.nom
+  FROM inscriptions i JOIN collectes c ON c.id = i.collecte_id
+ WHERE c.collecteur IN (SELECT alias FROM moi) LIMIT 1;
+
+WITH moi AS (SELECT alias FROM collecteurs WHERE email_membre = 'EMAIL_DU_COLLECTEUR')
+SELECT 'PAS A MOI (doit etre refuse)' AS cas, i.id, c.id AS collecte_id, c.nom
+  FROM inscriptions i JOIN collectes c ON c.id = i.collecte_id
+ WHERE c.collecteur IS NOT NULL
+   AND c.collecteur NOT IN (SELECT alias FROM moi) LIMIT 1;
+```
+
+Au 06/09/2026, la copie porte **21 collecteurs distincts**, dont **11 ont au moins une
+collecte avec des inscriptions** — de quoi choisir.
+
+## Forcer l'appel depuis la console
+
+Le front n'utilise pas `supabase-js` : il passe par le helper global `supabaseFetch`, qui
+met un **jeton Firebase** en `Authorization` — et c'est le claim `email` de ce jeton que
+lisent les policies. Connecté sur le front de test **avec le compte collecteur**, dans la
+console :
+
+```js
+// Ecrit statut_paiement A L'IDENTIQUE : la policy est traversee pour de vrai,
+// mais la donnee ne bouge pas. Rien a remettre en etat apres le test.
+async function testePolicy(id) {
+  const avant = await supabaseFetch(`/rest/v1/inscriptions?id=eq.${id}&select=statut_paiement`);
+  const res = await supabaseFetch(`/rest/v1/inscriptions?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { 'Prefer': 'return=representation' },
+    body: JSON.stringify({ statut_paiement: avant[0].statut_paiement })
+  });
+  console.log(id, res.length ? 'PASSE' : 'REFUSE', res);
+}
+await testePolicy(<INSCRIPTION_A_MOI>);      // attendu : PASSE
+await testePolicy(<INSCRIPTION_D_UN_AUTRE>); // attendu : REFUSE
+```
+
+⚠ **Lire le résultat, pas l'absence d'erreur.** Une policy `UPDATE` qui ne matche aucune
+ligne **ne lève pas d'erreur** : PostgREST rend une **liste vide**. Un `catch` qui ne se
+déclenche pas ne prouve donc rien — c'est `[]` qui prouve le refus, et une ligne rendue qui
+prouve le passage. C'est toute la raison du `res.length` ci-dessus.
+
+*(Colonnes vérifiées sur la copie le 06/09 : la table porte `statut_paiement`, pas de
+`paiement_valide` ; `id` est un `integer`, `collecte_id` un `uuid`.)*
+
+Pour éprouver le **gel des champs**, même forme avec une valeur qui change vraiment — le
+refus attendu vient alors du `WITH CHECK`, pas du périmètre :
+
+```js
+// Deplacer une inscription vers une autre collecte : doit etre REFUSE
+// meme si les DEUX collectes appartiennent au collecteur.
+supabaseFetch('/rest/v1/inscriptions?id=eq.<INSCRIPTION_A_MOI>', {
+  method: 'PATCH',
+  headers: { 'Prefer': 'return=representation' },
+  body: JSON.stringify({ collecte_id: '<AUTRE_COLLECTE_A_MOI_UUID>' })
+}).then(r => console.log(r.length ? 'PASSE (anormal)' : 'REFUSE (attendu)', r));
+```
+
+## État de la copie — contrôles passés
+
+**✅ Tout vérifié le 06/09/2026, après le réveil du projet** — la base était en *pause*,
+pas supprimée, et la copie migrée est intacte :
+
+| Contrôle | Attendu | Mesuré |
+|---|---|---|
+| Marqueur TEST-ONLY | `TESTENV` | `TESTENV` ✅ |
+| `inscriptions` sans `collecte_id` | 0 | **0** ✅ |
+| `billets` | ~5 436 | 5 441 |
+| `collectes` | ~5 292 | 5 297 |
+| `inscriptions` | ~4 230 | 4 242 |
+| `billets.Collecteur_deprecated` | présente | présente ✅ |
+| Policies `inscriptions_*_collecteur` | 3 | 3 (delete, insert, update) ✅ |
+| Billets à plusieurs collectes | 0 | **0** ✅ |
+
+Les écarts avec la répétition du 31/07 sont le **résidu des tests eux-mêmes** (+5 billets,
++5 collectes, +12 inscriptions). Le **+5/+5** est en soi une bonne nouvelle : l'invariant
+« une collecte créée par billet créé » tient toujours, y compris sur les billets nés après
+la migration.
+
+Le compte à 0 billet multi-collecte confirme aussi que le défaut des **deux règles
+concurrentes de « collecte principale »** reste **latent** — rien ne s'est déclenché depuis
+juillet.
+
+> ⏱ Le réveil prend ~2 minutes et passe par `521` (origine injoignable) puis `404`
+> (PostgREST debout, cache de schéma pas encore chargé) avant le `200`. Ne pas conclure
+> à une panne avant d'avoir attendu.
 
 Si la base a été **supprimée** et non mise en pause, le dump du 30/07 est encore sur le
 disque (`Documents\Perso\Backups\BilletsTouristiques\2026-07-30_2124`, 4,2 Mo) — mais il
