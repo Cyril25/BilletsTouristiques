@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Composition et gestion des notifications — interface d'administration.">
+    <title>Composer une notification - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Demande #51 — Les cartes reprennent volontairement l'apparence de la page
+           Nouveautés : l'admin voit la liste telle que les membres la verront. */
+        .notifadm-list { display: flex; flex-direction: column; gap: 12px; }
+        .notifadm-card {
+            background: #fff; border: 1px solid #e6e0ef; border-left: 4px solid #d9c9ee;
+            border-radius: 8px; padding: 14px 16px;
+        }
+        .notifadm-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+        .notifadm-card-titre {
+            font-weight: 600; color: var(--color-primary, #5D3A7E); font-size: 1.05em;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .notifadm-card-cible {
+            font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+            background: #f2ecf9; color: var(--color-primary, #5D3A7E);
+            border: 1px solid #d9c9ee; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .notifadm-card-date { margin-left: auto; font-size: 0.8em; color: #888; white-space: nowrap; }
+        .notifadm-card-texte { color: #333; font-size: 0.95em; line-height: 1.5; white-space: pre-wrap; }
+        .notifadm-card-lien { display: inline-block; margin-top: 8px; font-size: 0.9em; color: var(--color-primary, #5D3A7E); }
+        .notifadm-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .notifadm-action {
+            border: 1px solid #d9c9ee; background: #fff; color: var(--color-primary, #5D3A7E);
+            border-radius: 6px; padding: 5px 12px; font-size: 0.85rem; cursor: pointer;
+        }
+        .notifadm-action:hover { background: #f6f1fc; }
+        .notifadm-action--danger { border-color: #f0c4c4; color: #b3261e; }
+        .notifadm-action--danger:hover { background: #fdf1f0; }
+
+        /* Aperçu dans la modale : les deux endroits où la notification apparaîtra. */
+        .notifadm-apercu { background: #faf8fd; border: 1px dashed #d9c9ee; border-radius: 8px; padding: 12px; }
+        .notifadm-apercu-label {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+            color: #8a7aa3; margin-bottom: 6px;
+        }
+        .notifadm-apercu-bloc + .notifadm-apercu-bloc { margin-top: 14px; }
+        .notifadm-apercu-cloche { background: #fff; border: 1px solid #e6e0ef; border-radius: 6px; padding: 8px 10px; }
+        .notifadm-apercu-cloche-titre { font-weight: 600; font-size: 0.9em; color: #333; }
+        .notifadm-apercu-cloche-meta { font-size: 0.8em; color: #777; margin-top: 2px; }
+        .notifadm-apercu-vide { color: #999; font-style: italic; font-size: 0.9em; }
+
+        .notifadm-hint { font-size: 0.8rem; color: #777; margin-top: 4px; }
+        .notifadm-compteur { font-size: 0.75rem; color: #888; float: right; font-weight: 400; }
+        .notifadm-compteur.notifadm-compteur--long { color: #b3261e; font-weight: 600; }
+
+        /* Rappel du périmètre de l'écran (étage 1) — voir spec demande #51. */
+        .notifadm-bandeau {
+            background: #f2ecf9; border: 1px solid #d9c9ee; border-radius: 8px;
+            padding: 10px 14px; margin-bottom: 14px; font-size: 0.875rem; color: #4a3a5e;
+        }
+        .notifadm-bandeau i { margin-right: 6px; color: var(--color-primary, #5D3A7E); }
+    </style>
+</head>
+<body data-require-admin="true">
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="admin-page-header">
+            <h1><i class="fa-solid fa-bullhorn"></i> Composer une notification</h1>
+            <button type="button" class="admin-fab" title="Nouvelle annonce" onclick="ouvrirModaleNotif(null)">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="notifadm-bandeau">
+            <i class="fa-solid fa-circle-info"></i>
+            Annonces de <strong>diffusion</strong> (tous / collecteurs / admins). Les notifications
+            privées adressées à un membre précis ne sont pas listées ici : la règle posée par la
+            demande #33 les rend invisibles à tout autre que leur destinataire.
+        </div>
+
+        <div class="admin-search" style="margin-bottom: 12px;">
+            <i class="fa-solid fa-magnifying-glass admin-search__icon"></i>
+            <input type="text" id="notifadm-search-input" class="admin-search__input" placeholder="Rechercher (titre, texte...)" oninput="renderNotifsAdmin()">
+            <button type="button" class="admin-search__clear" id="notifadm-search-clear" onclick="clearNotifSearch()" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="notifadm-cible-filter" class="user-role-filter"></div>
+        <div id="notifadm-count" style="margin-bottom: 12px; font-size: 0.875rem; color: var(--color-text-light, #666);"></div>
+
+        <div id="notifadm-list" class="notifadm-list"></div>
+
+        <div class="user-empty-state" id="notifadm-empty-state" style="display:none">
+            <i class="fa-solid fa-bell-slash"></i>
+            <p>Aucune annonce dans ce filtre</p>
+        </div>
+
+    </div>
+
+    <!-- Modale de composition / modification -->
+    <div id="notifadm-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal demande-modal" role="dialog" aria-modal="true" aria-labelledby="notifadm-modal-title">
+            <h2 class="user-modal-title" id="notifadm-modal-title">Nouvelle annonce</h2>
+            <div class="demande-modal-form">
+                <div class="demande-modal-field demande-modal-field--full">
+                    <label for="na-titre">Titre * <span class="notifadm-compteur" id="na-titre-compteur"></span></label>
+                    <input type="text" id="na-titre" maxlength="120" placeholder="Ex: Nouveauté — tri par amorce sur Mes collectes" oninput="rafraichirApercu()">
+                    <p class="notifadm-hint">C'est ce que le membre lit dans la cloche du menu. Court et explicite.</p>
+                </div>
+                <div class="demande-modal-field demande-modal-field--full">
+                    <label for="na-texte">Texte * <span class="notifadm-compteur" id="na-texte-compteur"></span></label>
+                    <textarea id="na-texte" rows="6" placeholder="Détail de la nouveauté, affiché sur la page Nouveautés." oninput="rafraichirApercu()"></textarea>
+                    <p class="notifadm-hint">Les 110 premiers caractères servent d'accroche dans la cloche.</p>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="na-cible">Destinataires</label>
+                    <select id="na-cible" onchange="rafraichirApercu()"></select>
+                    <p class="notifadm-hint" id="na-cible-hint"></p>
+                </div>
+                <div class="demande-modal-field">
+                    <label for="na-lien">Lien « Y aller »</label>
+                    <select id="na-lien" onchange="rafraichirApercu()"></select>
+                    <p class="notifadm-hint">Page du site vers laquelle la notification renvoie.</p>
+                </div>
+                <div class="demande-modal-field demande-modal-field--full">
+                    <div class="notifadm-apercu">
+                        <div class="notifadm-apercu-bloc">
+                            <div class="notifadm-apercu-label">Aperçu — cloche du menu</div>
+                            <div id="na-apercu-cloche"></div>
+                        </div>
+                        <div class="notifadm-apercu-bloc">
+                            <div class="notifadm-apercu-label">Aperçu — page Nouveautés</div>
+                            <div id="na-apercu-page"></div>
+                        </div>
+                    </div>
+                </div>
+                <p class="user-modal-desc demande-modal-meta" id="na-meta" style="display:none"></p>
+            </div>
+            <div class="user-modal-actions">
+                <button type="button" class="user-modal-btn" onclick="fermerModaleNotif()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-primary" id="na-save-btn" onclick="sauverNotif()">Publier</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de confirmation de suppression -->
+    <div id="notifadm-delete-modal-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal" role="alertdialog" aria-modal="true">
+            <h2 class="user-modal-title">Supprimer cette annonce ?</h2>
+            <p class="user-modal-desc" id="notifadm-delete-desc">
+                L'annonce disparaîtra de la cloche et de la page Nouveautés pour tous les membres.
+            </p>
+            <div class="user-modal-actions">
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="fermerModaleSuppressionNotif()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerSuppressionNotif()">Confirmer la suppression</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="admin-notifications.js"></script>
+</body>
+</html>
