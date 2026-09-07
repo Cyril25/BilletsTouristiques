@@ -48,6 +48,21 @@ JP », « À tester par Cyril » comme autant de statuts.
 5. Une demande sans demandeur nominatif affiche un repli lisible, sans casser la ligne.
 6. Si la liste des membres ne se charge pas, l'écran fonctionne quand même.
 
+## Retour de Cyril : le libellé était rogné
+
+« À tester par Jean-Philippe » fait 26 caractères là où « À tester » en faisait 8. Le sélecteur
+d'état, calibré sur l'ancien libellé, tronquait — et un `<select>` natif tronque sans prévenir,
+sans « … » ni retour à la ligne.
+
+La place vient de la colonne **Écran**, comme Cyril l'a suggéré : son libellé, lui, **peut** passer
+à la ligne sans rien perdre. On la plafonne à 120 px et son badge passe en `white-space: normal`.
+Le sélecteur reçoit une largeur minimale calculée sur le pire cas — le plus long prénom de
+l'équipe, « Jean-Philippe ».
+
+Une garde en plus : sous 700 px le tableau devient des mini-fiches empilées, où une largeur
+minimale de 222 px pousserait la fiche hors de l'écran. Les contraintes sont donc relâchées dans
+la requête média.
+
 ## Réalisation
 
 - **Fichiers :** `admin-demandes.js` (`membresDemandes`, `nomTesteur()`, libellé contextuel dans

@@ -10702,3 +10702,39 @@ button.collecte-badge-status {
 .demande-row--a-tester-moi > td:first-child {
     box-shadow: inset 4px 0 0 #C2185B;
 }
+
+/* Demande #49 (suite) — « À tester par Jean-Philippe » est bien plus long que « À tester » :
+   le sélecteur d'état ne doit plus être rogné. La place vient de la colonne « Écran », dont le
+   libellé peut passer à la ligne sans rien perdre — contrairement au sélecteur, qui tronque. */
+.demande-etat-select {
+    min-width: 215px;
+    max-width: 100%;
+}
+.demande-etat-cell {
+    min-width: 222px;
+}
+.demandes-table td.demande-ecran-cell {
+    white-space: normal;
+    max-width: 120px;
+}
+.demande-badge-ecran {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+    /* Demande #49 — en mini-fiches, la colonne n'existe plus : on rend sa largeur libre,
+       sinon le sélecteur pousse la fiche hors de l'écran. */
+    .demande-etat-cell {
+        min-width: 0;
+    }
+    .demande-etat-select {
+        min-width: 0;
+    }
+    .demandes-table td.demande-ecran-cell {
+        max-width: none;
+    }
+}
