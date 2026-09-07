@@ -647,7 +647,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=195")
+    fetch("menu.html?v=196")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML

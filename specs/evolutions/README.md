@@ -88,6 +88,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#42 (prod)](demande-42-historique-paiements-chronologique.md) | Historique des paiements par date (absorbe #47) | M | À tester | ✅ | — |
 | [#46 (prod)](demande-46-cloche-accroche-et-ancre.md) | Cloche : accroche tronquée + clic vers la page Nouveautés ancrée | S | À tester | ✅ | — |
 | [#48 (prod)](demande-48-cloture-par-le-demandeur.md) | Seul le demandeur clôt sa demande | S | À tester | ✅ | — |
+| [#49 (prod)](demande-49-qui-doit-tester.md) | Voir qui doit tester, sans survoler | S | À tester | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

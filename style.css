@@ -10694,3 +10694,11 @@ button.collecte-badge-status {
     white-space: nowrap;
     margin-right: 8px;
 }
+
+/* Demande #49 — la ligne qu'il m'appartient de tester se repère sans survol */
+.demande-row--a-tester-moi > td {
+    background: #FDF0F5;
+}
+.demande-row--a-tester-moi > td:first-child {
+    box-shadow: inset 4px 0 0 #C2185B;
+}

@@ -85,6 +85,10 @@ function getEtatDef(value) {
 // 4. DONNÉES EN MÉMOIRE
 // ============================================================
 var demandesList = [];
+// Demande #49 — pour nommer le testeur sur la ligne. La colonne « demandeur » ne porte
+// qu'une icône et son tooltip : il fallait survoler chaque ligne pour savoir si on était
+// concerné. On charge les membres pour afficher un prénom plutôt qu'une adresse e-mail.
+var membresDemandes = {};
 var currentEtatFilter = 'actives';
 var editingDemandeId = null;
 
@@ -112,8 +116,17 @@ function populateEtatSelect() {
 // 6. CHARGEMENT DEPUIS SUPABASE
 // ============================================================
 function loadDemandes() {
-    supabaseFetch('/rest/v1/demandes?select=*&order=created_at.desc', { method: 'GET' })
-        .then(function(rows) {
+    Promise.all([
+        supabaseFetch('/rest/v1/demandes?select=*&order=created_at.desc', { method: 'GET' }),
+        // Demande #49 — un échec ici ne doit pas empêcher la liste de s'afficher :
+        // on retombe alors sur la partie locale de l'adresse.
+        supabaseFetch('/rest/v1/membres?select=email,nom,prenom', { method: 'GET' })
+            .catch(function() { return []; })
+    ])
+        .then(function(res) {
+            var rows = res[0];
+            membresDemandes = {};
+            (res[1] || []).forEach(function(m) { membresDemandes[(m.email || '').toLowerCase()] = m; });
             demandesList = rows || [];
             renderEtatFilter();
             renderDemandes();
@@ -269,6 +282,17 @@ function renderDemandes() {
         + '</tbody></table>';
 }
 
+// Demande #49 — le prénom suffit : l'équipe compte six personnes, et une adresse e-mail
+// complète dans un libellé de liste déroulante serait illisible. Repli sur la partie
+// gauche de l'adresse pour les demandes importées, qui n'ont pas de membre associé.
+function nomTesteur(email) {
+    var e = (email || '').trim();
+    if (!e) return '';
+    var m = membresDemandes[e.toLowerCase()];
+    if (m && (m.prenom || m.nom)) return (m.prenom || m.nom);
+    return e.indexOf('@') > 0 ? e.slice(0, e.indexOf('@')) : e;
+}
+
 function renderDemandeRow(d) {
     var etatDef = getEtatDef(d.etat);
     var estClose = (d.etat === 'terminee' || d.etat === 'abandonnee');
@@ -278,15 +302,26 @@ function renderDemandeRow(d) {
         dateInfo += ' — modifiée le ' + formatDateFr(d.updated_at);
     }
 
+    // Demande #49 — sur une demande À TESTER, l'option correspondante annonce qui doit
+    // tester. On ne crée aucun statut supplémentaire : la liste garde ses sept entrées,
+    // c'est le libellé de l'une d'elles qui se précise, et seulement sur cette ligne.
+    var testeur = (d.etat === 'a_tester') ? nomTesteur(d.demandeur) : '';
     var etatOptions = ETATS.map(function(e) {
-        return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(e.label) + '</option>';
+        var label = (e.value === 'a_tester' && testeur) ? (e.label + ' par ' + testeur) : e.label;
+        return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
     }).join('');
+
+    // Et si c'est à MOI de tester, la ligne se signale d'elle-même : c'est la question
+    // qu'on se pose en ouvrant l'écran, elle ne doit pas demander un survol.
+    var aMoiDeTester = (d.etat === 'a_tester')
+        && (d.demandeur || '').trim().toLowerCase() === (window.getActiveEmail() || '').trim().toLowerCase();
 
     var commentaireIcon = d.commentaire
         ? ' <i class="fa-solid fa-comment-dots demande-desc-comment" title="' + escapeAttr(d.commentaire) + '"></i>'
         : '';
 
-    return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '') + '" onclick="ouvrirModaleDemande(' + d.id + ')">'
+    return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')
+        + (aMoiDeTester ? ' demande-row--a-tester-moi' : '') + '" onclick="ouvrirModaleDemande(' + d.id + ')">'
         + '<td class="demande-id-cell" title="Demande n°' + d.id + '">#' + d.id + '</td>'
         + '<td class="demande-etat-cell">'
         +   '<select class="demande-etat-select" style="border-color:' + etatDef.color + ';color:' + etatDef.color + ';" '
