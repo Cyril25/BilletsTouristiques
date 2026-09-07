@@ -10686,3 +10686,11 @@ button.collecte-badge-status {
 .envoi-ligne-avoir {
     background: #eef8f3;
 }
+
+/* Demande #42 — horodatage en tête de chaque groupe de l'historique */
+.historique-horodatage {
+    font-weight: 600;
+    color: var(--color-text-light, #555);
+    white-space: nowrap;
+    margin-right: 8px;
+}

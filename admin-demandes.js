@@ -307,11 +307,36 @@ function renderDemandeRow(d) {
 // ============================================================
 // 9. CHANGEMENT D'ÉTAT RAPIDE (depuis la carte)
 // ============================================================
+// Demande #48 — « Terminé » est la conclusion du DEMANDEUR : c'est lui qui a demandé
+// l'évolution, à lui de dire qu'elle répond à son besoin. Le reste du cycle ne change pas.
+// Le superadmin garde la main : sans ce filet, les demandes importées du Google Sheet —
+// sans demandeur nominatif — n'auraient personne pour les clore.
+// Garde d'écran et non de RLS : c'est une convention de travail entre six admins, pas une
+// frontière de sécurité ; une policy de plus à maintenir pour un abus que personne ne
+// cherche à commettre serait un mauvais échange.
+function peutTerminer(demande) {
+    if (!demande) return true;
+    if (window.userRole === 'superadmin') return true;
+    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
+    var dem = (demande.demandeur || '').trim().toLowerCase();
+    return !!moi && moi === dem;
+}
+
+function refuserCloture(demande) {
+    var dem = (demande && demande.demandeur) ? demande.demandeur : 'le demandeur';
+    showToast('Seul ' + dem + ' peut clore cette demande : c\'est à lui de vérifier que le développement répond à son besoin.', 'error');
+}
+
 function changerEtat(id, nouvelEtat) {
     // Snapshot (demandeur + état d'avant) pour la notif de suivi au demandeur (#33).
     var demande = null, ancienEtat = null;
     for (var j = 0; j < demandesList.length; j++) {
         if (demandesList[j].id === id) { demande = demandesList[j]; ancienEtat = demande.etat; break; }
+    }
+    if (nouvelEtat === 'terminee' && !peutTerminer(demande)) {   // #48
+        refuserCloture(demande);
+        renderDemandes();   // le select revient sur l'état réel
+        return;
     }
     supabaseFetch('/rest/v1/demandes?id=eq.' + id, {
         method: 'PATCH',
@@ -467,6 +492,10 @@ function sauverDemande() {
     if (editingDemandeId !== null) {
         for (var k = 0; k < demandesList.length; k++) {
             if (demandesList[k].id === editingDemandeId) { demandeAvant = demandesList[k]; etatAvant = demandeAvant.etat; break; }
+        }
+        if (data.etat === 'terminee' && etatAvant !== 'terminee' && !peutTerminer(demandeAvant)) {   // #48
+            refuserCloture(demandeAvant);
+            return;
         }
         promesse = supabaseFetch('/rest/v1/demandes?id=eq.' + editingDemandeId, {
             method: 'PATCH',

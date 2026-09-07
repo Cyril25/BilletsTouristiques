@@ -3242,13 +3242,19 @@ function loadPaiementsConfirmes() {
 
     var pInsc = supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&statut_paiement=eq.confirme&pas_interesse=eq.false&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc,billet_id.asc');
     var pPort = supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&statut_paiement_port=eq.confirme&prix_envoi_reel=not.is.null&membre_email=neq.' + emailColl + '&select=*&order=membre_email.asc');
+    // Demande #42 — un règlement reste un règlement : les écarts de prix soldés (#44)
+    // entrent dans le même historique que les billets et les frais de port. Sans ça,
+    // une ligne validée disparaîtrait de l'écran sans laisser de trace.
+    var pDettesConf = supabaseFetch('/rest/v1/dettes?collecteur_alias=eq.' + alias + '&statut_paiement=eq.confirme&membre_email=neq.' + emailColl + '&select=*')
+        .catch(function() { return []; });   // table absente tant que la migration #44 n'est pas jouée
 
-    Promise.all([pInsc, pPort])
+    Promise.all([pInsc, pPort, pDettesConf])
         .then(function(results) {
             // Demande #48 — seulement MES collectes (cf. inscriptionsDeMesCollectes).
             var inscriptions = inscriptionsDeMesCollectes(results[0]);
             var port = (results[1] || []).filter(function(e) { return parseFloat(e.prix_envoi_reel || 0) > 0; });
-            if (inscriptions.length === 0 && port.length === 0) {
+            var dettesConf = results[2] || [];   // #42/#44
+            if (inscriptions.length === 0 && port.length === 0 && dettesConf.length === 0) {
                 container.innerHTML = '<p class="paiements-confirmes-vide">Aucun paiement confirmé.</p>';
                 container.setAttribute('data-loaded', '1');
                 return;
@@ -3256,12 +3262,13 @@ function loadPaiementsConfirmes() {
             var emails = [];
             inscriptions.forEach(function(i) { if (emails.indexOf(i.membre_email) === -1) emails.push(i.membre_email); });
             port.forEach(function(e) { if (emails.indexOf(e.membre_email) === -1) emails.push(e.membre_email); });
+            dettesConf.forEach(function(d) { if (emails.indexOf(d.membre_email) === -1) emails.push(d.membre_email); });   // #42
             var emailFilter = emails.map(function(e) { return encodeURIComponent(e); }).join(',');
             return supabaseFetch('/rest/v1/membres?email=in.(' + emailFilter + ')&select=email,nom,prenom')
                 .then(function(membres) {
                     var mMap = {};
                     (membres || []).forEach(function(m) { mMap[m.email] = m; });
-                    renderPaiementsConfirmes(inscriptions, port, mMap);
+                    renderPaiementsConfirmes(inscriptions, port, mMap, dettesConf);
                     container.setAttribute('data-loaded', '1');
                 });
         })
@@ -3271,79 +3278,164 @@ function loadPaiementsConfirmes() {
         });
 }
 
-// Demande #11 — libellé « validé le … » dans l'historique de validation.
-// Demande #35 — l'heure et la minute en plus : le but déclaré est de retrouver la
-// transaction correspondante sur PayPal, or sur 40 journées de validation en base, 39
-// portent plusieurs validations. La date seule ne désigne donc presque jamais un
-// paiement unique.
-function labelDateValidation(iso) {
-    if (!iso) return '';
-    var dStr;
-    try {
-        var dVal = new Date(iso);
-        dStr = dVal.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-            + ' à ' + dVal.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    }
-    catch (e) { return ''; }
-    return '<span class="paiement-valide-date" title="Date et heure de validation — pour retrouver la transaction sur PayPal"><i class="fa-solid fa-clock-rotate-left"></i> validé le ' + dStr + '</span>';
+// Demande #35 puis #42 — l'horodatage « le JJ/MM/AAAA à HH:MM » a quitté chaque ligne
+// pour l'en-tête du groupe de validation : même information, mais lue une fois par
+// geste de validation au lieu d'être répétée sur chacune de ses lignes. Le besoin de
+// #35 — retrouver la transaction sur PayPal — reste servi, avec l'heure et la minute.
+
+// Demande #42 — l'historique se lit par DATE, plus par membre. Une ligne de titre
+// = un membre + un horodatage à la minute ; en dessous, ce qui a été validé à ce
+// moment-là. « Annuler » reste sur chaque élément, pas sur le groupe : Jean-Philippe
+// a tranché « billet par billet », et c'est la bonne granularité — se tromper sur un
+// billet n'oblige pas à défaire les cinq autres.
+//
+// Le regroupement à la minute plutôt qu'à la milliseconde : une validation groupée
+// pose le même horodatage sur toutes ses lignes, mais deux validations faites à la
+// suite à la main méritent d'être lues comme un même geste.
+function clefMinuteValidation(iso) {
+    return iso ? String(iso).slice(0, 16) : '';
 }
 
-function renderPaiementsConfirmes(inscriptions, port, membresMap) {
+function libelleHorodatage(iso) {
+    if (!iso) return '';
+    try {
+        var d = new Date(iso);
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+             + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return ''; }
+}
+
+function renderPaiementsConfirmes(inscriptions, port, membresMap, dettesConf) {
     var container = document.getElementById('paiements-confirmes-container');
     if (!container) return;
+    dettesConf = dettesConf || [];
     var bMap = {};
     mesBillets.forEach(function(b) { bMap[b.id] = b; });
 
-    var groupes = {};
-    function ensureG(email) { if (!groupes[email]) groupes[email] = { inscriptions: [], port: [] }; return groupes[email]; }
-    inscriptions.forEach(function(i) { ensureG(i.membre_email).inscriptions.push(i); });
-    port.forEach(function(e) { ensureG(e.membre_email).port.push(e); });
+    function nomDe(email) {
+        var m = membresMap[email] || {};
+        return ((m.nom || '') + ' ' + (m.prenom || '')).trim() || email;
+    }
 
-    var emails = Object.keys(groupes);
-    emails.sort(function(a, b) {
-        var na = ((membresMap[a] || {}).nom || '').toLowerCase(), nb = ((membresMap[b] || {}).nom || '').toLowerCase();
-        return na < nb ? -1 : (na > nb ? 1 : 0);
+    // Tout ce qui a été validé, ramené à une forme commune : un règlement est un
+    // règlement, qu'il porte sur un billet, un affranchissement ou un écart de prix.
+    var items = [];
+    inscriptions.forEach(function(insc) {
+        var billet = bMap[insc.billet_id] || {};
+        var t = tarifInsc(insc);
+        var v = versionsInscription(insc, billet);   // #46 — périmètre de la collecte
+        var nbN = v.normale ? (insc.nb_normaux || 0) : 0;
+        var nbV = v.variante ? (insc.nb_variantes || 0) : 0;
+        items.push({
+            email: insc.membre_email,
+            ts: insc.date_validation,
+            montant: (t.prix * nbN) + (t.prixVar * nbV),
+            libelle: (billet.Reference ? billet.Reference + ' ' : '') + (billet.NomBillet || '?'),
+            icone: '',
+            classe: '',
+            annuler: 'annulerPaiementConfirme(' + insc.id + ')'
+        });
     });
+    port.forEach(function(env) {
+        items.push({
+            email: env.membre_email,
+            ts: env.date_validation_port,
+            montant: parseFloat(env.prix_envoi_reel || 0),
+            libelle: 'Frais d\'envoi',
+            icone: '<i class="fa-solid fa-truck-fast"></i> ',
+            classe: ' envoi-ligne-port',
+            annuler: 'annulerPaiementPortConfirme(' + env.id + ')'
+        });
+    });
+    dettesConf.forEach(function(d) {
+        items.push({
+            email: d.membre_email,
+            ts: d.date_validation,
+            montant: Math.abs(parseFloat(d.montant || 0)),
+            libelle: d.libelle || 'Écart de prix',
+            icone: '<i class="fa-solid fa-scale-balanced"></i> ',
+            classe: ' envoi-ligne-dette',
+            annuler: 'annulerDetteConfirmee(' + d.id + ')'
+        });
+    });
+
+    if (items.length === 0) {
+        container.innerHTML = '<p class="paiements-confirmes-vide">Aucun paiement confirmé.</p>';
+        return;
+    }
+
+    // Les validations antérieures à la demande #11 n'ont pas d'horodatage : la colonne
+    // n'existait pas. Impossible de les placer dans une frise ; on les met à part
+    // plutôt que d'inventer une date ou de les cacher.
+    var groupes = {};
+    var sansDate = [];
+    items.forEach(function(it) {
+        if (!it.ts) { sansDate.push(it); return; }
+        var k = it.email + '|' + clefMinuteValidation(it.ts);
+        if (!groupes[k]) groupes[k] = { email: it.email, ts: it.ts, items: [] };
+        groupes[k].items.push(it);
+    });
+    var listes = Object.keys(groupes).map(function(k) { return groupes[k]; });
+    listes.sort(function(a, b) { return String(b.ts).localeCompare(String(a.ts)); });
+
+    function ligneHtml(it) {
+        return '<div class="envoi-ligne' + it.classe + '">'
+            + '<span class="envoi-billet">' + it.icone + escapeHtmlMC(it.libelle) + '</span>'
+            + '<span class="envoi-montant">' + it.montant.toFixed(2) + ' €</span>'
+            + '<button onclick="' + it.annuler + '" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce règlement (il repasse à non payé)"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
+            + '</div>';
+    }
 
     var html = '<div class="paiements-confirmes-liste">';
-    html += '<h4 class="paiements-confirmes-titre">Historique des paiements validés — « Annuler » repasse le paiement à non payé</h4>';
-    emails.forEach(function(email) {
-        var m = membresMap[email] || {};
-        var nom = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || email;
-        var lignes = '';
-        groupes[email].inscriptions.forEach(function(insc) {
-            var billet = bMap[insc.billet_id] || {};
-            var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
-            var vHist = versionsInscription(insc, billet);   // #46
-            var nbN = vHist.normale ? (insc.nb_normaux || 0) : 0;
-            var nbV = vHist.variante ? (insc.nb_variantes || 0) : 0;
-            var montant = (prix * nbN) + (prixVar * nbV);
-            var refPrefix = billet.Reference ? billet.Reference + ' ' : '';
-            lignes += '<div class="envoi-ligne">'
-                + '<span class="envoi-billet">' + escapeHtmlMC(refPrefix + (billet.NomBillet || '?')) + '</span>'
-                + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
-                + badgePaiementEnvoi('confirme')
-                + labelDateValidation(insc.date_validation)
-                + '<button onclick="annulerPaiementConfirme(' + insc.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
-                + '</div>';
-        });
-        groupes[email].port.forEach(function(env) {
-            var montant = parseFloat(env.prix_envoi_reel || 0);
-            lignes += '<div class="envoi-ligne envoi-ligne-port">'
-                + '<span class="envoi-billet"><i class="fa-solid fa-truck-fast"></i> Frais d\'envoi</span>'
-                + '<span class="envoi-montant">' + montant.toFixed(2) + ' €</span>'
-                + badgePaiementEnvoi('confirme')
-                + labelDateValidation(env.date_validation_port)
-                + '<button onclick="annulerPaiementPortConfirme(' + env.id + ')" class="btn-marquer-envoye btn-refuser-paiement" title="Annuler ce paiement de frais de port confirmé"><i class="fa-solid fa-rotate-left"></i> Annuler</button>'
-                + '</div>';
-        });
+    html += '<h4 class="paiements-confirmes-titre">Historique des paiements validés, du plus récent au plus ancien — « Annuler » repasse la ligne à non payé</h4>';
+
+    listes.forEach(function(g) {
+        var total = 0;
+        g.items.forEach(function(it) { total += it.montant; });
         html += '<div class="envoi-groupe">'
-            + '<div class="envoi-groupe-header"><strong>' + escapeHtmlMC(nom) + '</strong></div>'
-            + '<div class="envoi-groupe-lignes">' + lignes + '</div>'
+            + '<div class="envoi-groupe-header">'
+            + '<span class="historique-horodatage"><i class="fa-solid fa-clock-rotate-left"></i> ' + libelleHorodatage(g.ts) + '</span>'
+            + '<strong>' + escapeHtmlMC(nomDe(g.email)) + '</strong>'
+            + '<span class="envoi-count">' + g.items.length + ' ligne(s)</span>'
+            + '<span class="paiement-groupe-total">Total : ' + total.toFixed(2) + ' €</span>'
+            + '</div>'
+            + '<div class="envoi-groupe-lignes">' + g.items.map(ligneHtml).join('') + '</div>'
             + '</div>';
     });
+
+    if (sansDate.length > 0) {
+        var parMembre = {};
+        sansDate.forEach(function(it) {
+            if (!parMembre[it.email]) parMembre[it.email] = [];
+            parMembre[it.email].push(it);
+        });
+        var emailsSansDate = Object.keys(parMembre).sort(function(a, b) {
+            var na = nomDe(a).toLowerCase(), nb = nomDe(b).toLowerCase();
+            return na < nb ? -1 : (na > nb ? 1 : 0);
+        });
+        html += '<button class="btn-toggle-reparties" onclick="toggleReparties(this, \'historique-sans-date\')">'
+            + '<i class="fa-solid fa-question"></i> Validés avant juillet 2026, date non enregistrée (' + sansDate.length + ')'
+            + ' <i class="fa-solid fa-chevron-down toggle-chevron"></i></button>';
+        html += '<div id="historique-sans-date" style="display:none">';
+        emailsSansDate.forEach(function(email) {
+            html += '<div class="envoi-groupe">'
+                + '<div class="envoi-groupe-header"><strong>' + escapeHtmlMC(nomDe(email)) + '</strong>'
+                + '<span class="envoi-count">' + parMembre[email].length + ' ligne(s)</span></div>'
+                + '<div class="envoi-groupe-lignes">' + parMembre[email].map(ligneHtml).join('') + '</div>'
+                + '</div>';
+        });
+        html += '</div>';
+    }
+
     html += '</div>';
     container.innerHTML = html;
+}
+
+// Demande #42/#44 — rouvrir une ligne d'écart déjà réglée.
+function annulerDetteConfirmee(detteId) {
+    if (!window.confirm('Annuler ce règlement ? La ligne repassera à « non réglée ».')) return;
+    majDette(detteId, { statut_paiement: 'non_paye', date_validation: null },
+             'Règlement annulé — ligne repassée à non réglée');
 }
 
 function annulerPaiementConfirme(inscriptionId) {

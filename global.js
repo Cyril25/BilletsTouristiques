@@ -647,7 +647,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=193")
+    fetch("menu.html?v=195")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -779,7 +779,12 @@ function refreshNotifications(effectiveRole) {
                         title: n.titre,
                         subtitle: n.texte || '',
                         date: n.created_at,
-                        href: n.lien || 'notifications.html'
+                        // Demande #46 — le clic mène à la page Nouveautés, ancré sur la
+                        // notification, et non plus directement au lien métier : dans la
+                        // cloche le texte est tronqué, il faut d'abord pouvoir le lire en
+                        // entier. Le lien métier reste accessible, par le bouton « Y aller »
+                        // de la carte, qui existe déjà.
+                        href: 'notifications.html#notif-' + n.id
                     });
                 });
             }).catch(function(e) { console.warn('Notifs nouveautés : échec chargement', e); })
@@ -941,10 +946,17 @@ function renderNotifications() {
             }
             html += '<a class="notif-item" href="' + notifEscHtml(n.href) + '"' + onclick + '>' +
                     '<div class="notif-item-title">' + icon + notifEscHtml(n.title) + '</div>' +
-                    '<div class="notif-item-meta">' + notifEscHtml(n.subtitle) + (dateStr ? ' · ' + dateStr : '') + '</div>' +
+                    '<div class="notif-item-meta">' + notifEscHtml(accrocheNotif(n.subtitle)) + (dateStr ? ' · ' + dateStr : '') + '</div>' +   // #46
                     '</a>';
         });
         body.innerHTML = html;
+    }
+
+    // Demande #46 — la cloche affichait le texte ENTIER de la notification, illisible sur
+    // quelques lignes. On n'y met qu'une accroche : le but est de donner envie d'aller lire.
+    function accrocheNotif(txt) {
+        var t = String(txt == null ? '' : txt).replace(/\s+/g, ' ').trim();
+        return t.length > 110 ? t.slice(0, 109) + '\u2026' : t;
     }
 
     // Pied toujours présent : accès à la page Nouveautés, même sans notification non lue

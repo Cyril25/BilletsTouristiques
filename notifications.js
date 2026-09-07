@@ -94,7 +94,9 @@ function renderNotifsPage() {
             ? '<span class="notif-card-cible"><i class="fa-solid ' + cible.icone + '"></i> ' + escapeHtmlNotif(cible.label) + '</span>'
             : '';
 
-        html += '<div class="notif-card' + (estNouveau ? ' notif-card-nouveau' : '') + '">'
+        // Demande #46 — ancre nommée : la cloche pointe « notifications.html#notif-<id> »,
+        // le navigateur amène donc directement sur la bonne carte, texte complet sous les yeux.
+        html += '<div class="notif-card' + (estNouveau ? ' notif-card-nouveau' : '') + '" id="notif-' + escapeHtmlNotif(String(n.id)) + '">'
             + '<div class="notif-card-head">'
             + '<span class="notif-card-titre"><i class="fa-solid fa-bullhorn"></i> ' + escapeHtmlNotif(n.titre) + '</span>'
             + cibleHtml
