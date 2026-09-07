@@ -330,7 +330,7 @@ function renderDemandeRow(d) {
         + '<td><span class="demande-badge demande-badge-priorite demande-badge-priorite--' + escapeAttr(d.priorite) + '">'
         +   escapeHtml(PRIORITE_LABELS[d.priorite] || d.priorite) + '</span></td>'
         + '<td>' + (d.complexite ? '<span class="demande-badge demande-badge-complexite" title="Complexité estimée">' + escapeHtml(d.complexite) + '</span>' : '') + '</td>'
-        + '<td><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
+        + '<td class="demande-qui-cell"><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
         + '<td class="demande-ecran-cell">' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
         + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
         + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'

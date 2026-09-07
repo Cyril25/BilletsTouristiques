@@ -63,6 +63,19 @@ Une garde en plus : sous 700 px le tableau devient des mini-fiches empilées, o�
 minimale de 222 px pousserait la fiche hors de l'écran. Les contraintes sont donc relâchées dans
 la requête média.
 
+### Deuxième correction : la colonne « Écran » réduite à trois lettres par ligne
+
+Le premier correctif employait `overflow-wrap: anywhere` sur le badge « Écran ». C'est un piège
+classique : cette règle **écrase la largeur min-content** de la cellule — un mot peut désormais se
+couper n'importe où, donc son minimum vaut un caractère. La mise en page automatique du tableau en
+a tiré la conséquence logique et a comprimé la colonne au plus étroit possible.
+
+Solution retenue, proposée par Cyril : **une largeur fixe, la même que la colonne « Qui »** —
+140 px pour les deux — et une coupure **aux espaces uniquement**. Mesuré en base : les libellés
+d'écran vont jusqu'à 38 caractères (« Mes collectes / préparation des envois »), ceux de « Qui »
+jusqu'à 21 (« Membres + Collecteurs ») ; 140 px laisse les premiers tenir sur deux ou trois lignes
+sans jamais couper un mot.
+
 ## Réalisation
 
 - **Fichiers :** `admin-demandes.js` (`membresDemandes`, `nomTesteur()`, libellé contextuel dans
