@@ -647,7 +647,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=198")
+    fetch("menu.html?v=199")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -858,7 +858,10 @@ function refreshNotifications(effectiveRole) {
 
 // Demande #5 — Libellés des motifs de signalement (partagés fiche billet / admin / cloche)
 window.SIGNALEMENT_MOTIFS = [
-    { code: 'image',      label: 'Image incorrecte' },
+    // Demande #50 — la fiche d'un billet SANS image est desormais atteignable
+    // depuis le catalogue : « incorrecte » seul ne decrivait pas ce cas.
+    // Libelle seul — le code stocke reste 'image', aucune reprise de donnees.
+    { code: 'image',      label: 'Image incorrecte ou manquante' },
     { code: 'infos',      label: 'Nom ou lieu erroné' },
     { code: 'millesime',  label: 'Millésime ou version' },
     { code: 'categorie',  label: 'Catégorie ou thème' },

@@ -855,9 +855,16 @@ function showMore() {
                 (sanitizeUrl(item.LinkFB)
                     ? '<a href="' + escapeAttr(sanitizeUrl(item.LinkFB)) + '" target="_blank" class="icon-btn ico-fb" title="Voir sur Facebook"><i class="fa-brands fa-facebook"></i></a>'
                     : '') +
+                // Demande #50 — deux icones distinctes. L'image (si elle existe) s'ouvre en
+                // modale sans quitter le catalogue ; la fiche est TOUJOURS atteignable.
+                // C'est elle qui porte « Signaler une erreur » (#5) : un billet sans image
+                // etait justement celui qu'on ne pouvait pas signaler. On passe l'ID du
+                // billet et non l'URL de l'image — ImageUrl est saisi par un admin, et
+                // l'interpoler dans un attribut onclick rouvrirait SEC-02/SEC-03.
                 (imgUrl
-                    ? '<a href="' + escapeAttr(billetPageUrl) + '" class="icon-btn ico-dl" title="Voir la fiche du billet"><i class="fa-solid fa-image"></i></a>'
+                    ? '<button type="button" class="icon-btn ico-dl" title="Voir l&#39;image du billet" onclick="openModalBillet(' + (item.id || 0) + ')"><i class="fa-solid fa-image"></i></button>'
                     : '') +
+                '<a href="' + escapeAttr(billetPageUrl) + '" class="icon-btn ico-fiche" title="Voir la fiche du billet"><i class="fa-solid fa-file-lines"></i></a>' +
                 '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
                 inscriptionHtml +
@@ -896,6 +903,21 @@ function updateLoadMoreButton() {
 // ============================================================
 // 5. GESTION DU MODAL (ZOOM GALERIE)
 // ============================================================
+// Demande #50 — declencheur depuis la carte. La modale existait deja (openModal) mais
+// n'etait plus appelee depuis que la tuile de galerie pointe vers la fiche : il ne
+// manquait que le point d'entree. On resout l'URL ici plutot que de la transporter dans
+// l'attribut onclick (cf. commentaire du rendu des cartes).
+function openModalBillet(billetId) {
+    var id = String(billetId);
+    for (var i = 0; i < currentData.length; i++) {
+        if (String(currentData[i].id) === id) {
+            var url = resolveImageUrl(currentData[i], 800);
+            if (url) openModal(url);
+            return;
+        }
+    }
+}
+
 function openModal(imgUrl) {
     var modal = document.getElementById('image-modal');
     var modalImg = document.getElementById('modal-image');

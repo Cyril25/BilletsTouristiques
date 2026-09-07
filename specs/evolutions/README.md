@@ -91,6 +91,8 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#46 (prod)](demande-46-cloche-accroche-et-ancre.md) | Cloche : accroche tronquée + clic vers la page Nouveautés ancrée | S | À tester | ✅ | — |
 | [#48 (prod)](demande-48-cloture-par-le-demandeur.md) | Seul le demandeur clôt sa demande | S | À tester | ✅ | — |
 | [#49 (prod)](demande-49-qui-doit-tester.md) | Voir qui doit tester, sans survoler | S | À tester | ✅ | — |
+| [#50](demande-50-icones-image-et-fiche-carte-billet.md) | Deux icônes sur la carte billet : l'image en modale, la fiche toujours accessible | S | À tester | ✅ | — |
+| [#51](demande-51-ecran-composition-notifications.md) | Écran de composition des notifications (étage 1 : diffusion) | M | À tester — **étage 2 en attente d'arbitrage** | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

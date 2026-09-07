@@ -1146,6 +1146,24 @@ input {
     transform: scale(1.1);
 }
 
+/* Demande #50 — une icone cliquable peut desormais etre un <button> : l'icone
+   « image » ouvre une modale, elle ne navigue pas. Sans cette remise a plat, le
+   bouton porterait le chrome natif (fond gris, bordure) au milieu des liens. */
+button.icon-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    line-height: inherit;
+    cursor: pointer;
+}
+
+/* Demande #50 — icone « fiche du billet », distincte de l'icone image. */
+.ico-fiche {
+    color: var(--color-primary);
+}
+
 .ico-form {
     color: var(--color-primary);
 }
