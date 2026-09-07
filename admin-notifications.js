@@ -6,11 +6,15 @@
 // à la main en SQL. La demande #33 n'avait livré que la plomberie (colonne
 // `cible_email` + policy) et un usage automatique.
 //
-// Périmètre : ÉTAGE 1 de la spec — annonces de DIFFUSION (tous / collecteurs /
-// admins). L'étage 2 (cibler un ou plusieurs membres nommés) attend l'arbitrage
-// du point 1 de la spec : la policy de #33 masque une notif privée à TOUS les
-// admins, y compris son auteur, qui ne pourrait donc ni la relire ni la
-// corriger. Voir specs/evolutions/demande-51-ecran-composition-notifications.md
+// Deux usages : annonce de DIFFUSION (tous / collecteurs / admins) et message
+// à des PERSONNES PRÉCISES (étage 2). Pour le second, la règle posée par #33
+// — une notif privée est masquée à tous les admins, auteur compris — rendait
+// toute correction impossible. Levée par `migration-demande-51-notif-auteur.sql`
+// SANS toucher à la policy de #33 : une fonction dédiée rend à un auteur ses
+// propres envois, donc la cloche et la page Nouveautés des membres ne changent
+// pas d'un iota. Tant que la migration n'est pas jouée, le mode ciblé se
+// désactive tout seul (voir `cibleDisponible`).
+// Voir specs/evolutions/demande-51-ecran-composition-notifications.md
 //
 // Réservé aux admins (data-require-admin + policies is_admin_ou_superadmin()).
 // ============================================================
@@ -143,13 +147,64 @@ function labelPage(url) {
     return labelPageConnue(url) || url;
 }
 
+// L'auteur d'un envoi doit être l'email RÉEL, jamais l'identité impersonnée :
+// c'est `auth.jwt()` que la fonction `mes_notifications_envoyees()` compare.
+// Écrire l'email impersonné rendrait l'envoi illisible à son propre auteur.
+// Même précaution que pour les signalements (#5, billet.js).
+function emailReel() {
+    try {
+        return (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
 // ============================================================
 // 4. DONNÉES EN MÉMOIRE
 // ============================================================
-var notifsAdmin = [];
+var notifsAdmin = [];              // annonces de diffusion (cible_email IS NULL)
+var notifsCiblees = [];            // MES envois ciblés, via la fonction dédiée
+var membresListe = [];             // annuaire, pour le sélecteur de destinataires
+var membresSelectionnes = {};      // email -> true, sélection en cours dans la modale
+var cibleDisponible = false;       // la migration #51 est-elle jouée ?
+var modeEnvoi = 'diffusion';       // 'diffusion' | 'cible'
 var currentCibleFilter = 'toutes';
-var editingNotifId = null;
+var editingNotifId = null;         // annonce de diffusion en cours d'édition (UUID)
+var editingGroupeIds = null;       // envoi ciblé en cours d'édition : les N lignes du groupe
 var deletingNotifId = null;
+var deletingGroupeIds = null;
+
+// Un envoi à N personnes crée N lignes. Elles partagent exactement le même
+// `created_at` (une seule instruction INSERT = un seul `now()`), ce qui suffit
+// à les regrouper — même mécanique que le regroupement des paiements de #42.
+function grouperEnvoisCibles(lignes) {
+    var parCle = {};
+    var ordre = [];
+    (lignes || []).forEach(function(n) {
+        var cle = String(n.created_at);
+        if (!parCle[cle]) {
+            parCle[cle] = {
+                cle: cle, titre: n.titre, texte: n.texte, lien: n.lien,
+                type: n.type, created_at: n.created_at, ids: [], destinataires: []
+            };
+            ordre.push(cle);
+        }
+        parCle[cle].ids.push(n.id);
+        parCle[cle].destinataires.push(n.cible_email);
+    });
+    return ordre.map(function(c) { return parCle[c]; });
+}
+
+function libelleMembre(email) {
+    for (var i = 0; i < membresListe.length; i++) {
+        var m = membresListe[i];
+        if ((m.email || '').toLowerCase() === String(email || '').toLowerCase()) {
+            var nom = [m.prenom, m.nom].filter(Boolean).join(' ').trim();
+            return nom || m.pseudo || m.email;
+        }
+    }
+    return email;
+}
 
 // ============================================================
 // 5. INITIALISATION
@@ -160,6 +215,7 @@ if (typeof firebase !== 'undefined') {
             populateCibleSelect();
             populateLienSelect(null);
             loadNotifsAdmin();
+            loadMembres();
         }
     });
 }
@@ -214,9 +270,20 @@ function labelPageConnue(url) {
 // privées reçues par l'admin lui-même (suivi de ses propres demandes, #33)
 // remonteraient sinon dans un écran de gestion où elles n'ont rien à faire.
 function loadNotifsAdmin() {
-    supabaseFetch('/rest/v1/notifications?select=*&cible_email=is.null&order=created_at.desc')
-        .then(function(rows) {
-            notifsAdmin = rows || [];
+    Promise.all([
+        supabaseFetch('/rest/v1/notifications?select=*&cible_email=is.null&order=created_at.desc'),
+        // Mes envois ciblés. Un échec signifie presque toujours « migration #51
+        // pas encore jouée » : on le traite comme une absence de fonctionnalité,
+        // pas comme une erreur — l'étage 1 doit rester utilisable sans elle.
+        supabaseFetch('/rest/v1/rpc/mes_notifications_envoyees', {
+            method: 'POST', body: '{}'
+        }).catch(function() { return null; })
+    ])
+        .then(function(res) {
+            notifsAdmin = res[0] || [];
+            cibleDisponible = (res[1] !== null);
+            notifsCiblees = grouperEnvoisCibles(res[1] || []);
+            majDisponibiliteCible();
             renderCibleFilter();
             renderNotifsAdmin();
         })
@@ -224,6 +291,36 @@ function loadNotifsAdmin() {
             showToast('Erreur chargement des annonces : ' + error.message, 'error');
             console.error('Erreur chargement notifications (admin):', error);
         });
+}
+
+// L'annuaire alimente le sélecteur de destinataires. Un échec ne doit pas
+// empêcher l'écran de servir pour la diffusion.
+function loadMembres() {
+    supabaseFetch('/rest/v1/membres?select=email,prenom,nom,pseudo,statut&order=prenom.asc')
+        .then(function(rows) {
+            membresListe = (rows || []).filter(function(m) {
+                return m.email && m.statut !== 'refuse';
+            });
+            renderMembresPicker();
+        })
+        .catch(function(e) {
+            console.warn('Annuaire indisponible pour le ciblage :', e);
+        });
+}
+
+// Grise le mode ciblé et explique pourquoi, plutôt que de laisser un bouton
+// qui échouerait au moment de publier.
+function majDisponibiliteCible() {
+    var btn = document.getElementById('na-mode-cible');
+    var avert = document.getElementById('na-mode-indispo');
+    if (btn) btn.disabled = !cibleDisponible;
+    if (avert) {
+        avert.style.display = cibleDisponible ? 'none' : '';
+        avert.textContent = "L'envoi à des personnes précises n'est pas encore actif : "
+            + "la migration « migration-demande-51-notif-auteur.sql » doit être jouée "
+            + "dans l'éditeur SQL Supabase. L'envoi à un groupe fonctionne normalement.";
+    }
+    if (!cibleDisponible && modeEnvoi === 'cible') setModeEnvoi('diffusion');
 }
 
 // ============================================================
@@ -243,6 +340,9 @@ function renderCibleFilter() {
     CIBLES.forEach(function(c) {
         html += filterBtnHtml(c.value, c.label, counts[c.value] || 0);
     });
+    if (cibleDisponible) {
+        html += filterBtnHtml('cibles', 'Mes envois ciblés', notifsCiblees.length);
+    }
     wrap.innerHTML = html;
 }
 
@@ -270,8 +370,10 @@ function getNotifsFiltrees() {
     var clearBtn = document.getElementById('notifadm-search-clear');
     if (clearBtn) clearBtn.style.display = terme ? '' : 'none';
 
-    return notifsAdmin.filter(function(n) {
-        if (currentCibleFilter !== 'toutes' && (n.cible || 'tous') !== currentCibleFilter) return false;
+    var source = (currentCibleFilter === 'cibles') ? notifsCiblees : notifsAdmin;
+    return source.filter(function(n) {
+        if (currentCibleFilter !== 'toutes' && currentCibleFilter !== 'cibles'
+            && (n.cible || 'tous') !== currentCibleFilter) return false;
         if (!terme) return true;
         var texte = ((n.titre || '') + ' ' + (n.texte || '')).toLowerCase();
         return texte.indexOf(terme) !== -1;
@@ -300,6 +402,11 @@ function renderNotifsAdmin() {
     }
     if (emptyState) emptyState.style.display = 'none';
 
+    if (currentCibleFilter === 'cibles') {
+        list.innerHTML = notifs.map(renderCarteEnvoiCible).join('');
+        return;
+    }
+
     var html = '';
     notifs.forEach(function(n) {
         var cible = getCibleDef(n.cible || 'tous');
@@ -322,6 +429,112 @@ function renderNotifsAdmin() {
     list.innerHTML = html;
 }
 
+// Carte d'un envoi ciblé : le groupe des N lignes créées d'un coup. On nomme les
+// destinataires plutôt que d'afficher « 4 personnes » — le seul intérêt de relire
+// un envoi, c'est de vérifier à QUI il est parti.
+function renderCarteEnvoiCible(g) {
+    var noms = g.destinataires.map(libelleMembre);
+    var apercuNoms = noms.slice(0, 6).join(', ') + (noms.length > 6 ? ' +' + (noms.length - 6) + ' autres' : '');
+    var dateStr = formatDateFr(g.created_at);
+    var cleAttr = escapeAttr(g.cle);
+
+    return '<div class="notifadm-card">'
+        + '<div class="notifadm-card-head">'
+        + '<span class="notifadm-card-titre"><i class="fa-solid fa-user-check"></i> ' + escapeHtml(g.titre) + '</span>'
+        + '<span class="notifadm-card-cible"><i class="fa-solid fa-lock"></i> Privé — '
+        + g.ids.length + ' destinataire' + (g.ids.length > 1 ? 's' : '') + '</span>'
+        + (dateStr ? '<span class="notifadm-card-date">' + escapeHtml(dateStr) + '</span>' : '')
+        + '</div>'
+        + (g.texte ? '<div class="notifadm-card-texte">' + escapeHtml(g.texte) + '</div>' : '')
+        + (g.lien ? '<span class="notifadm-card-lien"><i class="fa-solid fa-arrow-right"></i> ' + escapeHtml(labelPage(g.lien)) + '</span>' : '')
+        + '<div class="notifadm-destinataires"><i class="fa-solid fa-users"></i> ' + escapeHtml(apercuNoms) + '</div>'
+        + '<div class="notifadm-card-actions">'
+        + '<button type="button" class="notifadm-action" onclick="ouvrirModaleEnvoiCible(&#39;' + cleAttr + '&#39;)"><i class="fa-solid fa-pen"></i> Corriger le texte</button>'
+        + '<button type="button" class="notifadm-action notifadm-action--danger" onclick="ouvrirModaleSuppressionCible(&#39;' + cleAttr + '&#39;)"><i class="fa-solid fa-trash"></i> Supprimer l\'envoi</button>'
+        + '</div>'
+        + '</div>';
+}
+
+// ============================================================
+// 8b. SÉLECTEUR DE DESTINATAIRES (étage 2)
+// ============================================================
+function setModeEnvoi(mode) {
+    if (mode === 'cible' && !cibleDisponible) return;
+    modeEnvoi = mode;
+    var bDiff = document.getElementById('na-mode-diffusion');
+    var bCible = document.getElementById('na-mode-cible');
+    if (bDiff) bDiff.className = 'notifadm-mode-btn' + (mode === 'diffusion' ? ' actif' : '');
+    if (bCible) bCible.className = 'notifadm-mode-btn' + (mode === 'cible' ? ' actif' : '');
+    var blocDiff = document.getElementById('na-bloc-diffusion');
+    var blocCible = document.getElementById('na-bloc-cible');
+    if (blocDiff) blocDiff.style.display = (mode === 'diffusion') ? '' : 'none';
+    if (blocCible) blocCible.style.display = (mode === 'cible') ? '' : 'none';
+    renderMembresPicker();
+    rafraichirApercu();
+}
+
+function membresFiltres() {
+    var input = document.getElementById('na-membre-search');
+    var terme = input ? input.value.trim().toLowerCase() : '';
+    if (!terme) return membresListe;
+    return membresListe.filter(function(m) {
+        var t = ((m.prenom || '') + ' ' + (m.nom || '') + ' ' + (m.pseudo || '') + ' ' + m.email).toLowerCase();
+        return t.indexOf(terme) !== -1;
+    });
+}
+
+function renderMembresPicker() {
+    var wrap = document.getElementById('na-membres-liste');
+    var compte = document.getElementById('na-membres-compte');
+    var nb = Object.keys(membresSelectionnes).length;
+    if (compte) compte.textContent = nb + ' sélectionné' + (nb > 1 ? 's' : '');
+    if (!wrap) return;
+
+    // En modification d'un envoi déjà parti, les destinataires ne se changent
+    // plus : les lignes existent, en ajouter ou en retirer serait un autre envoi.
+    if (editingGroupeIds) {
+        wrap.innerHTML = '<p class="notifadm-hint" style="padding:6px">'
+            + 'Destinataires figés : ' + escapeHtml(Object.keys(membresSelectionnes).map(libelleMembre).join(', '))
+            + '. Pour changer la liste, supprimez cet envoi et refaites-en un.</p>';
+        return;
+    }
+
+    var liste = membresFiltres();
+    if (liste.length === 0) {
+        wrap.innerHTML = '<p class="notifadm-hint" style="padding:6px">Aucun membre ne correspond.</p>';
+        return;
+    }
+    wrap.innerHTML = liste.map(function(m) {
+        var e = escapeAttr(m.email);
+        var coche = membresSelectionnes[m.email.toLowerCase()] ? ' checked' : '';
+        var nom = [m.prenom, m.nom].filter(Boolean).join(' ').trim() || m.pseudo || m.email;
+        return '<label class="notifadm-membre">'
+            + '<input type="checkbox" value="' + e + '"' + coche
+            + ' onchange="toggleMembre(&#39;' + e + '&#39;, this.checked)">'
+            + '<span>' + escapeHtml(nom) + '</span>'
+            + '</label>';
+    }).join('');
+}
+
+function toggleMembre(email, coche) {
+    var cle = String(email || '').toLowerCase();
+    if (coche) membresSelectionnes[cle] = email;
+    else delete membresSelectionnes[cle];
+    renderMembresPicker();
+    rafraichirApercu();
+}
+
+function selectionnerMembresAffiches(coche) {
+    if (editingGroupeIds) return;
+    membresFiltres().forEach(function(m) {
+        var cle = m.email.toLowerCase();
+        if (coche) membresSelectionnes[cle] = m.email;
+        else delete membresSelectionnes[cle];
+    });
+    renderMembresPicker();
+    rafraichirApercu();
+}
+
 // ============================================================
 // 9. MODALE DE COMPOSITION
 // ============================================================
@@ -334,6 +547,11 @@ function getNotifById(id) {
 
 function ouvrirModaleNotif(id) {
     editingNotifId = id;
+    editingGroupeIds = null;
+    membresSelectionnes = {};
+    var rech = document.getElementById('na-membre-search');
+    if (rech) rech.value = '';
+    setModeEnvoi('diffusion');
     var n = id ? getNotifById(id) : null;
 
     var titreEl = document.getElementById('na-titre');
@@ -373,8 +591,57 @@ function ouvrirModaleNotif(id) {
 
 function fermerModaleNotif() {
     editingNotifId = null;
+    editingGroupeIds = null;
+    membresSelectionnes = {};
     var overlay = document.getElementById('notifadm-modal-overlay');
     if (overlay) overlay.style.display = 'none';
+}
+
+function getGroupeCible(cle) {
+    for (var i = 0; i < notifsCiblees.length; i++) {
+        if (notifsCiblees[i].cle === cle) return notifsCiblees[i];
+    }
+    return null;
+}
+
+// Corriger un envoi déjà parti : le texte seulement. Changer la liste des
+// destinataires reviendrait à créer ou supprimer des notifications déjà reçues.
+function ouvrirModaleEnvoiCible(cle) {
+    var g = getGroupeCible(cle);
+    if (!g) return;
+
+    editingNotifId = null;
+    editingGroupeIds = g.ids.slice();
+    membresSelectionnes = {};
+    g.destinataires.forEach(function(e) { membresSelectionnes[String(e).toLowerCase()] = e; });
+
+    populateLienSelect(g.lien);
+    var titreEl = document.getElementById('na-titre');
+    var texteEl = document.getElementById('na-texte');
+    var lienEl  = document.getElementById('na-lien');
+    if (titreEl) titreEl.value = g.titre || '';
+    if (texteEl) texteEl.value = g.texte || '';
+    if (lienEl)  lienEl.value  = g.lien || '';
+
+    modeEnvoi = 'cible';
+    setModeEnvoi('cible');
+
+    var modalTitle = document.getElementById('notifadm-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Corriger un envoi ciblé';
+    var saveBtn = document.getElementById('na-save-btn');
+    if (saveBtn) saveBtn.textContent = 'Enregistrer';
+    var metaEl = document.getElementById('na-meta');
+    if (metaEl) {
+        metaEl.style.display = '';
+        metaEl.textContent = 'Envoyé le ' + formatDateFr(g.created_at)
+            + ' à ' + g.ids.length + ' personne' + (g.ids.length > 1 ? 's' : '')
+            + ' · les destinataires ne sont plus modifiables';
+    }
+
+    rafraichirApercu();
+    var overlay = document.getElementById('notifadm-modal-overlay');
+    if (overlay) overlay.style.display = '';
+    if (titreEl) titreEl.focus();
 }
 
 // Aperçu : les deux endroits où la notification apparaîtra réellement.
@@ -402,6 +669,7 @@ function rafraichirApercu() {
     // Rappel de qui reçoit
     var cibleHint = document.getElementById('na-cible-hint');
     if (cibleHint) cibleHint.textContent = getCibleDef(cibleVal).recoivent;
+    if (modeEnvoi === 'cible') renderMembresPicker();
 
     // Aperçu cloche
     var clocheEl = document.getElementById('na-apercu-cloche');
@@ -426,9 +694,16 @@ function rafraichirApercu() {
             pageEl.innerHTML = '<p class="notifadm-apercu-vide">La carte de la page Nouveautés apparaîtra ici.</p>';
         } else {
             var cible = getCibleDef(cibleVal);
-            var badge = (cibleVal === 'tous') ? ''   // #29 : pas de badge pour « tous »
-                : '<span class="notifadm-card-cible"><i class="fa-solid ' + escapeAttr(cible.icone) + '"></i> '
-                  + escapeHtml(cible.label) + '</span>';
+            var nbDest = Object.keys(membresSelectionnes).length;
+            var badge;
+            if (modeEnvoi === 'cible') {
+                badge = '<span class="notifadm-card-cible"><i class="fa-solid fa-lock"></i> Privé — '
+                      + nbDest + ' destinataire' + (nbDest > 1 ? 's' : '') + '</span>';
+            } else {
+                badge = (cibleVal === 'tous') ? ''   // #29 : pas de badge pour « tous »
+                    : '<span class="notifadm-card-cible"><i class="fa-solid ' + escapeAttr(cible.icone) + '"></i> '
+                      + escapeHtml(cible.label) + '</span>';
+            }
             pageEl.innerHTML = '<div class="notifadm-card" style="border-left-color:#5D3A7E;background:#faf7fe;">'
                 + '<div class="notifadm-card-head">'
                 + '<span class="notifadm-card-titre"><i class="fa-solid fa-bullhorn"></i> '
@@ -451,6 +726,14 @@ function sauverNotif() {
 
     if (!titre) { showToast('Le titre est obligatoire.', 'error'); return; }
     if (!texte) { showToast('Le texte est obligatoire.', 'error'); return; }
+    if (modeEnvoi === 'cible' && Object.keys(membresSelectionnes).length === 0) {
+        showToast('Choisissez au moins un destinataire.', 'error');
+        return;
+    }
+    if (modeEnvoi === 'cible' && !editingGroupeIds && !emailReel()) {
+        showToast('Session expirée : reconnectez-vous avant d\'envoyer.', 'error');
+        return;
+    }
 
     var saveBtn = document.getElementById('na-save-btn');
     var labelInitial = saveBtn ? saveBtn.textContent : '';
@@ -464,13 +747,43 @@ function sauverNotif() {
     };
 
     var requete;
-    if (editingNotifId) {
+    if (editingGroupeIds) {
+        // Correction d'un envoi ciblé : les N lignes du groupe, texte seulement.
+        // Ni `cible_email` ni `created_at` ne bougent — sinon le regroupement se
+        // disloque et le membre reverrait le message comme neuf.
+        var maj = { titre: payload.titre, texte: payload.texte, lien: payload.lien };
+        requete = supabaseFetch('/rest/v1/notifications?id=in.(' + editingGroupeIds.join(',') + ')', {
+            method: 'PATCH',
+            headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify(maj)
+        });
+    } else if (editingNotifId) {
         // `type` et `created_at` ne sont pas touchés : une correction de texte ne
         // doit pas faire remonter l'annonce en tête ni la re-signaler comme neuve.
         requete = supabaseFetch('/rest/v1/notifications?id=eq.' + encodeURIComponent(editingNotifId), {
             method: 'PATCH',
             headers: { Prefer: 'return=minimal' },
             body: JSON.stringify(payload)
+        });
+    } else if (modeEnvoi === 'cible') {
+        // Une ligne par destinataire — `cible_email` est une colonne unique, pas
+        // une liste. Envoyées d'un seul POST : elles partagent alors le même
+        // `created_at`, ce qui les regroupe (cf. grouperEnvoisCibles).
+        var auteur = emailReel();
+        var lignes = Object.keys(membresSelectionnes).map(function(cle) {
+            return {
+                type: 'nouveaute',
+                titre: payload.titre,
+                texte: payload.texte,
+                lien: payload.lien,
+                cible_email: membresSelectionnes[cle],
+                auteur_email: auteur
+            };
+        });
+        requete = supabaseFetch('/rest/v1/notifications', {
+            method: 'POST',
+            headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify(lignes)
         });
     } else {
         payload.type = 'nouveaute';
@@ -483,7 +796,14 @@ function sauverNotif() {
 
     requete
         .then(function() {
-            showToast(editingNotifId ? 'Annonce modifiée.' : 'Annonce publiée.', 'success');
+            var nbEnv = Object.keys(membresSelectionnes).length;
+            showToast(
+                editingGroupeIds ? 'Envoi corrigé.'
+                : editingNotifId ? 'Annonce modifiée.'
+                : modeEnvoi === 'cible'
+                    ? ('Envoyé à ' + nbEnv + ' personne' + (nbEnv > 1 ? 's' : '') + '.')
+                    : 'Annonce publiée.',
+                'success');
             fermerModaleNotif();
             loadNotifsAdmin();
         })
@@ -499,7 +819,23 @@ function sauverNotif() {
 // ============================================================
 // 10. SUPPRESSION
 // ============================================================
+function ouvrirModaleSuppressionCible(cle) {
+    var g = getGroupeCible(cle);
+    if (!g) return;
+    deletingNotifId = null;
+    deletingGroupeIds = g.ids.slice();
+    var desc = document.getElementById('notifadm-delete-desc');
+    if (desc) {
+        desc.textContent = 'Le message « ' + g.titre +' » sera retiré à ses '
+            + g.ids.length + ' destinataire' + (g.ids.length > 1 ? 's' : '')
+            + '. Ceux qui l\'ont déjà lu ne le retrouveront plus.';
+    }
+    var overlay = document.getElementById('notifadm-delete-modal-overlay');
+    if (overlay) overlay.style.display = '';
+}
+
 function ouvrirModaleSuppressionNotif(id) {
+    deletingGroupeIds = null;
     deletingNotifId = id;
     var n = getNotifById(id);
     var desc = document.getElementById('notifadm-delete-desc');
@@ -514,15 +850,19 @@ function ouvrirModaleSuppressionNotif(id) {
 
 function fermerModaleSuppressionNotif() {
     deletingNotifId = null;
+    deletingGroupeIds = null;
     var overlay = document.getElementById('notifadm-delete-modal-overlay');
     if (overlay) overlay.style.display = 'none';
 }
 
 function confirmerSuppressionNotif() {
-    if (!deletingNotifId) return;
-    var id = deletingNotifId;
+    if (!deletingNotifId && !deletingGroupeIds) return;
 
-    supabaseFetch('/rest/v1/notifications?id=eq.' + encodeURIComponent(id), { method: 'DELETE' })
+    var url = deletingGroupeIds
+        ? '/rest/v1/notifications?id=in.(' + deletingGroupeIds.join(',') + ')'
+        : '/rest/v1/notifications?id=eq.' + encodeURIComponent(deletingNotifId);
+
+    supabaseFetch(url, { method: 'DELETE' })
         .then(function() {
             showToast('Annonce supprimée.', 'success');
             fermerModaleSuppressionNotif();

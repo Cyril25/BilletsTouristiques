@@ -52,6 +52,53 @@
         .notifadm-apercu-cloche-meta { font-size: 0.8em; color: #777; margin-top: 2px; }
         .notifadm-apercu-vide { color: #999; font-style: italic; font-size: 0.9em; }
 
+        /* Demande #51 etage 2 — bascule groupe / personnes precises. */
+        .notifadm-mode { display: flex; gap: 8px; margin-bottom: 4px; }
+        .notifadm-mode-btn {
+            flex: 1; border: 1px solid #d9c9ee; background: #fff; color: #4a3a5e;
+            border-radius: 6px; padding: 8px 10px; font-size: 0.875rem; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .notifadm-mode-btn.actif {
+            background: var(--color-primary, #5D3A7E); color: #fff;
+            border-color: var(--color-primary, #5D3A7E); font-weight: 600;
+        }
+        .notifadm-mode-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+        .notifadm-membres {
+            border: 1px solid #d9c9ee; border-radius: 6px; max-height: 190px;
+            overflow-y: auto; background: #fff; padding: 4px;
+        }
+        /* Une case et son libelle ne se separent jamais. */
+        .notifadm-membre {
+            display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+            width: 100%; padding: 4px 6px; border-radius: 4px; cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .notifadm-membre:hover { background: #f6f1fc; }
+        .notifadm-membre input { margin: 0; flex: none; }
+        .notifadm-membre span { overflow: hidden; text-overflow: ellipsis; }
+        .notifadm-membres-barre {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;
+        }
+        .notifadm-membres-barre input[type="text"] { flex: 1; min-width: 140px; }
+        .notifadm-lien-bouton {
+            border: none; background: none; color: var(--color-primary, #5D3A7E);
+            text-decoration: underline; cursor: pointer; font-size: 0.8rem; padding: 0;
+        }
+        .notifadm-compte {
+            font-size: 0.8rem; color: #4a3a5e; background: #f2ecf9;
+            border: 1px solid #d9c9ee; border-radius: 10px; padding: 2px 8px;
+        }
+        .notifadm-avert {
+            background: #fff6e5; border: 1px solid #f0d9a8; border-radius: 6px;
+            padding: 8px 10px; font-size: 0.8rem; color: #6b4e12; margin-top: 6px;
+        }
+        .notifadm-destinataires {
+            font-size: 0.8rem; color: #555; margin-top: 6px;
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+
         .notifadm-hint { font-size: 0.8rem; color: #777; margin-top: 4px; }
         .notifadm-compteur { font-size: 0.75rem; color: #888; float: right; font-weight: 400; }
         .notifadm-compteur.notifadm-compteur--long { color: #b3261e; font-weight: 600; }
@@ -77,9 +124,10 @@
 
         <div class="notifadm-bandeau">
             <i class="fa-solid fa-circle-info"></i>
-            Annonces de <strong>diffusion</strong> (tous / collecteurs / admins). Les notifications
-            privées adressées à un membre précis ne sont pas listées ici : la règle posée par la
-            demande #33 les rend invisibles à tout autre que leur destinataire.
+            Deux usages : une annonce de <strong>diffusion</strong> (tous / collecteurs / admins),
+            ou un message <strong>à des personnes précises</strong>. Vos envois ciblés sont
+            relisibles et corrigeables via le filtre « Mes envois ciblés » — mais ils restent
+            invisibles aux <em>autres</em> admins, comme l'exige la règle de la demande #33.
         </div>
 
         <div class="admin-search" style="margin-bottom: 12px;">
@@ -115,10 +163,32 @@
                     <textarea id="na-texte" rows="6" placeholder="Détail de la nouveauté, affiché sur la page Nouveautés." oninput="rafraichirApercu()"></textarea>
                     <p class="notifadm-hint">Les 110 premiers caractères servent d'accroche dans la cloche.</p>
                 </div>
-                <div class="demande-modal-field">
-                    <label for="na-cible">Destinataires</label>
+                <div class="demande-modal-field demande-modal-field--full">
+                    <label>Destinataires</label>
+                    <div class="notifadm-mode">
+                        <button type="button" class="notifadm-mode-btn actif" id="na-mode-diffusion" onclick="setModeEnvoi('diffusion')">
+                            <i class="fa-solid fa-bullhorn"></i> À un groupe
+                        </button>
+                        <button type="button" class="notifadm-mode-btn" id="na-mode-cible" onclick="setModeEnvoi('cible')">
+                            <i class="fa-solid fa-user-check"></i> À des personnes précises
+                        </button>
+                    </div>
+                    <p class="notifadm-avert" id="na-mode-indispo" style="display:none"></p>
+                </div>
+                <div class="demande-modal-field demande-modal-field--full" id="na-bloc-diffusion">
+                    <label for="na-cible">Groupe destinataire</label>
                     <select id="na-cible" onchange="rafraichirApercu()"></select>
                     <p class="notifadm-hint" id="na-cible-hint"></p>
+                </div>
+                <div class="demande-modal-field demande-modal-field--full" id="na-bloc-cible" style="display:none">
+                    <label for="na-membre-search">Choisir les personnes <span class="notifadm-compte" id="na-membres-compte">0 sélectionnée</span></label>
+                    <div class="notifadm-membres-barre">
+                        <input type="text" id="na-membre-search" placeholder="Rechercher un membre..." oninput="renderMembresPicker()" autocomplete="off">
+                        <button type="button" class="notifadm-lien-bouton" onclick="selectionnerMembresAffiches(true)">Tout cocher</button>
+                        <button type="button" class="notifadm-lien-bouton" onclick="selectionnerMembresAffiches(false)">Tout décocher</button>
+                    </div>
+                    <div class="notifadm-membres" id="na-membres-liste"></div>
+                    <p class="notifadm-hint">Une notification distincte est créée pour chaque personne : elle ne voit que la sienne, et les autres admins ne la voient pas.</p>
                 </div>
                 <div class="demande-modal-field">
                     <label for="na-lien">Lien « Y aller »</label>
