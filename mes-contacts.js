@@ -222,8 +222,16 @@ function ouvrirContactModal(id) {
         if (el) el.value = champs[key];
     });
 
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) {
+        overlay.style.display = 'flex';
+        // Reouverture : repartir du haut du formulaire, pas la ou on avait laisse le defilement.
+        var boite = overlay.querySelector('.user-modal');
+        if (boite) boite.scrollTop = 0;
+    }
     setTimeout(function() {
+        // Sur petit ecran, pas de focus automatique : le clavier virtuel s'ouvrirait aussitot
+        // et masquerait la moitie du formulaire.
+        if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches) return;
         var focusEl = document.getElementById('contact-titre');
         if (focusEl) focusEl.focus();
     }, 50);
