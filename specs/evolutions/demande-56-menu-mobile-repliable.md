@@ -5,7 +5,7 @@
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Menu (téléphone)
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `3fa09cb`
 
 ## Contexte (demande)
 
@@ -69,4 +69,4 @@ gestionnaire de clic sort immédiatement au-dessus de 768 px.
   (bloc `@media (max-width: 768px)` : chevron, `.dropdown-content` replié, `.dropdown.open`),
   `sw.js` (`CACHE_NAME`).
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `3fa09cb`

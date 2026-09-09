@@ -5,7 +5,7 @@
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Menu (téléphone)
 - **Statut :** À tester
-- **Commit :** _(voir Réalisation)_
+- **Commit :** `3fa09cb`
 
 ## Contexte (demande)
 
@@ -77,4 +77,4 @@ alors la seule chose qui les sépare.
 - **Fichiers :** `style.css` (`.dropdown-content a.active`, `.dropdown`, ordre du bloc tactile),
   `sw.js` (`CACHE_NAME`).
 - **Migration :** aucune.
-- **Commit :** _(à compléter)_
+- **Commit :** `3fa09cb`
