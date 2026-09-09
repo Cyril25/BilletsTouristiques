@@ -96,6 +96,8 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#52 (prod)](demande-52-modale-contact-mobile.md) | Bug mobile : le bas de la modale « Nouveau contact » inatteignable | S | À tester | ✅ | `7e1668e` |
 | [#53 (prod)](demande-53-menu-mobile-contraste.md) | Menu sur téléphone : titres invisibles (1,0:1) et hiérarchie illisible | M | À tester | ✅ | `8d4899b` |
 | [#54 (prod)](#) | Mode sombre / mode clair | L | **Prêt à dev** — phase d'analyse obligatoire, non démarrée | — | — |
+| [#55 (prod)](demande-55-menu-violet-fonce-et-traits.md) | Le violet foncé ne voulait plus dire « titre de rubrique » (retour sur #53) | S | À tester | ✅ | _(à compléter)_ |
+| [#56 (prod)](demande-56-menu-mobile-repliable.md) | Sous-menus repliables sur téléphone | M | À tester | ✅ | _(à compléter)_ |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

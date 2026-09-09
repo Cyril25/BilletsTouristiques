@@ -656,6 +656,9 @@ function loadMenu() {
             // 2. On gère le lien actif
             highlightActiveLink();
 
+            // 2ter. Demande #56 — sous-menus repliables sur telephone
+            setupMobileDropdowns();
+
             // 2bis. Bandeau figé : ombre + coins droits dès qu'on scrolle
             setupStickyNavbar();
 
@@ -1006,6 +1009,60 @@ function notifEscHtml(s) {
     if (s == null) return '';
     return String(s).replace(/[&<>"']/g, function(c) {
         return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+    });
+}
+
+// ============================================================
+// Demande #56 — Sous-menus repliables sur telephone
+// ------------------------------------------------------------
+// Sur mobile, les trois groupes etaient toujours deplies : pour un admin, le
+// menu faisait une trentaine de lignes d'affilee. On les replie, un seul
+// ouvert a la fois — c'est ce qui raccourcit vraiment la liste. Sur grand
+// ecran, rien ne change : le survol continue de gouverner les sous-menus.
+// ============================================================
+function setupMobileDropdowns() {
+    var nav = document.getElementById('nav-links');
+    if (!nav) return;
+
+    var surMobile = function() {
+        return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    };
+
+    // Le groupe qui contient la page courante s'ouvre d'emblee : on arrive dans
+    // le menu la ou on se trouve. On repart de l'URL et non de la classe
+    // .active, que highlightActiveLink() ne pose que 100 ms plus tard.
+    var page = window.location.pathname.split('/').pop() || 'index.html';
+    var lienCourant = nav.querySelector('.dropdown-content a[href="' + page + '"]');
+    if (lienCourant && lienCourant.closest) {
+        var groupeCourant = lienCourant.closest('.dropdown');
+        if (groupeCourant) groupeCourant.classList.add('open');
+    }
+
+    var majAria = function() {
+        nav.querySelectorAll('.dropdown').forEach(function(dd) {
+            var btn = dd.querySelector('.dropbtn');
+            if (btn) btn.setAttribute('aria-expanded', dd.classList.contains('open') ? 'true' : 'false');
+        });
+    };
+    majAria();
+
+    // Delegation : le menu est injecte d'un bloc, un seul ecouteur suffit.
+    nav.addEventListener('click', function(e) {
+        if (!surMobile()) return;
+        var btn = e.target.closest ? e.target.closest('.dropbtn') : null;
+        if (!btn) return;
+
+        var dd = btn.closest('.dropdown');
+        if (!dd) return;
+
+        var etaitOuvert = dd.classList.contains('open');
+        nav.querySelectorAll('.dropdown.open').forEach(function(autre) {
+            autre.classList.remove('open');
+        });
+        if (!etaitOuvert) dd.classList.add('open');
+
+        majAria();
+        e.preventDefault();
     });
 }
 

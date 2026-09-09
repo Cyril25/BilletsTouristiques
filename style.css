@@ -392,8 +392,13 @@ body.has-impersonate-banner #menu-placeholder {
 
     .dropdown {
         padding: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
-        margin-top: 4px;
+        /* Demande #55 : le trait flottait 4 px au-dessus de la bande, dans une
+           bande de fond a lui. Colle au titre, il separe deux groupes au lieu
+           de sembler appartenir a l'un ou a l'autre. Avec les sous-menus
+           repliables (#56), les titres se suivent sur le meme violet : c'est la
+           que le trait devient reellement necessaire. */
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        margin-top: 0;
     }
 
     .dropdown-content {
@@ -433,7 +438,10 @@ body.has-impersonate-banner #menu-placeholder {
     }
 
     .dropbtn {
-        display: block;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
         width: 100%;
         text-align: left;
         padding: 14px 20px;
@@ -444,23 +452,32 @@ body.has-impersonate-banner #menu-placeholder {
         color: var(--color-surface);
     }
 
-    /* Le menu est toujours déplié sur mobile : le chevron n'a pas de sens */
+    /* Demande #56 : les sous-menus se replient. Le chevron reprend donc son
+       sens — il etait masque tant que tout restait deplie. */
     .dropbtn .fa-caret-down {
+        display: inline-block;
+        font-size: 0.9em;
+        opacity: 0.75;
+        transition: transform var(--transition-fast);
+    }
+
+    .dropdown.open > .dropbtn .fa-caret-down {
+        transform: rotate(180deg);
+    }
+
+    /* Replie par defaut. La regle de survol du bureau doit etre neutralisee :
+       sur tactile, `:hover` se declenche des qu'on touche le groupe et
+       ouvrirait le sous-menu sans qu'on l'ait demande. */
+    .dropdown-content {
         display: none;
     }
 
-    /* Sur un écran tactile, :hover ne se lève pas : il reste collé au lien tapé
-       jusqu'au tap suivant. Or la règle de survol du bureau repeint le texte en
-       --color-secondary, et le sous-menu mobile a EXACTEMENT ce fond : le lien
-       qu'on vient de toucher disparaît (1,0:1). Même cause que les titres de
-       rubrique, troisième endroit où elle frappe (demande #53). */
-    .dropdown-content a:hover,
-    .dropdown-content a:focus,
-    .dropdown-content a:active {
-        color: var(--color-text-inverse);
-        /* Assombrir plutot qu'eclaircir : un voile blanc remonterait le fond a
-           4,3:1 sous le texte blanc, sous le seuil AA. La, on est a 6,9:1. */
-        background-color: rgba(0, 0, 0, 0.14) !important;
+    .dropdown:hover .dropdown-content {
+        display: none;
+    }
+
+    .dropdown.open .dropdown-content {
+        display: block;
     }
 
     /* Meme piege un cran plus haut : `.dropdown:hover` repeint tout le groupe en
@@ -477,15 +494,36 @@ body.has-impersonate-banner #menu-placeholder {
     }
 
     .dropdown-content a.active {
-        /* Sur le violet moyen du sous-menu, on descend au violet foncé plutôt
-           que de monter au gris clair : blanc sur #5D3A7E, 8,9:1. */
+        /* Demande #55 : plus de fond fonce ici. Le violet fonce est la langue
+           des bandes de structure — liens principaux et titres de rubrique ;
+           s'en servir aussi pour la page courante faisait passer une simple
+           ligne pour un titre de rubrique. Elle se signale desormais par une
+           barre et du gras, sur le fond du sous-menu inchange (blanc a 5,5:1).
+           Pourquoi pas un fond plus CLAIR : mesure faite, tout eclaircissement
+           ramene le texte blanc a 4,4:1, sous le seuil AA. Pas de fond, donc.
+           La barre passe de --color-accent (2,3:1 sur ce violet, insuffisant
+           pour un element d'interface) a --color-surface (4,6:1). */
         color: var(--color-text-inverse);
-        background-color: var(--color-primary) !important;
-        box-shadow: inset 4px 0 0 var(--color-accent);
+        font-weight: 600;
+        background-color: transparent !important;
+        box-shadow: inset 4px 0 0 var(--color-surface);
     }
 
     .dropbtn.active {
         color: var(--color-text-inverse);
+    }
+
+    /* Retour tactile, place en dernier pour valoir aussi sur la page courante.
+       Sur un ecran tactile `:hover` ne se leve pas avant la navigation, et la
+       regle du bureau repeint le texte en --color-secondary — la couleur exacte
+       du fond du sous-menu : le lien touche disparaissait (1,0:1, demande #53).
+       Assombrir plutot qu'eclaircir : un voile blanc ramenerait le fond a
+       4,3:1 sous du texte blanc ; la, on est a 6,9:1. */
+    .dropdown-content a:hover,
+    .dropdown-content a:focus,
+    .dropdown-content a:active {
+        color: var(--color-text-inverse);
+        background-color: rgba(0, 0, 0, 0.14) !important;
     }
 
     /* Ajustement Profil sur Mobile */
