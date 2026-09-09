@@ -771,7 +771,7 @@ function renderAdminCards() {
 
         html += '<div class="admin-card-billet" data-doc-id="' + docId + '">' +
             '<div class="admin-card-header">' +
-                '<h3 class="admin-card-title">' + escapeHtml(nom) + ' <span style="font-size:10px; color:#ccc; font-weight:normal;">(n\u00b0' + docId + ')</span></h3>' +
+                '<h3 class="admin-card-title">' + escapeHtml(nom) + ' <span style="font-size:10px; color:var(--color-border); font-weight:normal;">(n\u00b0' + docId + ')</span></h3>' +
                 '<div class="card-badge-wrapper">' +
                     (nbCollectes >= 2
                         // 2+ collectes : statut billet dérivé, lecture seule (on change par collecte)
@@ -3930,12 +3930,12 @@ function openInscriptionsModal(billetId, focusCollecteId) {
     // Si un recalcul est en cours pour ce billet, attendre qu'il finisse
     if (adminRecalculEnCoursBilletId && String(adminRecalculEnCoursBilletId) === String(billetId)) {
         bodyEl.innerHTML =
-            '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Recalcul des inscriptions en cours…</p>';
+            '<p style="text-align:center; padding:20px; color:var(--color-text-light, var(--color-text-muted));"><i class="fa-solid fa-spinner fa-spin"></i> Recalcul des inscriptions en cours…</p>';
         return;
     }
 
     bodyEl.innerHTML =
-        '<p style="text-align:center; padding:20px; color:var(--color-text-light, #666);"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
+        '<p style="text-align:center; padding:20px; color:var(--color-text-light, var(--color-text-muted));"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</p>';
 
     // Charger les inscriptions et les membres en parallèle
     Promise.all([
@@ -4501,7 +4501,7 @@ function refreshStatutBilletUI() {
 function loadCollectesForBillet(billetId) {
     if (!billetId) return;
     var container = document.getElementById('collectes-list');
-    if (container) container.innerHTML = '<p style="font-style:italic; color: var(--color-text-light, #666);">Chargement...</p>';
+    if (container) container.innerHTML = '<p style="font-style:italic; color: var(--color-text-light, var(--color-text-muted));">Chargement...</p>';
     supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&order=created_at.asc')
         .then(function(data) {
             currentBilletCollectes = data || [];

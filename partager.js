@@ -174,7 +174,7 @@
             }
         };
         qrImg.onerror = function() {
-            loading.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:#CC4444;"></i> Impossible de générer le QR code. Vérifiez votre connexion.';
+            loading.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--color-danger);"></i> Impossible de générer le QR code. Vérifiez votre connexion.';
         };
         qrImg.src = getQrUrl();
 

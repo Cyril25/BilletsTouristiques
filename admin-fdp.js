@@ -72,7 +72,7 @@ function fdpLoadYear() {
     fdpCurrentYear = parseInt(select.value);
 
     var container = document.getElementById('fdp-content');
-    container.innerHTML = '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement des tarifs ' + fdpCurrentYear + '...</p>';
+    container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement des tarifs ' + fdpCurrentYear + '...</p>';
 
     supabaseFetch('/rest/v1/frais_port?annee=eq.' + fdpCurrentYear + '&select=*&order=destination,qte_min,type_envoi')
         .then(function(data) {
@@ -81,7 +81,7 @@ function fdpLoadYear() {
         })
         .catch(function(err) {
             var errDiv = document.createElement('p');
-            errDiv.style.cssText = 'text-align:center; padding:40px; color:#CC4444;';
+            errDiv.style.cssText = 'text-align:center; padding:40px; color:var(--color-danger);';
             errDiv.textContent = 'Erreur : ' + (err.message || 'Erreur réseau');
             container.innerHTML = '';
             container.appendChild(errDiv);
@@ -99,7 +99,7 @@ function fdpRender() {
     html += '<h2><i class="fa-solid fa-location-dot"></i> Envois en France Métropolitaine — ' + fdpCurrentYear + '</h2>';
     html += fdpBuildTable('france', FDP_TYPES_FRANCE);
 
-    html += '<hr style="border:0; border-top:1px solid #eee; margin:40px 0;">';
+    html += '<hr style="border:0; border-top:1px solid var(--color-border-lighter); margin:40px 0;">';
 
     // --- International ---
     html += '<h2><i class="fa-solid fa-earth-europe"></i> Envois à l\'Étranger — ' + fdpCurrentYear + '</h2>';

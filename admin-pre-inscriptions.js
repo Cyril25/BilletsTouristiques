@@ -78,7 +78,7 @@ function preInscLoadYear() {
     preInscCurrentYear = parseInt(select.value);
 
     var container = document.getElementById('preinsc-content');
-    container.innerHTML = '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement des pré-inscriptions ' + preInscCurrentYear + '...</p>';
+    container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement des pré-inscriptions ' + preInscCurrentYear + '...</p>';
 
     Promise.all([
         supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + preInscCurrentYear + '&select=*&order=membre_email.asc'),
@@ -123,7 +123,7 @@ function preInscRender() {
     });
 
     if (preInscData.length === 0) {
-        html += '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Aucun paramétrage pour ' + preInscCurrentYear + '.</p>';
+        html += '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Aucun paramétrage pour ' + preInscCurrentYear + '.</p>';
     } else {
         html += '<div class="preinsc-list">';
         for (var i = 0; i < preInscData.length; i++) {

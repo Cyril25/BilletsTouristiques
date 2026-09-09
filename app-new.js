@@ -258,10 +258,10 @@ function fetchData() {
             var grid = document.getElementById('cards-grid');
             if (grid) {
                 grid.innerHTML =
-                    '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--color-danger, #CC4444);">' +
+                    '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--color-danger, var(--color-danger));">' +
                     '<i class="fa-solid fa-circle-exclamation" style="font-size:2em; margin-bottom:12px; display:block;"></i>' +
                     '<strong>Impossible de charger les billets.</strong><br>' +
-                    '<span style="color:var(--color-text-light, #666); font-size:0.9em;">' + escapeHtml(err.message || 'Erreur réseau') + ' — Réessaye dans quelques instants.</span>' +
+                    '<span style="color:var(--color-text-light, var(--color-text-muted)); font-size:0.9em;">' + escapeHtml(err.message || 'Erreur réseau') + ' — Réessaye dans quelques instants.</span>' +
                     '</div>';
             }
         });
@@ -722,7 +722,7 @@ function showMore() {
                 '<a class="galerie-item" href="' + escapeAttr(billetPageUrl) + '">' +
                 (imgUrl
                     ? '<img src="' + escapeAttr(imgUrl) + '" class="galerie-image" alt="' + escapeAttr(item.NomBillet || 'Billet') + '">'
-                    : '<div style="text-align:center; color:#999; font-size:0.8em; padding:10px;">Image manquante<br>' + escapeHtml(item.Reference || '') + '</div>'
+                    : '<div style="text-align:center; color:var(--color-text-disabled); font-size:0.8em; padding:10px;">Image manquante<br>' + escapeHtml(item.Reference || '') + '</div>'
                 ) +
                 '</a>';
 
@@ -865,7 +865,7 @@ function showMore() {
                     ? '<button type="button" class="icon-btn ico-dl" title="Voir l&#39;image du billet" onclick="openModalBillet(' + (item.id || 0) + ')"><i class="fa-solid fa-image"></i></button>'
                     : '') +
                 '<a href="' + escapeAttr(billetPageUrl) + '" class="icon-btn ico-fiche" title="Voir la fiche du billet"><i class="fa-solid fa-file-lines"></i></a>' +
-                '<span style="font-size:10px; color:#ccc; align-self:center;">(n°' + (item.id || '') + ')</span>' +
+                '<span style="font-size:10px; color:var(--color-border); align-self:center;">(n°' + (item.id || '') + ')</span>' +
                 '</div>' +
                 inscriptionHtml +
                 buildCollectesSupplementairesHtml(item) +

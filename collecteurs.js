@@ -343,7 +343,7 @@ function openMembreSelectPopup(collecteurId) {
     }
 
     var listDiv = document.getElementById('membre-list');
-    if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:#888">Chargement...</p>';
+    if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint)">Chargement...</p>';
 
     supabaseFetch('/rest/v1/membres?select=email,nom,prenom&order=nom.asc,prenom.asc')
         .then(function(data) {
@@ -375,7 +375,7 @@ function renderMembreList(filter) {
     }
 
     if (filtered.length === 0) {
-        listDiv.innerHTML = '<p style="text-align:center;color:#888;padding:var(--spacing-md)">Aucun membre trouvé</p>';
+        listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint);padding:var(--spacing-md)">Aucun membre trouvé</p>';
         return;
     }
 

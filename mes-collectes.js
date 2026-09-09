@@ -667,7 +667,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         if (billet.Millesime) titreDetail += billet.Millesime + (billet.Version ? '-' + billet.Version : '') + ' ';
         titreDetail += billet.NomBillet || '';
     }
-    html += '<h2>' + escapeHtmlMC(titreDetail) + '<span style="font-weight:400; font-size:0.75em; color:#666;">' + prixHeader + '</span></h2>';
+    html += '<h2>' + escapeHtmlMC(titreDetail) + '<span style="font-weight:400; font-size:0.75em; color:var(--color-text-muted);">' + prixHeader + '</span></h2>';
     if (billet && billet.Ville) html += '<span class="collecte-detail-ville"><i class="fa-solid fa-location-dot"></i> ' + escapeHtmlMC(billet.Ville) + '</span>';
     html += '</div>';
 
@@ -4705,7 +4705,7 @@ function openMembreReassignModal(oldEmail) {
     html += '<h2><i class="fa-solid fa-user-slash"></i> Membre introuvable</h2>';
     html += '<p style="margin-bottom:var(--spacing-md)">L\u2019adresse <strong>' + escapeHtmlMC(oldEmail) + '</strong> ne correspond à aucun membre. Sélectionnez un membre existant pour réattribuer les inscriptions.</p>';
     html += '<input type="text" id="reassign-search" class="membre-search-input" placeholder="Rechercher par nom, prénom ou email\u2026" autocomplete="off">';
-    html += '<div id="reassign-list" class="membre-list"><p style="text-align:center;color:#888">Chargement\u2026</p></div>';
+    html += '<div id="reassign-list" class="membre-list"><p style="text-align:center;color:var(--color-text-hint)">Chargement\u2026</p></div>';
     html += '<div class="user-edit-modal-actions">';
     html += '<button class="user-modal-btn" id="reassign-cancel"><i class="fa-solid fa-xmark"></i> Annuler</button>';
     html += '</div>';
@@ -4749,7 +4749,7 @@ function renderReassignList(filter) {
     }
 
     if (filtered.length === 0) {
-        listDiv.innerHTML = '<p style="text-align:center;color:#888;padding:var(--spacing-md)">Aucun membre trouvé</p>';
+        listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint);padding:var(--spacing-md)">Aucun membre trouvé</p>';
         return;
     }
 

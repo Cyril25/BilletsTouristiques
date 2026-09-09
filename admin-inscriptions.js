@@ -43,7 +43,7 @@ function adminInscLoadCounts() {
 
 function adminInscLoad() {
     var container = document.getElementById('admin-insc-content');
-    container.innerHTML = '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement...</p>';
+    container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement...</p>';
 
     var path;
     if (adminInscCurrentTab === 'actif') {
@@ -72,7 +72,7 @@ function adminInscRender() {
         var msg = adminInscCurrentTab === 'en_attente' ? 'Aucune demande en attente.'
                 : adminInscCurrentTab === 'refuse'     ? 'Aucune demande refusée.'
                 : 'Aucune validation récente.';
-        container.innerHTML = '<p style="text-align:center; padding:40px; color:#666;">' + msg + '</p>';
+        container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted);">' + msg + '</p>';
         return;
     }
 

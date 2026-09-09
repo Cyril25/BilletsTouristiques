@@ -148,6 +148,22 @@
     --color-ebay:                #E53238;
     --color-impersonate-border:  #FFC107;
     --color-bell-active:         #F5C542;
+
+
+    /* Demande #54 — roles venus des balises <style> des pages */
+    --color-text-strong:         #2B2B2B;
+    --color-text-dark:           #444444;
+    --color-text-grey:           #777777;
+    --color-text-faint:          #BBBBBB;
+    --color-border-soft:         #E3E3E3;
+    --color-violet-bright:       #7E57C2;
+    --color-violet-tint:         #D9C9EE;
+    --color-violet-deep:         #4A3A5E;
+    --color-violet-muted:        #8A7AA3;
+    --color-error-strong:        #B3261E;
+    --color-credit-deep:         #1E5033;
+    --color-question-border:     #F0D9A8;
+    --color-question-text:       #6B4E12;
 }
 
 /* =========================================

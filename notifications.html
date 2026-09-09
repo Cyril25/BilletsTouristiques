@@ -15,29 +15,29 @@
         .notifs-header h1 { margin: 0; }
         .notifs-list { display: flex; flex-direction: column; gap: 12px; }
         .notif-card {
-            background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 14px 16px;
+            background: var(--color-bg-white); border: 1px solid var(--color-border-soft); border-radius: 8px; padding: 14px 16px;
             border-left: 4px solid var(--color-border-disabled, #ccc);
         }
-        .notif-card.notif-card-nouveau { border-left-color: var(--color-primary, #5D3A7E); background: #faf7fe; }
+        .notif-card.notif-card-nouveau { border-left-color: var(--color-primary, #5D3A7E); background: var(--color-bg); }
         .notif-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
         .notif-card-titre { font-weight: 600; color: var(--color-primary, #5D3A7E); font-size: 1.05em; display: inline-flex; align-items: center; gap: 8px; }
         .notif-card-badge {
             font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
-            background: var(--color-primary, #5D3A7E); color: #fff;
+            background: var(--color-primary, #5D3A7E); color: var(--color-text-inverse);
         }
         /* Demande #29 — cible de la notif : pastille claire (métadonnée),
            volontairement différente du badge « Nouveau » qui est plein (état de lecture). */
         .notif-card-cible {
             font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
-            background: #f2ecf9; color: var(--color-primary, #5D3A7E);
-            border: 1px solid #d9c9ee; white-space: nowrap;
+            background: var(--color-surface); color: var(--color-primary, #5D3A7E);
+            border: 1px solid var(--color-violet-tint); white-space: nowrap;
             display: inline-flex; align-items: center; gap: 5px;
         }
-        .notif-card-date { margin-left: auto; font-size: 0.8em; color: #888; white-space: nowrap; }
-        .notif-card-texte { color: #333; font-size: 0.95em; line-height: 1.5; white-space: pre-wrap; }
+        .notif-card-date { margin-left: auto; font-size: 0.8em; color: var(--color-text-hint); white-space: nowrap; }
+        .notif-card-texte { color: var(--color-text); font-size: 0.95em; line-height: 1.5; white-space: pre-wrap; }
         .notif-card-lien { display: inline-block; margin-top: 8px; font-size: 0.9em; }
-        .notifs-empty { text-align: center; padding: 40px; color: #888; background: #fafafa; border-radius: 8px; }
-        .notifs-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: #bbb; }
+        .notifs-empty { text-align: center; padding: 40px; color: var(--color-text-hint); background: var(--color-bg-subtle); border-radius: 8px; }
+        .notifs-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: var(--color-text-faint); }
     </style>
 </head>
 <body>

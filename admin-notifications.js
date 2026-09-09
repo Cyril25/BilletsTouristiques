@@ -704,7 +704,7 @@ function rafraichirApercu() {
                     : '<span class="notifadm-card-cible"><i class="fa-solid ' + escapeAttr(cible.icone) + '"></i> '
                       + escapeHtml(cible.label) + '</span>';
             }
-            pageEl.innerHTML = '<div class="notifadm-card" style="border-left-color:#5D3A7E;background:#faf7fe;">'
+            pageEl.innerHTML = '<div class="notifadm-card" style="border-left-color:var(--color-primary);background:#faf7fe;">'
                 + '<div class="notifadm-card-head">'
                 + '<span class="notifadm-card-titre"><i class="fa-solid fa-bullhorn"></i> '
                 + escapeHtml(titre || '(sans titre)') + '</span>'

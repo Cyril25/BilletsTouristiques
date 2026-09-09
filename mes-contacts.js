@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================================
 function chargerContacts() {
     var listDiv = document.getElementById('contacts-list');
-    if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:#888;padding:20px">Chargement...</p>';
+    if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint);padding:20px">Chargement...</p>';
 
     supabaseFetch('/rest/v1/contacts_collecteur?select=*&order=titre.asc,nom.asc')
         .then(function(data) {
@@ -77,7 +77,7 @@ function chargerContacts() {
         })
         .catch(function(err) {
             console.error('Erreur chargement contacts:', err);
-            if (listDiv) listDiv.innerHTML = '<p style="color:#cc4444;text-align:center;padding:20px">Erreur : ' + escapeHtml(err.message) + '</p>';
+            if (listDiv) listDiv.innerHTML = '<p style="color:var(--color-danger);text-align:center;padding:20px">Erreur : ' + escapeHtml(err.message) + '</p>';
         });
 }
 

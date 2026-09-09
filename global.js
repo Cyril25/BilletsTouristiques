@@ -65,8 +65,8 @@ function showEnvBanner() {
         + (ref ? ' (base ' + ref + ')' : '');
     bar.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483647',
-        'background:repeating-linear-gradient(45deg,#b71c1c,#b71c1c 18px,#8e0000 18px,#8e0000 36px)',
-        'color:#fff', 'font:700 13px/1.4 system-ui,Segoe UI,Arial,sans-serif',
+        'background:repeating-linear-gradient(45deg,var(--color-nocollecte),#b71c1c 18px,#8e0000 18px,#8e0000 36px)',
+        'color:var(--color-text-inverse)', 'font:700 13px/1.4 system-ui,Segoe UI,Arial,sans-serif',
         'letter-spacing:.02em', 'text-align:center', 'padding:6px 40px',
         'box-shadow:0 2px 6px rgba(0,0,0,.35)', 'pointer-events:none', 'user-select:none'
     ].join(';');
@@ -333,10 +333,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 var appContent = document.getElementById('app-content');
                 if (appContent) {
                     appContent.style.display = 'block';
-                    appContent.innerHTML = '<div style="text-align:center;padding:40px;color:var(--color-danger, #CC4444);">' +
+                    appContent.innerHTML = '<div style="text-align:center;padding:40px;color:var(--color-danger, var(--color-danger));">' +
                         '<i class="fa-solid fa-circle-exclamation" style="font-size:2em;margin-bottom:12px;display:block;"></i>' +
                         '<strong>Erreur de connexion au serveur.</strong><br>' +
-                        '<span style="color:var(--color-text-light, #666);">Veuillez rafraichir la page ou reessayer plus tard.</span>' +
+                        '<span style="color:var(--color-text-light, var(--color-text-muted));">Veuillez rafraichir la page ou reessayer plus tard.</span>' +
                         '</div>';
                 }
             });

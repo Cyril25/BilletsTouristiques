@@ -39,7 +39,7 @@ function adminSigLoadCounts() {
 
 function adminSigLoad() {
     var container = document.getElementById('admin-sig-content');
-    container.innerHTML = '<p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement...</p>';
+    container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement...</p>';
 
     // Tri : les plus récents d'abord (par date de traitement sur les onglets clôturés)
     var ordre = (adminSigCurrentTab === 'traite' || adminSigCurrentTab === 'rejete')
@@ -68,7 +68,7 @@ function adminSigRender() {
                 : adminSigCurrentTab === 'en_cours' ? 'Aucun signalement en cours de traitement.'
                 : adminSigCurrentTab === 'traite'   ? 'Aucun signalement traité.'
                 : 'Aucun signalement non retenu.';
-        container.innerHTML = '<p style="text-align:center; padding:40px; color:#666;">' + msg + '</p>';
+        container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted);">' + msg + '</p>';
         return;
     }
 

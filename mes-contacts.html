@@ -15,33 +15,33 @@
         .contacts-header h1 { margin: 0; }
         .contacts-privacy-banner {
             display: flex; align-items: center; gap: 10px;
-            background: #EAF4EE; border-left: 4px solid #2E7D4F; color: #1E5033;
+            background: var(--color-credit-bg); border-left: 4px solid var(--color-valide); color: var(--color-credit-deep);
             padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95em;
         }
         .contacts-privacy-banner i { font-size: 1.2em; }
         .contacts-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
         .contacts-search { flex: 1 1 260px; position: relative; }
         .contacts-search input {
-            width: 100%; padding: 10px 12px 10px 36px; border: 1px solid #ccc; border-radius: 6px;
+            width: 100%; padding: 10px 12px 10px 36px; border: 1px solid var(--color-border); border-radius: 6px;
             font-size: 1em; box-sizing: border-box;
         }
         .contacts-search i.fa-search {
-            position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888;
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-hint);
         }
         .contacts-toolbar button { white-space: nowrap; }
         .contacts-btn-primary {
-            background: var(--color-primary, #5D3A7E); color: #fff; border: none; padding: 10px 16px;
+            background: var(--color-primary, #5D3A7E); color: var(--color-text-inverse); border: none; padding: 10px 16px;
             border-radius: 6px; font-size: 1em; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
         }
         .contacts-btn-primary:hover { filter: brightness(0.92); }
         .contacts-btn-secondary {
-            background: #fff; color: var(--color-primary, #5D3A7E); border: 1px solid var(--color-primary, #5D3A7E);
+            background: var(--color-bg-white); color: var(--color-primary, #5D3A7E); border: 1px solid var(--color-primary, #5D3A7E);
             padding: 10px 14px; border-radius: 6px; font-size: 1em; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
         }
-        .contacts-btn-secondary:hover { background: #f5f0fa; }
+        .contacts-btn-secondary:hover { background: var(--color-surface); }
         .contacts-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
         .contact-card {
-            background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 14px;
+            background: var(--color-bg-white); border: 1px solid var(--color-border-soft); border-radius: 8px; padding: 14px;
             cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; position: relative;
         }
         .contact-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); transform: translateY(-1px); }
@@ -49,39 +49,39 @@
             display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--color-primary, #5D3A7E);
             margin-bottom: 6px; font-size: 1.05em;
         }
-        .contact-card-title .fa-lock { color: #2E7D4F; font-size: 0.85em; }
-        .contact-card-name { font-size: 0.95em; color: #333; margin-bottom: 4px; }
-        .contact-card-societe { font-size: 0.88em; color: #666; margin-bottom: 6px; font-style: italic; }
-        .contact-card-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82em; color: #555; }
+        .contact-card-title .fa-lock { color: var(--color-valide); font-size: 0.85em; }
+        .contact-card-name { font-size: 0.95em; color: var(--color-text); margin-bottom: 4px; }
+        .contact-card-societe { font-size: 0.88em; color: var(--color-text-muted); margin-bottom: 6px; font-style: italic; }
+        .contact-card-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82em; color: var(--color-text-secondary); }
         .contact-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
         .contact-card-refs {
-            margin-top: 8px; font-size: 0.8em; color: #5D3A7E;
-            display: inline-block; background: #f3ecfa; padding: 2px 8px; border-radius: 10px;
+            margin-top: 8px; font-size: 0.8em; color: var(--color-primary);
+            display: inline-block; background: var(--color-surface); padding: 2px 8px; border-radius: 10px;
         }
-        .contact-card-cheque { margin-top: 6px; font-size: 0.85em; color: #1E5033; }
+        .contact-card-cheque { margin-top: 6px; font-size: 0.85em; color: var(--color-credit-deep); }
         .contact-card-cheque i { margin-right: 4px; }
         .contacts-empty {
-            text-align: center; padding: 40px; color: #888; background: #fafafa; border-radius: 8px;
+            text-align: center; padding: 40px; color: var(--color-text-hint); background: var(--color-bg-subtle); border-radius: 8px;
         }
-        .contacts-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: #bbb; }
+        .contacts-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: var(--color-text-faint); }
 
         .contact-modal-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .contact-modal-form .full { grid-column: 1 / -1; }
         .contact-modal-form label {
-            display: block; font-size: 0.88em; color: #555; margin-bottom: 4px; font-weight: 500;
+            display: block; font-size: 0.88em; color: var(--color-text-secondary); margin-bottom: 4px; font-weight: 500;
         }
         .contact-modal-form input, .contact-modal-form textarea {
-            width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 5px;
+            width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 5px;
             font-size: 0.95em; box-sizing: border-box; font-family: inherit;
         }
         .contact-modal-form textarea { resize: vertical; min-height: 60px; }
         .contact-modal-header { display: flex; align-items: center; gap: 8px; }
-        .contact-modal-header .fa-lock { color: #2E7D4F; font-size: 0.9em; }
+        .contact-modal-header .fa-lock { color: var(--color-valide); font-size: 0.9em; }
         .contact-modal-delete {
-            background: #fff; color: #cc4444; border: 1px solid #cc4444;
+            background: var(--color-bg-white); color: var(--color-danger); border: 1px solid var(--color-danger);
             padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 0.95em;
         }
-        .contact-modal-delete:hover { background: #ffeaea; }
+        .contact-modal-delete:hover { background: var(--color-plein-bg); }
         @media (max-width: 600px) {
             .contact-modal-form { grid-template-columns: 1fr; }
         }
