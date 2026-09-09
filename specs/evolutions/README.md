@@ -94,7 +94,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#50](demande-50-icones-image-et-fiche-carte-billet.md) | Deux icônes sur la carte billet : l'image en modale, la fiche toujours accessible | S | À tester | ✅ | — |
 | [#51](demande-51-ecran-composition-notifications.md) | Écran de composition des notifications (diffusion + envoi ciblé) | M | À tester — ⚠ **migration à jouer** pour l'envoi ciblé | ✅ | `5a6d966` + — |
 | [#52 (prod)](demande-52-modale-contact-mobile.md) | Bug mobile : le bas de la modale « Nouveau contact » inatteignable | S | À tester | ✅ | `7e1668e` |
-| [#53 (prod)](demande-53-menu-mobile-contraste.md) | Menu sur téléphone : titres invisibles (1,0:1) et hiérarchie illisible | M | Développée — relecture visuelle en cours | ✅ | _(à compléter)_ |
+| [#53 (prod)](demande-53-menu-mobile-contraste.md) | Menu sur téléphone : titres invisibles (1,0:1) et hiérarchie illisible | M | À tester | ✅ | `8d4899b` |
 | [#54 (prod)](#) | Mode sombre / mode clair | L | **Prêt à dev** — phase d'analyse obligatoire, non démarrée | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et

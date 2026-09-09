@@ -4,8 +4,8 @@
 - **Demande :** #53 (prod) — sebleniglo54@gmail.com, 2026-09-09, priorité normale, complexité M.
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Menu (toutes les pages)
-- **Statut :** Prêt à dev → développé, en attente de relecture visuelle
-- **Commit :** _(voir Réalisation)_
+- **Statut :** À tester
+- **Commit :** `8d4899b`
 
 ## Contexte (demande)
 
@@ -92,4 +92,4 @@ pour la demande #52 : `vh` ignore la barre d'adresse du téléphone.
 - **Migration :** aucune.
 - **Aperçu soumis à Cyril avant mise en ligne :**
   https://claude.ai/code/artifact/142abd7f-c2df-4a18-9140-ad0bb98e9d12
-- **Commit :** _(à compléter)_
+- **Commit :** `8d4899b`
