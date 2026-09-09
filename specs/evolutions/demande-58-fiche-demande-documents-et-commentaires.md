@@ -6,7 +6,9 @@
   auto pendant la session de cadrage. Le numéro 58 est le prochain libre (max actuel = 57) et
   **doit être confirmé** au moment de créer la demande — si un autre dépôt passe avant, renommer
   ce fichier et sa ligne d'index.
-- **Concerne :** admins (6 personnes), et le demandeur pour la partie création.
+- **Concerne :** les admins (6 personnes), et eux seuls — `admin-demandes.html` porte
+  `data-require-admin`, et **aucun écran membre n'écrit dans `demandes`** (vérifié : la table
+  n'est alimentée que par `admin-demandes.js`).
 - **Statut :** **analyse à valider par Cyril.** Aucun développement commencé.
 
 ## Contexte (demande)
@@ -74,9 +76,14 @@ rend seulement le chemin praticable.
 
 ### Pourquoi la popup survit
 
-Un membre qui dépose une demande n'a pas besoin — et n'a pas le droit — de voir le journal de
-traitement, les documents de spec et les échanges entre admins. La popup garde donc son rôle
-d'origine : **saisie rapide** (description, écran, qui, priorité). Tout le reste déménage.
+**Pas pour protéger les membres** — ils n'y accèdent jamais : une demande n'est déposée que par un
+admin, qui consigne dans `demandeur` le nom de la personne à l'origine du besoin. #52 est arrivée
+ainsi, depuis un signalement Facebook de sebleniglo54.
+
+La vraie raison est la **saisie rapide**. Consigner une demande entendue sur Facebook, c'est trois
+champs et dix secondes ; ouvrir une fiche pleine page pour ça serait un détour à chaque fois. La
+popup garde donc son rôle d'origine — description, écran, qui, priorité — et **tout le reste
+déménage** : la fiche est le lieu où la demande *vit*, la popup celui où elle *naît*.
 
 C'est aussi une leçon de #52 : `.user-modal` n'avait ni `max-height` ni `overflow`, et le
 formulaire de contact — le seul assez long pour dépasser — devenait inatteignable en bas. Y
