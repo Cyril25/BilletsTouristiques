@@ -2,6 +2,10 @@
    0. VARIABLES CSS (Palette de couleurs)
    ========================================= */
 :root {
+    /* Demande #54 : les controles natifs (champs, listes, barres de
+       defilement) suivent le theme. Sans cette ligne ils restent clairs. */
+    color-scheme: light dark;
+
     --color-primary:   #5D3A7E; /* Violet principal */
     --color-secondary: #7F58A0; /* Violet moyen */
     --color-accent:    #B19CD9; /* Lilas clair */
@@ -164,7 +168,264 @@
     --color-credit-deep:         #1E5033;
     --color-question-border:     #F0D9A8;
     --color-question-text:       #6B4E12;
+
+
+    /* Demande #54 — jetons invoques partout mais jamais definis : leur repli
+       s'appliquait donc toujours, et serait reste clair en mode sombre.
+       Deux d'entre eux n'avaient meme aucun repli et ne produisaient rien. */
+    --color-text-light:          var(--color-text-muted);
+    --color-text-primary:        var(--color-text);
+    --color-bg-light:            var(--color-bg-disabled);
+    --color-bg-alt:              var(--color-bg-hover);
+    --color-background:          var(--color-bg-white);
+    --color-card-bg:             var(--color-bg-white);
+    --color-danger-light:        var(--color-badge-error-bg);
+    --color-danger-bg:           var(--color-bg-light-error);
+    --color-success-light:       var(--color-badge-inscrit-bg);
+    --color-warning-light:       var(--color-badge-warning-bg);
+
+    /* Triplet du violet de marque : les replis trouves dans le code etaient tous
+       faux (0,0,0 ; 44,62,80 ; 59,130,246), donc les rgba() batis dessus
+       affichaient une teinte qui n'etait pas celle du site. */
+    --color-primary-rgb:         93, 58, 126;
 }
+
+/* =========================================
+   0 bis. PALETTE SOMBRE (demande #54)
+   -----------------------------------------
+   Trois etats et non deux : un choix explicite pose data-theme sur <html>,
+   son absence signifie "automatique" et laisse decider prefers-color-scheme.
+   Le :not([data-theme="light"]) est ce qui permet a un choix "clair"
+   explicite de l'emporter sur un systeme regle en sombre.
+   Un jeton absent de ces blocs garde sa valeur claire : c'est voulu pour les
+   couleurs de marque (Facebook, PayPal, eBay, Sheets) et pour les violets du
+   site, qui tiennent sur les deux fonds.
+   ========================================= */
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        /* Fonds : un violet tres sombre plutot qu'un gris neutre, pour rester dans la famille du site */
+        --color-bg:                    #14111A;
+        --color-bg-white:              #1E1926;
+        --color-bg-subtle:             #191420;
+        --color-surface:               #2A2233;
+        --color-bg-hover:              #2E2738;
+        --color-bg-disabled:           #241E2C;
+
+        /* Textes : on ne descend pas au blanc pur, trop dur sur fond sombre */
+        --color-text:                  #EDE8F2;
+        --color-text-strong:           #F6F2F9;
+        --color-text-dark:             #DCD5E4;
+        --color-text-secondary:        #C6BDD1;
+        --color-text-muted:            #ADA2BA;
+        --color-text-grey:             #A79DB4;
+        --color-text-hint:             #948AA3;
+        --color-text-faint:            #8B8298;
+        --color-text-disabled:         #7A7089;
+        --color-text-silver:           #9A93A6;
+        --color-icon-neutral:          #A8A3AF;
+
+        /* Bordures : plus claires que le fond, jamais plus claires que le texte */
+        --color-border:                #4A4056;
+        --color-border-light:          #3D3449;
+        --color-border-lighter:        #332B3E;
+        --color-border-soft:           #372F42;
+        --color-border-disabled:       #2E2738;
+
+        /* Etats : les couleurs qui portent un sens gardent leur teinte, eclaircie pour tenir sur le sombre */
+        --color-success:               #5BC46A;
+        --color-success-dark:          #4CAF50;
+        --color-danger:                #EC7B7B;
+        --color-danger-dark:           #D96060;
+        --color-warning:               #FFA94D;
+        --color-info:                  #6FB4F0;
+        --color-delete:                #F0736A;
+        --color-export:                #4CC98A;
+        --color-export-hover:          #3FB57A;
+        --color-payment:               #F09A4D;
+        --color-payment-hover:         #E08236;
+        --color-payment-active:        #C96C24;
+        --color-text-warning:          #F0A063;
+        --color-icon-orange:           #F5B94A;
+        --color-error-strong:          #F08D86;
+
+        /* Pastilles : fond pale -> fond sombre teinte, texte sombre -> texte clair */
+        --color-badge-inscrit-bg:      #1D3A25;
+        --color-badge-inscrit-text:    #8FD9A4;
+        --color-badge-warning-bg:      #3D3212;
+        --color-badge-warning-text:    #F0CF74;
+        --color-badge-warning-border:  #5A4A1C;
+        --color-badge-info-bg:         #16304D;
+        --color-badge-info-text:       #8FC4F5;
+        --color-badge-success-bg:      #1B3320;
+        --color-badge-error-bg:        #40191D;
+        --color-badge-error-text:      #F2A0A6;
+        --color-badge-error-border:    #5C2429;
+        --color-badge-variant-bg:      #33203A;
+        --color-badge-variant-text:    #D89BEC;
+        --color-badge-member-bg:       #35303C;
+        --color-badge-member-text:     #B5ADBF;
+        --color-badge-inactive:        #8A8394;
+        --color-badge-inactive-dark:   #A29AAD;
+        --color-bg-light-error:        #3D1D1D;
+
+        /* Credit, dette, validation */
+        --color-credit:                #57C99E;
+        --color-credit-bg:             #153029;
+        --color-credit-bg-soft:        #11261F;
+        --color-credit-deep:           #7FD3A6;
+        --color-valide:                #5BC08A;
+        --color-valide-dark:           #4AA774;
+        --color-possede-bg:            #152719;
+        --color-copie-bg:              #16291B;
+        --color-dette:                 #E8A33D;
+        --color-dette-bg:              #3A2C15;
+
+        /* Vacances, avertissements, questions */
+        --color-vacances-text:         #F0A063;
+        --color-vacances-bg:           #3A2A17;
+        --color-vacances-border:       #6B4A28;
+        --color-avert-text:            #E3C86A;
+        --color-avert-bg:              #3A3315;
+        --color-avert-border:          #5E5121;
+        --color-question-bg:           #3A3217;
+        --color-question-accent:       #E3B85C;
+        --color-question-border:       #5E512F;
+        --color-question-text:         #DCC183;
+
+        /* Alertes et suivi des demandes */
+        --color-alerte-text:           #F09595;
+        --color-alerte-bg:             #3D1D1D;
+        --color-plein-bg:              #3A2020;
+        --color-danger-soft-bg:        #3A2029;
+        --color-nocollecte:            #F08080;
+        --color-nocollecte-bg:         #3D1E1E;
+        --color-a-tester:              #EC8CB2;
+        --color-a-tester-bg:           #38202B;
+        --color-prio-normale:          #93A0E8;
+        --color-prio-normale-bg:       #23273D;
+
+        /* Teintes violettes et divers */
+        --color-violet-tint:           #4A3C63;
+        --color-violet-deep:           #D6CBE6;
+        --color-violet-muted:          #A99BC0;
+        --color-violet-bright:         #A98CE0;
+        --color-onboarding-bg:         #1A2A38;
+        --color-pays-bg:               #2C2436;
+    }
+}
+
+:root[data-theme="dark"] {
+    /* Fonds : un violet tres sombre plutot qu'un gris neutre, pour rester dans la famille du site */
+    --color-bg:                    #14111A;
+    --color-bg-white:              #1E1926;
+    --color-bg-subtle:             #191420;
+    --color-surface:               #2A2233;
+    --color-bg-hover:              #2E2738;
+    --color-bg-disabled:           #241E2C;
+
+    /* Textes : on ne descend pas au blanc pur, trop dur sur fond sombre */
+    --color-text:                  #EDE8F2;
+    --color-text-strong:           #F6F2F9;
+    --color-text-dark:             #DCD5E4;
+    --color-text-secondary:        #C6BDD1;
+    --color-text-muted:            #ADA2BA;
+    --color-text-grey:             #A79DB4;
+    --color-text-hint:             #948AA3;
+    --color-text-faint:            #8B8298;
+    --color-text-disabled:         #7A7089;
+    --color-text-silver:           #9A93A6;
+    --color-icon-neutral:          #A8A3AF;
+
+    /* Bordures : plus claires que le fond, jamais plus claires que le texte */
+    --color-border:                #4A4056;
+    --color-border-light:          #3D3449;
+    --color-border-lighter:        #332B3E;
+    --color-border-soft:           #372F42;
+    --color-border-disabled:       #2E2738;
+
+    /* Etats : les couleurs qui portent un sens gardent leur teinte, eclaircie pour tenir sur le sombre */
+    --color-success:               #5BC46A;
+    --color-success-dark:          #4CAF50;
+    --color-danger:                #EC7B7B;
+    --color-danger-dark:           #D96060;
+    --color-warning:               #FFA94D;
+    --color-info:                  #6FB4F0;
+    --color-delete:                #F0736A;
+    --color-export:                #4CC98A;
+    --color-export-hover:          #3FB57A;
+    --color-payment:               #F09A4D;
+    --color-payment-hover:         #E08236;
+    --color-payment-active:        #C96C24;
+    --color-text-warning:          #F0A063;
+    --color-icon-orange:           #F5B94A;
+    --color-error-strong:          #F08D86;
+
+    /* Pastilles : fond pale -> fond sombre teinte, texte sombre -> texte clair */
+    --color-badge-inscrit-bg:      #1D3A25;
+    --color-badge-inscrit-text:    #8FD9A4;
+    --color-badge-warning-bg:      #3D3212;
+    --color-badge-warning-text:    #F0CF74;
+    --color-badge-warning-border:  #5A4A1C;
+    --color-badge-info-bg:         #16304D;
+    --color-badge-info-text:       #8FC4F5;
+    --color-badge-success-bg:      #1B3320;
+    --color-badge-error-bg:        #40191D;
+    --color-badge-error-text:      #F2A0A6;
+    --color-badge-error-border:    #5C2429;
+    --color-badge-variant-bg:      #33203A;
+    --color-badge-variant-text:    #D89BEC;
+    --color-badge-member-bg:       #35303C;
+    --color-badge-member-text:     #B5ADBF;
+    --color-badge-inactive:        #8A8394;
+    --color-badge-inactive-dark:   #A29AAD;
+    --color-bg-light-error:        #3D1D1D;
+
+    /* Credit, dette, validation */
+    --color-credit:                #57C99E;
+    --color-credit-bg:             #153029;
+    --color-credit-bg-soft:        #11261F;
+    --color-credit-deep:           #7FD3A6;
+    --color-valide:                #5BC08A;
+    --color-valide-dark:           #4AA774;
+    --color-possede-bg:            #152719;
+    --color-copie-bg:              #16291B;
+    --color-dette:                 #E8A33D;
+    --color-dette-bg:              #3A2C15;
+
+    /* Vacances, avertissements, questions */
+    --color-vacances-text:         #F0A063;
+    --color-vacances-bg:           #3A2A17;
+    --color-vacances-border:       #6B4A28;
+    --color-avert-text:            #E3C86A;
+    --color-avert-bg:              #3A3315;
+    --color-avert-border:          #5E5121;
+    --color-question-bg:           #3A3217;
+    --color-question-accent:       #E3B85C;
+    --color-question-border:       #5E512F;
+    --color-question-text:         #DCC183;
+
+    /* Alertes et suivi des demandes */
+    --color-alerte-text:           #F09595;
+    --color-alerte-bg:             #3D1D1D;
+    --color-plein-bg:              #3A2020;
+    --color-danger-soft-bg:        #3A2029;
+    --color-nocollecte:            #F08080;
+    --color-nocollecte-bg:         #3D1E1E;
+    --color-a-tester:              #EC8CB2;
+    --color-a-tester-bg:           #38202B;
+    --color-prio-normale:          #93A0E8;
+    --color-prio-normale-bg:       #23273D;
+
+    /* Teintes violettes et divers */
+    --color-violet-tint:           #4A3C63;
+    --color-violet-deep:           #D6CBE6;
+    --color-violet-muted:          #A99BC0;
+    --color-violet-bright:         #A98CE0;
+    --color-onboarding-bg:         #1A2A38;
+    --color-pays-bg:               #2C2436;
+}
+
 
 /* =========================================
    1. SECURITE & GLOBAL
@@ -9823,6 +10084,27 @@ button.collecte-badge-status {
 }
 .somme-due-pill:hover {
     opacity: 0.88;
+}
+
+/* Demande #54 — bascule de theme, calquee sur la cloche voisine */
+.theme-toggle {
+    background: transparent;
+    border: none;
+    color: var(--color-text-silver, #e0e0e0);
+    font-size: 1.05rem;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 50%;
+    line-height: 1;
+    transition: background 0.2s, color 0.2s;
+}
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-inverse);
+}
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
 }
 
 .notif-bell-btn {

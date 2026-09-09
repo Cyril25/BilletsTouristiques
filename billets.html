@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" integrity="sha512-qveKnGrvOChbSzAdtSs8p69eoLegyh+1hwOMbmpCViIwj7rn4oJjdmMvWOuyQlTOZgTlZA0N2PXA7iA8/2TUYA==" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js" integrity="sha512-UOJe4paV6hYWBnS0c9GnIRH8PLm2nFK22uhfAvsTIqd3uwnWsVri1OPn5fJYdLtGY3wB11LGHJ4yPU1WFJeBYQ==" crossorigin="anonymous"></script>
 
+    <!-- Demande #54 : pose le theme AVANT le premier rendu. global.js se charge en fin
+         de corps ; y mettre cette ligne ferait clignoter le blanc a chaque page. -->
+    <script>(function(){try{var t=localStorage.getItem('bt-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="view-collecte"> <div id="app-content">
@@ -20,7 +23,7 @@
         <header>
             <div>
                 <span style="font-weight:bold; font-size:1.2em;">Annuaire Billets</span>
-                <span id="counter" style="background:#eee; padding:5px 10px; border-radius:15px; font-size:0.8em; margin-left:10px;">Chargement...</span>
+                <span id="counter" style="background:var(--color-border-lighter); padding:5px 10px; border-radius:15px; font-size:0.8em; margin-left:10px;">Chargement...</span>
             </div>
         </header>
 
@@ -59,7 +62,7 @@
 
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="date" id="date-start" aria-label="Date de début" onchange="manualDateChange()">
-                    <span style="color:#999;" aria-hidden="true">à</span>
+                    <span style="color:var(--color-text-disabled);" aria-hidden="true">à</span>
                     <input type="date" id="date-end" aria-label="Date de fin" onchange="manualDateChange()">
                 </div>
             </div>
@@ -85,7 +88,7 @@
         <div id="billets-status-counters" class="admin-status-counters"></div>
 
         <div id="cards-grid">
-            <p style="text-align:center; padding:40px; color:#666; font-style:italic;">Chargement de la collection...</p>
+            <p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement de la collection...</p>
         </div>
 
         <div id="list-table-container" class="hidden">

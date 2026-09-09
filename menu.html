@@ -26,7 +26,7 @@
             <div class="dropdown-content">
                 <a href="mes-inscriptions.html">Mes inscriptions</a>
                 <a href="mes-collectes.html">Mes collectes</a>
-                <a href="mes-contacts.html"><i class="fa-solid fa-lock" style="font-size:0.75em;color:#2E7D4F;margin-right:4px;"></i>Mes contacts</a>
+                <a href="mes-contacts.html"><i class="fa-solid fa-lock" style="font-size:0.75em;color:var(--color-valide);margin-right:4px;"></i>Mes contacts</a>
                 <a href="ma-collection.html" class="admin-only">Ma collection</a>
                 <a href="notifications.html"><i class="fa-solid fa-bullhorn" style="font-size:0.8em;margin-right:4px;"></i>Nouveautés</a>
                 <a href="profil.html">Mon profil</a>
@@ -67,6 +67,11 @@
                     </div>
                 </div>
             </div>
+            <!-- Demande #54 : bascule de theme, trois positions -->
+            <button id="theme-toggle" type="button" class="theme-toggle" onclick="cycleTheme()"
+                    title="Thème" aria-label="Changer de thème">
+                <i class="fa-solid fa-circle-half-stroke"></i>
+            </button>
             <span id="user-email-display" class="user-email"></span>
             <button id="btn-install-pwa" type="button" class="btn-install-pwa" style="display:none;" onclick="window.installPwa()" title="Installer l'application sur l'écran d'accueil">
                 <i class="fa-solid fa-download"></i> Installer

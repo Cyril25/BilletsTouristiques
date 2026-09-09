@@ -647,7 +647,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=200")
+    fetch("menu.html?v=201")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -658,6 +658,9 @@ function loadMenu() {
 
             // 2ter. Demande #56 — sous-menus repliables sur telephone
             setupMobileDropdowns();
+
+            // 2quater. Demande #54 — etat du bouton de theme
+            majBoutonTheme(themeCourant());
 
             // 2bis. Bandeau figé : ombre + coins droits dès qu'on scrolle
             setupStickyNavbar();
@@ -1020,6 +1023,59 @@ function notifEscHtml(s) {
 // ouvert a la fois — c'est ce qui raccourcit vraiment la liste. Sur grand
 // ecran, rien ne change : le survol continue de gouverner les sous-menus.
 // ============================================================
+// ============================================================
+// Demande #54 — Bascule de theme (clair / sombre / automatique)
+// ------------------------------------------------------------
+// Trois etats, pas deux : l'absence de data-theme signifie "automatique" et
+// laisse prefers-color-scheme decider. Le choix vit dans localStorage, donc sur
+// l'appareil — c'est ce qui permet au <head> de chaque page de le poser avant
+// le premier rendu, sans attendre l'authentification ni clignoter.
+// ============================================================
+var BT_THEMES = ['auto', 'light', 'dark'];
+
+function themeCourant() {
+    try {
+        var t = localStorage.getItem('bt-theme');
+        return (t === 'light' || t === 'dark') ? t : 'auto';
+    } catch (e) {
+        return 'auto';
+    }
+}
+
+function majBoutonTheme(t) {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    var conf = {
+        auto:  ['fa-circle-half-stroke', 'Theme : automatique, selon votre appareil'],
+        light: ['fa-sun',                'Theme : clair'],
+        dark:  ['fa-moon',               'Theme : sombre']
+    }[t] || ['fa-circle-half-stroke', 'Theme'];
+    var ic = btn.querySelector('i');
+    if (ic) ic.className = 'fa-solid ' + conf[0];
+    btn.title = conf[1];
+    btn.setAttribute('aria-label', conf[1]);
+}
+
+function appliquerTheme(t) {
+    if (t === 'auto') {
+        document.documentElement.removeAttribute('data-theme');
+    } else {
+        document.documentElement.setAttribute('data-theme', t);
+    }
+    try {
+        if (t === 'auto') localStorage.removeItem('bt-theme');
+        else localStorage.setItem('bt-theme', t);
+    } catch (e) {
+        // navigation privee ou stockage refuse : le theme vaut pour la page courante
+    }
+    majBoutonTheme(t);
+}
+
+function cycleTheme() {
+    var i = BT_THEMES.indexOf(themeCourant());
+    appliquerTheme(BT_THEMES[(i + 1) % BT_THEMES.length]);
+}
+
 function setupMobileDropdowns() {
     var nav = document.getElementById('nav-links');
     if (!nav) return;
