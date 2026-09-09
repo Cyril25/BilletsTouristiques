@@ -5,8 +5,8 @@
 - **Complexité :** ~~L~~ → **M** (ré-estimée après mesure, voir ci-dessous)
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** tous
-- **Statut :** En cours — étape 1 livrée
-- **Commit :** `68b9394` (étape 1)
+- **Statut :** À tester
+- **Commits :** `68b9394`, `773675e`, `04e2fea`, `1ffb71f`
 
 ## Contexte (demande)
 
@@ -118,6 +118,27 @@ trois positions dans `menu.html`.
 
 ## Réalisation
 
-- **Étape 1 :** `style.css` — commit `68b9394`.
-- **Étapes 2 à 4 :** _(à faire)_
+- **Étape 1** — tokenisation de `style.css` : `68b9394`
+- **Étape 2** — 60 littéraux nommés par rôle, 38 jetons : `773675e`
+- **Étape 3** — 5 pages à `<style>` (100 occurrences) et 30 styles en ligne des `.js` : `04e2fea`
+- **Étape 4** — palette sombre (91 jetons), bascule, anti-clignotement dans 27 pages : `1ffb71f`
+- **Cache :** `sw.js` v297 et `?v=201` sur `menu.html` dans `global.js` (menu modifié)
+
+### Trouvé en chemin
+
+**11 jetons étaient invoqués partout sans jamais être définis** — 35 appels pour
+`--color-text-light` à lui seul. Leur repli s'appliquait donc toujours, et serait resté clair en
+mode sombre. Deux d'entre eux (`--color-text-primary`, `--color-card-bg`) n'avaient même aucun
+repli et ne produisaient rien du tout. Tous définis en alias vers un jeton réel, donc ils suivent
+désormais le thème.
+
+Et les replis de `--color-primary-rgb` trouvés dans le code étaient **tous faux** — `0,0,0`,
+`44,62,80`, `59,130,246` : les `rgba()` bâtis dessus n'affichaient pas la couleur du site.
+
+### Contrastes mesurés
+
+23 couples texte/fond vérifiés dans les deux thèmes. **Aucun sous 4,5:1 en sombre**, qui est même
+plus contrasté que le clair. Deux couples sont sous AA **en mode clair depuis toujours** —
+« indication sur une carte » à 3,5:1 et « avoir sur son fond » à 4,4:1. Défauts préexistants,
+laissés tels quels pour ne rien changer au rendu clair ; à traiter par une demande dédiée.
 - **Migration :** aucune (choix mémorisé sur l'appareil).
