@@ -5,7 +5,7 @@
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Mes contacts
 - **Statut :** À tester
-- **Commit :** `652fe51`
+- **Commit :** `7e1668e`
 
 ## Contexte (demande)
 
@@ -94,4 +94,4 @@ avoir défilé dans une fiche, la suivante s'ouvrirait au milieu du formulaire.
   remise à zéro du défilement, focus automatique réservé aux écrans larges), `sw.js`
   (`CACHE_NAME` v292 → v293).
 - **Migration :** aucune.
-- **Commit :** `652fe51`
+- **Commit :** `7e1668e`
