@@ -5,7 +5,7 @@
 - **Concerne :** membres, collecteurs, admins
 - **Écran :** Menu (toutes les pages)
 - **Statut :** À tester
-- **Commit :** `8d4899b`
+- **Commit :** `8d4899b`, puis correctif du survol
 
 ## Contexte (demande)
 
@@ -75,12 +75,42 @@ pour la demande #52 : `vh` ignore la barre d'adresse du téléphone.
 - **Pas de refonte** : ni nouvelle mise en page, ni icônes ajoutées, ni animation. La demande
   parle de lisibilité ; la lisibilité est ce qui a été traité.
 
+## Retour de Cyril : le survol, troisième occurrence du même défaut
+
+Premier correctif incomplet. J'avais audité l'état **au repos** et l'état **page courante**, pas
+l'état **survol** — et c'est exactement là que le défaut se reproduisait une troisième fois :
+
+```css
+.dropdown-content a:hover { color: var(--color-secondary); }   /* sur un fond --color-secondary */
+```
+
+**1,0:1 de nouveau.** Sur un écran tactile, `:hover` ne se lève pas : il reste collé au lien
+touché jusqu'au tap suivant. Le lien qu'on vient de choisir disparaît donc, et y reste. C'est
+littéralement ce que décrit la demande — « quand on clique sur une option » — et ce que le premier
+correctif n'avait pas traité.
+
+Le fond de survol du bureau (`--color-bg-hover`, `#F5F5F5`) ne s'appliquait pas, lui, parce que
+`.dropdown-content a` porte `background-color: transparent !important` ; seule la **couleur du
+texte** passait. D'où un texte invisible plutôt qu'un pavé clair : deux symptômes, une cause.
+
+Corrigé : sur mobile, `:hover`, `:focus` et `:active` gardent le texte blanc et **assombrissent**
+le fond de 14 %. Assombrir plutôt qu'éclaircir n'est pas cosmétique — un voile blanc à 12 %
+remontait le fond à 4,3:1 sous du texte blanc, soit sous le seuil AA ; l'assombrissement donne
+6,9:1. Même piège un cran plus haut : `.dropdown:hover` repeignait **tout le groupe** en
+`--color-secondary`, effaçant la séparation entre la bande du titre et son sous-menu — annulé sur
+mobile, où le survol n'a pas de sens.
+
+**Leçon :** sur une maquette tactile, auditer les états `:hover` / `:focus` / `:active` au même
+titre que l'état au repos. Sur mobile ils ne sont pas transitoires, ils collent. Les dix couples
+texte/fond du menu ont ensuite été recalculés d'un bloc — aucun ne descend sous son seuil.
+
 ## Critères d'acceptation
 
 1. Sur téléphone, « Infos pratiques » et « Communauté » sont lisibles dans « Ressources ».
 2. L'entrée de la page où l'on se trouve est lisible et se distingue du reste au premier coup d'œil.
 3. Le titre du groupe contenant la page courante ressort au lieu de pâlir.
-4. Tous les textes du menu mobile atteignent au moins 4,5:1 sur leur fond.
+4. Tous les textes du menu mobile atteignent au moins 4,5:1 sur leur fond, **y compris juste
+   après avoir touché un lien** (l'état de survol reste collé sur un écran tactile).
 5. La liste se lit alignée à gauche, les entrées de sous-menu en retrait sous leur groupe.
 6. Le bas du menu reste atteignable quand la liste est longue (cas admin), barre d'adresse comprise.
 7. Sur ordinateur, le menu garde sa forme : seule la couleur de l'état actif change.
@@ -88,7 +118,8 @@ pour la demande #52 : `vh` ignore la barre d'adresse du téléphone.
 ## Réalisation
 
 - **Fichiers :** `style.css` (`.nav-links a.active`, `.dropbtn.active`, `.dropdown-content a.active`,
-  et le bloc `@media (max-width: 768px)` du menu réécrit), `sw.js` (`CACHE_NAME`).
+  et le bloc `@media (max-width: 768px)` du menu réécrit — puis les états `:hover` / `:focus` /
+  `:active` du sous-menu et `.dropdown:hover`), `sw.js` (`CACHE_NAME`).
 - **Migration :** aucune.
 - **Aperçu soumis à Cyril avant mise en ligne :**
   https://claude.ai/code/artifact/142abd7f-c2df-4a18-9140-ad0bb98e9d12

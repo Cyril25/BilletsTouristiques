@@ -449,6 +449,27 @@ body.has-impersonate-banner #menu-placeholder {
         display: none;
     }
 
+    /* Sur un écran tactile, :hover ne se lève pas : il reste collé au lien tapé
+       jusqu'au tap suivant. Or la règle de survol du bureau repeint le texte en
+       --color-secondary, et le sous-menu mobile a EXACTEMENT ce fond : le lien
+       qu'on vient de toucher disparaît (1,0:1). Même cause que les titres de
+       rubrique, troisième endroit où elle frappe (demande #53). */
+    .dropdown-content a:hover,
+    .dropdown-content a:focus,
+    .dropdown-content a:active {
+        color: var(--color-text-inverse);
+        /* Assombrir plutot qu'eclaircir : un voile blanc remonterait le fond a
+           4,3:1 sous le texte blanc, sous le seuil AA. La, on est a 6,9:1. */
+        background-color: rgba(0, 0, 0, 0.14) !important;
+    }
+
+    /* Meme piege un cran plus haut : `.dropdown:hover` repeint tout le groupe en
+       --color-secondary, et ce fond collé fait disparaître la separation entre la
+       bande du titre et son sous-menu. Sans effet de survol sur tactile. */
+    .dropdown:hover {
+        background-color: transparent;
+    }
+
     /* Page courante : le liseré du bureau devient une barre à gauche, qui suit
        le sens de lecture d'une liste verticale. */
     .nav-links a.active {
