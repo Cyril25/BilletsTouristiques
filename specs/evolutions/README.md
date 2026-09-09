@@ -39,8 +39,8 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#5](demande-5-signalement-erreur-billet.md) | Signaler une erreur sur un billet + boîte aux lettres admin | L → M | À tester | ✅ | — |
 | [#16](demande-16-refonte-collectes.md) | Refonte collectes : découplage billet ↔ collecte (epic 13 v2) | L | **Terminée** (prod 2026-09-06) | ✅ | merge `prepa-bascule-prod-16` (69 commits) |
 | [#44 (prod)](demande-44-solde-membre-collecteur.md) | Solde membre ↔ collecteur après un changement de prix | L | **En cours** — analyse, 3 questions ouvertes | ✅ | — |
-| [#22](demande-22-et-1-cadrage-doubles-et-vente.md) | Gestion des doubles : vendre et échanger entre membres | L | **En cours** — cadrage commun avec #1, 7 questions ouvertes | ✅ | — |
-| [#1](demande-22-et-1-cadrage-doubles-et-vente.md) | Vente du rab / numéros spéciaux (collecteur) | L | **En cours** — cadrage commun avec #22, 7 questions ouvertes | ✅ | — |
+| [#22](demande-22-tableau-doubles-recherches.md) | Doubles et recherches : le tableau d'affichage | L → M | **En cours** — cadrage clos, spec à valider ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
+| [#1](demande-1-vente-du-rab.md) | Vente du rab / numéros spéciaux (collecteur) | L → M | **En cours** — cadrage clos, spec à valider ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
 | [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
 | [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
 | [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |
@@ -98,6 +98,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#54 (prod)](demande-54-mode-sombre.md) | Mode sombre / mode clair (4 étapes) | ~~L~~ → M | À tester | ✅ | `68b9394` → `1ffb71f` |
 | [#55 (prod)](demande-55-menu-violet-fonce-et-traits.md) | Le violet foncé ne voulait plus dire « titre de rubrique » (retour sur #53) | S | À tester | ✅ | `3fa09cb` |
 | [#56 (prod)](demande-56-menu-mobile-repliable.md) | Sous-menus repliables sur téléphone | M | À tester | ✅ | `3fa09cb` |
+| [#58 (prod)](demande-58-fiche-demande-documents-et-commentaires.md) | Fiche demande pleine page : documents de spec lisibles et commentables par les admins | M | **Spec à valider** — ⚠ la demande **n'est pas encore créée** en base, le n° 58 est à confirmer | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
