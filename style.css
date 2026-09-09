@@ -4,6 +4,10 @@
 :root {
     /* Demande #54 : les controles natifs (champs, listes, barres de
        defilement) suivent le theme. Sans cette ligne ils restent clairs. */
+    /* En automatique on annonce les deux et le navigateur choisit d'apres le
+       systeme ; les deux regles plus bas forcent l'un ou l'autre des que
+       l'utilisateur a tranche. Sans elles, un site bascule en sombre sur un
+       systeme regle en clair garderait des champs et des listes blancs. */
     color-scheme: light dark;
 
     --color-primary:   #5D3A7E; /* Violet principal */
@@ -204,6 +208,8 @@
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
+        color-scheme: dark;
+
         /* Fonds : un violet tres sombre plutot qu'un gris neutre, pour rester dans la famille du site */
         --color-bg:                    #14111A;
         --color-bg-white:              #1E1926;
@@ -315,7 +321,13 @@
     }
 }
 
+:root[data-theme="light"] {
+    color-scheme: light;
+}
+
 :root[data-theme="dark"] {
+    color-scheme: dark;
+
     /* Fonds : un violet tres sombre plutot qu'un gris neutre, pour rester dans la famille du site */
     --color-bg:                    #14111A;
     --color-bg-white:              #1E1926;
@@ -1378,6 +1390,40 @@ input {
     border-radius: 4px;
     width: 100%;
     box-sizing: border-box;
+    /* Demande #54 — aucune regle du site ne fixait le fond ni la couleur d'un
+       champ : ils gardaient le rendu par defaut du navigateur, donc blancs sur
+       un site passe en sombre. */
+    background-color: var(--color-bg-white);
+    color: var(--color-text);
+}
+
+/* Les widgets que le navigateur peint lui-meme : leur imposer un fond les
+   deforme. `color-scheme` suffit a les faire suivre le theme. */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+input[type="color"],
+input[type="file"] {
+    background-color: initial;
+}
+
+/* `textarea` n'avait aucune regle de base : on ne lui donne que les couleurs,
+   pas la mise en page, pour ne rien changer au rendu clair. */
+textarea {
+    background-color: var(--color-bg-white);
+    color: var(--color-text);
+}
+
+/* La liste deroulee d'un <select> est peinte a part sur plusieurs plateformes. */
+option {
+    background-color: var(--color-bg-white);
+    color: var(--color-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--color-text-hint);
+    opacity: 1; /* Firefox l'attenue par defaut, ce qui la ferait passer sous AA */
 }
 
 #search-input {
