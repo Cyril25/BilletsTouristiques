@@ -3,8 +3,13 @@
 - **Épic :** chantier structurant (deux demandes de complexité **L**)
 - **Demandes :** **#22** (Cyril, 2026-07-16, priorité *normale*) et **#1** (import Google Sheet,
   2026-07-16, priorité *basse*) de la table `demandes` de production.
-- **Statut :** **analyse ouverte le 2026-09-07** — les deux demandes passées en `en_cours`.
-  **Aucun développement**, conformément à la règle des demandes L.
+- **Statut :** **cadrage CLOS le 2026-09-09** — les 7 questions sont tranchées (voir
+  « Les décisions » en fin de document). Les deux demandes se poursuivent séparément, chacune
+  avec sa propre spec :
+  **[#1 — vente du rab](demande-1-vente-du-rab.md)** et
+  **[#22 — tableau des doubles et recherches](demande-22-tableau-doubles-recherches.md)**.
+  Ce document reste la trace du cadrage commun et de la raison pour laquelle les deux se séparent.
+  **Aucun développement** à ce stade, conformément à la règle des demandes L.
 - **Pourquoi un seul document :** les commentaires posés le 2026-07-21 sur les deux fiches disent
   « à cadrer **ENSEMBLE** », sur l'hypothèse « **#1 = première tranche de #22** ».
   **Ce document teste cette hypothèse. Il conclut qu'elle ne tient pas** — et c'est le premier
@@ -233,14 +238,49 @@ est retenu, #1 attend la mise en prod de #44.
 | **Q6** | **#22 : ouvrir « Ma collection » aux membres est-il dans le périmètre, ou un projet à part ?** | La page est fermée par `data-require-admin`, 0 double déclaré. Sans elle, une bourse alimentée par le registre n'a aucun carburant. |
 | **Q7** | **Le troc est-il vraiment demandé, ou est-ce « vendre » qui compte ?** | Un échange n'a pas de montant, il est bilatéral et simultané. C'est un mécanisme entièrement neuf, sans réemploi possible. S'il n'est pas essentiel, le retirer allège fortement #22. |
 
+## Les décisions — séance du 2026-09-09
+
+Les 7 questions ont été tranchées avec Cyril. Q2 tombe d'elle-même avec la réponse à Q1.
+
+| | Question | Décision |
+|---|---|---|
+| **Q1** | #22 : place de marché ou tableau d'affichage ? | **Tableau d'affichage.** L'application publie les listes, elle ne gère ni l'argent, ni l'envoi, ni le litige entre deux membres. |
+| **Q2** | Si place de marché : qui arbitre un litige ? | **Sans objet.** Pas de transaction, donc pas d'arbitrage — les 6 admins bénévoles ne deviennent pas arbitres de fait. |
+| **Q3** | #1 : « numéros spéciaux » = numéro de série précis ? | **Les deux cas existent.** Le modèle doit porter un **numéro de série optionnel** : tantôt « 2 billets du rab », tantôt « le billet n° 00042 ». |
+| **Q4** | #1 : quel modèle de prix, A, B ou C ? | **C** — une ligne de `dettes` avec `motif = 'vente_rab'`. |
+| **Q5** | #1 : un membre peut-il refuser une vente qu'on lui affecte ? | **Confirmation préalable.** La vente ne compte dans le solde du membre qu'**après acceptation** — le précédent « aucun montant sans inscription volontaire » est préservé. |
+| **Q6** | #22 : ouvrir « Ma collection » aux membres — périmètre ou projet à part ? | **Deux lots.** L'ouverture de « Ma collection » est un lot séparé ; #22 démarre en saisie manuelle et ne l'attend pas. |
+| **Q7** | Le troc est-il vraiment demandé ? | **Non — « vendre » est ce qui compte.** Le troc sort du périmètre. |
+
+### Ce que ces décisions changent
+
+**#22 passe de L à M.** Elle était L parce qu'elle supposait un solde membre ↔ membre, un casier
+membre ↔ membre et un mécanisme de litige — trois choses absentes du système. Q1 et Q7 les
+retirent toutes les trois : il ne reste que de la publication et de la mise en relation.
+
+**#1 reste M, et son unique réserve de calendrier est levée.** Le cadrage notait que le modèle C
+dépendait de `dettes`, alors absente de la production. **Vérifié le 2026-09-09 : la table est en
+production depuis le 07/09** (elle répond, et elle est vide). #1 est développable.
+
+**Quatre points durs de #1 sont apparus à la relecture de la migration #44**, et font le vrai
+contenu de son dev : l'INSERT sur `dettes` est réservé aux admins ; le trigger R4 supprimerait la
+vente à la première annulation de paiement ; la somme du menu compterait une vente non acceptée ;
+et `collecte_id` est `NOT NULL`. Détail dans la spec de #1.
+
+**L'ordre de travail reste celui que le cadrage recommandait** : la décision produit de #22 étant
+prise, **#1 se développe en premier** — c'est la plus petite, ses rails existent, elle sert
+6 collecteurs immédiatement.
+
 ## Prochaines étapes
 
-1. **Séance de cadrage à deux** sur les questions Q1 à Q7 — Q1 d'abord, elle commande le reste.
-   Format proposé : un **brainstorming BMAD** sur #22 (la question est produit, pas technique),
-   puis une décision courte sur le modèle de #1.
-2. À l'issue : **deux specs séparées**, `demande-1-…` et `demande-22-…`, ce document restant la
-   trace du cadrage commun et de la raison pour laquelle elles se séparent.
-3. **Pas une ligne de code avant** l'accord explicite sur Q1, Q3 et Q4.
+1. ~~Séance de cadrage à deux sur Q1 à Q7~~ → **faite le 2026-09-09**, voir « Les décisions ».
+2. ~~Deux specs séparées~~ → **rédigées le 2026-09-09** :
+   [demande-1-vente-du-rab.md](demande-1-vente-du-rab.md) et
+   [demande-22-tableau-doubles-recherches.md](demande-22-tableau-doubles-recherches.md).
+3. **Reste : la validation explicite de Cyril sur ces deux specs.** La règle des demandes L
+   demande que l'analyse soit jugée complète **d'un commun accord** avant tout dev — c'est à
+   l'assistant de dire « l'analyse me semble complète » et d'attendre le feu vert. C'est dit.
+4. Ensuite, dans l'ordre : **dev #1**, puis le lot « ouvrir Ma collection », puis **dev #22**.
 
 ---
 
