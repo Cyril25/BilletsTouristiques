@@ -3,10 +3,11 @@
 - **Épic :** corrections et évolutions (complexité **M**)
 - **Demande :** #59 de la table `demandes` de production — Cyril, 2026-09-10, priorité *normale*.
 - **Concerne :** les admins (6 personnes).
-- **Statut :** **À tester.** Développée le 2026-09-10. ⚠ **Migration à jouer**
-  (`scripts/migration-demande-59-flux-analyse-validation.sql`) : sans elle, les deux nouveaux
-  états n'existent pas en base et la validation reste indisponible — l'écran le dit et nomme le
-  script, le reste continue de fonctionner.
+- **Statut :** **À tester.** Développée et **migration jouée le 2026-09-10**. Vérifié en
+  production : `demande_validations` répond, plus aucune demande en `en_cours`, #1 et #22 sont
+  passées en `analyse_a_valider` avec leurs documents. **Le trigger de bascule a été prouvé** sur
+  la demande #59 elle-même — validation → passage automatique en Prêt à dev, retrait → l'état ne
+  revient pas en arrière, aucune ligne parasite.
 - **Suite directe de #58**, qui a rendu les specs lisibles dans l'appli sans rendre visible
   qu'elles attendaient quelque chose.
 
