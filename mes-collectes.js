@@ -4670,6 +4670,11 @@ function saveMembreEditModal(email) {
             closeMembreEditModal();
             renderCollecteDetail(currentBilletId, currentInscriptions);
             showToast('Fiche mise à jour', 'success');
+
+            // Demande #63 — replacer le point du membre sur la carte des stats si
+            // son adresse a bougé. Meilleur effort : l'enregistrement est déjà
+            // confirmé, un géocodeur en panne ne doit pas le remettre en cause.
+            if (window.majPositionMembre) window.majPositionMembre(email);
         })
         .catch(function(error) {
             if (btnSave) btnSave.disabled = false; // F7: réactiver en cas d'erreur

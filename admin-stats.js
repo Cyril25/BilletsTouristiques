@@ -27,10 +27,17 @@ function loadStats() {
         supabaseFetch('/rest/v1/billets?select=id,Categorie,date_effective'),
         supabaseFetch('/rest/v1/collecteurs?select=alias,masque'),
         supabaseFetch('/rest/v1/enveloppes?select=statut'),
-        supabaseFetch('/rest/v1/collectes?select=id,billet_id,collecteur,date_pre,date_coll,date_fin&limit=10000')
+        supabaseFetch('/rest/v1/collectes?select=id,billet_id,collecteur,date_pre,date_coll,date_fin&limit=10000'),
+        // Demande #63 — positions pour la carte. Requête à part, et volontairement :
+        // tant que la migration #63 n'a pas été jouée, les colonnes latitude /
+        // longitude n'existent pas et PostgREST répond 400. Groupée avec les autres,
+        // cette erreur emporterait TOUTE la page de statistiques ; isolée, elle ne
+        // coûte que la carte, qui le dit alors elle-même.
+        supabaseFetch('/rest/v1/membres?statut=eq.actif&select=nom,prenom,ville,code_postal,latitude,longitude')
+            .catch(function() { return null; })
     ])
     .then(function(res) {
-        renderStats(res[0] || [], res[1] || [], res[2] || [], res[3] || [], res[4] || [], res[5] || []);
+        renderStats(res[0] || [], res[1] || [], res[2] || [], res[3] || [], res[4] || [], res[5] || [], res[6]);
     })
     .catch(function(err) {
         console.error('Erreur chargement stats:', err);
@@ -39,7 +46,7 @@ function loadStats() {
     });
 }
 
-function renderStats(membres, inscriptions, billets, collecteurs, enveloppes, collectes) {
+function renderStats(membres, inscriptions, billets, collecteurs, enveloppes, collectes, membresGeo) {
     var now = Date.now();
     var anneeCourante = new Date().getFullYear();
     // Demande #16 — collecte_id → collecteur (attribution des stats)
@@ -180,6 +187,23 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes, co
 
     html += '</div>'; // fin 2col
 
+    // Demande #63 — carte des membres (pleine largeur, sous la répartition par pays)
+    html += '<div class="stats-section">';
+    html += '<h2><i class="fa-solid fa-map-location-dot"></i> Où habitent les membres</h2>';
+    if (membresGeo == null) {
+        html += '<p class="carte-vide"><i class="fa-solid fa-triangle-exclamation"></i><br>'
+            + 'Carte indisponible : la migration <code>scripts/migration-demande-63-position-membres.sql</code>'
+            + ' n\'a pas encore été jouée dans l\'éditeur SQL Supabase.</p>';
+    } else {
+        html += '<div class="carte-actions">'
+            + '<button type="button" class="btn-admin-secondary" id="carte-tout-voir"><i class="fa-solid fa-expand"></i> Tout voir</button>'
+            + '<button type="button" class="btn-admin-secondary" id="carte-france"><i class="fa-solid fa-location-crosshairs"></i> Recentrer sur la France</button>'
+            + '</div>';
+        html += '<div class="carte-wrap"><div id="carte-membres"></div></div>';
+        html += '<div class="carte-legende" id="carte-legende"></div>';
+    }
+    html += '</div>';
+
     // 2 colonnes : top collecteurs (billets) + top collecteurs (collectes)
     var depuisTxt = '<p class="kpi-sub" style="margin-top:-8px">Depuis le ' + escStat(premiereDateStr) + ' (ouverture du site)</p>';
     html += '<div class="stats-2col">';
@@ -207,6 +231,8 @@ function renderStats(membres, inscriptions, billets, collecteurs, enveloppes, co
 
     var body = document.getElementById('stats-body');
     if (body) body.innerHTML = html;
+    // Après l'injection seulement : Leaflet a besoin d'un vrai élément du document.
+    if (membresGeo != null) initCarteMembres(membresGeo);
     var sub = document.getElementById('stats-subtitle');
     if (sub) sub.textContent = 'Données arrêtées au ' + new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
         + ' · inscriptions suivies depuis l\'ouverture du site (mars 2026).';
@@ -248,4 +274,113 @@ function vbarChart(items) {
             + '<span class="vbar-label">' + escStat(it.label) + '</span>'
             + '</div>';
     }).join('') + '</div>';
+}
+
+// ============================================================
+// Demande #63 — Carte des membres
+// ============================================================
+// Les pins sont au CENTRE DE LA COMMUNE, jamais sur la rue : les membres ont
+// donné leur adresse pour recevoir des billets, pas pour être pointés sur une
+// carte. Les positions viennent des colonnes latitude / longitude de membres,
+// remplies par window.majPositionMembre() quand une adresse est enregistrée.
+
+// France métropolitaine, vue d'ouverture demandée.
+var CARTE_VUE_FRANCE = [[41.3, -5.2], [51.1, 9.6]];
+
+function initCarteMembres(membresGeo) {
+    var hote = document.getElementById('carte-membres');
+    if (!hote || typeof L === 'undefined') return;
+
+    var situes = membresGeo.filter(function(m) {
+        return typeof m.latitude === 'number' && typeof m.longitude === 'number';
+    });
+    // Une adresse existe mais aucune position : commune introuvable au géocodage,
+    // ou migration jouée depuis peu et rattrapage pas encore lancé.
+    var sansPosition = membresGeo.filter(function(m) {
+        return typeof m.latitude !== 'number'
+            && (m.code_postal || '').trim() && (m.ville || '').trim();
+    }).length;
+    var sansAdresse = membresGeo.length - situes.length - sansPosition;
+
+    var map = L.map(hote, {
+        // Sans ça, la page cesse de défiler dès que la molette passe sur la carte.
+        scrollWheelZoom: false,
+        // Sur téléphone un glissement doit défiler la page ; le voile ci-dessous
+        // rend la main à la carte quand on le demande explicitement.
+        dragging: !L.Browser.mobile,
+        minZoom: 2,   // jusqu'au monde entier, comme demandé
+        maxZoom: 13   // au-delà, la précision serait mensongère : c'est un centre de commune
+    }).setView([46.6, 2.4], 5); // vue de repli : valable même si la carte ne se mesure pas
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 13
+    }).addTo(map);
+
+    var pins = [];
+    situes.forEach(function(m) {
+        var nom = [m.prenom, m.nom].filter(Boolean).join(' ').trim();
+        // circleMarker et non marker : les marqueurs par défaut de Leaflet chargent
+        // leur image depuis le CDN, ce qui obligerait à ouvrir img-src vers cdnjs et
+        // casse en silence si on l'oublie. Un cercle est du SVG : aucune URL.
+        var pin = L.circleMarker([m.latitude, m.longitude], {
+            radius: 7, weight: 2, color: '#FFFFFF', fillColor: '#5D3A7E', fillOpacity: 0.9
+        }).addTo(map);
+        pin.bindPopup('<span class="carte-popup-nom">' + escStat(nom || '(sans nom)') + '</span>'
+            + (m.ville ? '<br><span class="carte-popup-ville">' + escStat(m.ville) + '</span>' : ''));
+        pins.push(pin);
+    });
+
+    var btnTout = document.getElementById('carte-tout-voir');
+    if (btnTout) {
+        btnTout.addEventListener('click', function() {
+            if (!pins.length) return;
+            map.fitBounds(L.featureGroup(pins).getBounds(), { padding: [24, 24] });
+        });
+    }
+    var btnFrance = document.getElementById('carte-france');
+    if (btnFrance) {
+        btnFrance.addEventListener('click', function() { map.fitBounds(CARTE_VUE_FRANCE); });
+    }
+
+    // Voile d'activation sur téléphone (cf. la leçon de #53 : ça ne se voit qu'au doigt).
+    if (L.Browser.mobile && hote.parentNode) {
+        var voile = document.createElement('button');
+        voile.type = 'button';
+        voile.className = 'carte-activer';
+        voile.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Activer la carte';
+        voile.addEventListener('click', function() {
+            map.dragging.enable();
+            if (voile.parentNode) voile.parentNode.removeChild(voile);
+        });
+        hote.parentNode.appendChild(voile);
+    }
+
+    // #app-content est masqué jusqu'à la vérification du rôle. Une carte construite
+    // pendant ce temps mesure 0 sur 0 : elle reste grise, et un fitBounds calculé sur
+    // cette taille donnerait un zoom faux. On la remesure — et on pose la vue France
+    // pour de bon — dès qu'elle a une taille réelle.
+    var vuePosee = false;
+    function calerCarte() {
+        map.invalidateSize();
+        if (!vuePosee && hote.clientWidth > 0) {
+            map.fitBounds(CARTE_VUE_FRANCE);
+            vuePosee = true;
+        }
+    }
+    calerCarte();
+    if (window.ResizeObserver) {
+        new ResizeObserver(calerCarte).observe(hote);
+    } else {
+        setTimeout(calerCarte, 300);
+    }
+
+    var leg = document.getElementById('carte-legende');
+    if (leg) {
+        var bouts = ['<span><b>' + fmtNb(situes.length) + '</b> membres situés sur <b>' + fmtNb(membresGeo.length) + '</b></span>'];
+        if (sansAdresse > 0) bouts.push('<span><b>' + fmtNb(sansAdresse) + '</b> sans adresse renseignée</span>');
+        if (sansPosition > 0) bouts.push('<span><b>' + fmtNb(sansPosition) + '</b> dont la commune n\'a pas été retrouvée</span>');
+        bouts.push('<span>Pins au centre de la commune, pas à l\'adresse exacte.</span>');
+        leg.innerHTML = bouts.join('');
+    }
 }

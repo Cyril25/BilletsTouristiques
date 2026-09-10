@@ -526,6 +526,127 @@ window.flagImg = function(pays) {
     return '<img class="pays-flag" src="flags/' + code.toLowerCase() + '.svg" alt="' + code + '" title="' + titre + '" loading="lazy">';
 };
 
+// ============================================================
+// Demande #63 — Position d'un membre (carte de la page Statistiques)
+// ============================================================
+// La position affichée sur la carte est celle du CENTRE DE LA COMMUNE, jamais
+// celle de la rue : les membres ont donné leur adresse pour recevoir des billets,
+// pas pour être pointés sur une carte. On ne géocode donc que le couple
+// code postal + ville.
+(function() {
+
+    function geoJson(url) {
+        return fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .catch(function() { return null; });
+    }
+
+    // Base Adresse Nationale : GeoJSON, coordonnées en [longitude, latitude].
+    function posBan(data) {
+        var f = data && data.features && data.features[0];
+        var c = f && f.geometry && f.geometry.coordinates;
+        return (c && c.length === 2) ? { lat: c[1], lng: c[0] } : null;
+    }
+
+    function posNominatim(data) {
+        var hit = data && data[0];
+        return hit ? { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) } : null;
+    }
+
+    // Clé normalisée de l'adresse géocodée (colonne membres.geo_adresse). Elle dit
+    // si la position en base correspond encore à l'adresse courante.
+    window.cleGeoAdresse = function(cp, ville, pays) {
+        var n = window._normPays; // minuscules, accents retirés
+        // Pays vide = France : les 8 cas connus ont tous un code postal français,
+        // et la BAN les a tous reconnus.
+        return [n(cp), n(ville), n(pays) || 'france'].join('|');
+    };
+
+    // Géocode un couple code postal + ville au niveau de la commune.
+    // Rend une Promise de {lat, lng} ou de null — elle ne rejette jamais.
+    window.geocoderCommune = function(cp, ville, pays) {
+        cp = (cp || '').trim();
+        ville = (ville || '').trim();
+        if (!cp && !ville) return Promise.resolve(null);
+
+        var code = window.paysCode(pays); // ISO2 déduit de la table des drapeaux
+        if (!code || code === 'FR') {
+            // La BAN est gratuite, sans clé, et son type=municipality donne
+            // exactement le centre de commune cherché. Éprouvée sur les 56 adresses
+            // françaises existantes : 56 sur 56.
+            return geoJson('https://api-adresse.data.gouv.fr/search/?limit=1&type=municipality&q='
+                + encodeURIComponent((cp + ' ' + ville).trim())).then(posBan);
+        }
+
+        // La BAN ne connaît pas l'étranger : Nominatim, en trois essais de plus en
+        // plus tolérants. Le premier suffit le plus souvent, les deux autres
+        // rattrapent les champs « ville » bruités — et ils sont la règle plus que
+        // l'exception sur ces lignes : « 4300 - WAREMME » (le code postal répété),
+        // « MOSTOLES MADRID » (la province collée), voire un code postal faux d'un
+        // chiffre que seul le nom de la ville permet de retrouver. Sans cette
+        // cascade, 4 des 11 membres étrangers restaient sans point.
+        var pc = code.toLowerCase();
+        var essais = [
+            'postalcode=' + encodeURIComponent(cp) + '&city=' + encodeURIComponent(ville) + '&countrycodes=' + pc,
+            'postalcode=' + encodeURIComponent(cp) + '&countrycodes=' + pc,
+            'q=' + encodeURIComponent((cp + ' ' + ville + ', ' + (pays || '')).trim())
+        ];
+        return essais.reduce(function(chaine, params) {
+            return chaine.then(function(pos) {
+                if (pos) return pos; // déjà trouvé : on n'interroge pas pour rien
+                return geoJson('https://nominatim.openstreetmap.org/search?format=json&limit=1&' + params)
+                    .then(posNominatim);
+            });
+        }, Promise.resolve(null));
+    };
+
+    // Met à jour la position d'un membre si son adresse a bougé.
+    // À appeler APRÈS un enregistrement d'adresse réussi, en MEILLEUR EFFORT : la
+    // sauvegarde est déjà confirmée à l'utilisateur, une panne de géocodeur ne doit
+    // ni la remettre en cause ni lui être signalée. Le manque se voit là où il
+    // compte : le compteur « sans position » sous la carte des stats.
+    window.majPositionMembre = function(email) {
+        if (!email) return Promise.resolve(null);
+
+        return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email)
+                + '&select=code_postal,ville,pays,latitude,geo_adresse')
+            .then(function(rows) {
+                var m = rows && rows[0];
+                if (!m) return null;
+
+                var cp = (m.code_postal || '').trim();
+                var ville = (m.ville || '').trim();
+                if (!cp && !ville) return null;
+
+                var cle = window.cleGeoAdresse(cp, ville, m.pays);
+                // La position en base correspond déjà à cette adresse : ne pas rappeler
+                // le géocodeur (le mode vacances, par exemple, passe par le même PATCH).
+                if (m.geo_adresse === cle && m.latitude != null) return null;
+
+                return window.geocoderCommune(cp, ville, m.pays).then(function(pos) {
+                    // geo_adresse est écrite même quand la commune est introuvable :
+                    // c'est ce qui distingue « essayé, échoué » de « jamais tenté », et
+                    // ce qui évite de réinterroger le géocodeur à chaque sauvegarde.
+                    return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email), {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            latitude: pos ? pos.lat : null,
+                            longitude: pos ? pos.lng : null,
+                            geo_adresse: cle
+                        })
+                    }).then(function() { return pos; });
+                });
+            })
+            .catch(function(err) {
+                // Colonnes absentes (migration #63 pas encore jouée), réseau, géocodeur
+                // en panne : on n'embête personne avec ça.
+                console.warn('Demande #63 — position non mise à jour pour ' + email, err);
+                return null;
+            });
+    };
+
+})();
+
 // Demande #28 / #26 — audience effective (rôle + statut collecteur) de l'identité active.
 // On interroge toujours la table membres pour le rôle de l'email actif (impersonné ou réel),
 // afin de ne pas dépendre de window.userRole qui peut ne pas être encore défini (course au

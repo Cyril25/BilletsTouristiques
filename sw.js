@@ -7,7 +7,7 @@
 //   - Network Only  : API données (supabase, workers.dev, google)
 // ============================================================
 
-const CACHE_NAME = 'billets-v302';
+const CACHE_NAME = 'billets-v303';
 
 const STATIC_ASSETS = [
     './',
@@ -75,6 +75,12 @@ const NETWORK_ONLY_ORIGINS = [
     'googleapis.com',
     'accounts.google.com',
     'supabase.co',
+    // Demande #63 — tuiles de la carte et geocodeurs. Sans eux, la branche
+    // Cache First plus bas entasserait des centaines de tuiles dans le cache
+    // du site et servirait des reponses d'API depuis le cache.
+    'tile.openstreetmap.org',
+    'api-adresse.data.gouv.fr',
+    'nominatim.openstreetmap.org',
 ];
 
 // ---------------------------------------------------------------

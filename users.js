@@ -578,6 +578,11 @@ function saveUserEditModal(email) {
             }
             showToast('Fiche mise à jour', 'success');
             closeUserEditModal();
+
+            // Demande #63 — replacer le point du membre sur la carte des stats si
+            // son adresse a bougé. Meilleur effort : l'enregistrement est déjà
+            // confirmé, un géocodeur en panne ne doit pas le remettre en cause.
+            if (window.majPositionMembre) window.majPositionMembre(email);
             var searchInput = document.getElementById('user-search-input');
             var currentQuery = searchInput ? searchInput.value.trim() : '';
             renderUserCards(currentQuery);

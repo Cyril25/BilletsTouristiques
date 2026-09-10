@@ -525,6 +525,11 @@ function saveProfil() {
     })
     .then(function() {
         showToast('Profil sauvegardé avec succès', 'success');
+
+        // Demande #63 — replacer le point du membre sur la carte des stats si son
+        // adresse a bougé. Meilleur effort : la sauvegarde est déjà confirmée,
+        // un géocodeur en panne ne doit pas la remettre en cause.
+        if (window.majPositionMembre) window.majPositionMembre(email);
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
