@@ -90,7 +90,6 @@ var demandesList = [];
 // concerné. On charge les membres pour afficher un prénom plutôt qu'une adresse e-mail.
 var membresDemandes = {};
 var currentEtatFilter = 'actives';
-var editingDemandeId = null;
 
 // ============================================================
 // 5. INITIALISATION
@@ -321,7 +320,7 @@ function renderDemandeRow(d) {
         : '';
 
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')
-        + (aMoiDeTester ? ' demande-row--a-tester-moi' : '') + '" onclick="ouvrirModaleDemande(' + d.id + ')">'
+        + (aMoiDeTester ? ' demande-row--a-tester-moi' : '') + '" onclick="ouvrirFicheDemande(' + d.id + ')">'
         + '<td class="demande-id-cell" title="Demande n°' + d.id + '">#' + d.id + '</td>'
         + '<td class="demande-etat-cell">'
         +   '<select class="demande-etat-select" style="border-color:' + etatDef.color + ';color:' + etatDef.color + ';" '
@@ -335,7 +334,7 @@ function renderDemandeRow(d) {
         + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
         + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'
         + '<td class="demande-date-cell" title="' + escapeAttr(dateInfo) + '"><i class="fa-solid fa-calendar-day"></i></td>'
-        + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirModaleDemande(' + d.id + ')" title="Modifier la demande"><i class="fa-solid fa-pen"></i></button></td>'
+        + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirFicheDemande(' + d.id + ')" title="Ouvrir la fiche de la demande"><i class="fa-solid fa-up-right-from-square"></i></button></td>'
         + '</tr>';
 }
 
@@ -445,45 +444,39 @@ function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
 }
 
 // ============================================================
-// 10. MODALE AJOUT / ÉDITION
+// 10. OUVERTURE DE LA FICHE (demande #58)
+// ------------------------------------------------------------
+// L'édition d'une demande a quitté la popup : le champ « journal de
+// traitement » y était trop étroit, alors que c'est justement là que
+// s'écrivent les questions de cadrage. Cliquer une ligne mène désormais à
+// demande.html, qui porte aussi les documents de spec et le fil de relecture
+// entre admins.
 // ============================================================
-function ouvrirModaleDemande(id) {
-    editingDemandeId = id;
+function ouvrirFicheDemande(id) {
+    window.location.href = 'demande.html?id=' + id;
+}
+
+// ============================================================
+// 11. MODALE — CRÉATION UNIQUEMENT
+// ------------------------------------------------------------
+// Elle survit parce que consigner une demande entendue sur Facebook, c'est
+// trois champs et dix secondes : ouvrir une fiche pleine page pour ça serait
+// un détour à chaque fois. La demande naît ici, elle vit sur sa fiche.
+// La suppression a suivi l'édition : elle est sur la fiche.
+// ============================================================
+function ouvrirNouvelleDemande() {
     var overlay = document.getElementById('demande-modal-overlay');
-    var titre = document.getElementById('demande-modal-title');
-    var deleteBtn = document.getElementById('dm-delete-btn');
-    var meta = document.getElementById('dm-meta');
     if (!overlay) return;
 
-    var d = null;
-    if (id !== null) {
-        for (var i = 0; i < demandesList.length; i++) {
-            if (demandesList[i].id === id) { d = demandesList[i]; break; }
-        }
-        if (!d) return;
-    }
-
-    titre.textContent = d ? 'Modifier la demande #' + d.id : 'Nouvelle demande';
-    document.getElementById('dm-description').value = d ? d.description : '';
-    document.getElementById('dm-ecran').value = d ? d.ecran : '';
-    var quiValues = d ? parseQui(d.qui) : QUI_VALUES.slice();
+    document.getElementById('dm-description').value = '';
+    document.getElementById('dm-ecran').value = '';
     QUI_VALUES.forEach(function(v) {
-        document.getElementById('dm-qui-' + v).checked = (quiValues.indexOf(v) !== -1);
+        document.getElementById('dm-qui-' + v).checked = true;
     });
-    document.getElementById('dm-priorite').value = d ? d.priorite : 'normale';
-    document.getElementById('dm-complexite').value = d ? d.complexite : '';
-    document.getElementById('dm-etat').value = d ? d.etat : 'nouvelle';
-
-    document.getElementById('dm-commentaire').value = d ? d.commentaire : '';
-    deleteBtn.style.display = d ? '' : 'none';
-    if (meta) {
-        if (d) {
-            meta.textContent = 'Saisie par ' + d.demandeur + ' le ' + formatDateFr(d.created_at);
-            meta.style.display = '';
-        } else {
-            meta.style.display = 'none';
-        }
-    }
+    document.getElementById('dm-priorite').value = 'normale';
+    document.getElementById('dm-complexite').value = '';
+    document.getElementById('dm-etat').value = 'nouvelle';
+    document.getElementById('dm-commentaire').value = '';
 
     overlay.style.display = 'flex';
     document.getElementById('dm-description').focus();
@@ -492,10 +485,9 @@ function ouvrirModaleDemande(id) {
 function fermerModaleDemande() {
     var overlay = document.getElementById('demande-modal-overlay');
     if (overlay) overlay.style.display = 'none';
-    editingDemandeId = null;
 }
 
-function sauverDemande() {
+function creerDemande() {
     var description = document.getElementById('dm-description').value.trim();
     if (!description) {
         showToast('La description est obligatoire', 'error');
@@ -517,68 +509,20 @@ function sauverDemande() {
         priorite: document.getElementById('dm-priorite').value,
         complexite: document.getElementById('dm-complexite').value,
         etat: document.getElementById('dm-etat').value,
-        commentaire: document.getElementById('dm-commentaire').value.trim()
+        commentaire: document.getElementById('dm-commentaire').value.trim(),
+        demandeur: (firebase.auth().currentUser && firebase.auth().currentUser.email) || ''
     };
 
-    var promesse;
-    // Snapshot (demandeur + état d'avant) pour la notif de suivi au demandeur (#33),
-    // capturé avant fermerModaleDemande() qui remet editingDemandeId à null.
-    var demandeAvant = null, etatAvant = null;
-    if (editingDemandeId !== null) {
-        for (var k = 0; k < demandesList.length; k++) {
-            if (demandesList[k].id === editingDemandeId) { demandeAvant = demandesList[k]; etatAvant = demandeAvant.etat; break; }
-        }
-        if (data.etat === 'terminee' && etatAvant !== 'terminee' && !peutTerminer(demandeAvant)) {   // #48
-            refuserCloture(demandeAvant);
-            return;
-        }
-        promesse = supabaseFetch('/rest/v1/demandes?id=eq.' + editingDemandeId, {
-            method: 'PATCH',
-            body: JSON.stringify(data)
-        });
-    } else {
-        data.demandeur = (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
-        promesse = supabaseFetch('/rest/v1/demandes', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    promesse
+    supabaseFetch('/rest/v1/demandes', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    })
         .then(function() {
-            showToast(editingDemandeId !== null ? 'Demande mise à jour' : 'Demande ajoutée', 'success');
+            showToast('Demande ajoutée', 'success');
             fermerModaleDemande();
             loadDemandes();
-            if (demandeAvant) notifierDemandeurSiSuivi(demandeAvant, data.etat, etatAvant);
         })
         .catch(function(error) {
             showToast('Erreur enregistrement : ' + error.message, 'error');
-        });
-}
-
-// ============================================================
-// 11. SUPPRESSION
-// ============================================================
-function ouvrirModaleSuppression() {
-    var overlay = document.getElementById('demande-delete-modal-overlay');
-    if (overlay) overlay.style.display = 'flex';
-}
-
-function fermerModaleSuppression() {
-    var overlay = document.getElementById('demande-delete-modal-overlay');
-    if (overlay) overlay.style.display = 'none';
-}
-
-function confirmerSuppressionDemande() {
-    if (editingDemandeId === null) return;
-    supabaseFetch('/rest/v1/demandes?id=eq.' + editingDemandeId, { method: 'DELETE' })
-        .then(function() {
-            showToast('Demande supprimée', 'success');
-            fermerModaleSuppression();
-            fermerModaleDemande();
-            loadDemandes();
-        })
-        .catch(function(error) {
-            showToast('Erreur suppression : ' + error.message, 'error');
         });
 }

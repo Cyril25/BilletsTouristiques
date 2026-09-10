@@ -11294,3 +11294,326 @@ button.collecte-badge-status {
         min-width: 0;
     }
 }
+
+/* ============================================================
+   DEMANDE #58 — FICHE DEMANDE PLEINE PAGE
+   ------------------------------------------------------------
+   L'edition d'une demande a quitte la popup (trop etroite pour le
+   journal de traitement). Cette section habille la fiche, le rendu
+   des documents de spec et le fil de relecture entre admins.
+   Tout est bati sur les jetons de #54 : aucune couleur en dur, donc
+   le mode sombre suit sans une seule regle supplementaire.
+   ============================================================ */
+
+.fiche-retour {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+}
+.fiche-retour:hover { text-decoration: underline; }
+
+.fiche-bloc {
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.fiche-bloc-titre {
+    margin: 0 0 10px;
+    font-size: 1.0625rem;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fiche-aide {
+    margin: 0 0 10px;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+.fiche-erreur {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--color-badge-warning-bg);
+    color: var(--color-badge-warning-text);
+    border: 1px solid var(--color-badge-warning-border);
+    font-size: 0.875rem;
+}
+
+/* ---------- Caracteristiques ---------- */
+.fiche-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.fiche-champ { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.fiche-champ label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-muted);
+}
+
+.fiche-champ select,
+.fiche-champ input[type="text"] {
+    padding: 7px 9px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    min-width: 0;
+}
+
+.fiche-lecture {
+    margin: 0;
+    padding: 7px 0;
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    overflow-wrap: anywhere;
+}
+
+.fiche-dates {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-hint);
+}
+
+/* ---------- Champs longs ---------- */
+/* Le motif de cette demande : de la place. La popup plafonnait le
+   journal a trois lignes alors que c'est la que s'ecrivent les
+   questions de cadrage. */
+.fiche-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    resize: vertical;
+}
+
+.fiche-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+/* ---------- Documents ---------- */
+.fiche-docs-onglets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+.fiche-doc-onglet {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-bg-white);
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+.fiche-doc-onglet:hover { background: var(--color-bg-hover); }
+.fiche-doc-onglet.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+
+.fiche-docs-sommaire {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+}
+.fiche-sommaire-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-size: 0.6875rem;
+}
+.fiche-docs-sommaire a { color: var(--color-primary); text-decoration: none; }
+.fiche-docs-sommaire a:hover { text-decoration: underline; }
+
+.fiche-docs-gestion { margin-top: 16px; }
+.fiche-docs-gestion > summary {
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+.fiche-docs-gestion .user-modal-btn { margin-top: 8px; }
+
+/* ---------- Rendu du markdown ---------- */
+.fiche-doc-rendu {
+    color: var(--color-text);
+    line-height: 1.65;
+    font-size: 0.9375rem;
+    overflow-wrap: break-word;
+}
+.fiche-doc-rendu h2,
+.fiche-doc-rendu h3,
+.fiche-doc-rendu h4,
+.fiche-doc-rendu h5,
+.fiche-doc-rendu h6 {
+    color: var(--color-primary);
+    line-height: 1.3;
+    margin: 1.4em 0 0.5em;
+    scroll-margin-top: 16px;
+}
+.fiche-doc-rendu h2 {
+    font-size: 1.25rem;
+    border-bottom: 1px solid var(--color-border-lighter);
+    padding-bottom: 6px;
+}
+.fiche-doc-rendu h3 { font-size: 1.0625rem; }
+.fiche-doc-rendu h4 { font-size: 0.9375rem; }
+.fiche-doc-rendu p { margin: 0.7em 0; }
+.fiche-doc-rendu ul,
+.fiche-doc-rendu ol { margin: 0.6em 0; padding-left: 1.6em; }
+.fiche-doc-rendu li { margin: 0.3em 0; }
+.fiche-doc-rendu hr {
+    border: 0;
+    border-top: 1px solid var(--color-border-lighter);
+    margin: 1.6em 0;
+}
+.fiche-doc-rendu a { color: var(--color-primary); }
+
+.fiche-doc-rendu blockquote {
+    margin: 0.9em 0;
+    padding: 8px 14px;
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-surface);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--color-text-secondary);
+}
+
+.fiche-doc-rendu code {
+    background: var(--color-surface);
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875em;
+    overflow-wrap: anywhere;
+}
+
+.fiche-code {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-lighter);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+.fiche-code code { background: none; padding: 0; }
+
+/* Un tableau large defile DANS son conteneur : la page, elle, ne doit
+   jamais defiler horizontalement. Les specs sont pleines de tableaux et
+   l'ecran est souvent un telephone. */
+.fiche-table-wrap { overflow-x: auto; margin: 1em 0; }
+
+.fiche-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.875rem;
+}
+.fiche-table th,
+.fiche-table td {
+    border: 1px solid var(--color-border-light);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+.fiche-table th { background: var(--color-surface); color: var(--color-primary); }
+
+/* ---------- Fil de commentaires ---------- */
+.fiche-commentaires {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.fiche-com {
+    border: 1px solid var(--color-border-lighter);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    background: var(--color-bg-white);
+}
+
+.fiche-com-tete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin-bottom: 6px;
+    font-size: 0.8125rem;
+}
+.fiche-com-tete strong { color: var(--color-primary); }
+.fiche-com-date { color: var(--color-text-hint); }
+.fiche-com-modifie { color: var(--color-text-hint); font-style: italic; }
+
+.fiche-com-contexte {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.fiche-com-texte {
+    color: var(--color-text);
+    line-height: 1.55;
+    overflow-wrap: break-word;
+}
+
+.fiche-com-actions { display: flex; gap: 12px; margin-top: 8px; }
+
+.fiche-com-lien {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.fiche-com-lien:hover { color: var(--color-primary); }
+.fiche-com-lien--danger:hover { color: var(--color-danger); }
+
+.fiche-commentaire-form { display: flex; flex-direction: column; gap: 10px; }
+.fiche-commentaire-form .fiche-actions { margin-bottom: 0; }
+
+@media (max-width: 600px) {
+    .fiche-bloc { padding: 12px; }
+    .fiche-actions { justify-content: stretch; }
+    .fiche-actions .user-modal-btn { flex: 1; }
+}

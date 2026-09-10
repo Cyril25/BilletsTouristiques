@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://drive.google.com https://drive.usercontent.google.com https://lh3.googleusercontent.com https://res.cloudinary.com; connect-src 'self' https://www.gstatic.com https://lhwcoybugdsggcclhtgb.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.cloudinary.com https://billet-proxy-worker.cyril-samson41.workers.dev; frame-src 'self' https://asso-billet-site.firebaseapp.com https://apis.google.com https://accounts.google.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fiche d'une demande d'amélioration : description, journal, documents de spec et commentaires.">
+    <title>Fiche demande - BilletsTouristiques</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <!-- Demande #54 : pose le theme AVANT le premier rendu. global.js se charge en fin
+         de corps ; y mettre cette ligne ferait clignoter le blanc a chaque page. -->
+    <script>(function(){try{var t=localStorage.getItem('bt-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-require-admin="true">
+    <div id="menu-placeholder"></div>
+    <div id="app-content" style="display:none">
+
+        <div class="admin-page-header">
+            <h1><i class="fa-solid fa-clipboard-list"></i> <span id="fd-titre">Demande</span></h1>
+            <a href="admin-demandes.html" class="fiche-retour" title="Revenir à la liste des demandes">
+                <i class="fa-solid fa-arrow-left"></i> Toutes les demandes
+            </a>
+        </div>
+
+        <!-- Affiché si l'id est absent, invalide ou introuvable -->
+        <div class="user-empty-state" id="fd-introuvable" style="display:none">
+            <i class="fa-solid fa-circle-question"></i>
+            <p id="fd-introuvable-texte">Demande introuvable</p>
+        </div>
+
+        <div id="fd-contenu" style="display:none">
+
+            <!-- ---------- Caractéristiques ---------- -->
+            <section class="fiche-bloc">
+                <div class="fiche-meta-grid">
+                    <div class="fiche-champ">
+                        <label for="fd-etat">État</label>
+                        <select id="fd-etat"></select>
+                    </div>
+                    <div class="fiche-champ">
+                        <label for="fd-priorite">Priorité</label>
+                        <select id="fd-priorite">
+                            <option value="haute">Haute</option>
+                            <option value="normale">Normale</option>
+                            <option value="basse">Basse</option>
+                        </select>
+                    </div>
+                    <div class="fiche-champ">
+                        <label for="fd-complexite">Complexité</label>
+                        <select id="fd-complexite">
+                            <option value="">À estimer</option>
+                            <option value="S">S — petit</option>
+                            <option value="M">M — moyen</option>
+                            <option value="L">L — gros</option>
+                        </select>
+                    </div>
+                    <div class="fiche-champ">
+                        <label for="fd-ecran">Écran / onglet</label>
+                        <input type="text" id="fd-ecran" list="fd-ecran-list" placeholder="Ex: Mes collectes" autocomplete="off">
+                        <datalist id="fd-ecran-list">
+                            <option value="Accueil"></option>
+                            <option value="Les billets"></option>
+                            <option value="Fiche billet"></option>
+                            <option value="Frais de port"></option>
+                            <option value="Règlement"></option>
+                            <option value="Infos Collecteurs"></option>
+                            <option value="Liens Utiles"></option>
+                            <option value="Mes inscriptions"></option>
+                            <option value="Mes collectes"></option>
+                            <option value="Mes contacts"></option>
+                            <option value="Ma collection"></option>
+                            <option value="Mon profil"></option>
+                            <option value="Gestion Billets"></option>
+                            <option value="Gestion Membres"></option>
+                            <option value="Gestion Collecteurs"></option>
+                            <option value="Gestion Demandes"></option>
+                            <option value="Gestion Frais de Port"></option>
+                            <option value="Gestion Pré-inscriptions"></option>
+                            <option value="Gestion Notifications"></option>
+                            <option value="Gestion Signalements"></option>
+                            <option value="Statistiques"></option>
+                            <option value="Demandes d'inscription"></option>
+                            <option value="Menu / Navigation"></option>
+                        </datalist>
+                    </div>
+                    <div class="fiche-champ">
+                        <label>Qui est concerné</label>
+                        <div class="demande-qui-checkboxes">
+                            <label class="demande-qui-cb"><input type="checkbox" id="fd-qui-membres"> Membres</label>
+                            <label class="demande-qui-cb"><input type="checkbox" id="fd-qui-collecteurs"> Collecteurs</label>
+                            <label class="demande-qui-cb"><input type="checkbox" id="fd-qui-admins"> Admins</label>
+                        </div>
+                    </div>
+                    <div class="fiche-champ">
+                        <label>Demandeur</label>
+                        <p class="fiche-lecture" id="fd-demandeur"></p>
+                    </div>
+                </div>
+                <p class="fiche-dates" id="fd-dates"></p>
+            </section>
+
+            <!-- ---------- Description ---------- -->
+            <section class="fiche-bloc">
+                <h2 class="fiche-bloc-titre"><i class="fa-solid fa-align-left"></i> Description</h2>
+                <textarea id="fd-description" class="fiche-textarea" rows="8"
+                          placeholder="Décrire la demande : quoi, pour qui, dans quel contexte..."></textarea>
+            </section>
+
+            <!-- ---------- Journal de traitement ---------- -->
+            <section class="fiche-bloc">
+                <h2 class="fiche-bloc-titre"><i class="fa-solid fa-clipboard-check"></i> Journal de traitement</h2>
+                <p class="fiche-aide">Questions ouvertes, décisions, avancement. C'est ce texte qui s'affiche en
+                   infobulle dans la liste et qui est cherché par la recherche.</p>
+                <textarea id="fd-commentaire" class="fiche-textarea" rows="12"
+                          placeholder="[date] Ce qui a été décidé, ce qui reste à trancher..."></textarea>
+            </section>
+
+            <div class="fiche-actions">
+                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="ouvrirSuppressionFiche()">
+                    <i class="fa-solid fa-trash"></i> Supprimer
+                </button>
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="enregistrerFiche()">
+                    <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+                </button>
+            </div>
+
+            <!-- ---------- Documents de spec ---------- -->
+            <section class="fiche-bloc">
+                <h2 class="fiche-bloc-titre"><i class="fa-solid fa-file-lines"></i> Documents de spec</h2>
+                <div id="fd-docs-onglets" class="fiche-docs-onglets"></div>
+                <div id="fd-docs-sommaire" class="fiche-docs-sommaire" style="display:none"></div>
+                <div id="fd-docs-rendu" class="fiche-doc-rendu markdown-corps"></div>
+                <details class="fiche-docs-gestion">
+                    <summary>Documents attachés à cette demande</summary>
+                    <p class="fiche-aide">Un chemin par ligne, depuis la racine du site. Seuls les fichiers
+                       <code>specs/…&nbsp;.md</code> sont acceptés.</p>
+                    <textarea id="fd-docs" class="fiche-textarea" rows="4"
+                              placeholder="specs/evolutions/demande-1-vente-du-rab.md"></textarea>
+                    <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="enregistrerDocs()">
+                        Enregistrer les documents
+                    </button>
+                </details>
+            </section>
+
+            <!-- ---------- Fil de commentaires ---------- -->
+            <section class="fiche-bloc">
+                <h2 class="fiche-bloc-titre"><i class="fa-solid fa-comments"></i> Relecture &amp; commentaires</h2>
+                <p class="fiche-aide">Ce qu'on aurait oublié, ce qu'on pourrait améliorer ou adapter. Visible des
+                   admins uniquement ; les autres sont prévenus par une notification.</p>
+
+                <div id="fd-commentaires-liste" class="fiche-commentaires"></div>
+
+                <div class="fiche-commentaire-form" id="fd-commentaire-form">
+                    <div class="fiche-champ">
+                        <label for="fd-com-section">Sur quelle partie ? (facultatif)</label>
+                        <select id="fd-com-section"></select>
+                    </div>
+                    <textarea id="fd-com-texte" class="fiche-textarea" rows="4"
+                              placeholder="Votre remarque..."></textarea>
+                    <div class="fiche-actions">
+                        <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="posterCommentaire()">
+                            <i class="fa-solid fa-paper-plane"></i> Publier
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Modale de confirmation de suppression -->
+    <div id="fd-delete-overlay" class="user-modal-overlay" style="display: none;">
+        <div class="user-modal" role="alertdialog" aria-modal="true">
+            <h2 class="user-modal-title">Supprimer cette demande ?</h2>
+            <p class="user-modal-desc">
+                La demande et ses commentaires seront définitivement supprimés. Pour la conserver
+                sans la traiter, préférez l'état « Abandonnée ».
+            </p>
+            <div class="user-modal-actions">
+                <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="fermerSuppressionFiche()">Annuler</button>
+                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmerSuppressionFiche()">Confirmer la suppression</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" integrity="sha384-v3Z/Xdw1sCeo6M/geW7sn1Lt9obIm7MhAk8laVV+rvYFmzuWDELOiygx7dVte2dX" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" integrity="sha384-p62xBRve8PdqGDGASZtZMuHgPsyPcT5VsFwgmz2p4zaFdEtt5ZzNqxK+CLzQS7xP" crossorigin="anonymous"></script>
+    <script src="global.js"></script>
+    <script src="demande.js"></script>
+</body>
+</html>
