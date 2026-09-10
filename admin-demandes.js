@@ -43,43 +43,11 @@ function formatDateFr(isoString) {
 
 // ============================================================
 // 3. RÉFÉRENTIELS
+// ------------------------------------------------------------
+// ETATS, ETATS_ACTIFS, PRIORITE_*, QUI_* , parseQui(), quiLabel(),
+// getEtatDef() et attendValidationSpec() vivent dans global.js depuis la
+// demande #59 : ils étaient dupliqués ici et dans demande.js.
 // ============================================================
-var ETATS = [
-    { value: 'nouvelle',   label: 'Nouvelle',   color: '#1976D2' },
-    { value: 'a_cadrer',   label: 'À cadrer',   color: '#EF6C00' },
-    { value: 'validee',    label: 'Prêt à dev', color: '#6A1B9A' },
-    { value: 'en_cours',   label: 'En cours',   color: '#00838F' },
-    { value: 'a_tester',   label: 'À tester',   color: '#C2185B' },
-    { value: 'terminee',   label: 'Terminée',   color: '#2E7D32' },
-    { value: 'abandonnee', label: 'Abandonnée', color: '#757575' }
-];
-
-// États considérés comme « actifs » (filtre par défaut)
-var ETATS_ACTIFS = ['nouvelle', 'a_cadrer', 'validee', 'en_cours', 'a_tester'];
-
-var PRIORITE_LABELS = { haute: 'Haute', normale: 'Normale', basse: 'Basse' };
-var PRIORITE_ORDER = { haute: 0, normale: 1, basse: 2 };
-var QUI_VALUES = ['membres', 'collecteurs', 'admins'];
-var QUI_LABELS = { membres: 'Membres', collecteurs: 'Collecteurs', admins: 'Admins' };
-
-// qui = liste séparée par des virgules (ancienne valeur 'tous' = les trois)
-function parseQui(qui) {
-    if (!qui || qui === 'tous') return QUI_VALUES.slice();
-    return qui.split(',').filter(function(v) { return QUI_VALUES.indexOf(v) !== -1; });
-}
-
-function quiLabel(qui) {
-    var values = parseQui(qui);
-    if (values.length === QUI_VALUES.length) return 'Tous';
-    return values.map(function(v) { return QUI_LABELS[v]; }).join(' + ');
-}
-
-function getEtatDef(value) {
-    for (var i = 0; i < ETATS.length; i++) {
-        if (ETATS[i].value === value) return ETATS[i];
-    }
-    return { value: value, label: value, color: '#757575' };
-}
 
 // ============================================================
 // 4. DONNÉES EN MÉMOIRE
@@ -89,6 +57,8 @@ var demandesList = [];
 // qu'une icône et son tooltip : il fallait survoler chaque ligne pour savoir si on était
 // concerné. On charge les membres pour afficher un prénom plutôt qu'une adresse e-mail.
 var membresDemandes = {};
+// Demande #59 — { demande_id: [emails des admins ayant validé l'analyse] }
+var validationsParDemande = {};
 var currentEtatFilter = 'actives';
 
 // ============================================================
@@ -120,12 +90,22 @@ function loadDemandes() {
         // Demande #49 — un échec ici ne doit pas empêcher la liste de s'afficher :
         // on retombe alors sur la partie locale de l'adresse.
         supabaseFetch('/rest/v1/membres?select=email,nom,prenom', { method: 'GET' })
+            .catch(function() { return []; }),
+        // Demande #59 — qui a validé quelle analyse. Même repli que ci-dessus :
+        // tant que la migration n'est pas jouée, la table n'existe pas et la
+        // liste doit quand même s'afficher.
+        supabaseFetch('/rest/v1/demande_validations?select=demande_id,admin_email', { method: 'GET' })
             .catch(function() { return []; })
     ])
         .then(function(res) {
             var rows = res[0];
             membresDemandes = {};
             (res[1] || []).forEach(function(m) { membresDemandes[(m.email || '').toLowerCase()] = m; });
+            validationsParDemande = {};
+            (res[2] || []).forEach(function(v) {
+                if (!validationsParDemande[v.demande_id]) validationsParDemande[v.demande_id] = [];
+                validationsParDemande[v.demande_id].push((v.admin_email || '').toLowerCase());
+            });
             demandesList = rows || [];
             renderEtatFilter();
             renderDemandes();
@@ -319,8 +299,35 @@ function renderDemandeRow(d) {
         ? ' <i class="fa-solid fa-comment-dots demande-desc-comment" title="' + escapeAttr(d.commentaire) + '"></i>'
         : '';
 
+    // Demande #59 — la question qu'on se pose en ouvrant l'écran est « qu'est-ce
+    // qui attend quelque chose de MOI ». Avant, il fallait ouvrir la fiche pour
+    // découvrir qu'une spec y dormait.
+    var validations = validationsParDemande[d.id] || [];
+    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
+    var jaiValide = validations.indexOf(moi) !== -1;
+    var aRelire = attendValidationSpec(d.etat);
+    var aMoiDeRelire = aRelire && !jaiValide;
+
+    var specIcon = '';
+    if (d.docs && d.docs.trim()) {
+        var nbDocs = d.docs.split('\n').filter(function(l) { return l.trim(); }).length;
+        specIcon = ' <i class="fa-solid fa-file-lines demande-desc-spec" title="'
+                 + nbDocs + ' document(s) de spec attaché(s)"></i>';
+    }
+    if (aRelire) {
+        var titreValid = validations.length === 0
+            ? 'Analyse à relire — aucune validation pour l\'instant'
+            : validations.length + ' validation(s)' + (jaiValide ? ', dont la vôtre' : ', pas la vôtre');
+        specIcon += ' <span class="demande-badge demande-badge-validation'
+                 + (jaiValide ? ' demande-badge-validation--faite' : '')
+                 + '" title="' + escapeAttr(titreValid) + '">'
+                 + '<i class="fa-solid fa-' + (jaiValide ? 'circle-check' : 'eye') + '"></i> '
+                 + validations.length + '</span>';
+    }
+
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')
-        + (aMoiDeTester ? ' demande-row--a-tester-moi' : '') + '" onclick="ouvrirFicheDemande(' + d.id + ')">'
+        + (aMoiDeTester ? ' demande-row--a-tester-moi' : '')
+        + (aMoiDeRelire ? ' demande-row--a-relire-moi' : '') + '" onclick="ouvrirFicheDemande(' + d.id + ')">'
         + '<td class="demande-id-cell" title="Demande n°' + d.id + '">#' + d.id + '</td>'
         + '<td class="demande-etat-cell">'
         +   '<select class="demande-etat-select" style="border-color:' + etatDef.color + ';color:' + etatDef.color + ';" '
@@ -331,7 +338,7 @@ function renderDemandeRow(d) {
         + '<td>' + (d.complexite ? '<span class="demande-badge demande-badge-complexite" title="Complexité estimée">' + escapeHtml(d.complexite) + '</span>' : '') + '</td>'
         + '<td class="demande-qui-cell"><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
         + '<td class="demande-ecran-cell">' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
-        + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + '</td>'
+        + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + specIcon + '</td>'
         + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'
         + '<td class="demande-date-cell" title="' + escapeAttr(dateInfo) + '"><i class="fa-solid fa-calendar-day"></i></td>'
         + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirFicheDemande(' + d.id + ')" title="Ouvrir la fiche de la demande"><i class="fa-solid fa-up-right-from-square"></i></button></td>'

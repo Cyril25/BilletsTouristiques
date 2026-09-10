@@ -56,30 +56,10 @@ function formatDateHeureFr(isoString) {
 }
 
 // ============================================================
-// 3. RÉFÉRENTIELS (mêmes valeurs que admin-demandes.js)
+// 3. RÉFÉRENTIELS
+// ------------------------------------------------------------
+// Source unique dans global.js depuis la demande #59.
 // ============================================================
-var ETATS = [
-    { value: 'nouvelle',   label: 'Nouvelle',   color: '#1976D2' },
-    { value: 'a_cadrer',   label: 'À cadrer',   color: '#EF6C00' },
-    { value: 'validee',    label: 'Prêt à dev', color: '#6A1B9A' },
-    { value: 'en_cours',   label: 'En cours',   color: '#00838F' },
-    { value: 'a_tester',   label: 'À tester',   color: '#C2185B' },
-    { value: 'terminee',   label: 'Terminée',   color: '#2E7D32' },
-    { value: 'abandonnee', label: 'Abandonnée', color: '#757575' }
-];
-var QUI_VALUES = ['membres', 'collecteurs', 'admins'];
-
-function parseQui(qui) {
-    if (!qui || qui === 'tous') return QUI_VALUES.slice();
-    return qui.split(',').filter(function(v) { return QUI_VALUES.indexOf(v) !== -1; });
-}
-
-function getEtatDef(value) {
-    for (var i = 0; i < ETATS.length; i++) {
-        if (ETATS[i].value === value) return ETATS[i];
-    }
-    return { value: value, label: value, color: '#757575' };
-}
 
 // ============================================================
 // 4. ÉTAT EN MÉMOIRE
@@ -92,6 +72,9 @@ var docsAttaches = [];                   // chemins validés
 var docCourant = null;                   // chemin affiché
 var titresDocCourant = [];               // pour le sommaire et le choix de section
 var commentaireEnEdition = null;
+// Demande #59 — qui a validé l'analyse de CETTE demande.
+var lesValidations = [];
+var validationsIndisponibles = false;   // migration #59 pas encore jouée
 
 // ============================================================
 // 5. INITIALISATION
@@ -132,7 +115,8 @@ function chargerFiche() {
         // sur la partie locale de l'adresse pour nommer les gens (même repli
         // que la liste, demande #49).
         supabaseFetch('/rest/v1/membres?select=email,nom,prenom').catch(function() { return []; }),
-        chargerCommentaires(id)
+        chargerCommentaires(id),
+        chargerValidations(id)
     ])
         .then(function(res) {
             var rows = res[0] || [];
@@ -147,6 +131,7 @@ function chargerFiche() {
             document.getElementById('fd-contenu').style.display = '';
             renderFiche();
             renderDocs();
+            renderValidation();
             renderCommentaires();
         })
         .catch(function(error) {
@@ -169,6 +154,23 @@ function chargerCommentaires(id) {
         .catch(function() {
             lesCommentaires = [];
             commentairesIndisponibles = true;
+            return [];
+        });
+}
+
+// Même repli que les commentaires : tant que la migration #59 n'est pas jouée,
+// la table n'existe pas et la fiche doit rester utilisable.
+function chargerValidations(id) {
+    return supabaseFetch('/rest/v1/demande_validations?demande_id=eq.' + id
+                       + '&select=*&order=created_at.asc')
+        .then(function(rows) {
+            lesValidations = rows || [];
+            validationsIndisponibles = false;
+            return lesValidations;
+        })
+        .catch(function() {
+            lesValidations = [];
+            validationsIndisponibles = true;
             return [];
         });
 }
@@ -690,7 +692,118 @@ function mdToHtml(source) {
 }
 
 // ============================================================
-// 11. FIL DE COMMENTAIRES
+// 11. VALIDATION DE L'ANALYSE (demande #59)
+// ------------------------------------------------------------
+// Une demande estimée L au moment du tri passe par une analyse, qu'au moins un
+// admin doit relire avant que le dev commence. UNE validation suffit : c'est le
+// trigger `trg_demande_validation` qui fait basculer la demande en « Prêt à dev »,
+// en base et pas ici — une règle de cohérence ne doit pas dépendre du chemin
+// emprunté (même raisonnement qu'en #44).
+//
+// Retirer sa validation ne fait PAS revenir en arrière : le compteur baisse,
+// l'état reste. Une demande qui retomberait toute seule en analyse parce que
+// quelqu'un a décoché serait plus déroutante qu'utile.
+// ============================================================
+function renderValidation() {
+    var bloc = document.getElementById('fd-validation-bloc');
+    if (!bloc) return;
+
+    var aRelire = attendValidationSpec(laDemande.etat);
+
+    // Rien à montrer : ni relecture attendue, ni validation passée à afficher.
+    if (!aRelire && lesValidations.length === 0) {
+        bloc.style.display = 'none';
+        return;
+    }
+    bloc.style.display = '';
+
+    var aide = document.getElementById('fd-validation-aide');
+    if (validationsIndisponibles) {
+        aide.innerHTML = '<span class="fiche-erreur"><i class="fa-solid fa-triangle-exclamation"></i> '
+            + 'Migration <code>scripts/migration-demande-59-flux-analyse-validation.sql</code> '
+            + 'non jouée : la validation n\'est pas encore disponible.</span>';
+        document.getElementById('fd-validation-liste').innerHTML = '';
+        document.getElementById('fd-validation-actions').innerHTML = '';
+        return;
+    }
+
+    aide.textContent = aRelire
+        ? 'Une seule validation suffit : dès qu\'un admin valide, la demande passe en « Prêt à dev ».'
+        : 'Analyse déjà validée — la demande a quitté la phase de relecture.';
+
+    var liste = document.getElementById('fd-validation-liste');
+    if (lesValidations.length === 0) {
+        liste.innerHTML = '<p class="fiche-validation-vide">Personne n\'a encore relu cette analyse.</p>';
+    } else {
+        liste.innerHTML = lesValidations.map(function(v) {
+            return '<div class="fiche-validation-ligne"><i class="fa-solid fa-circle-check"></i> '
+                 + '<strong>' + escapeHtml(nomAffiche(v.admin_email)) + '</strong> a validé '
+                 + '<span class="fiche-validation-date">le ' + escapeHtml(formatDateHeureFr(v.created_at)) + '</span>'
+                 + '</div>';
+        }).join('');
+    }
+
+    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
+    var maValidation = null;
+    for (var i = 0; i < lesValidations.length; i++) {
+        if ((lesValidations[i].admin_email || '').trim().toLowerCase() === moi) {
+            maValidation = lesValidations[i];
+        }
+    }
+
+    var actions = document.getElementById('fd-validation-actions');
+    if (maValidation) {
+        actions.innerHTML = '<button type="button" class="user-modal-btn" onclick="retirerValidation('
+            + maValidation.id + ')"><i class="fa-solid fa-rotate-left"></i> Retirer ma validation</button>';
+    } else {
+        actions.innerHTML = '<button type="button" class="user-modal-btn user-modal-btn-primary" '
+            + 'onclick="validerSpec()"><i class="fa-solid fa-circle-check"></i> '
+            + 'J\'ai lu et je valide l\'analyse</button>';
+    }
+}
+
+function validerSpec() {
+    var email = (window.getActiveEmail() || '').trim();
+    if (!email) {
+        showToast('Session expirée : reconnectez-vous', 'error');
+        return;
+    }
+    supabaseFetch('/rest/v1/demande_validations', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ demande_id: laDemande.id, admin_email: email })
+    })
+        .then(function(rows) {
+            if (rows && rows.length) lesValidations.push(rows[0]);
+            // L'état a changé EN BASE (trigger) : on relit plutôt que de le
+            // deviner, sinon la fiche afficherait encore « Analyse à valider ».
+            return supabaseFetch('/rest/v1/demandes?id=eq.' + laDemande.id + '&select=*');
+        })
+        .then(function(rows) {
+            if (rows && rows.length) laDemande = rows[0];
+            renderFiche();
+            renderValidation();
+            showToast('Analyse validée — la demande passe en « ' + getEtatDef(laDemande.etat).label + ' »', 'success');
+        })
+        .catch(function(error) {
+            showToast('Erreur validation : ' + error.message, 'error');
+        });
+}
+
+function retirerValidation(id) {
+    supabaseFetch('/rest/v1/demande_validations?id=eq.' + id, { method: 'DELETE' })
+        .then(function() {
+            lesValidations = lesValidations.filter(function(v) { return v.id !== id; });
+            renderValidation();
+            showToast('Validation retirée — l\'état de la demande, lui, ne change pas', 'info');
+        })
+        .catch(function(error) {
+            showToast('Erreur : ' + error.message, 'error');
+        });
+}
+
+// ============================================================
+// 12. FIL DE COMMENTAIRES
 // ============================================================
 function remplirSelectSection(titres) {
     var sel = document.getElementById('fd-com-section');

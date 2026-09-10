@@ -173,6 +173,73 @@ function getTextColorForBg(hex) {
 }
 
 // ============================================================
+// 1c-bis. DEMANDES — ÉTATS, PRIORITÉS ET PUBLICS (source unique, demande #59)
+// ------------------------------------------------------------
+// Étaient dupliqués dans admin-demandes.js ET demande.js. #59 ajoutant deux
+// états, maintenir deux copies coûtait plus cher que centraliser.
+//
+// LE FLUX. Une demande S ou M va de « Nouvelle » à « Prêt à dev » puis au dev.
+// Une demande estimée L AU MOMENT DU TRI passe d'abord par une phase d'analyse :
+//
+//   Nouvelle → À cadrer → Prêt à analyser → Analyse à valider → Prêt à dev
+//            → En cours (dev) → À tester → Terminée
+//
+// ⚠ « En cours » a CHANGÉ DE SENS en #59 : il désignait la phase d'analyse d'une
+// demande L, il désigne maintenant le DÉVELOPPEMENT. L'analyse a ses deux états
+// propres. Les demandes qui étaient en `en_cours` au moment de la migration
+// (leur analyse écrite, pas encore relue) sont passées en `analyse_a_valider`.
+//
+// Une ré-estimation de complexité n'éjecte pas du flux : c'est le L du tri qui
+// engage l'analyse. Cas vécu : #1 et #22, repassées à M après leur cadrage.
+var ETATS = [
+    { value: 'nouvelle',          label: 'Nouvelle',          color: '#1976D2' },
+    { value: 'a_cadrer',          label: 'À cadrer',          color: '#EF6C00' },
+    // Indigo et ambre : les deux plus grands écarts de teinte libres dans la
+    // palette existante, pour que les neuf pastilles restent distinguables.
+    { value: 'a_analyser',        label: 'Prêt à analyser',   color: '#3949AB' },
+    { value: 'analyse_a_valider', label: 'Analyse à valider', color: '#F9A825' },
+    { value: 'validee',           label: 'Prêt à dev',        color: '#6A1B9A' },
+    { value: 'en_cours',          label: 'En cours (dev)',    color: '#00838F' },
+    { value: 'a_tester',          label: 'À tester',          color: '#C2185B' },
+    { value: 'terminee',          label: 'Terminée',          color: '#2E7D32' },
+    { value: 'abandonnee',        label: 'Abandonnée',        color: '#757575' }
+];
+
+// États considérés comme « actifs » (filtre par défaut de la liste).
+var ETATS_ACTIFS = ['nouvelle', 'a_cadrer', 'a_analyser', 'analyse_a_valider',
+                    'validee', 'en_cours', 'a_tester'];
+
+var PRIORITE_LABELS = { haute: 'Haute', normale: 'Normale', basse: 'Basse' };
+var PRIORITE_ORDER = { haute: 0, normale: 1, basse: 2 };
+var QUI_VALUES = ['membres', 'collecteurs', 'admins'];
+var QUI_LABELS = { membres: 'Membres', collecteurs: 'Collecteurs', admins: 'Admins' };
+
+// qui = liste séparée par des virgules (ancienne valeur 'tous' = les trois)
+function parseQui(qui) {
+    if (!qui || qui === 'tous') return QUI_VALUES.slice();
+    return qui.split(',').filter(function(v) { return QUI_VALUES.indexOf(v) !== -1; });
+}
+
+function quiLabel(qui) {
+    var values = parseQui(qui);
+    if (values.length === QUI_VALUES.length) return 'Tous';
+    return values.map(function(v) { return QUI_LABELS[v]; }).join(' + ');
+}
+
+function getEtatDef(value) {
+    for (var i = 0; i < ETATS.length; i++) {
+        if (ETATS[i].value === value) return ETATS[i];
+    }
+    return { value: value, label: value, color: '#757575' };
+}
+
+// Une analyse qui attend d'être relue par un admin. C'est le seul état où une
+// validation a un sens — et celui qui doit sauter aux yeux dans la liste.
+function attendValidationSpec(etat) {
+    return etat === 'analyse_a_valider';
+}
+
+// ============================================================
 // 1d. PÉRIMÈTRE DE VERSIONS D'UNE COLLECTE — SOURCE UNIQUE (demande #46)
 // ============================================================
 // Depuis #16, ce qu'une collecte vend (version normale, variante, ou les deux)
