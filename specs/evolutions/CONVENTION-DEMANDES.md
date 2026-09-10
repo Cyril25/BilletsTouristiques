@@ -77,8 +77,13 @@ Nouvelle → À cadrer → Prêt à analyser → Analyse à valider → Prêt à
    phrase à interpréter : on sait qui a relu, et quand.
 
 **Ce qui déclenche ce parcours, c'est le L au moment du tri.** Une ré-estimation ultérieure n'en
-éjecte pas la demande : #1 et #22 sont repassées à **M** après leur cadrage et suivent malgré tout
-le flux, leur analyse existant déjà.
+éjecte pas la demande dont l'analyse existe déjà.
+
+⚠ **Et ne pas ré-estimer une demande de fond à M par optimisme.** L'état la protège jusqu'à la
+validation ; **après**, elle passe en `validee` et c'est la **complexité seule** qui l'empêche
+d'être ramassée par un « traite 2 demandes ». Le piège est réel : #1 et #22 avaient été ré-estimées
+M à la sortie de leur cadrage — la ré-estimation mesurait ce que le cadrage avait *enlevé*, pas ce
+qui restait — et ont été **remises à L le 2026-09-10**.
 
 **Retirer sa validation ne fait pas revenir en arrière** : le compteur baisse, l'état reste. Une
 demande qui retomberait toute seule en analyse parce que quelqu'un a décoché serait plus

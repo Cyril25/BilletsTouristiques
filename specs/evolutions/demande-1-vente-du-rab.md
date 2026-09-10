@@ -1,6 +1,7 @@
 # Demande #1 — Vente du rab et des numéros spéciaux par le collecteur
 
-- **Épic :** corrections et évolutions (complexité **L → M** après cadrage)
+- **Épic :** chantier structurant (complexité **L**)
+  ⚠ Ré-estimée **M** au cadrage du 09/09, **remise à L le 10/09** : cette ré-estimation mesurait ce que le cadrage avait *enlevé*, pas ce qui restait — une migration, quatre points durs, deux écrans, un état d'acceptation neuf, et de l'argent en jeu.
 - **Demande :** #1 de la table `demandes` de production — import Google Sheet, 2026-07-16,
   priorité **basse**.
 - **Concerne :** collecteurs (6 actifs, 14 au maximum), et les membres qui leur achètent.

@@ -1,6 +1,7 @@
 # Demande #22 — Doubles et recherches : le tableau d'affichage
 
-- **Épic :** corrections et évolutions (complexité **L → M** après cadrage)
+- **Épic :** chantier structurant (complexité **L**)
+  ⚠ Ré-estimée **M** au cadrage du 09/09, **remise à L le 10/09** : le tableau d'affichage reste une table neuve, un écran membre entier et un moteur de rapprochement.
 - **Demande :** #22 de la table `demandes` de production — Cyril, 2026-07-16, priorité *normale*.
 - **Concerne :** tous les membres (109 whitelistés, **52 actifs** sur 30 jours).
 - **Statut :** **analyse à valider par Cyril.** Aucun développement commencé.
@@ -26,7 +27,13 @@
 membre ↔ membre, un casier membre ↔ membre et un mécanisme de litige — trois choses qui n'existent
 nulle part dans l'application, dont le modèle de paiement repose entièrement sur une relation
 asymétrique *le membre déclare, le collecteur valide*. En retirant la transaction et le troc, il
-ne reste que de la **publication et de la mise en relation** : **M**.
+ne reste que de la **publication et de la mise en relation**.
+
+⚠ **Ce qui l'allège beaucoup ne la fait pas descendre à M pour autant.** C'était la conclusion du
+cadrage, corrigée le 10/09 : ce qui reste — une table neuve, un écran membre entier, un moteur de
+rapprochement — est un chantier, pas un point qu'on attrape au fil d'une série de petites demandes.
+Et la complexité n'est pas qu'une estimation de taille : **c'est elle qui, une fois la demande
+passée en « Prêt à dev », l'empêche d'être ramassée par un « traite 2 demandes »**.
 
 ## Pourquoi ce périmètre livre l'essentiel
 

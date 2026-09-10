@@ -198,7 +198,9 @@ Ce que ça change par rapport à la bourse complète :
   démarrer, et le registre viendra l'alimenter plus tard s'il s'ouvre un jour ;
 - pas de solde membre ↔ membre, pas de casier, pas d'arbitrage, pas de responsabilité nouvelle
   pour le groupe ;
-- complexité **M**, pas L.
+- un chantier nettement plus court — même s'il reste un **L** : la conclusion « complexité M »
+  écrite ici le 09/09 a été corrigée le 10/09, elle mesurait ce que ce périmètre *enlevait*
+  plutôt que ce qu'il *laissait*.
 
 À noter, la porte est déjà entrebâillée dans le schéma : `contacts_collecteur.visibilite` existe
 avec un `CHECK (visibilite IN ('prive'))` — une colonne posée pour un jour accepter autre chose
@@ -254,11 +256,11 @@ Les 7 questions ont été tranchées avec Cyril. Q2 tombe d'elle-même avec la r
 
 ### Ce que ces décisions changent
 
-**#22 passe de L à M.** Elle était L parce qu'elle supposait un solde membre ↔ membre, un casier
+**#22 s'allège nettement — mais reste un L.** Elle était L parce qu'elle supposait un solde membre ↔ membre, un casier
 membre ↔ membre et un mécanisme de litige — trois choses absentes du système. Q1 et Q7 les
 retirent toutes les trois : il ne reste que de la publication et de la mise en relation.
 
-**#1 reste M, et son unique réserve de calendrier est levée.** Le cadrage notait que le modèle C
+**#1 s'allège aussi, et son unique réserve de calendrier est levée.** Le cadrage notait que le modèle C
 dépendait de `dettes`, alors absente de la production. **Vérifié le 2026-09-09 : la table est en
 production depuis le 07/09** (elle répond, et elle est vide). #1 est développable.
 

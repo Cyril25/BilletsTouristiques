@@ -46,9 +46,15 @@ Nouvelle → À cadrer → Prêt à analyser → Analyse à valider → Prêt à
 
 ### Ce qui déclenche le parcours
 
-**Le L au moment du tri**, pas la complexité courante. Une ré-estimation ultérieure n'éjecte pas
-la demande du flux — cas vécu avec **#1 et #22**, repassées à **M** après leur cadrage alors que
-leur analyse existe et attend toujours une relecture.
+**Le L au moment du tri**, pas la complexité courante : une ré-estimation en cours de route
+n'éjecte pas une demande dont l'analyse existe déjà.
+
+⚠ **Mais la complexité garde un rôle, et c'est le second garde-fou.** L'état protège la demande
+*jusqu'à* la validation ; après, elle devient `validee` et c'est la **complexité seule** qui
+l'empêche d'être ramassée par un « traite 2 demandes ». Une demande de fond ré-estimée M se
+retrouverait donc en dev au fil de l'eau, ce que la règle des L existe pour empêcher.
+C'est exactement ce qui a failli arriver à **#1 et #22** : ré-estimées M au cadrage, **remises à
+L le 2026-09-10** sur remarque de Cyril.
 
 ### Pourquoi le pilote de l'analyse peut valider sa propre spec
 
