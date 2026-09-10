@@ -102,6 +102,8 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#59 (prod)](demande-59-flux-analyse-et-validation-spec.md) | Flux d'analyse des demandes L et validation de spec par un admin | M | À tester (migration jouée le 2026-09-10) | ✅ | `def28c1` |
 | [#60 (prod)](demande-60-spec-en-clair-et-technique.md) | Une spec en deux registres : « en clair » et « technique » | M | À tester | ✅ | — |
 | [#61 (prod)](demande-61-journal-replie-en-bas.md) | Le journal de traitement descend et se replie | S | À tester | ✅ | — |
+| [#62 (prod)](demande-62-migration-email-membre.md) | Migrer un membre vers une nouvelle adresse email | L | Analyse à valider | ✅ | — |
+| #64 (prod) | Garde-fou « JWT nul » manquant sur le trigger des enveloppes — **prérequis de #62** | S | Prêt à dev | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
