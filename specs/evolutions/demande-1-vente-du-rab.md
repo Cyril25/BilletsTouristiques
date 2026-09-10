@@ -5,10 +5,9 @@
 - **Demande :** #1 de la table `demandes` de production — import Google Sheet, 2026-07-16,
   priorité **basse**.
 - **Concerne :** collecteurs (6 actifs, 14 au maximum), et les membres qui leur achètent.
-- **Statut :** ⚠ **ANALYSE ROUVERTE le 2026-09-10.** Commentaire de Cyril : « reprendre les
-  commentaires que j'ai faits sur la spec #22 ». La conséquence pour #1 est réelle et tient en
-  un point — voir « Ce que la réouverture de #22 change ici ». Demande repassée en
-  **Prêt à analyser**. Aucun développement commencé.
+- **Statut :** **analyse reprise et complétée le 2026-09-10.** La réouverture de #22 a une
+  conséquence unique mais structurante sur #1 : elle **dépend maintenant du lot 1 de #22**.
+  Voir « Ce que la reprise de #22 change ici ». Aucun développement commencé.
 - **Origine :** issue du cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, dont les
   7 questions ont été tranchées le **2026-09-09**. Ce document est la spec de dev qui en découle ;
   #22 a désormais la sienne, les deux demandes ne partagent plus de modèle.
@@ -170,30 +169,47 @@ Cyril dans l'éditeur SQL Supabase, et son contenu reproduit dans cette spec au 
 10. Le numéro de série s'affiche chez le membre comme le demandait le commentaire de la fiche, et
     reste facultatif — vendre « 2 billets du rab » sans numéro doit marcher.
 
-## ⚠ Ce que la réouverture de #22 change ici (2026-09-10)
+## Ce que la reprise de #22 change ici (2026-09-10)
 
-#22 n'est plus un simple tableau d'affichage : elle doit porter des **dettes de membre à membre**,
-leur **validation par le créancier** et un **historique des transactions**. Le cadrage commun avait
-séparé #1 et #22 sur un argument central — *« #1 a de l'argent, #22 n'en a pas »* — **qui est mort**.
+#22 n'est plus un tableau d'affichage : elle porte des **transactions entre membres** — ventes et
+échanges — avec **dette, confirmation par le créancier et historique**. Le cadrage commun avait
+séparé #1 et #22 sur un argument central, *« #1 a de l'argent, #22 n'en a pas »*, **qui est mort**.
 
-Conséquence concrète pour cette spec : le **modèle C** repose sur la table `dettes`, ancrée sur
-`collecteur_alias NOT NULL` et `collecte_id NOT NULL`. Si #22 amène une dette entre deux membres,
-la même table devra soit **se généraliser** (créancier quelconque), soit **coexister** avec une
-seconde table. Développer #1 d'abord sans avoir tranché, c'est risquer de poser une deuxième fois
-la même primitive — ou de devoir migrer une table qui porte déjà les écarts de prix de #44.
+### La conséquence : #1 dépend du lot 1 de #22
 
-**Ce qui ne change pas** : les décisions Q3 (numéro de série optionnel), Q4 (le prix vit dans une
-ligne de dette et non sur l'inscription) et Q5 (confirmation préalable du membre) restent valables,
-de même que les quatre points durs et le mécanisme d'inscription à quantités nulles. C'est
-**l'ordre des travaux** qui est en question, pas le contenu.
+Le **modèle C** de #1 repose sur `dettes`, aujourd'hui ancrée sur `collecteur_alias NOT NULL` et
+`collecte_id NOT NULL`. Le lot 1 de #22 **généralise précisément cette table** (créancier qui n'est
+pas un collecteur, colonnes rendues nullables, RLS élargie).
 
-**À trancher avec #22, pas séparément** : généraliser `dettes` ou non. Voir la section
-« Analyse rouverte » de la spec #22.
+Développer #1 avant, c'est poser la même primitive deux fois — puis migrer une table qui portera
+alors des lignes réelles. **`dettes` est vide aujourd'hui** (mesuré le 10/09) : c'est le moment le
+moins cher pour la généraliser, et il ne se représentera pas.
+
+**Ordre retenu, qui remplace celui du cadrage** (« développer #1 d'abord ») :
+
+```
+lot 1 de #22 (fondation : dettes généralisée + transactions)  →  #1  →  lot 2 de #22 (annonces)
+```
+
+#1 reste **la petite** des deux : une fois la fondation posée, il ne lui reste que ses quatre
+points durs et ses deux écrans.
+
+### Ce qui ne change pas
+
+Les décisions **Q3** (numéro de série optionnel), **Q4** (le prix vit dans une ligne de dette et
+non sur l'inscription) et **Q5** (confirmation préalable du membre) **restent valables**. Les
+quatre points durs identifiés dans la migration #44 et le mécanisme d'inscription à quantités
+nulles également. **C'est l'ordre des travaux qui a changé, pas le contenu de la spec.**
+
+Un détail gagne même en cohérence : la Q5 de #1 (le membre accepte avant que la vente compte) et la
+règle de #22 (celui qui reçoit confirme) sont **le même principe** — rien n'apparaît dans le solde
+de quelqu'un sans un geste de sa part.
 
 ## Ce que cette spec ne fait pas
 
-- **Pas de vente entre deux membres** — c'est #22. ⚠ Mais #22 **n'est plus** « sans argent » :
-  la frontière entre les deux demandes est à re-tracer (voir ci-dessus).
+- **Pas de vente entre deux membres** — c'est #22. La frontière est désormais nette : #22
+  fournit la **fondation** (dettes généralisée, transactions), #1 s'en sert pour le cas
+  collecteur → membre, qui a en plus l'enveloppe et l'inscription.
 - **Pas de catalogue du rab** : le collecteur sait ce qui lui reste, l'appli ne l'inventorie pas.
   La vente se négocie toujours sur Facebook, l'appli enregistre ce qui a été convenu.
 - **Pas de reprise** des ventes passées.

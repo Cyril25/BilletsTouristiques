@@ -39,8 +39,8 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#5](demande-5-signalement-erreur-billet.md) | Signaler une erreur sur un billet + boîte aux lettres admin | L → M | À tester | ✅ | — |
 | [#16](demande-16-refonte-collectes.md) | Refonte collectes : découplage billet ↔ collecte (epic 13 v2) | L | **Terminée** (prod 2026-09-06) | ✅ | merge `prepa-bascule-prod-16` (69 commits) |
 | [#44 (prod)](demande-44-solde-membre-collecteur.md) | Solde membre ↔ collecteur après un changement de prix | L | **En cours** — analyse, 3 questions ouvertes | ✅ | — |
-| [#22](demande-22-tableau-doubles-recherches.md) | Doubles et recherches : le tableau d'affichage | L | **Prêt à analyser** — analyse ROUVERTE le 10/09 sur remarque de Cyril ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
-| [#1](demande-1-vente-du-rab.md) | Vente du rab / numéros spéciaux (collecteur) | L | **Prêt à analyser** — analyse ROUVERTE le 10/09 sur remarque de Cyril ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
+| [#22](demande-22-tableau-doubles-recherches.md) | Doubles, ventes et echanges entre membres (3 lots) | L | **Analyse à valider** — reprise le 10/09 ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
+| [#1](demande-1-vente-du-rab.md) | Vente du rab / numéros spéciaux (collecteur) | L | **Analyse à valider** — reprise le 10/09 ([cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md)) | ✅ | — |
 | [#2](demande-2-drapeau-filtre-pays-membres.md) | Drapeau + filtre/compteur par pays (Gestion Membres) | M | À tester | ✅ | `7592acc` |
 | [#3](demande-3-bouton-facebook-carte-billet.md) | Bouton Facebook sur la carte billet (admin) | S | À tester | ✅ | `7592acc` |
 | [#4](demande-4-somme-due-menu.md) | Somme due dans la barre de menu (membre) | M | À tester | ✅ | `7592acc` |

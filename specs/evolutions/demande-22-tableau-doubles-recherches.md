@@ -1,246 +1,274 @@
-# Demande #22 — Doubles et recherches : le tableau d'affichage
+# Demande #22 — Doubles, ventes et échanges entre membres
 
 - **Épic :** chantier structurant (complexité **L**)
-  ⚠ Ré-estimée **M** au cadrage du 09/09, **remise à L le 10/09** : le tableau d'affichage reste une table neuve, un écran membre entier et un moteur de rapprochement.
 - **Demande :** #22 de la table `demandes` de production — Cyril, 2026-07-16, priorité *normale*.
-- **Concerne :** tous les membres (109 whitelistés, **52 actifs** sur 30 jours).
-- **Statut :** ⚠ **ANALYSE ROUVERTE le 2026-09-10**, sur commentaire de Cyril : le périmètre
-  décrit ci-dessous est **faux sur un point central**. Voir la section « Analyse rouverte ».
-  Demande repassée en **Prêt à analyser**. Aucun développement commencé.
-- **Origine :** cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, 7 questions
-  tranchées le **2026-09-09**. #1 a désormais sa propre spec : les deux demandes ne partagent
-  plus de modèle, et **#22 ne touche pas à l'argent**.
-
-## ⚠ Analyse ROUVERTE le 2026-09-10 — ma question Q1 était mal posée
-
-Commentaire de Cyril sur cette spec, section « Ce que cette spec ne fait pas » :
-
-> Je pense qu'on s'est mal compris, et il est nécessaire de reprendre l'analyse afin de creuser le
-> sujet. On ne veut en effet pas une « usine à gaz », mais la partie [« pas de vente entre membres,
-> pas d'historique de transactions »] est totalement fausse. Nous souhaitons permettre un
-> **historique des transactions**, que ce soit pour un **échange** ou pour une **vente**, mais
-> également la possibilité d'une **dette de membre à membre**, qu'un membre puisse **valider le
-> fait qu'un autre membre lui a payé** la somme qu'il lui doit. C'est donc bien quelque chose de
-> lourd, il faut adapter et analyser tout cela avant de se lancer.
-
-**L'erreur est dans ma question, pas dans sa réponse.** Q1 opposait « place de marché » et
-« tableau d'affichage » — un binaire qui empaquetait deux choses sans rapport :
-
-| Ce que le binaire mélangeait | Voulu ? |
-|---|---|
-| **Tenir le compte** de ce qui est dû entre deux membres, et permettre au créancier d'accuser réception | **OUI** |
-| Garder un **historique** des ventes et des échanges | **OUI** |
-| **Encaisser** le paiement (PayPal, etc.) | non |
-| **Suivre l'expédition** entre deux membres | *à trancher* |
-| **Arbitrer** un litige | non |
-
-Répondre « tableau d'affichage » à cette question voulait dire « pas d'usine à gaz » ; je l'ai lu
-« pas d'argent du tout ». **Une question binaire sur un sujet qui ne l'est pas produit une réponse
-juste et une conclusion fausse.** À retenir pour les prochains cadrages : proposer les briques une
-par une plutôt qu'un forfait.
-
-### Ce qui rentre dans le périmètre
-
-1. **Une dette de membre à membre**, née d'une vente ou d'un échange.
-2. **La validation du règlement par le créancier** — celui à qui l'argent est dû confirme l'avoir reçu.
-3. **Un historique des transactions**, ventes **et** échanges.
-
-Le **troc revient donc dans le périmètre** : la réponse Q7 (« vendre suffit ») tombe avec le reste.
-
-### La bonne nouvelle : le mécanisme existe déjà, et il n'a pas besoin d'arbitre
-
-Le cadrage du 09/09 écartait la place de marché sur un argument qui se révèle faux :
-*« tout le modèle de paiement repose sur une relation asymétrique — le membre déclare, le
-collecteur valide. Entre deux pairs, il n'y a personne pour valider. »*
-
-**Il y a quelqu'un : le créancier.** Le motif se transpose exactement — *le débiteur déclare, le
-créancier valide* — et c'est mot pour mot ce que demande Cyril. Le rôle vérifié de collecteur
-n'était pas nécessaire à la mécanique : il se trouvait simplement être toujours le créancier.
-
-Et **aucun arbitrage n'est requis** : si le créancier ne confirme pas, la dette **reste ouverte**.
-L'application *enregistre*, elle ne *juge pas*. C'est ce qui permet de tenir le compte sans que les
-6 admins deviennent arbitres — la crainte qui avait fait écarter l'option.
-
-### Ce qui bloque techniquement, et qui est le vrai travail
-
-`dettes` (#44) porte la primitive « un montant dû entre deux parties, réglé par déclaration puis
-validation ». Mais elle est **ancrée sur le collecteur** :
-
-- `collecteur_alias TEXT NOT NULL` — un membre lambda n'a pas d'alias ;
-- `collecte_id UUID NOT NULL REFERENCES collectes(id)` — une vente entre membres ne dépend d'aucune collecte ;
-- la policy `dettes_select` résout le créancier par `SELECT alias FROM collecteurs WHERE email_membre = …`.
-
-Deux voies, à trancher :
-
-| | Voie | Ce que ça coûte | Ce que ça risque |
-|---|---|---|---|
-| **A** | **Généraliser `dettes`** : `creancier_email`, `collecteur_alias` et `collecte_id` rendus nullables, RLS élargie | Une seule table pour tout l'argent de l'appli, un seul parcours déclarer/valider, un seul écran de solde | Toucher à une table **déjà en production** et qui porte les écarts de prix de #44 ; chaque requête existante doit être relue |
-| **B** | **Une table `transactions` à part** pour le membre ↔ membre | `dettes` n'est pas touchée, aucun risque de régression sur #44 | Deux mécanismes d'argent parallèles à maintenir, deux écrans de solde, et la question « où est mon total ? » pour le membre |
-
-**Aucune recommandation ferme à ce stade** : le choix dépend de ce qu'on décide pour l'expédition
-et pour l'historique, ci-dessous. C'est précisément ce que « creuser le sujet » veut dire.
-
-### Les questions rouvertes
-
-| | Question | Pourquoi elle bloque |
-|---|---|---|
-| **R1** | **Le troc : comment se trace-t-il ?** Un échange n'a pas de montant. Deux remises à confirmer de part et d'autre, chacun accusant réception de ce qu'il a reçu ? | Détermine si l'objet central est « une dette » ou « une transaction » dont la dette n'est qu'un cas. Change le modèle. |
-| **R2** | **L'appli suit-elle l'expédition entre membres ?** Aujourd'hui l'envoi passe par `enveloppes`, ancrées sur `collecteurs.alias`. | Si oui, c'est un second chantier de même ampleur que la dette. Si non, l'historique dit « vendu », pas « reçu ». |
-| **R3** | **Qui crée la dette : le vendeur l'inscrit, ou l'acheteur la reconnaît ?** | Précédent posé par #1 (Q5) : aucun montant n'apparaît chez un membre sans qu'il l'ait accepté. La même règle doit-elle valoir ici ? |
-| **R4** | **Une dette qui traîne : l'appli relance, ou reste passive ?** | Une relance automatique entre deux membres est un message que le groupe envoie en leur nom. |
-| **R5** | **L'historique est-il visible des seuls intéressés, ou de tous ?** | `inscriptions_read_whitelisted` laisse déjà tout membre lire toutes les inscriptions ; refaire ça sur de l'argent entre pairs serait plus gênant. |
-| **R6** | **La réputation** (« ce membre honore ses engagements ») **est-elle souhaitée ?** | Écartée le 09/09 comme corollaire d'un choix qui vient de tomber — donc à reposer, pas à supposer. |
-
-### Conséquence sur #1
-
-Le cadrage du 09/09 concluait que **#1 et #22 ne sont pas deux tranches du même chantier**, sur
-l'argument central que *« #1 a de l'argent, #22 n'en a pas »*. **Cet argument est mort.** Les deux
-demandes ont désormais besoin d'une même primitive : *un montant dû entre deux personnes, réglé par
-déclaration puis validation*. La séparation reste peut-être la bonne décision — mais elle doit être
-**re-justifiée**, pas héritée. C'est la voie A/B ci-dessus qui la tranchera.
+- **Concerne :** tous les membres (**110** whitelistés, dont 6 admins et 1 superadmin).
+- **Statut :** **analyse reprise le 2026-09-10**, après la remarque de Cyril qui a invalidé le
+  périmètre du 09/09. Quatre décisions prises ce jour-là. **Aucun développement commencé.**
+- **Historique de ce document :** une première version du 09/09 concluait à un « tableau
+  d'affichage sans argent ». **C'était faux** — voir « Pourquoi la première analyse s'est trompée ».
+  Le [cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md) garde la trace du raisonnement
+  d'origine, avec son avertissement.
 
 ## Contexte (demande)
 
 > Gestion des doubles avec possibilité de vendre et échanger. Attention car ça doit fonctionner
 > autant pour un collecteur (reliquat de collecte), qu'un membre qui a des billets en double.
 
-## Les décisions du cadrage qui commandent cette spec
+Et la précision de Cyril du 2026-09-10, qui a rouvert l'analyse :
 
-| | Décision du 2026-09-09 |
+> Nous souhaitons permettre un **historique des transactions**, que ce soit pour un **échange** ou
+> pour une **vente**, mais également la possibilité d'une **dette de membre à membre**, qu'un
+> membre puisse **valider le fait qu'un autre membre lui a payé** la somme qu'il lui doit.
+
+## Pourquoi la première analyse s'est trompée
+
+La question Q1 du cadrage opposait « place de marché » et « tableau d'affichage ». **Ce binaire
+empaquetait deux choses sans rapport :**
+
+| Ce que la question mélangeait | Voulu |
 |---|---|
-| **Q1** | **Tableau d'affichage, pas place de marché.** L'application publie « j'ai en double » et « je recherche ». Elle **ne gère ni l'argent, ni l'envoi, ni le litige** entre deux membres : la transaction se fait de gré à gré, comme aujourd'hui. |
-| **Q2** | Sans objet — sans transaction, pas d'arbitrage à inventer, et les 6 admins bénévoles ne deviennent pas arbitres. |
-| **Q6** | **Deux lots.** Ouvrir « Ma collection » aux membres est un lot **séparé** ; #22 démarre en saisie manuelle et ne l'attend pas. |
-| **Q7** | **Le troc sort du périmètre.** Un échange n'a pas de montant, il est bilatéral et simultané — mécanisme entièrement neuf, sans réemploi. « Vendre » est ce qui compte. |
+| Tenir le compte de ce qui est dû entre deux membres, et permettre au créancier d'accuser réception | **oui** |
+| Garder un historique des ventes **et** des échanges | **oui** |
+| Encaisser le paiement (PayPal…) | non |
+| Arbitrer un litige | non |
 
-**Ce que ces décisions font gagner.** #22 était estimée **L** parce qu'elle supposait un solde
-membre ↔ membre, un casier membre ↔ membre et un mécanisme de litige — trois choses qui n'existent
-nulle part dans l'application, dont le modèle de paiement repose entièrement sur une relation
-asymétrique *le membre déclare, le collecteur valide*. En retirant la transaction et le troc, il
-ne reste que de la **publication et de la mise en relation**.
+Répondre « tableau d'affichage » voulait dire « pas d'usine à gaz » ; l'analyse l'a lu « pas
+d'argent du tout ». **Une question binaire sur un sujet qui ne l'est pas produit une réponse juste
+et une conclusion fausse** — et l'erreur est invisible, puisque la réponse a bien été donnée.
 
-⚠ **Ce qui l'allège beaucoup ne la fait pas descendre à M pour autant.** C'était la conclusion du
-cadrage, corrigée le 10/09 : ce qui reste — une table neuve, un écran membre entier, un moteur de
-rapprochement — est un chantier, pas un point qu'on attrape au fil d'une série de petites demandes.
-Et la complexité n'est pas qu'une estimation de taille : **c'est elle qui, une fois la demande
-passée en « Prêt à dev », l'empêche d'être ramassée par un « traite 2 demandes »**.
+À retenir pour les cadrages suivants : **proposer les briques une par une, jamais un forfait.**
 
-## Pourquoi ce périmètre livre l'essentiel
+## L'état du terrain, remesuré le 2026-09-10
 
-Le cadrage avait mesuré que **l'application n'a aucun avantage sur Facebook pour la mise en
-relation** : le groupe est plus grand que les 109 membres whitelistés. Son avantage est ailleurs —
-elle connaît le catalogue des 5 507 billets et sait qui possède quoi.
+| Mesure | Valeur | Ce que ça implique |
+|---|---|---|
+| Lignes dans `dettes` | **0** | La table de #44 est **vide** : la généraliser coûte un `ALTER`, pas une migration de données |
+| Requêtes sur `dettes` dans le front | **7** (global.js ×1, mes-collectes.js ×4, mes-inscriptions.js ×2) | Le coût de la généralisation est mesuré, pas supposé |
+| `collection` | 877 lignes, **17 membres** | dont **776 `pas_interesse`** posés par le moteur de #16 |
+| … dont `nb_doubles > 0` | **0** | Inchangé depuis mars : le registre des doubles **n'existe toujours pas** |
+| … dont possession réelle | **97**, toutes du compte de Cyril | |
+| Membres | **110** (103 + 6 admins + 1 superadmin) | |
+| `enveloppes` | 618 | La machinerie d'envoi est réelle — mais **ancrée sur `collecteurs.alias`** |
 
-D'où le seul mécanisme que Facebook ne sait pas faire, et qui est le cœur de cette spec :
+**Le fait à retenir : `dettes` est vide.** C'est maintenant, et seulement maintenant, que la
+généraliser est gratuit. Chaque changement de prix de collecte y créera des lignes.
 
-> **Le rapprochement automatique.** Quand ce que A publie en double figure dans ce que B recherche,
-> les deux le voient — sans que personne ait à parcourir un fil de discussion.
+## Le constat qui structure tout : une vente et un échange sont le même objet
 
-C'est ça, la valeur. Le reste (publier une liste, la consulter) n'est que le support.
+La première analyse traitait le troc comme un mécanisme à part, « qui ne se modélise pas ». C'est
+faux dès qu'on le regarde par le bon bout :
+
+> Une transaction a **deux côtés**. Chaque partie remet quelque chose, et **celle qui reçoit
+> confirme l'avoir reçu.**
+>
+> - **Vente** : A remet des billets, B remet de l'argent.
+> - **Échange** : A remet des billets, B remet des billets.
+> - **Don** : un seul côté est rempli.
+
+Et **une dette n'est rien d'autre que le côté « argent » pas encore confirmé.**
+
+Le troc cesse d'être un cas particulier : c'est une transaction dont aucun côté n'est de l'argent.
+Il n'y a **pas de mécanisme neuf à inventer** pour lui.
+
+### Le rôle de collecteur n'était pas nécessaire — seulement commode
+
+Le cadrage écartait la place de marché sur cet argument :
+
+> *« Tout le modèle de paiement repose sur une relation asymétrique : le membre déclare, le
+> collecteur valide. Entre deux pairs, il n'y a personne pour valider. »*
+
+**Il y a quelqu'un : le créancier.** Le motif se transpose mot pour mot — *celui qui reçoit
+confirme*. Le rôle vérifié de collecteur n'entrait pas dans la mécanique ; il se trouvait
+simplement être toujours celui qui recevait l'argent.
+
+### Et aucun arbitrage n'est nécessaire
+
+Si le destinataire ne confirme pas, **la transaction reste ouverte**, visible des deux parties.
+L'application **enregistre, elle ne juge pas**. C'est ce qui permet de tenir les comptes sans que
+les 6 admins bénévoles deviennent arbitres de fait — la crainte qui avait fait écarter l'option.
+
+## Les décisions du 2026-09-10
+
+| | Décision |
+|---|---|
+| **Confirmation** | **Chaque côté se confirme** : celui qui reçoit confirme. Une transaction est **close** quand les deux côtés le sont. C'est ce qui fait qu'un troc fonctionne exactement comme une vente. |
+| **Visibilité** | **Détail privé** aux deux parties (et aux admins), **plus un compteur public** « N transactions conclues » par membre. Réputation **factuelle**, sans note ni avis. |
+| **Découpage** | **Les transactions d'abord.** Le lot 1 est la fondation commune, qui **débloque aussi #1**. Les annonces « j'ai en double / je recherche » viennent en lot 2. |
+| **Somme du menu** | **Un seul total.** Ce que je dois à un collecteur et ce que je dois à un membre s'additionnent : une seule question « combien je dois ». |
+| **Modèle de dette** | **Voie A — généraliser `dettes`**, décidé sur mesure : table vide, 7 requêtes à relire. Deux tables d'argent en parallèle coûteraient plus cher, et le membre n'aurait plus un seul endroit où lire ce qu'il doit. |
 
 ## Le modèle de données
 
-Une table, `annonces`, et rien d'autre :
+### 1. `dettes` se généralise
+
+Aujourd'hui la table suppose partout un collecteur en face du membre :
+
+```sql
+collecteur_alias TEXT NOT NULL,
+collecte_id      UUID NOT NULL REFERENCES collectes(id)
+```
+
+Un membre lambda n'a pas d'alias, et une vente entre membres ne dépend d'aucune collecte. La
+migration :
+
+- `creancier_email TEXT NULL` — le créancier quand ce n'est pas un collecteur ;
+- `collecteur_alias` et `collecte_id` deviennent **nullables** ;
+- un `CHECK` impose **exactement un** créancier : soit `collecteur_alias`, soit `creancier_email` ;
+- `dettes_select` gagne `OR lower(creancier_email) = lower(auth.jwt() ->> 'email')`.
+
+⚠ **Pourquoi `creancier_email` plutôt que de réutiliser l'alias** : sur les **85 collecteurs
+déclarés, 14 seulement sont rattachés à un compte membre**. On ne peut donc pas remplir un e-mail
+de créancier pour les lignes de #44. Les deux colonnes cohabitent, et le `CHECK` empêche
+l'ambiguïté.
+
+**Ce que les 7 requêtes existantes deviennent** — vérifié une par une :
+
+| Requête | Filtre actuel | Après |
+|---|---|---|
+| `global.js` — somme du menu | `membre_email=eq.moi & non_paye & montant>0` | **inchangée**, et elle ramasse naturellement les dettes entre membres → la décision « un seul total » est satisfaite **sans écrire une ligne** |
+| `mes-inscriptions.js` ×2 | `membre_email=eq.moi` | **inchangées** — ce que je dois, quelle qu'en soit l'origine |
+| `mes-collectes.js` ×4 | `collecteur_alias=eq.mon_alias` | **inchangées** — l'écran collecteur ne voit que ses lignes de collecte |
+
+**Aucune des sept ne casse.** Le travail est dans l'écran neuf, pas dans l'existant.
+
+### 2. `transactions`
+
+Un seul enregistrement porte les deux côtés. **Choix assumé : pas de table de côtés séparée.**
+Tous les écrans lisent les deux côtés ensemble — une jointure systématique est une jointure qui
+coûte sans rien rapporter — et le besoin est bien de 0 ou 1 remise par côté.
 
 | Colonne | Rôle |
 |---|---|
-| `id` | clé |
-| `membre_email` | l'auteur |
-| `type` | `'double'` ou `'recherche'` — `CHECK` sur les deux valeurs |
-| `billet_id` | référence au catalogue, **nullable** |
-| `libelle_libre` | texte, pour ce qui n'est pas au catalogue (`billet_id` NULL) |
-| `version` | `normal` / `variante` / indifférent — le projet distingue les deux partout |
-| `quantite` | pour un double ; 1 par défaut |
-| `commentaire` | état du billet, contraintes, « échange contre… » — texte libre |
-| `actif` | l'annonce se retire sans se supprimer |
-| `created_at` / `updated_at` | |
+| `id`, `created_at`, `closed_at` | |
+| `type` | `'vente'` / `'echange'` / `'don'` |
+| `membre_a`, `membre_b` | les deux parties |
+| `statut` | `'proposee'` → `'acceptee'` → `'close'`, plus `'refusee'` et `'annulee'` |
+| `a_nature`, `b_nature` | `'billets'` / `'argent'` / `'rien'` |
+| `a_billet_id`, `b_billet_id` | référence au catalogue, **nullable** |
+| `a_libelle`, `b_libelle` | pour ce qui n'est pas au catalogue |
+| `a_quantite`, `b_quantite` | |
+| `a_montant`, `b_montant` | quand la nature est `'argent'` |
+| `a_remis_at`, `b_remis_at` | déclaré par **celui qui remet** |
+| `a_confirme_at`, `b_confirme_at` | confirmé par **celui qui reçoit** |
+| `dette_id` | la ligne de `dettes` créée pour le côté « argent », s'il y en a un |
+| `annonce_id` | lien vers l'annonce d'origine — **lot 2**, nullable |
 
-**Contrainte à respecter :** `billet_id` nullable **et** `libelle_libre`, parce qu'un membre peut
-avoir un double d'un billet absent du catalogue. Un `CHECK` impose qu'au moins l'un des deux soit
-renseigné.
+**La règle de clôture, en une phrase** : une transaction est `close` quand **chaque côté non vide
+est confirmé**. C'est ce qui rend le troc et la vente identiques.
 
-### RLS — sur le patron du projet, pas un nouveau
+**Le lien avec `dettes`** : quand un côté est de l'argent, une ligne de `dettes` est créée
+(`motif = 'transaction'`, créancier = celui qui reçoit). Confirmer la réception de l'argent, c'est
+passer cette dette en `confirme` — **le parcours déclarer/valider de #44, sans une règle de plus.**
 
-- **SELECT** : tout membre whitelisté lit toutes les annonces actives. C'est le principe même d'un
-  tableau d'affichage. *(À noter : c'est le même patron que `inscriptions_read_whitelisted`, avec
-  cette différence que la publication est ici volontaire et publique par nature — il n'y a rien à
-  cloisonner.)*
-- **INSERT / UPDATE / DELETE** : uniquement ses propres annonces
-  (`lower(membre_email) = lower(auth.jwt() ->> 'email')`), plus les admins.
-- ⚠ **Jamais `TO authenticated`** — le JWT Firebase arrive en rôle `anon`. Et
-  `is_admin_ou_superadmin()`, pas `is_admin()`.
+### 3. Le compteur public
 
-## Les écrans
+Pas de colonne : il se calcule (110 membres, aucun enjeu de volume). Mais les transactions étant
+privées, un membre ne peut pas compter celles d'un autre — il faut une fonction
+**`SECURITY DEFINER`**, exactement le motif retenu en **#51** pour `mes_notifications_envoyees()` :
 
-### Un écran nouveau : `annonces.html`
+```sql
+CREATE OR REPLACE FUNCTION nb_transactions_conclues(p_email TEXT)
+RETURNS INT LANGUAGE sql SECURITY DEFINER STABLE AS $$
+  SELECT count(*)::int FROM transactions
+   WHERE statut = 'close' AND (membre_a = p_email OR membre_b = p_email);
+$$;
+```
 
-Deux onglets, **« Les doubles »** et **« Les recherches »**, plus **« Mes annonces »**.
+Elle ne rend **qu'un nombre** — jamais le détail. La confidentialité tient sans dépendre du front.
 
-- Recherche et filtres réutilisant ceux du catalogue (pays, millésime, référence).
-- Chaque ligne : le billet (visuel du catalogue quand `billet_id` est renseigné), le membre, son
-  commentaire.
-- **Publier une annonce** : depuis le catalogue (« j'ai ce billet en double » sur la fiche) ou en
-  saisie libre depuis l'écran.
+### RLS
 
-### Le rapprochement
+Conventions du projet : **jamais `TO authenticated`** (le JWT Firebase arrive en rôle `anon`), et
+`is_admin_ou_superadmin()` plutôt que `is_admin()`.
 
-Un bandeau en haut de « Mes annonces » : *« 3 membres recherchent un billet que vous avez en
-double »* et *« 2 membres proposent un billet que vous recherchez »*. Calculé sur `billet_id` —
-c'est pour ça que la référence au catalogue vaut mieux que le texte libre, et l'écran doit y
-inciter à la saisie.
+- **SELECT** : `membre_a` ou `membre_b`, ou admin. *(À noter : c'est plus strict que
+  `inscriptions_read_whitelisted`, qui laisse tout membre lire toutes les inscriptions. De l'argent
+  entre pairs mérite mieux que le cloisonnement porté par le seul front.)*
+- **INSERT** : sous son propre nom, en `'proposee'`.
+- **UPDATE** : chaque partie ne peut toucher **que ses propres colonnes** — `a_*` pour A, `b_*`
+  pour B. C'est la garantie que personne ne confirme à la place de l'autre.
 
-### La prise de contact — sans exposer d'adresse e-mail
+## Le parcours, en un exemple
 
-**Ne pas afficher l'e-mail des membres.** Le bouton « Ça m'intéresse » envoie une **notification
-privée** à l'auteur de l'annonce : `cible_email` renseigné, rendue invisible aux autres membres
-(admins compris) par la policy de **#33**. Le mécanisme existe déjà, il est éprouvé, et il évite
-d'ouvrir un annuaire d'adresses là où la demande ne le réclame pas.
+Marie a un double, Jean-Philippe le cherche. Ils se sont mis d'accord à **6,00 €**.
 
-L'auteur répond ensuite comme il veut — Facebook, message privé. **L'application s'arrête là :
-c'est exactement la décision Q1.**
+1. **Marie propose** : type *vente*, elle remet `billet UEBK-2026-14`, JP remet `6,00 €`.
+2. **JP accepte** → la transaction passe `acceptee`, et une ligne de `dettes` de 6,00 € naît à sa
+   charge. Elle apparaît dans **son « vous devez »** du menu, à côté de ce qu'il doit aux collecteurs.
+3. **Marie déclare avoir envoyé** le billet. **JP confirme l'avoir reçu.**
+4. **JP déclare avoir payé.** **Marie confirme avoir reçu l'argent** → la dette passe `confirme`.
+5. Les deux côtés confirmés → la transaction est **close**, et le compteur public de chacun avance.
 
-## Le lot séparé : ouvrir « Ma collection » aux membres
+Si l'un ne confirme jamais, la transaction **reste ouverte** — visible des deux, et de personne
+d'autre. L'appli n'a rien à trancher.
 
-Décidé en Q6, **livrable indépendamment et avant** — c'est petit :
+## Le découpage
 
-- `ma-collection.html:16` porte `data-require-admin="true"` → à retirer ;
-- `menu.html:30` classe le lien en `admin-only` → à retirer ;
-- **vérifier la RLS de `collection`** avant d'ouvrir : la page n'a jamais servi qu'à des admins,
-  ses policies n'ont jamais été éprouvées par 102 membres. C'est le seul vrai travail du lot.
-- Rappel de l'état mesuré le 2026-09-07 : **873 lignes, dont 772 `pas_interesse`** posés par le
-  moteur de pré-inscription de #16, **97 possessions réelles toutes du compte de Cyril**, et
-  **`nb_doubles` = 0 partout depuis mars**.
+### Lot 1 — la fondation *(ce lot-ci)*
 
-Une fois les deux lots livrés, ils se rejoignent : « Ma collection » peut proposer *« publier mes
-doubles comme annonces »*, et `nb_doubles` prend enfin un sens. **Mais #22 ne l'attend pas** — sans
-quoi la demande dépendrait d'une adoption qu'on ne maîtrise pas, sur 5 507 billets.
+Généralisation de `dettes`, table `transactions`, écran « Mes transactions », compteur public,
+et la somme du menu qui englobe les dettes entre membres.
+
+**Il débloque #1 du même coup** : la vente du rab a besoin de la même primitive, et son modèle C
+repose sur cette table. Voir la note de dépendance dans [la spec #1](demande-1-vente-du-rab.md).
+
+### Lot 2 — les annonces
+
+« J'ai en double » / « je recherche », le **rapprochement automatique** — la seule chose que
+Facebook ne sait pas faire — et le bouton « ça m'intéresse » qui ouvre une transaction pré-remplie.
+
+> Le rapprochement reste le cœur de la valeur : l'appli n'a **aucun avantage sur Facebook pour la
+> mise en relation** (le groupe est plus grand que les 110 whitelistés), mais Facebook ne sait pas
+> dire *« ce que tu as en double, trois membres le cherchent »*.
+
+Table `annonces` (membre, `'double'`/`'recherche'`, `billet_id` **nullable** + `libelle_libre`,
+version, quantité, commentaire, `actif`). Contact par **notification privée** (`cible_email`,
+policy de #33) : **aucune adresse e-mail affichée**.
+
+### Lot 3 (séparé, indépendant) — ouvrir « Ma collection »
+
+`ma-collection.html:16` porte `data-require-admin="true"` et `menu.html:30` classe le lien en
+`admin-only`. Le retirer est trivial ; **le vrai travail est de vérifier la RLS de `collection`**,
+qui n'a jamais été éprouvée par 103 membres. Aucun des deux autres lots n'en dépend — et vu que
+`nb_doubles` vaut 0 partout depuis mars, mieux vaut ne pas l'attendre.
 
 ## Critères d'acceptation
 
-1. Un membre whitelisté publie un double ou une recherche, avec ou sans billet du catalogue.
-2. Tous les membres whitelistés voient les annonces actives ; **personne ne peut modifier ou
-   supprimer celle d'un autre**, y compris par appel direct à l'API.
-3. Un membre retire son annonce (`actif = false`) sans la perdre, et la republie.
-4. Le rapprochement signale à un membre qu'un autre recherche ce qu'il a en double, et l'inverse.
-5. « Ça m'intéresse » envoie une notification **privée** à l'auteur — invisible aux autres membres
-   et aux admins.
-6. **Aucune adresse e-mail de membre n'est affichée** nulle part dans l'écran.
-7. **Aucun montant, aucun paiement, aucune enveloppe** n'apparaît dans le parcours : l'appli ne
-   promet rien qu'elle ne puisse tenir.
-8. Lot séparé : un membre non-admin atteint « Ma collection » et n'y voit que **sa** collection.
+1. Un membre propose une transaction à un autre ; celui-ci l'accepte ou la refuse.
+2. Une vente crée une **dette** à la charge de l'acheteur, qui apparaît dans **le total unique** du
+   menu, à côté de ce qu'il doit aux collecteurs.
+3. Chaque partie **déclare avoir remis** ce qu'elle devait ; **l'autre confirme l'avoir reçu**.
+4. Une transaction est **close** quand chaque côté non vide est confirmé — **et un échange se
+   clôt exactement comme une vente**, sans code spécifique.
+5. **Personne ne peut confirmer à la place de l'autre**, y compris par appel direct à l'API.
+6. Le **détail** d'une transaction n'est visible que de ses deux parties et des admins.
+7. Le **compteur public** « N transactions conclues » est visible de tous, **sans jamais exposer
+   le détail** — vérifié en appelant la fonction depuis un compte tiers.
+8. Une transaction dont un côté n'est jamais confirmé **reste ouverte indéfiniment**, sans blocage
+   ni escalade : l'appli n'arbitre pas.
+9. Les **7 requêtes existantes** sur `dettes` rendent exactement les mêmes résultats qu'avant la
+   généralisation — à vérifier écran par écran, c'est le seul vrai risque de régression.
+10. Les lignes de `dettes` créées par #44 (changement de prix) sont **inchangées** et gardent leur
+    comportement.
 
 ## Ce que cette spec ne fait pas
 
-- ~~**Pas de troc modélisé** (Q7).~~ ⚠ **FAUX — corrigé le 2026-09-10** : l'historique doit
-  couvrir les échanges autant que les ventes. Reste à décider **comment** se trace un troc, qui
-  n'a pas de montant (question R1).
-- ~~**Pas de vente entre membres** : ni prix, ni paiement, ni litige.~~
-  ~~**Pas de réputation, pas d'historique de transactions.**~~
-  ⚠ **FAUX — corrigé le 2026-09-10.** La dette de membre à membre, sa validation par le créancier
-  et l'historique des transactions (ventes **et** échanges) sont **dans le périmètre**. Restent
-  hors périmètre : **encaisser** un paiement, et **arbitrer** un litige — l'appli enregistre, elle
-  ne juge pas. Le suivi d'expédition est **à trancher** (question R2).
-- **Pas de dépendance à `collection.nb_doubles`** dans ce lot.
+- **Pas d'encaissement** : aucun paiement n'est traité par l'appli. Elle enregistre qui doit quoi
+  et qui a confirmé avoir reçu.
+- **Pas d'arbitrage** : une transaction non confirmée reste ouverte, point.
+- **Pas de note ni d'avis** : le compteur est factuel, il ne dit pas si l'échange s'est bien passé.
+- **Pas de machinerie d'enveloppes** entre membres : `enveloppes` est ancrée sur `collecteurs.alias`.
+  Un simple *remis / reçu* suffit, et évite un second chantier de même ampleur.
+- **Pas de dépendance à `collection.nb_doubles`** : le lot 2 démarre en saisie manuelle.
+
+## Questions restées ouvertes
+
+| | Question | Quand elle se pose |
+|---|---|---|
+| **O1** | Une **dette qui traîne** : l'appli relance-t-elle, ou reste-t-elle passive ? Une relance automatique entre deux membres est un message que le groupe envoie en leur nom. | Au dev du lot 1 |
+| **O2** | Un membre peut-il **annuler une transaction acceptée** unilatéralement, ou faut-il l'accord des deux ? | Au dev du lot 1 |
+| **O3** | Une transaction peut-elle naître **sans annonce** (deux membres qui se sont arrangés sur Facebook) ? Supposé **oui** ici — c'est même le cas courant tant que le lot 2 n'existe pas. | À confirmer |
 
 ## Réalisation
 
@@ -248,5 +276,5 @@ quoi la demande dépendrait d'une adoption qu'on ne maîtrise pas, sur 5 507 bil
 
 ---
 
-*Spec du 2026-09-09, issue du cadrage commun #22/#1. Aucune ligne de code écrite : la demande est
-en analyse jusqu'à validation explicite de Cyril.*
+*Analyse reprise le 2026-09-10 après la remarque de Cyril, sur mesures refaites le jour même.
+Aucune ligne de code : la règle des L demande l'accord explicite avant dev.*
