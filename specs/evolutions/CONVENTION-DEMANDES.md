@@ -67,7 +67,8 @@ Nouvelle → À cadrer → Prêt à analyser → Analyse à valider → Prêt à
 2. rédiger une **spec détaillée**, en **posant les questions** nécessaires plutôt qu'en comblant
    les trous par des hypothèses silencieuses ; méthode BMAD (`bmad-bmm-*`) si l'ampleur le
    justifie ;
-3. **attacher la spec à la demande** (champ `docs`, cf. #58) et passer en **Analyse à valider**
+3. **écrire la version en clair** (cf. « Une spec, deux documents »), **attacher les deux
+   fichiers** à la demande (champ `docs`, cf. #58) et passer en **Analyse à valider**
    (`analyse_a_valider`). La liste signale alors d'elle-même qu'une relecture est attendue —
    personne n'a besoin d'ouvrir la fiche pour le découvrir ;
 4. **un admin relit et valide** depuis la fiche. Une seule validation suffit : la demande bascule
@@ -106,11 +107,49 @@ s'éteint.
 demande qui retomberait toute seule en analyse parce que quelqu'un a décoché serait plus
 déroutante qu'utile ; le retour se fait à la main.
 
+## Une spec, deux documents
+
+**Consigne de Cyril, 2026-09-10, née d'un admin qui a dit d'une spec : « c'est pas mon domaine,
+c'est du charabia pour moi ».** Les specs sont relues par des admins qui ne sont pas du métier.
+Une spec illisible par son relecteur ne produit aucune relecture — exactement comme une spec qu'il
+ne voyait pas (le défaut corrigé par #59).
+
+Chaque demande porte donc **deux fichiers** :
+
+| Fichier | Pour qui | Ce qu'il contient |
+|---|---|---|
+| `demande-<id>-<slug>.md` | le développement | modèle de données, RLS, migration, points durs |
+| `demande-<id>-<slug>-en-clair.md` | **les admins relecteurs** | ce que ça change pour les gens, ce qui a été décidé et pourquoi, ce qui est volontairement exclu, ce qui reste ouvert |
+
+L'écran affiche **« En clair » par défaut**, avec une bascule vers « Technique ». La paire se
+reconnaît au **suffixe `-en-clair`** du nom de fichier : aucune colonne supplémentaire, les deux
+chemins vivent dans le même champ `docs`.
+
+**Ce n'est pas une traduction ligne à ligne, et c'est ce qui rend l'exercice tenable.** Les deux
+documents répondent à deux questions différentes : le technique dit *« comment on le construit »*,
+celui en clair dit *« est-ce bien ce qu'on veut »*. **Un admin qui valide répond à la seconde.**
+D'où, dans la version en clair : pas de schéma de table, pas de RLS, pas de SQL, pas de nom de
+fonction — mais un **parcours concret** avec des prénoms et des montants, et une section
+« ce sur quoi on vous demande de vous prononcer ».
+
+⚠ **Le risque est la dérive** : deux documents qui finissent par dire des choses différentes, c'est
+pire qu'un seul document difficile. Parade : la version en clair **cite en en-tête le commit de la
+version technique dont elle découle**. Un écart devient visible au lieu de s'installer.
+
+**L'ordre de travail :** analyser → écrire ou corriger la version technique → **puis** écrire la
+version en clair. Jamais l'inverse : une version en clair écrite d'abord fige des décisions qui
+n'ont pas encore rencontré le schéma.
+
+**Et les commentaires de réponse suivent la même règle.** Ils sont lus par les mêmes admins :
+écrire l'essentiel sans jargon, et reléguer le détail technique en fin de message s'il est
+vraiment nécessaire.
+
 ## Développer une demande : la spec d'abord
 
-Avant de coder, une courte spec dans ce dossier : `demande-<id>-<slug>.md`, avec contexte,
-analyse/décisions, critères d'acceptation, et une section **Réalisation** complétée après coup
-(fichiers + hash de commit). Reporter la ligne dans le tableau de [README.md](README.md).
+Avant de coder, une courte spec dans ce dossier : `demande-<id>-<slug>.md` **et sa version
+`-en-clair.md`** (voir ci-dessus), avec contexte, analyse/décisions, critères d'acceptation, et une
+section **Réalisation** complétée après coup (fichiers + hash de commit). Reporter la ligne dans le
+tableau de [README.md](README.md).
 
 Le hash de commit et la spec se mordent la queue : écrire le hash puis `--amend` change le hash.
 Faire un petit commit `docs(#id)` juste après, comme les specs précédentes.

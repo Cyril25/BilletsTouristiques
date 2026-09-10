@@ -70,6 +70,9 @@ var lesCommentaires = [];
 var commentairesIndisponibles = false;   // migration #58 pas encore jouée
 var docsAttaches = [];                   // chemins validés
 var docCourant = null;                   // chemin affiché
+var groupesDocs = [];                    // #60 — documents, chacun avec ses deux registres
+var groupeCourant = 0;
+var registreCourant = 'clair';           // #60 — 'clair' par défaut
 var titresDocCourant = [];               // pour le sommaire et le choix de section
 var commentaireEnEdition = null;
 // Demande #59 — qui a validé l'analyse de CETTE demande.
@@ -369,15 +372,41 @@ function parseDocs(docs) {
         .filter(function(l) { return l !== ''; });
 }
 
+// Demande #60 — un document existe en DEUX REGISTRES : « en clair », écrit pour
+// un admin qui n'est pas du métier, et « technique ». La paire se reconnaît au
+// suffixe `-en-clair` du nom de fichier — donc AUCUNE colonne supplémentaire :
+// les deux chemins vivent dans le même champ `docs`.
+var SUFFIXE_CLAIR = '-en-clair.md';
+
 function nomCourtDoc(chemin) {
-    var base = chemin.split('/').pop().replace(/\.md$/, '');
+    var base = chemin.split('/').pop().replace(/-en-clair\.md$/, '').replace(/\.md$/, '');
     return base.replace(/-/g, ' ');
+}
+
+function baseDoc(chemin) {
+    return chemin.replace(/-en-clair\.md$/, '.md');
+}
+
+// Regroupe les chemins attachés en documents, chacun pouvant avoir ses deux
+// registres. Un document qui n'existe que dans un registre s'affiche seul,
+// sans bascule — on ne montre pas un bouton qui ne mène nulle part.
+function grouperDocs(chemins) {
+    var parBase = {};
+    var ordre = [];
+    chemins.forEach(function(c) {
+        var b = baseDoc(c);
+        if (!parBase[b]) { parBase[b] = { base: b, clair: null, technique: null }; ordre.push(b); }
+        if (c.slice(-SUFFIXE_CLAIR.length) === SUFFIXE_CLAIR) parBase[b].clair = c;
+        else parBase[b].technique = c;
+    });
+    return ordre.map(function(b) { return parBase[b]; });
 }
 
 function renderDocs() {
     var lignes = parseDocs(laDemande.docs);
     var invalides = lignes.filter(function(l) { return !cheminDocValide(l); });
     docsAttaches = lignes.filter(cheminDocValide);
+    groupesDocs = grouperDocs(docsAttaches);
 
     var onglets = document.getElementById('fd-docs-onglets');
     var rendu = document.getElementById('fd-docs-rendu');
@@ -388,7 +417,7 @@ function renderDocs() {
                 + 'specs/… .md sont acceptés.', 'error');
     }
 
-    if (docsAttaches.length === 0) {
+    if (groupesDocs.length === 0) {
         onglets.innerHTML = '';
         sommaire.style.display = 'none';
         rendu.innerHTML = '<p class="fiche-aide">Aucun document attaché. Ouvrez « Documents attachés '
@@ -397,27 +426,59 @@ function renderDocs() {
         return;
     }
 
-    onglets.innerHTML = docsAttaches.map(function(chemin, i) {
-        var actif = (chemin === docCourant) || (docCourant === null && i === 0);
-        return '<button type="button" class="fiche-doc-onglet' + (actif ? ' active' : '') + '" '
-             + 'onclick="afficherDoc(\'' + escapeAttr(chemin) + '\')">'
-             + '<i class="fa-solid fa-file-lines"></i> ' + escapeHtml(nomCourtDoc(chemin)) + '</button>';
-    }).join('');
+    if (groupeCourant >= groupesDocs.length) groupeCourant = 0;
+    afficherGroupe(groupeCourant);
+}
 
-    afficherDoc(docCourant && docsAttaches.indexOf(docCourant) !== -1 ? docCourant : docsAttaches[0]);
+// Registre par défaut : « en clair » dès qu'il existe. C'est le motif de #60 —
+// un relecteur non technique ne doit pas avoir à chercher sa version.
+function afficherGroupe(index) {
+    groupeCourant = index;
+    var g = groupesDocs[index];
+    if (!g) return;
+    registreCourant = g.clair ? 'clair' : 'technique';
+    rendreDocCourant();
+}
+
+function basculerRegistre(registre) {
+    registreCourant = registre;
+    rendreDocCourant();
+}
+
+function rendreDocCourant() {
+    var g = groupesDocs[groupeCourant];
+    if (!g) return;
+    var chemin = (registreCourant === 'clair' && g.clair) ? g.clair : g.technique;
+    if (!chemin) { chemin = g.clair; registreCourant = 'clair'; }
+
+    var onglets = document.getElementById('fd-docs-onglets');
+    if (onglets) {
+        var html = '';
+        if (groupesDocs.length > 1) {
+            html += groupesDocs.map(function(gr, i) {
+                return '<button type="button" class="fiche-doc-onglet' + (i === groupeCourant ? ' active' : '') + '" '
+                     + 'onclick="afficherGroupe(' + i + ')">'
+                     + '<i class="fa-solid fa-file-lines"></i> '
+                     + escapeHtml(nomCourtDoc(gr.technique || gr.clair)) + '</button>';
+            }).join('');
+        }
+        if (g.clair && g.technique) {
+            html += '<span class="fiche-registre">'
+                 + '<button type="button" class="fiche-registre-btn' + (registreCourant === 'clair' ? ' active' : '') + '" '
+                 + 'onclick="basculerRegistre(\'clair\')" title="Écrite pour être lue sans être du métier">En clair</button>'
+                 + '<button type="button" class="fiche-registre-btn' + (registreCourant === 'technique' ? ' active' : '') + '" '
+                 + 'onclick="basculerRegistre(\'technique\')" title="Modèle de données, règles, migration">Technique</button>'
+                 + '</span>';
+        }
+        onglets.innerHTML = html;
+    }
+
+    afficherDoc(chemin);
 }
 
 function afficherDoc(chemin) {
     if (!cheminDocValide(chemin)) return;
     docCourant = chemin;
-
-    var onglets = document.getElementById('fd-docs-onglets');
-    if (onglets) {
-        var btns = onglets.getElementsByClassName('fiche-doc-onglet');
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].className = 'fiche-doc-onglet' + (docsAttaches[i] === chemin ? ' active' : '');
-        }
-    }
 
     var rendu = document.getElementById('fd-docs-rendu');
     rendu.innerHTML = '<p class="fiche-aide"><i class="fa-solid fa-spinner fa-spin"></i> Chargement…</p>';

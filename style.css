@@ -11683,3 +11683,51 @@ button.collecte-badge-status {
     font-style: italic;
     margin: 0 0 12px;
 }
+
+
+/* ============================================================
+   DEMANDE #60 — BASCULE « EN CLAIR » / « TECHNIQUE »
+   ------------------------------------------------------------
+   Un admin a dit d'une spec : « c'est du charabia pour moi ».
+   Chaque document existe donc en deux registres, et c'est « en
+   clair » qui s'affiche par defaut : le relecteur non technique
+   ne doit pas avoir a chercher sa version.
+   La bascule se distingue des onglets de document (arrondi
+   different, fond appuye) pour qu'on ne la confonde pas avec
+   « un autre document ».
+   ============================================================ */
+
+.fiche-registre {
+    display: inline-flex;
+    margin-left: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-bg-white);
+}
+
+.fiche-registre-btn {
+    border: 0;
+    padding: 6px 14px;
+    background: none;
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.fiche-registre-btn:hover { background: var(--color-bg-hover); }
+.fiche-registre-btn.active {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font-weight: 500;
+}
+
+/* Le conteneur des onglets porte maintenant deux choses de nature
+   differente : les documents a gauche, la bascule de registre a
+   droite. `margin-left: auto` ci-dessus les separe visuellement. */
+.fiche-docs-onglets { align-items: center; }
+
+@media (max-width: 600px) {
+    .fiche-registre { margin-left: 0; width: 100%; }
+    .fiche-registre-btn { flex: 1; }
+}
