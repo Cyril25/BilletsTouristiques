@@ -15,6 +15,14 @@
   **Ce document teste cette hypothèse. Il conclut qu'elle ne tient pas** — et c'est le premier
   point à trancher ensemble.
 
+> ⚠ **AVERTISSEMENT AJOUTÉ LE 2026-09-10.** La conclusion centrale de ce document — « #1 et #22
+> ne sont pas deux tranches du même chantier » — reposait sur l'argument *« #1 a de l'argent, #22
+> n'en a pas »*. **Cet argument est faux** : Cyril a précisé que #22 doit porter des dettes de
+> membre à membre, leur validation et un historique des transactions. Le tableau comparatif et la
+> réponse Q1 ci-dessous sont donc à lire avec cette réserve. La séparation des deux demandes reste
+> peut-être justifiée, mais **pour d'autres raisons, qui sont à établir**. Détail dans la section
+> « Analyse rouverte » de [la spec #22](demande-22-tableau-doubles-recherches.md).
+
 ## Ce que demandent les deux fiches
 
 > **#22** — « Gestion des doubles avec possibilité de vendre et échanger. Attention car ça doit

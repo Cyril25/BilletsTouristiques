@@ -85,6 +85,23 @@ d'être ramassée par un « traite 2 demandes ». Le piège est réel : #1 et #2
 M à la sortie de leur cadrage — la ré-estimation mesurait ce que le cadrage avait *enlevé*, pas ce
 qui restait — et ont été **remises à L le 2026-09-10**.
 
+### Répondre à une remarque : la règle
+
+**Consigne de Cyril, 2026-09-10 — vaut à chaque fois, pas seulement pour les L.** Quand un admin
+laisse un commentaire sur une analyse :
+
+1. **le lire et le prendre en compte** — corriger la spec, affiner l'analyse, rouvrir les questions
+   que la remarque soulève ;
+2. si la remarque invalide une décision, **le dire dans la spec** au lieu de réécrire l'histoire :
+   barrer ce qui était faux, dater la correction, expliquer *pourquoi* c'était faux ;
+3. **ajouter un commentaire en réponse** disant **ce qui a été fait et comment** — pas « pris en
+   compte » tout seul ;
+4. si l'analyse doit être reprise, **repasser la demande en Prêt à analyser** : la laisser en
+   « Analyse à valider » ferait croire qu'elle n'attend qu'un clic.
+
+Une remarque à laquelle personne ne répond décourage la suivante, et c'est le mécanisme entier qui
+s'éteint.
+
 **Retirer sa validation ne fait pas revenir en arrière** : le compteur baisse, l'état reste. Une
 demande qui retomberait toute seule en analyse parce que quelqu'un a décoché serait plus
 déroutante qu'utile ; le retour se fait à la main.

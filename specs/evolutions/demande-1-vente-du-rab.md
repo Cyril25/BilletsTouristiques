@@ -5,7 +5,10 @@
 - **Demande :** #1 de la table `demandes` de production — import Google Sheet, 2026-07-16,
   priorité **basse**.
 - **Concerne :** collecteurs (6 actifs, 14 au maximum), et les membres qui leur achètent.
-- **Statut :** **analyse à valider par Cyril.** Aucun développement commencé.
+- **Statut :** ⚠ **ANALYSE ROUVERTE le 2026-09-10.** Commentaire de Cyril : « reprendre les
+  commentaires que j'ai faits sur la spec #22 ». La conséquence pour #1 est réelle et tient en
+  un point — voir « Ce que la réouverture de #22 change ici ». Demande repassée en
+  **Prêt à analyser**. Aucun développement commencé.
 - **Origine :** issue du cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, dont les
   7 questions ont été tranchées le **2026-09-09**. Ce document est la spec de dev qui en découle ;
   #22 a désormais la sienne, les deux demandes ne partagent plus de modèle.
@@ -167,9 +170,30 @@ Cyril dans l'éditeur SQL Supabase, et son contenu reproduit dans cette spec au 
 10. Le numéro de série s'affiche chez le membre comme le demandait le commentaire de la fiche, et
     reste facultatif — vendre « 2 billets du rab » sans numéro doit marcher.
 
+## ⚠ Ce que la réouverture de #22 change ici (2026-09-10)
+
+#22 n'est plus un simple tableau d'affichage : elle doit porter des **dettes de membre à membre**,
+leur **validation par le créancier** et un **historique des transactions**. Le cadrage commun avait
+séparé #1 et #22 sur un argument central — *« #1 a de l'argent, #22 n'en a pas »* — **qui est mort**.
+
+Conséquence concrète pour cette spec : le **modèle C** repose sur la table `dettes`, ancrée sur
+`collecteur_alias NOT NULL` et `collecte_id NOT NULL`. Si #22 amène une dette entre deux membres,
+la même table devra soit **se généraliser** (créancier quelconque), soit **coexister** avec une
+seconde table. Développer #1 d'abord sans avoir tranché, c'est risquer de poser une deuxième fois
+la même primitive — ou de devoir migrer une table qui porte déjà les écarts de prix de #44.
+
+**Ce qui ne change pas** : les décisions Q3 (numéro de série optionnel), Q4 (le prix vit dans une
+ligne de dette et non sur l'inscription) et Q5 (confirmation préalable du membre) restent valables,
+de même que les quatre points durs et le mécanisme d'inscription à quantités nulles. C'est
+**l'ordre des travaux** qui est en question, pas le contenu.
+
+**À trancher avec #22, pas séparément** : généraliser `dettes` ou non. Voir la section
+« Analyse rouverte » de la spec #22.
+
 ## Ce que cette spec ne fait pas
 
-- **Pas de vente entre deux membres** — c'est #22, et c'est un tableau d'affichage sans argent.
+- **Pas de vente entre deux membres** — c'est #22. ⚠ Mais #22 **n'est plus** « sans argent » :
+  la frontière entre les deux demandes est à re-tracer (voir ci-dessus).
 - **Pas de catalogue du rab** : le collecteur sait ce qui lui reste, l'appli ne l'inventorie pas.
   La vente se négocie toujours sur Facebook, l'appli enregistre ce qui a été convenu.
 - **Pas de reprise** des ventes passées.

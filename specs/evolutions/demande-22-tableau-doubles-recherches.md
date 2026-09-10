@@ -4,10 +4,100 @@
   ⚠ Ré-estimée **M** au cadrage du 09/09, **remise à L le 10/09** : le tableau d'affichage reste une table neuve, un écran membre entier et un moteur de rapprochement.
 - **Demande :** #22 de la table `demandes` de production — Cyril, 2026-07-16, priorité *normale*.
 - **Concerne :** tous les membres (109 whitelistés, **52 actifs** sur 30 jours).
-- **Statut :** **analyse à valider par Cyril.** Aucun développement commencé.
+- **Statut :** ⚠ **ANALYSE ROUVERTE le 2026-09-10**, sur commentaire de Cyril : le périmètre
+  décrit ci-dessous est **faux sur un point central**. Voir la section « Analyse rouverte ».
+  Demande repassée en **Prêt à analyser**. Aucun développement commencé.
 - **Origine :** cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, 7 questions
   tranchées le **2026-09-09**. #1 a désormais sa propre spec : les deux demandes ne partagent
   plus de modèle, et **#22 ne touche pas à l'argent**.
+
+## ⚠ Analyse ROUVERTE le 2026-09-10 — ma question Q1 était mal posée
+
+Commentaire de Cyril sur cette spec, section « Ce que cette spec ne fait pas » :
+
+> Je pense qu'on s'est mal compris, et il est nécessaire de reprendre l'analyse afin de creuser le
+> sujet. On ne veut en effet pas une « usine à gaz », mais la partie [« pas de vente entre membres,
+> pas d'historique de transactions »] est totalement fausse. Nous souhaitons permettre un
+> **historique des transactions**, que ce soit pour un **échange** ou pour une **vente**, mais
+> également la possibilité d'une **dette de membre à membre**, qu'un membre puisse **valider le
+> fait qu'un autre membre lui a payé** la somme qu'il lui doit. C'est donc bien quelque chose de
+> lourd, il faut adapter et analyser tout cela avant de se lancer.
+
+**L'erreur est dans ma question, pas dans sa réponse.** Q1 opposait « place de marché » et
+« tableau d'affichage » — un binaire qui empaquetait deux choses sans rapport :
+
+| Ce que le binaire mélangeait | Voulu ? |
+|---|---|
+| **Tenir le compte** de ce qui est dû entre deux membres, et permettre au créancier d'accuser réception | **OUI** |
+| Garder un **historique** des ventes et des échanges | **OUI** |
+| **Encaisser** le paiement (PayPal, etc.) | non |
+| **Suivre l'expédition** entre deux membres | *à trancher* |
+| **Arbitrer** un litige | non |
+
+Répondre « tableau d'affichage » à cette question voulait dire « pas d'usine à gaz » ; je l'ai lu
+« pas d'argent du tout ». **Une question binaire sur un sujet qui ne l'est pas produit une réponse
+juste et une conclusion fausse.** À retenir pour les prochains cadrages : proposer les briques une
+par une plutôt qu'un forfait.
+
+### Ce qui rentre dans le périmètre
+
+1. **Une dette de membre à membre**, née d'une vente ou d'un échange.
+2. **La validation du règlement par le créancier** — celui à qui l'argent est dû confirme l'avoir reçu.
+3. **Un historique des transactions**, ventes **et** échanges.
+
+Le **troc revient donc dans le périmètre** : la réponse Q7 (« vendre suffit ») tombe avec le reste.
+
+### La bonne nouvelle : le mécanisme existe déjà, et il n'a pas besoin d'arbitre
+
+Le cadrage du 09/09 écartait la place de marché sur un argument qui se révèle faux :
+*« tout le modèle de paiement repose sur une relation asymétrique — le membre déclare, le
+collecteur valide. Entre deux pairs, il n'y a personne pour valider. »*
+
+**Il y a quelqu'un : le créancier.** Le motif se transpose exactement — *le débiteur déclare, le
+créancier valide* — et c'est mot pour mot ce que demande Cyril. Le rôle vérifié de collecteur
+n'était pas nécessaire à la mécanique : il se trouvait simplement être toujours le créancier.
+
+Et **aucun arbitrage n'est requis** : si le créancier ne confirme pas, la dette **reste ouverte**.
+L'application *enregistre*, elle ne *juge pas*. C'est ce qui permet de tenir le compte sans que les
+6 admins deviennent arbitres — la crainte qui avait fait écarter l'option.
+
+### Ce qui bloque techniquement, et qui est le vrai travail
+
+`dettes` (#44) porte la primitive « un montant dû entre deux parties, réglé par déclaration puis
+validation ». Mais elle est **ancrée sur le collecteur** :
+
+- `collecteur_alias TEXT NOT NULL` — un membre lambda n'a pas d'alias ;
+- `collecte_id UUID NOT NULL REFERENCES collectes(id)` — une vente entre membres ne dépend d'aucune collecte ;
+- la policy `dettes_select` résout le créancier par `SELECT alias FROM collecteurs WHERE email_membre = …`.
+
+Deux voies, à trancher :
+
+| | Voie | Ce que ça coûte | Ce que ça risque |
+|---|---|---|---|
+| **A** | **Généraliser `dettes`** : `creancier_email`, `collecteur_alias` et `collecte_id` rendus nullables, RLS élargie | Une seule table pour tout l'argent de l'appli, un seul parcours déclarer/valider, un seul écran de solde | Toucher à une table **déjà en production** et qui porte les écarts de prix de #44 ; chaque requête existante doit être relue |
+| **B** | **Une table `transactions` à part** pour le membre ↔ membre | `dettes` n'est pas touchée, aucun risque de régression sur #44 | Deux mécanismes d'argent parallèles à maintenir, deux écrans de solde, et la question « où est mon total ? » pour le membre |
+
+**Aucune recommandation ferme à ce stade** : le choix dépend de ce qu'on décide pour l'expédition
+et pour l'historique, ci-dessous. C'est précisément ce que « creuser le sujet » veut dire.
+
+### Les questions rouvertes
+
+| | Question | Pourquoi elle bloque |
+|---|---|---|
+| **R1** | **Le troc : comment se trace-t-il ?** Un échange n'a pas de montant. Deux remises à confirmer de part et d'autre, chacun accusant réception de ce qu'il a reçu ? | Détermine si l'objet central est « une dette » ou « une transaction » dont la dette n'est qu'un cas. Change le modèle. |
+| **R2** | **L'appli suit-elle l'expédition entre membres ?** Aujourd'hui l'envoi passe par `enveloppes`, ancrées sur `collecteurs.alias`. | Si oui, c'est un second chantier de même ampleur que la dette. Si non, l'historique dit « vendu », pas « reçu ». |
+| **R3** | **Qui crée la dette : le vendeur l'inscrit, ou l'acheteur la reconnaît ?** | Précédent posé par #1 (Q5) : aucun montant n'apparaît chez un membre sans qu'il l'ait accepté. La même règle doit-elle valoir ici ? |
+| **R4** | **Une dette qui traîne : l'appli relance, ou reste passive ?** | Une relance automatique entre deux membres est un message que le groupe envoie en leur nom. |
+| **R5** | **L'historique est-il visible des seuls intéressés, ou de tous ?** | `inscriptions_read_whitelisted` laisse déjà tout membre lire toutes les inscriptions ; refaire ça sur de l'argent entre pairs serait plus gênant. |
+| **R6** | **La réputation** (« ce membre honore ses engagements ») **est-elle souhaitée ?** | Écartée le 09/09 comme corollaire d'un choix qui vient de tomber — donc à reposer, pas à supposer. |
+
+### Conséquence sur #1
+
+Le cadrage du 09/09 concluait que **#1 et #22 ne sont pas deux tranches du même chantier**, sur
+l'argument central que *« #1 a de l'argent, #22 n'en a pas »*. **Cet argument est mort.** Les deux
+demandes ont désormais besoin d'une même primitive : *un montant dû entre deux personnes, réglé par
+déclaration puis validation*. La séparation reste peut-être la bonne décision — mais elle doit être
+**re-justifiée**, pas héritée. C'est la voie A/B ci-dessus qui la tranchera.
 
 ## Contexte (demande)
 
@@ -141,12 +231,15 @@ quoi la demande dépendrait d'une adoption qu'on ne maîtrise pas, sur 5 507 bil
 
 ## Ce que cette spec ne fait pas
 
-- **Pas de troc modélisé** (Q7). Un membre qui veut échanger l'écrit dans son commentaire ; c'est
-  du texte, l'appli n'en fait rien.
-- **Pas de vente entre membres** : ni prix, ni paiement, ni suivi d'envoi, ni litige (Q1, Q2).
-  Un champ « prix souhaité » resterait indicatif — **à ne pas ajouter** sans y revenir : afficher
-  un prix dans l'appli laisse croire qu'elle en garantit quelque chose.
-- **Pas de réputation, pas d'historique de transactions** — corollaire du même choix.
+- ~~**Pas de troc modélisé** (Q7).~~ ⚠ **FAUX — corrigé le 2026-09-10** : l'historique doit
+  couvrir les échanges autant que les ventes. Reste à décider **comment** se trace un troc, qui
+  n'a pas de montant (question R1).
+- ~~**Pas de vente entre membres** : ni prix, ni paiement, ni litige.~~
+  ~~**Pas de réputation, pas d'historique de transactions.**~~
+  ⚠ **FAUX — corrigé le 2026-09-10.** La dette de membre à membre, sa validation par le créancier
+  et l'historique des transactions (ventes **et** échanges) sont **dans le périmètre**. Restent
+  hors périmètre : **encaisser** un paiement, et **arbitrer** un litige — l'appli enregistre, elle
+  ne juge pas. Le suivi d'expédition est **à trancher** (question R2).
 - **Pas de dépendance à `collection.nb_doubles`** dans ce lot.
 
 ## Réalisation
