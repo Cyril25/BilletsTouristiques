@@ -2,14 +2,14 @@
 
 - **Épic :** corrections et évolutions (complexité **M**)
 - **Demande :** #58 de la table `demandes` de production — Cyril, 2026-09-09, priorité *normale*.
-  ⚠ **La ligne n'existe pas encore** : l'écriture en base a été refusée par le garde-fou du mode
-  auto pendant la session de cadrage. Le numéro 58 est le prochain libre (max actuel = 57) et
-  **doit être confirmé** au moment de créer la demande — si un autre dépôt passe avant, renommer
-  ce fichier et sa ligne d'index.
+  Numéro **confirmé par Cyril le 2026-09-10**, à la création de la demande depuis l'écran.
 - **Concerne :** les admins (6 personnes), et eux seuls — `admin-demandes.html` porte
   `data-require-admin`, et **aucun écran membre n'écrit dans `demandes`** (vérifié : la table
   n'est alimentée que par `admin-demandes.js`).
-- **Statut :** **analyse à valider par Cyril.** Aucun développement commencé.
+- **Statut :** **développée le 2026-09-10, à tester.** ⚠ La migration
+  `scripts/migration-demande-58-docs-et-commentaires.sql` **reste à jouer** : sans elle la fiche
+  s'affiche et s'édite, mais les documents ne peuvent pas être attachés et le fil de commentaires
+  annonce son indisponibilité en nommant le script.
 
 ## Contexte (demande)
 
@@ -126,9 +126,19 @@ n'apparaît plus que pour la création). Contenu :
 
 ### 3. Le rendu markdown
 
-`marked` depuis **cdnjs**, épinglé à une version exacte avec `integrity` — même patron que Font
-Awesome, et **cdnjs est déjà dans la CSP** (`script-src`). Un rendu maison serait vite un parser
-complet : les specs sont pleines de tableaux, de blocs de code et de citations.
+*Analyse initiale :* `marked` depuis **cdnjs**, épinglé avec `integrity` — même patron que Font
+Awesome, et cdnjs est déjà dans la CSP. Un rendu maison serait vite un parser complet.
+
+⚠ **Écart assumé au développement : convertisseur fait maison, sans dépendance.** L'analyse
+ci-dessus oubliait que `marked` **laisse passer le HTML brut** et n'embarque plus de sanitizer
+depuis la v5 : il aurait fallu **DOMPurify en plus**. Deux dépendances au lieu de zéro, pour un
+sous-ensemble de markdown qu'on maîtrise. Le convertisseur écrit applique la règle inverse —
+**on échappe tout le document d'abord, on transforme ensuite** — ce qui rend l'injection
+structurellement impossible plutôt que filtrée après coup.
+
+Une conséquence volontaire : **les `_underscores_` ne produisent pas d'italique.** Le projet écrit
+sans cesse `pas_interesse`, `prix_variante`, `statut_paiement` — les traiter en italique
+abîmerait une phrase sur deux. `*astérisques*` suffisent.
 
 ⚠ **Le HTML brut du markdown doit être échappé, pas interprété.** La CSP de ces pages autorise
 `'unsafe-inline'` pour les scripts : un `<script>` présent dans un `.md` s'exécuterait. Nos specs
@@ -159,7 +169,12 @@ demande_commentaires
 
 Un commentaire déposé ne sert à rien si personne ne le voit : ligne dans `notifications`,
 `cible = 'admins'` (qui inclut les superadmins), titre court pour la cloche, lien vers la fiche.
-Ne pas notifier son propre auteur.
+
+⚠ **L'auteur reçoit aussi sa propre notification.** Le modèle de `notifications` cible des
+**groupes** (`tous` / `collecteurs` / `admins`) ou **une personne** (`cible_email`) — il ne sait
+pas dire « le groupe sauf untel ». L'exclure supposerait une notification privée par admin, soit
+cinq lignes au lieu d'une à chaque commentaire. Le bruit d'une cloche sur son propre message a
+paru le moindre des deux maux ; à revoir si ça agace.
 
 ## Critères d'acceptation
 
@@ -195,8 +210,40 @@ Ne pas notifier son propre auteur.
 
 ## Réalisation
 
-*(à compléter après dev : fichiers touchés + commit)*
+Développée le **2026-09-10**, commit `eb4d8fa`.
+
+| Fichier | Ce qui a changé |
+|---|---|
+| `demande.html` | **Nouveau** — la fiche pleine page, `data-require-admin`. |
+| `demande.js` | **Nouveau** — chargement, édition, documents, convertisseur markdown, fil de commentaires. |
+| `admin-demandes.html` | La popup se réduit à la création : bouton Supprimer, ligne de méta et modale de suppression retirés. |
+| `admin-demandes.js` | Le clic sur une ligne ouvre la fiche ; `ouvrirNouvelleDemande()` / `creerDemande()` remplacent l'ancien couple ajout-édition ; suppression retirée (elle est sur la fiche). |
+| `style.css` | Section « Fiche demande » — uniquement des jetons de #54, donc le mode sombre suit sans règle à part. |
+| `sw.js` | `CACHE_NAME` v298 → v299, plus les deux nouveaux fichiers. `menu.html` non touché, donc pas de cache-buster à bumper dans `global.js`. |
+| `scripts/migration-demande-58-docs-et-commentaires.sql` | **À jouer par Cyril** (gitignoré comme toutes les migrations). |
+
+### Ce qui a été vérifié, et comment
+
+Un banc d'essai sous **node** (hors navigateur, DOM minimal simulé) a fait tourner le
+convertisseur sur les **4 specs réelles** du dépôt, puis sur des cas hostiles :
+
+- balises `ul`/`ol`/`table` équilibrées sur les 4 documents, tableaux rendus (jusqu'à 38 lignes),
+  aucun `|` orphelin, aucun saut de ligne parasite dans une balise ;
+- un `<script>` écrit dans un `.md` **s'affiche comme du texte** ; `onerror=` ne survit pas ;
+  `javascript:` dans un lien est **neutralisé** ; `https:` et les chemins relatifs sont conservés ;
+- les nombres du texte ne deviennent pas du code, et les `snake_case` ne deviennent pas de
+  l'italique ;
+- les chemins `specs/../global.js`, `global.js`, `x.js`, une URL absolue et les antislashs sont
+  **refusés**.
+
+Contrôle de cohérence complémentaire : tous les `getElementById` de `demande.js` existent dans
+`demande.html` (21), toutes les fonctions appelées depuis le HTML et depuis les gestionnaires
+construits en chaîne sont définies, et les 16 classes `fiche-*` ont une règle CSS.
+
+**Non vérifié à ce stade : le rendu réel dans un navigateur**, en clair et en sombre, et sur
+téléphone. C'est le sens de l'état « À tester » — et la leçon de #53, où c'est un vrai téléphone
+qui avait rattrapé ce que le calcul disait bon.
 
 ---
 
-*Spec du 2026-09-09. Aucune ligne de code écrite : en attente du feu vert de Cyril.*
+*Spec du 2026-09-09, développée le 2026-09-10 après le feu vert de Cyril.*
