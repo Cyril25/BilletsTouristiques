@@ -98,7 +98,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#54 (prod)](demande-54-mode-sombre.md) | Mode sombre / mode clair (4 étapes) | ~~L~~ → M | À tester | ✅ | `68b9394` → `1ffb71f` |
 | [#55 (prod)](demande-55-menu-violet-fonce-et-traits.md) | Le violet foncé ne voulait plus dire « titre de rubrique » (retour sur #53) | S | À tester | ✅ | `3fa09cb` |
 | [#56 (prod)](demande-56-menu-mobile-repliable.md) | Sous-menus repliables sur téléphone | M | À tester | ✅ | `3fa09cb` |
-| [#58 (prod)](demande-58-fiche-demande-documents-et-commentaires.md) | Fiche demande pleine page : documents de spec lisibles et commentables par les admins | M | À tester — ⚠ **migration à jouer** pour les documents et les commentaires | ✅ | `eb4d8fa` |
+| [#58 (prod)](demande-58-fiche-demande-documents-et-commentaires.md) | Fiche demande pleine page : documents de spec lisibles et commentables par les admins | M | À tester (migration jouée le 2026-09-10) | ✅ | `eb4d8fa` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

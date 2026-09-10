@@ -6,10 +6,12 @@
 - **Concerne :** les admins (6 personnes), et eux seuls — `admin-demandes.html` porte
   `data-require-admin`, et **aucun écran membre n'écrit dans `demandes`** (vérifié : la table
   n'est alimentée que par `admin-demandes.js`).
-- **Statut :** **développée le 2026-09-10, à tester.** ⚠ La migration
-  `scripts/migration-demande-58-docs-et-commentaires.sql` **reste à jouer** : sans elle la fiche
-  s'affiche et s'édite, mais les documents ne peuvent pas être attachés et le fil de commentaires
-  annonce son indisponibilité en nommant le script.
+- **Statut :** **À tester.** Développée et mise en ligne le 2026-09-10 ; **migration jouée le
+  même jour** par Cyril dans le SQL Editor — les ports 5432 et 6543 étant filtrés depuis son
+  poste, la voie habituelle (psql via Docker) n'était pas praticable. Vérifié ensuite en
+  production : la table `demande_commentaires` répond, les documents du cadrage sont rattachés à
+  #1, #22 et #58, et la contrainte de chemins **rejette** `specs/../global.js`, `global.js` et une
+  URL absolue (erreur `23514`).
 
 ## Contexte (demande)
 
