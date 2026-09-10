@@ -196,6 +196,68 @@ Deux pièges, tous deux traités :
 9. Sur téléphone, un glissement fait défiler la page tant que la carte n'a pas été activée.
 10. La carte reste inaccessible à un non-admin (hérité de `data-require-admin`).
 
+## Ce que le développement a appris
+
+Trois choses que l'analyse n'avait pas vues, et qui valaient d'être corrigées avant la mise en
+ligne plutôt qu'après.
+
+### Les champs « ville » des membres étrangers sont sales — la requête structurée ne suffit pas
+
+Le géocodeur a été éprouvé sur les **vraies** adresses, pas sur des exemples. Résultat du premier
+jet : **BAN 14/14**, dont les 8 membres sans pays renseigné — la règle « pays vide = France » est
+confirmée. Mais **Nominatim 7/11**, et les 4 échecs venaient tous du champ `ville` :
+
+| Donnée réelle | Ce qui cloche |
+|---|---|
+| `4300` / `4300 - WAREMME` | le code postal recopié dans la ville |
+| `28934` / `MOSTOLES MADRID` | la province collée au nom |
+| `46460` / `SILLA -VALENCIA` | la province collée, avec un tiret |
+| `45692` / `MALPICA DE TAJO ( TOLEDO` | parenthèse ouverte, **et un code postal faux d'un chiffre** |
+
+D'où la **cascade à trois essais** : structuré (`postalcode` + `city` + `countrycodes`), puis code
+postal seul, puis texte libre. Le code postal seul rattrape 3 cas ; le texte libre rattrape le
+quatrième, celui dont le code postal est faux — seul le nom de la ville permettait de le retrouver.
+Après cascade : **25/25** sur l'échantillon réel (11 étrangers + 8 sans pays + 6 français).
+
+La leçon vaut au-delà de cette demande : sur ces 14 colonnes d'adresse saisies à la main depuis
+des années, **tout ce qui suppose un format propre échouera sur une ligne sur quatre**.
+
+### Les contrôles de Leaflet passaient par-dessus le menu
+
+`.leaflet-top` / `.leaflet-bottom` sont à `z-index: 1000` ; `#menu-placeholder` est collant à
+`z-index: 900`. Les boutons de zoom et l'attribution flottaient donc **au-dessus du menu** dès
+qu'on faisait défiler la page. Corrigé par un `position: relative; z-index: 0` sur le conteneur de
+la carte : sur un élément positionné, `z-index: 0` crée un contexte d'empilement et enferme tous
+les `z-index` de Leaflet dedans.
+
+### Une carte construite dans un conteneur masqué se cadre de travers
+
+`#app-content` reste en `display: none` jusqu'à la vérification du rôle. Une carte construite
+pendant ce temps mesure 0 sur 0 : `invalidateSize()` la remet à la bonne taille, mais **ne rejoue
+pas le cadrage**, et le `fitBounds` initial avait été calculé sur une taille nulle. La vue France
+est donc posée **quand la carte a une taille réelle** (`ResizeObserver`), avec un `setView` de
+repli à la construction pour le cas où elle n'en aurait jamais.
+
 ## Réalisation
 
-_À compléter après développement (fichiers + hash de commit)._
+Commit **`8572c0b`** (code) — cache `v303`.
+
+| Fichier | Ce qui change |
+|---|---|
+| [global.js](../../global.js) | `cleGeoAdresse`, `geocoderCommune` (cascade), `majPositionMembre` |
+| [admin-stats.js](../../admin-stats.js) | requête des positions isolée, section carte, `initCarteMembres()` |
+| [admin-stats.html](../../admin-stats.html) | Leaflet 1.9.4 + SRI, styles de la carte, `img-src` des tuiles |
+| [profil.js](../../profil.js), [users.js](../../users.js), [mes-collectes.js](../../mes-collectes.js) | appel à `majPositionMembre()` après enregistrement |
+| [profil.html](../../profil.html), [users.html](../../users.html), [mes-collectes.html](../../mes-collectes.html) | `connect-src` des deux géocodeurs |
+| [sw.js](../../sw.js) | tuiles et géocodeurs en `NETWORK_ONLY`, `CACHE_NAME` → `v303` |
+| `scripts/migration-demande-63-position-membres.sql` | les 3 colonnes (gitignoré, reproduit plus haut) |
+| `scripts/geocode-membres-63.py` | rattrapage des 67 adresses (gitignoré) |
+
+### ⚠ Dans cet ordre, sinon la carte ne montre rien
+
+1. **Jouer la migration** dans l'éditeur SQL Supabase. Avant ça, la page des stats fonctionne mais
+   la carte affiche « migration non jouée » en nommant le script.
+2. **Lancer le rattrapage** : `python scripts/geocode-membres-63.py --dry-run` pour voir, puis sans
+   l'option pour écrire. Compter un peu plus d'une minute (une requête par seconde). Sous VPN,
+   `set BT_CA_BUNDLE=%USERPROFILE%\.claude\secrets\ne-ca-bundle.pem`.
+3. **Puis tester la carte.**
