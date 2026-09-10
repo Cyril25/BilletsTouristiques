@@ -93,6 +93,10 @@ Migration : [scripts/migration-demande-63-position-membres.sql](../../scripts/mi
 | France (`pays` vide ou « France ») | `api-adresse.data.gouv.fr` | `/search/?q=<cp> <ville>&type=municipality&limit=1` |
 | Étranger | `nominatim.openstreetmap.org` | `/search?format=json&limit=1&postalcode=<cp>&city=<ville>&countrycodes=<iso2>` |
 
+> ⚠ Côté étranger, cette requête n'est que **le premier de trois essais**. Le développement a
+> montré qu'elle échouait sur 4 des 11 membres concernés, à cause de champs `ville` bruités :
+> voir « Ce que le développement a appris » plus bas, qui donne la cascade complète.
+
 La BAN est gratuite, sans clé, sans quota gênant, et son `type=municipality` donne **exactement**
 le centre de commune voulu par D2 — c'est la bonne source pour les 56 membres français. Elle ne
 connaît pas l'étranger, d'où Nominatim pour les 11 autres : volume négligeable, compatible avec sa
