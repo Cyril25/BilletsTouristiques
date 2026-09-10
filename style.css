@@ -11731,3 +11731,51 @@ button.collecte-badge-status {
     .fiche-registre { margin-left: 0; width: 100%; }
     .fiche-registre-btn { flex: 1; }
 }
+
+
+/* ============================================================
+   DEMANDE #61 — LE JOURNAL DE TRAITEMENT, REPLIE ET EN BAS
+   ------------------------------------------------------------
+   Un admin qui vient relire une analyse traversait 12 lignes de
+   notes de travail avant d atteindre le document. La page suivait
+   l ordre du modele de donnees, pas celui de la tache du lecteur.
+   Le bloc reste accessible d un clic pour qui traite la demande.
+   ============================================================ */
+
+.fiche-traitement > summary {
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+}
+.fiche-traitement > summary::-webkit-details-marker { display: none; }
+
+/* Chevron dessine en CSS : pas d icone a charger, et il tourne a
+   l ouverture pour dire ou on en est. */
+.fiche-traitement > summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    margin-left: 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.15s;
+}
+.fiche-traitement[open] > summary::after { transform: rotate(-135deg); }
+
+.fiche-traitement > summary:hover { color: var(--color-primary); }
+.fiche-traitement[open] > summary { color: var(--color-primary); margin-bottom: 12px; }
+
+/* Replie, le bloc doit se lire comme une simple ligne : pas de
+   grande carte vide qui attire l oeil au bas de la page. */
+.fiche-traitement:not([open]) {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.fiche-traitement .fiche-actions { margin-bottom: 0; margin-top: 12px; }

@@ -273,8 +273,9 @@ function enregistrerFiche() {
         qui: quiValues.join(','),
         priorite: document.getElementById('fd-priorite').value,
         complexite: document.getElementById('fd-complexite').value,
-        etat: nouvelEtat,
-        commentaire: document.getElementById('fd-commentaire').value.trim()
+        etat: nouvelEtat
+        // Le journal (`commentaire`) a son propre bouton, dans le bloc replie
+        // du bas — demande #61.
     };
 
     supabaseFetch('/rest/v1/demandes?id=eq.' + laDemande.id, {
@@ -329,6 +330,24 @@ function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
     }).catch(function(e) {
         console.warn('Notif demandeur (#33) : échec', e);
     });
+}
+
+// Demande #61 — le journal s'enregistre seul : il vit dans un bloc replie en
+// bas de page, loin du bouton d'en-tete. Un bouton qui enregistre un champ
+// qu'on ne voit pas est un bouton qui fait peur.
+function enregistrerJournal() {
+    var texte = document.getElementById('fd-commentaire').value.trim();
+    supabaseFetch('/rest/v1/demandes?id=eq.' + laDemande.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ commentaire: texte })
+    })
+        .then(function() {
+            laDemande.commentaire = texte;
+            showToast('Journal enregistré', 'success');
+        })
+        .catch(function(error) {
+            showToast('Erreur enregistrement : ' + error.message, 'error');
+        });
 }
 
 function ouvrirSuppressionFiche() {

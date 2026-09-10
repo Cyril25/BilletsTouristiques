@@ -108,19 +108,7 @@
                           placeholder="Décrire la demande : quoi, pour qui, dans quel contexte..."></textarea>
             </section>
 
-            <!-- ---------- Journal de traitement ---------- -->
-            <section class="fiche-bloc">
-                <h2 class="fiche-bloc-titre"><i class="fa-solid fa-clipboard-check"></i> Journal de traitement</h2>
-                <p class="fiche-aide">Questions ouvertes, décisions, avancement. C'est ce texte qui s'affiche en
-                   infobulle dans la liste et qui est cherché par la recherche.</p>
-                <textarea id="fd-commentaire" class="fiche-textarea" rows="12"
-                          placeholder="[date] Ce qui a été décidé, ce qui reste à trancher..."></textarea>
-            </section>
-
             <div class="fiche-actions">
-                <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="ouvrirSuppressionFiche()">
-                    <i class="fa-solid fa-trash"></i> Supprimer
-                </button>
                 <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="enregistrerFiche()">
                     <i class="fa-solid fa-floppy-disk"></i> Enregistrer
                 </button>
@@ -174,6 +162,29 @@
                     </div>
                 </div>
             </section>
+
+
+            <!-- ---------- Traitement de la demande (#61) ----------
+                 Descendu ici et replie : un admin qui vient relire une analyse
+                 traversait 12 lignes de notes de travail avant d'atteindre le
+                 document. La page suivait l'ordre du modele de donnees, pas
+                 celui de la tache du lecteur. -->
+            <details class="fiche-bloc fiche-traitement">
+                <summary><i class="fa-solid fa-clipboard-check"></i> Traitement de la demande</summary>
+                <p class="fiche-aide">Le journal de suivi : questions ouvertes, décisions, avancement.
+                   C'est ce texte qui s'affiche en infobulle dans la liste et qui est cherché par la
+                   recherche. <strong>Pas besoin de l'ouvrir pour relire une analyse.</strong></p>
+                <textarea id="fd-commentaire" class="fiche-textarea" rows="12"
+                          placeholder="[date] Ce qui a été décidé, ce qui reste à trancher..."></textarea>
+                <div class="fiche-actions">
+                    <button type="button" class="user-modal-btn user-modal-btn-danger" onclick="ouvrirSuppressionFiche()">
+                        <i class="fa-solid fa-trash"></i> Supprimer la demande
+                    </button>
+                    <button type="button" class="user-modal-btn user-modal-btn-primary" onclick="enregistrerJournal()">
+                        <i class="fa-solid fa-floppy-disk"></i> Enregistrer le journal
+                    </button>
+                </div>
+            </details>
 
         </div>
     </div>

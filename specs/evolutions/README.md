@@ -101,6 +101,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#58 (prod)](demande-58-fiche-demande-documents-et-commentaires.md) | Fiche demande pleine page : documents de spec lisibles et commentables par les admins | M | À tester (migration jouée le 2026-09-10) | ✅ | `eb4d8fa` |
 | [#59 (prod)](demande-59-flux-analyse-et-validation-spec.md) | Flux d'analyse des demandes L et validation de spec par un admin | M | À tester (migration jouée le 2026-09-10) | ✅ | `def28c1` |
 | [#60 (prod)](demande-60-spec-en-clair-et-technique.md) | Une spec en deux registres : « en clair » et « technique » | M | À tester | ✅ | — |
+| [#61 (prod)](demande-61-journal-replie-en-bas.md) | Le journal de traitement descend et se replie | S | À tester | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
