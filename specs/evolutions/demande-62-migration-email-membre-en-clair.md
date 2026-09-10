@@ -13,7 +13,7 @@ De temps en temps, un membre n'arrive plus à se connecter avec son adresse emai
 nouvelle, revient sur le site... et **ne retrouve rien**. Ni ses inscriptions, ni sa collection, ni
 ses envois. Pour l'application, la personne avec la nouvelle adresse est **quelqu'un d'autre**.
 
-C'est arrivé à Angelo Schirmer le 9 septembre. Dix ans d'historique — 139 inscriptions, 27 billets
+C'est arrivé le 9 septembre. Dix ans d'historique — 139 inscriptions, 27 billets
 en collection, 24 envois — dormaient sous son ancienne adresse pendant qu'il consultait le site
 avec la nouvelle, où il n'y avait rien.
 
@@ -36,7 +36,7 @@ personne ne s'en aperçoive.
 
 ### Ce n'est pas une crainte, c'est déjà arrivé deux fois
 
-**En 2024**, un changement d'adresse a été fait à la main pour Jean. Le script d'alors traitait six
+**En 2024**, un changement d'adresse a été fait à la main pour un membre. Le script d'alors traitait six
 sortes de données. Il en avait oublié une : les enveloppes. **Six enveloppes sont restées au nom de
 l'ancienne adresse**, et personne ne l'a jamais vu — jusqu'à ce qu'on aille regarder, cette semaine.
 
@@ -49,12 +49,11 @@ Rien de grave dans l'immédiat — aucune n'a de frais de port impayés — mais
 
 ## Ce qui a déjà été fait
 
-**Le cas d'Angelo a été réglé à la main le 10 septembre**, avec un script écrit pour l'occasion et
-essayé au préalable sur une copie jetable de la base. Il a fonctionné : Angelo retrouve tout sous
-sa nouvelle adresse.
+**Ce cas a été réglé à la main le 10 septembre**, avec un script écrit pour l'occasion et
+essayé au préalable sur une copie jetable de la base. Il a fonctionné : le membre retrouve tout sous sa nouvelle adresse.
 
 Mais c'est justement le problème : **à la main, à chaque fois, avec le risque d'oublier une case** —
-exactement ce qui est arrivé à Jean.
+exactement ce qui est arrivé en 2024.
 
 ## Ce qui est proposé
 
@@ -63,7 +62,7 @@ Deux façons de faire, et le choix compte plus que le reste.
 **La première** : écrire dans l'application la liste des endroits à mettre à jour. Rapide, et ça
 marche... jusqu'au jour où quelqu'un ajoute une nouvelle fonctionnalité, donc une nouvelle sorte de
 données, et oublie de compléter la liste. **On aurait reproduit le mécanisme qui a coûté les six
-enveloppes de Jean**, en plus officiel.
+enveloppes de 2024**, en plus officiel.
 
 **La seconde, recommandée** : demander à la base de données elle-même de tenir le lien. Une fois
 que c'est fait, changer l'adresse d'un membre entraîne automatiquement tout le reste — **y compris
@@ -88,12 +87,12 @@ d'afficher une erreur technique incompréhensible.
 
 ## Comment ça se passera, concrètement
 
-Marie, admin, ouvre la fiche d'Angelo dans Gestion Membres. Elle clique sur **« Changer l'adresse
+Marie, admin, ouvre la fiche du membre concerné dans Gestion Membres. Elle clique sur **« Changer l'adresse
 email »**. L'application lui montre d'abord **ce qui va bouger** :
 
 > 139 inscriptions, 27 billets en collection, 24 enveloppes, 1 fiche membre.
 
-Elle saisit la nouvelle adresse, confirme, et c'est fait. Angelo se reconnecte avec son nouveau
+Elle saisit la nouvelle adresse, confirme, et c'est fait. Le membre se reconnecte avec son nouveau
 compte Google et retrouve tout.
 
 **Le décompte affiché avant de confirmer n'est pas décoratif** : c'est ce qui permet à Marie de
@@ -107,7 +106,7 @@ collection ».
 ## Ce que l'application ne fera PAS
 
 - **Fusionner deux comptes réellement utilisés tous les deux.** On a regardé : il reste deux
-  doublons connus (Aurélien Cau, Robert Decoster) et dans les deux cas, comme pour Angelo, tout
+  doublons connus, et dans les deux cas, comme dans le cas déjà traité, tout
   l'historique est d'un seul côté. Il s'agit de renommer, pas d'arbitrer entre deux collections.
   Construire cet arbitrage doublerait le travail pour une situation qui n'existe pas.
   Si un jour le cas se présente, l'application **refusera clairement** et dira pourquoi, plutôt que

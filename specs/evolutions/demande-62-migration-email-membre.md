@@ -37,9 +37,9 @@ et n'a jamais eu de contrainte.
 
 ### La preuve que le problème est déjà réalisé, pas hypothétique
 
-Parmi les 10 adresses d'enveloppes orphelines figure **`jsobierajski71@wp.pl`**, avec 6 lignes.
-C'est l'adresse exacte de la seule migration d'email faite à la main jusqu'ici
-(`scripts/migrate-email-jsobierajski-to-fatherer.sql`). Ce script traitait 6 tables ; `enveloppes`
+Parmi les 10 adresses d'enveloppes orphelines figure **celle qui a été migrée en 2024**, avec
+6 lignes. C'est l'adresse exacte de la seule migration d'email faite à la main jusqu'ici
+(un script `scripts/migrate-email-*.sql`, non versionné). Ce script traitait 6 tables ; `enveloppes`
 n'en faisait pas partie. **Les 6 lignes sont restées derrière, sans erreur, sans alerte, pendant
 des mois.**
 
@@ -57,9 +57,9 @@ solution est une liste écrite à la main, qui sera fausse à la prochaine table
 
 **On ne construit pas une fonctionnalité sur une liste que personne ne maintiendra.**
 
-## Ce que la migration manuelle d'Angelo a appris
+## Ce que la migration manuelle du 2026-09-10 a appris
 
-Faite le 2026-09-10 (`angelo.schirmer@live.fr` → `schirmerangelo@gmail.com` : 139 inscriptions,
+Faite le 2026-09-10 (`<ancienne adresse>` → `<nouvelle adresse>` : 139 inscriptions,
 27 lignes de collection, 24 enveloppes, 17 marqueurs de notification). Scripts
 `scripts/migration-demande-62-{1,2,3}-*.sql`. Trois enseignements qui contraignent le design :
 
@@ -85,7 +85,7 @@ Une fonction `SECURITY DEFINER` qui enchaîne les 20 `UPDATE`, comme le script m
 
 - **Pour** : aucun changement de schéma, aucune donnée à arbitrer, livrable vite.
 - **Contre** : **elle pourrit**. Toute table ajoutée plus tard devra y être ajoutée, et rien ne le
-  rappellera. C'est exactement le mécanisme qui a coûté les 6 enveloppes de Jean.
+  rappellera. C'est exactement le mécanisme qui a coûté les 6 enveloppes de 2024.
 
 ### Voie B — de vraies clés étrangères `ON UPDATE CASCADE` *(recommandée)*
 
@@ -249,7 +249,7 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 3. **`last_changed` et `changed_by` des inscriptions ne sont pas écrasés** par l'opération.
 4. Renommer vers une adresse déjà titulaire de données d'appartenance est **refusé**, avec un
    message nommant la table et le nombre de lignes.
-5. Renommer vers une adresse existante mais vide (cas Angelo) **fonctionne** et fusionne les fiches.
+5. Renommer vers une adresse existante mais vide (le cas rencontré le 10/09) **fonctionne** et fusionne les fiches.
 6. Un non-admin appelant la fonction directement par l'API est **refusé**.
 7. Après renommage, plus aucune ligne de la base ne porte l'ancienne adresse (contrôle automatique).
 8. Créer une ligne pointant vers un membre inexistant est **refusé** par la base.
@@ -261,7 +261,7 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 ## Ce que cette spec ne fait pas
 
 - **Fusionner deux comptes qui portent tous les deux des données.** Les trois doublons connus
-  (Schirmer — fait, Cau, Decoster) ont tout d'un seul côté. Construire l'arbitrage d'un conflit
+  (un traité le 2026-09-10, deux restants) ont tout d'un seul côté. Construire l'arbitrage d'un conflit
   qui n'existe pas doublerait le travail.
 - **Permettre à un membre de changer sa propre adresse.** Opération d'admin.
 - **Nettoyer les orphelines existantes** (lot 3, séparé).
@@ -277,7 +277,7 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 - **Q3 — Prévenir le membre ?** Une notification privée « votre adresse a été changée » a-t-elle un
   sens, sachant qu'il ne peut justement plus lire l'ancienne boîte ?
 - **Q4 — Le garde-fou d'exhaustivité vaut-il ses 20 lignes ?** Il protège d'une répétition exacte
-  de l'incident Jean. Je le recommande, mais c'est de la complexité en plus dans un projet dont la
+  de l'incident de 2024. Je le recommande, mais c'est de la complexité en plus dans un projet dont la
   simplicité est une contrainte assumée.
 - **Q5 — `is_admin()`.** Deux définitions coexistent dans le dépôt : `migration-4-1-membres.sql`
   (rôle `admin` seul) et `migration-inscription-publique.sql` (`admin` + `superadmin` + actif). À
