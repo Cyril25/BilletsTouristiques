@@ -15,11 +15,18 @@ demande » veut dire.
 |---|---|---|
 | `nouvelle` | Nouvelle | Déposée, pas encore lue |
 | `a_cadrer` | À cadrer | Comprise à moitié : il manque une précision du demandeur |
-| `validee` | Prêt à dev | Assez claire pour être développée telle quelle |
-| `en_cours` | En cours | Chantier ouvert (phase d'analyse d'une demande L) |
+| `a_analyser` | Prêt à analyser | Estimée **L** au tri : l'analyse est à écrire, le dev n'est pas ouvert |
+| `analyse_a_valider` | Analyse à valider | L'analyse est écrite et **attend la relecture d'un admin** |
+| `validee` | Prêt à dev | Développable telle quelle (pour une L : analyse relue et validée) |
+| `en_cours` | En cours (dev) | **Développement** en cours |
 | `a_tester` | À tester | Développée et **en ligne** : le demandeur doit vérifier |
 | `terminee` | Terminée | Le demandeur a validé (**lui seul** peut clore, cf. demande #48) |
 | `abandonnee` | Abandonnée | Écartée |
+
+> ⚠ **`en_cours` a changé de sens à la demande #59.** Il désignait la phase d'analyse d'une
+> demande L ; il désigne désormais le **développement**. L'analyse a ses deux états propres.
+> Les demandes qui étaient en `en_cours` au moment de la bascule (#1 et #22, analyse écrite,
+> pas encore relue) sont passées en `analyse_a_valider`.
 
 ## Le vocabulaire de Cyril
 
@@ -47,14 +54,35 @@ coder sur du flou.
 
 ## Les demandes de complexité L
 
-Phase d'analyse **obligatoire**, jamais de développement direct :
+Phase d'analyse **obligatoire**, jamais de développement direct. Depuis la demande #59, le
+parcours est porté par les états eux-mêmes :
 
-1. passer la demande en **En cours** (`en_cours`) — ouverte, mais pas en dev ;
+```
+Nouvelle → À cadrer → Prêt à analyser → Analyse à valider → Prêt à dev
+         → En cours (dev) → À tester → Terminée
+```
+
+1. au tri, une demande estimée **L** part en **Prêt à analyser** (`a_analyser`) — ouverte, mais
+   pas en dev ;
 2. rédiger une **spec détaillée**, en **posant les questions** nécessaires plutôt qu'en comblant
-   les trous par des hypothèses silencieuses ;
-3. méthode BMAD (`bmad-bmm-*`) si l'ampleur le justifie ;
-4. **ne pas commencer le dev** avant que l'analyse soit jugée complète **d'un commun accord**.
-   C'est à l'assistant de dire « l'analyse me semble complète » et d'attendre le feu vert.
+   les trous par des hypothèses silencieuses ; méthode BMAD (`bmad-bmm-*`) si l'ampleur le
+   justifie ;
+3. **attacher la spec à la demande** (champ `docs`, cf. #58) et passer en **Analyse à valider**
+   (`analyse_a_valider`). La liste signale alors d'elle-même qu'une relecture est attendue —
+   personne n'a besoin d'ouvrir la fiche pour le découvrir ;
+4. **un admin relit et valide** depuis la fiche. Une seule validation suffit : la demande bascule
+   **automatiquement** en `validee` (Prêt à dev), par un trigger en base.
+5. **ne pas commencer le dev avant cette validation.** C'est à l'assistant de dire « l'analyse me
+   semble complète » et d'attendre — mais le feu vert est désormais un **geste tracé**, pas une
+   phrase à interpréter : on sait qui a relu, et quand.
+
+**Ce qui déclenche ce parcours, c'est le L au moment du tri.** Une ré-estimation ultérieure n'en
+éjecte pas la demande : #1 et #22 sont repassées à **M** après leur cadrage et suivent malgré tout
+le flux, leur analyse existant déjà.
+
+**Retirer sa validation ne fait pas revenir en arrière** : le compteur baisse, l'état reste. Une
+demande qui retomberait toute seule en analyse parce que quelqu'un a décoché serait plus
+déroutante qu'utile ; le retour se fait à la main.
 
 ## Développer une demande : la spec d'abord
 
