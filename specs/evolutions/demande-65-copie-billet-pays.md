@@ -129,7 +129,7 @@ son département.
 
 ## Réalisation
 
-Développée le **2026-09-11**.
+Développée le **2026-09-11**, commit `1046fc9`.
 
 | Fichier | Ce qui a changé |
 |---|---|
