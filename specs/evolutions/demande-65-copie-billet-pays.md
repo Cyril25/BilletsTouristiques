@@ -3,7 +3,7 @@
 - **Épic :** corrections et évolutions (complexité **S**)
 - **Demande :** #65 de la table `demandes` de production — Jean-Philippe, 2026-09-11, priorité *normale*.
 - **Concerne :** les admins, écran Gestion Billets.
-- **Statut :** **En cours.** Spec du 2026-09-11.
+- **Statut :** **À tester.** Spec et développement du 2026-09-11.
 - **Régression de #16 (#35)**, commit `0d7ef84` : la copie s'ouvre depuis sur la page dédiée.
 
 ## Contexte (demande)
@@ -129,7 +129,20 @@ son département.
 
 ## Réalisation
 
-*À compléter après le développement.*
+Développée le **2026-09-11**.
+
+| Fichier | Ce qui a changé |
+|---|---|
+| `admin.js` | `populatePaysSelect()` mémorise la valeur sélectionnée avant de reconstruire la liste et la rétablit (D1). Nouvelle `ajouterPaysAncien()`, partagée avec `prefillForm()` : l'option « (ancien) » n'a plus qu'une seule écriture. Écouteur `change` du pays : sortie anticipée si `Dep` vaut déjà l'ISO ou commence par `ISO-` (D2). |
+| `sw.js` | `CACHE_NAME` v304 → v305. |
+
+**Vérifié** : syntaxe (`node --check`) ; banc jsdom sur la vraie page et le vrai `admin.js`,
+**25/25** après correction contre **16/25** avant — copie et modification quel que soit l'ordre
+d'arrivée des pays, pays hors référentiel (liste avant, après, rechargée), billet sans pays,
+double chargement sans option en double, et les cinq cas de l'écouteur du département.
+
+**Non vérifié** : un vrai navigateur, avec le vrai délai réseau. Le banc impose l'ordre d'arrivée ;
+il ne reproduit pas un rendu. `menu.html` non touché : pas de bump du `?v=` de `global.js`.
 
 ---
 

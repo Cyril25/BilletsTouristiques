@@ -105,6 +105,7 @@ avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
 | [#61 (prod)](demande-61-journal-replie-en-bas.md) | Le journal de traitement descend et se replie | S | À tester | ✅ | — |
 | [#62 (prod)](demande-62-migration-email-membre.md) | Migrer un membre vers une nouvelle adresse email | L | Prêt à analyser — reprise le 2026-09-11 (Q6) | ✅ | — |
 | [#64 (prod)](demande-64-garde-fou-jwt-enveloppes.md) | Garde-fou « hors du site » sur le trigger des enveloppes (débloque la maintenance, **pas** le renommage de #62 depuis l'écran) | S | À tester (migration jouée le 2026-09-11) | ✅ | `dac0c8b` |
+| [#65 (prod)](demande-65-copie-billet-pays.md) | La copie d'un billet perd son pays, puis son département ([en clair](demande-65-copie-billet-pays-en-clair.md)) | S | À tester | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

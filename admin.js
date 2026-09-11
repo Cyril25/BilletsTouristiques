@@ -637,6 +637,10 @@ function loadPays() {
 function populatePaysSelect() {
     var select = document.getElementById('field-pays');
     if (!select) return;
+    // Demande #65 — la liste arrive en asynchrone : sur la page dédiée, le formulaire
+    // est souvent déjà pré-rempli (copie, modification). Reconstruire la liste effaçait
+    // le pays posé : on le mémorise pour le rétablir.
+    var valeur = select.value;
     // Garder la premiere option (placeholder)
     select.length = 1;
     paysListe.forEach(function(pays) {
@@ -645,6 +649,19 @@ function populatePaysSelect() {
         option.textContent = pays.nom;
         select.appendChild(option);
     });
+    if (valeur) {
+        var existe = paysListe.some(function(pays) { return pays.nom === valeur; });
+        if (!existe) ajouterPaysAncien(select, valeur);
+        select.value = valeur;
+    }
+}
+
+// Story 4.3 — Pays hors référentiel (ancien billet) : on l'ajoute pour pouvoir l'afficher
+function ajouterPaysAncien(select, valeur) {
+    var option = document.createElement('option');
+    option.value = valeur;
+    option.textContent = valeur + ' (ancien)';
+    select.appendChild(option);
 }
 
 // ============================================================
@@ -1178,6 +1195,11 @@ function initPanel() {
             var paysNom = paysSelect.value;
             var iso = paysIsoMap[paysNom];
             if (iso) {
+                // Demande #65 — ne pas écraser un département qui correspond déjà au
+                // pays choisi (« FR-50 », ou « IT » au format court) : re-choisir le
+                // même pays effaçait le code.
+                var dep = depField.value.trim().toUpperCase();
+                if (dep === iso || dep.indexOf(iso + '-') === 0) return;
                 depField.value = iso + '-';
                 depField.focus();
                 // Placer le curseur après le tiret
@@ -1698,12 +1720,7 @@ function prefillForm(data) {
         var paysOptionExists = Array.prototype.some.call(paysSelect.options, function(opt) {
             return opt.value === paysValue;
         });
-        if (!paysOptionExists) {
-            var newPaysOption = document.createElement('option');
-            newPaysOption.value = paysValue;
-            newPaysOption.textContent = paysValue + ' (ancien)';
-            paysSelect.appendChild(newPaysOption);
-        }
+        if (!paysOptionExists) ajouterPaysAncien(paysSelect, paysValue);
         paysSelect.value = paysValue;
     }
 
