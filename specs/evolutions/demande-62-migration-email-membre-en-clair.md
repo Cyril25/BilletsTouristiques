@@ -5,7 +5,12 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> *Reflète la version technique du commit `19f3623` (10/09/2026).*
+> *Reflète la version technique du commit `de402c7` (11/09/2026).*
+>
+> **Mise à jour du 11/09 : l'analyse est reprise.** En développant la petite correction préalable
+> (demande #64), on a découvert qu'elle ne suffisait pas à ouvrir la voie, contrairement à ce
+> qu'annonçait la première version de ce document. Rien ne change dans ce qui vous est proposé ;
+> c'est un point de mécanique interne à régler avant de pouvoir vous soumettre la version finale.
 
 ## De quoi il s'agit
 
@@ -118,8 +123,13 @@ collection ».
 
 ## En combien de fois
 
-1. D'abord une petite correction technique préalable (demande #64), sans effet visible.
-2. Ensuite la mécanique de fond : le lien tenu par la base, et le changement d'adresse lui-même.
+1. ~~D'abord une petite correction technique préalable (demande #64), sans effet visible.~~
+   *Faite le 11/09. Elle simplifie l'entretien de la base, mais on a découvert en la testant
+   qu'elle n'ouvrait pas la voie au changement d'adresse depuis le site : les protections qui
+   entourent les enveloppes et l'historique des inscriptions s'appliquent aussi pendant
+   l'opération, et il faut prévoir comment elles la laissent passer — sans les affaiblir pour le
+   reste.*
+2. La mécanique de fond : le lien tenu par la base, et le changement d'adresse lui-même.
 3. Puis le bouton dans Gestion Membres, avec le décompte et la confirmation.
 4. Enfin, un jour, le ménage dans les adresses fantômes. Indépendant du reste.
 
