@@ -4,9 +4,10 @@
 - **Demande :** #22 de la table `demandes` de production — Cyril, 2026-07-16, priorité *normale*.
 - **Concerne :** tous les membres (**110** whitelistés, dont 6 admins et 1 superadmin).
 - **Statut :** **analyse reprise une deuxième fois le 2026-09-11**, après la remarque de
-  Jean-Philippe (admin) sur le parcours. Demande repassée en **Prêt à analyser**. Trois décisions
-  prises avec Cyril le jour même ; **une question posée à Jean-Philippe bloque encore** (O4,
-  l'enveloppe groupée). **Aucun développement commencé.**
+  Jean-Philippe (admin) sur le parcours. Repassée en **Prêt à analyser** le temps de la reprise,
+  puis en **Analyse à valider** une fois les documents réécrits. Trois décisions prises avec Cyril
+  le jour même ; **une question posée à Jean-Philippe reste ouverte** (O4, l'enveloppe groupée) :
+  si sa réponse change le modèle, la demande repassera en analyse. **Aucun développement commencé.**
 - **Historique de ce document :**
   - 09/09 — « tableau d'affichage sans argent ». **Faux** (remarque de Cyril du 10/09), voir
     « Pourquoi la première analyse s'est trompée ».
@@ -508,7 +509,7 @@ le jour où « Ma collection » est remplie, elle pourra proposer les siens en p
 | **O1** | Une **dette qui traîne** : l'appli relance-t-elle, ou reste-t-elle passive ? *Jean-Philippe a gardé « l'application ne relance pas » tel quel — lu comme un accord, à confirmer.* | Au dev du lot 1 |
 | **O2** | Un membre peut-il **annuler une transaction acceptée** unilatéralement, ou faut-il l'accord des deux ? | Au dev du lot 1 |
 | ~~O3~~ | ~~Une transaction peut-elle naître sans annonce ?~~ **Tranchée le 11/09 : oui** — c'est le lot 1 tel qu'il est maintenu. | — |
-| **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | **Bloquante** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs |
+| **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | **À trancher avant de valider** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs |
 | **O5** | L'ordre « lot 1 de #22 → #1 » tient-il encore, maintenant que « `dettes` est vide » ne pèse plus ? | Avant le dev — avec Cyril |
 
 ## Réalisation

@@ -103,6 +103,19 @@ laisse un commentaire sur une analyse :
 Une remarque à laquelle personne ne répond décourage la suivante, et c'est le mécanisme entier qui
 s'éteint.
 
+**Et une fois la reprise faite, la demande repart en Analyse à valider — même si une question reste
+posée à un relecteur** *(remarque de Cyril, 2026-09-11, sur #22)*. « Prêt à analyser » dit que c'est
+à l'analyste de jouer ; une question qui attend la réponse d'un admin dit l'inverse. Laisser la
+demande en analyse cacherait aux relecteurs que la balle est dans leur camp : la liste ne leur
+signale rien. La question se signale dans la version en clair (« mieux vaut attendre sa réponse
+avant de valider »), pas par l'état. Le risque d'une validation prématurée est faible : la
+complexité L empêche que la demande parte en dev au fil de l'eau, et le garde-fou avant dev relit
+les questions ouvertes.
+
+Et une réponse postée **par l'API** doit créer sa notification (`type='demande_commentaire'`,
+`cible='admins'`, comme le fait l'écran) : sans elle, le commentateur n'apprend jamais qu'on lui a
+répondu. Les réponses du 10/09 sur #1 et #22 n'avaient prévenu personne.
+
 **Retirer sa validation ne fait pas revenir en arrière** : le compteur baisse, l'état reste. Une
 demande qui retomberait toute seule en analyse parce que quelqu'un a décoché serait plus
 déroutante qu'utile ; le retour se fait à la main.
