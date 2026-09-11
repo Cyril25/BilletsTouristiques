@@ -149,4 +149,22 @@ Aucun changement côté site, aucun redéploiement, pas de bump de `CACHE_NAME`.
 
 ## Réalisation
 
-*(à compléter une fois la migration jouée en production : verdict de l'étape 3, date)*
+**Jouée en production le 2026-09-11 à 09h10**, par `psql` (VPN coupé par Cyril le temps de
+l'opération), sur le projet `lhwcoybugdsggcclhtgb` — vérifié avant d'agir : utilisateur de
+connexion suffixé par la référence de prod, absence du marqueur de la copie de test, et mêmes
+lignes `membres` lues par `psql` et par le Worker.
+
+| Étape | Résultat |
+|---|---|
+| 1 — constat | **PRET** : la production tournait exactement la version de juillet ; trigger `O` |
+| 2 — migration | Dans **une seule transaction** : garde d'empreinte avant → `CREATE OR REPLACE` → garde d'empreinte et d'état du trigger après → `COMMIT`. Un échec de l'une des gardes aurait tout annulé |
+| 3 — contrôle, nouvelle connexion | **OK** : la fonction en production est exactement celle du banc ; trigger `O` |
+
+**L'hypothèse que le banc avait imitée a été vérifiée sur la vraie base**, en lecture seule
+(transaction annulée, aucune donnée touchée) : `auth.jwt()` de Supabase lit bien
+`request.jwt.claims`, et le garde-fou s'évalue comme sur le banc — `true` sans JWT et en rôle
+service, `false` pour un anonyme sans email et pour un membre connecté.
+
+- Scripts : `scripts/migration-demande-64-{1-constat,2-migration,3-controle}.sql` (gitignorés).
+- Aucun fichier du site modifié : pas de redéploiement, pas de bump de `CACHE_NAME`.
+- Pas d'annonce « nouveauté » : rien de visible pour personne.
