@@ -572,10 +572,21 @@ window.flagImg = function(pays) {
         var code = window.paysCode(pays); // ISO2 déduit de la table des drapeaux
         if (!code || code === 'FR') {
             // La BAN est gratuite, sans clé, et son type=municipality donne
-            // exactement le centre de commune cherché. Éprouvée sur les 56 adresses
-            // françaises existantes : 56 sur 56.
-            return geoJson('https://api-adresse.data.gouv.fr/search/?limit=1&type=municipality&q='
-                + encodeURIComponent((cp + ' ' + ville).trim())).then(posBan);
+            // exactement le centre de commune cherché.
+            var ban = 'https://api-adresse.data.gouv.fr/search/?limit=1&type=municipality&q=';
+            return geoJson(ban + encodeURIComponent((cp + ' ' + ville).trim())).then(posBan)
+                .then(function(pos) {
+                    // Repli : le code postal seul. Nécessaire pour les COMMUNES FUSIONNÉES —
+                    // environ 2 500 depuis 2015. Un membre qui écrit « Bussière-Poitevine »
+                    // (fondue en 2019 dans Val-d'Oire-et-Gartempe) écrit une adresse que La
+                    // Poste accepte, mais que type=municipality ne connaît plus : seule la
+                    // commune actuelle y figure. Le code postal, lui, n'a pas bougé.
+                    // Pas de repli par lieu-dit (type=locality) : sur une commune normale il
+                    // tombe sur une rue au hasard, alors que celui-ci rend toujours un centre
+                    // de commune. Premier passage réel : 54 sur 55 sans lui, 55 sur 55 avec.
+                    if (pos || !cp) return pos;
+                    return geoJson(ban + encodeURIComponent(cp)).then(posBan);
+                });
         }
 
         // La BAN ne connaît pas l'étranger : Nominatim, en trois essais de plus en
