@@ -1,6 +1,9 @@
 # Demande #62 — Migrer un membre vers une nouvelle adresse email
 
-> **Complexité L.** Analyse écrite le 2026-09-10, en attente de validation.
+> **Complexité L.** Analyse écrite le 2026-09-10. **Reprise le 2026-09-11** : deux affirmations se
+> sont révélées fausses en développant #64 — elles sont barrées ci-dessous, avec la correction et
+> la preuve. La demande repasse en **Prêt à analyser** : la fonction de renommage doit maintenant
+> dire comment elle traite les triggers pendant le cascade (question Q6).
 >
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
@@ -69,8 +72,16 @@ Faite le 2026-09-10 (`<ancienne adresse>` → `<nouvelle adresse>` : 139 inscrip
    `membre_email` : `Champ non modifiable par le membre`. → **saisi en demande #64.**
    ⚠ Une fonction `SECURITY DEFINER` appelée depuis l'écran **aura** un JWT (celui de l'admin), donc
    ce trigger ne bloquera pas — mais il refusera quand même, puisque l'admin n'est pas le
-   collecteur propriétaire de l'enveloppe. **#64 est un prérequis de #62**, ou la fonction devra
-   désactiver le trigger, ce qui est bien pire dans du code appelé depuis le navigateur.
+   collecteur propriétaire de l'enveloppe. ~~**#64 est un prérequis de #62**, ou la fonction devra
+   désactiver le trigger, ce qui est bien pire dans du code appelé depuis le navigateur.~~
+
+   > **Corrigé le 2026-09-11.** La conclusion ne suivait pas de ce qui la précède : la phrase
+   > disait elle-même que le JWT de l'admin serait refusé, puis faisait de #64 — qui ne traite que
+   > le cas *sans* JWT — la solution. **#64 débloque la maintenance (éditeur SQL, Worker), pas le
+   > renommage lancé depuis l'écran.** Vérifié sur le banc de #64 : avec la nouvelle fonction en
+   > place, un renommage porté par un JWT d'admin est toujours refusé (`Champ non modifiable par le
+   > membre`). #64 reste utile, mais n'est ni suffisante ni, à strictement parler, un prérequis.
+   > Voir Q6.
 2. **`trg_inscription_audit` écrase l'historique sans rien dire** : `changed_by='système'` et
    `last_changed=NOW()` sur chaque ligne touchée. Sur 139 inscriptions, toute la traçabilité.
 3. **L'invariant D4 ne gêne pas** : `trg_inscription_scope_invariant` ne se déclenche que sur
@@ -191,9 +202,26 @@ Elle doit, dans cet ordre :
 8. **auto-contrôle final** : plus aucune ligne ne doit porter l'ancienne adresse, sinon
    `RAISE EXCEPTION` — la fonction étant une seule instruction, tout est annulé.
 
-⚠ Le trigger `trg_inscription_audit` se déclenchera-t-il ? **Non** : avec la voie B, on ne fait plus
+~~⚠ Le trigger `trg_inscription_audit` se déclenchera-t-il ? **Non** : avec la voie B, on ne fait plus
 d'`UPDATE` sur `inscriptions` — c'est le CASCADE qui agit, et il n'exécute pas les triggers
-utilisateur `BEFORE UPDATE`. **À vérifier en recette**, c'est un point où je peux me tromper.
+utilisateur `BEFORE UPDATE`. **À vérifier en recette**, c'est un point où je peux me tromper.~~
+
+> **Corrigé le 2026-09-11 — c'était faux.** Un `ON UPDATE CASCADE` est exécuté par Postgres comme un
+> véritable `UPDATE` sur la table fille, et **cet `UPDATE` déclenche les triggers de la table fille**
+> comme n'importe quel autre. Vérifié sur Postgres 16 (banc de #64, cas A et B) :
+>
+> | Cas | Ce qui se passe pendant le cascade |
+> |---|---|
+> | A — renommage avec JWT d'admin | `trg_enforce_enveloppe_membre_update` s'exécute et **bloque** le renommage |
+> | B — même renommage, trigger enveloppes retiré | `trg_inscription_audit` s'exécute et **écrase** `changed_by` (→ l'admin) et `last_changed` (→ aujourd'hui) |
+>
+> La mention « à vérifier en recette » était la bonne intuition, au mauvais moment : **une
+> affirmation dont on doute se vérifie avant de la mettre dans une spec soumise à validation**, pas
+> après. Vérifier coûtait trois minutes.
+>
+> **Conséquence** : la voie B reste la bonne — elle règle la question de l'exhaustivité, qui était
+> le fond du problème. Mais le cascade ne dispense pas de s'occuper des triggers : la fonction de
+> renommage doit dire comment elle les traverse sans les désactiver pour tout le monde. C'est Q6.
 
 ## Le garde-fou contre le pourrissement
 
@@ -234,8 +262,8 @@ qu'il s'apprête à déplacer 139 inscriptions, et donc de s'arrêter s'il s'est
 
 | Lot | Contenu | Dépend de |
 |---|---|---|
-| **0** | **#64** — garde-fou JWT sur `enforce_enveloppe_membre_update()` | — |
-| **1** | Migration : FK `ON UPDATE CASCADE NOT VALID` sur les 16 colonnes d'appartenance, table de journal, fonction `migrer_email_membre()` + contrôle d'exhaustivité | lot 0 |
+| ~~**0**~~ | ~~**#64** — garde-fou JWT sur `enforce_enveloppe_membre_update()`~~ *(faite le 2026-09-11 — utile à la maintenance, ne débloque pas l'écran)* | — |
+| **1** | Migration : FK `ON UPDATE CASCADE NOT VALID` sur les 16 colonnes d'appartenance, table de journal, fonction `migrer_email_membre()` + contrôle d'exhaustivité **+ traversée des triggers pendant le cascade (Q6)** | — |
 | **2** | Écran : bouton, simulation, confirmation, message d'erreur de suppression revu dans `users.js` | lot 1 |
 | **3** *(séparé)* | Arbitrage des 15 adresses orphelines, puis `VALIDATE CONSTRAINT` | indépendant |
 
@@ -282,6 +310,19 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 - **Q5 — `is_admin()`.** Deux définitions coexistent dans le dépôt : `migration-4-1-membres.sql`
   (rôle `admin` seul) et `migration-inscription-publique.sql` (`admin` + `superadmin` + actif). À
   vérifier en base laquelle est vivante ; la spec utilise `is_admin_ou_superadmin()`, non ambigu.
+- **Q6 — Comment la fonction traverse-t-elle les triggers pendant le cascade ?** *(ajoutée le
+  2026-09-11, bloquante)* Deux triggers s'exécutent pendant le renommage et le cassent : celui des
+  enveloppes le **refuse**, celui d'audit des inscriptions **écrase l'historique**. Trois pistes,
+  aucune tranchée :
+
+  | Piste | Principe | À peser |
+  |---|---|---|
+  | **a. Drapeau de transaction** | La fonction pose `set_config('app.migration_email', 'on', true)` — local à la transaction — et les deux triggers sortent immédiatement quand il est posé | Le plus ciblé : seul le renommage passe. **À vérifier : qu'aucun appelant ne puisse poser ce drapeau lui-même** (PostgREST n'expose pas `set_config`, mais c'est précisément le genre d'hypothèse qui s'est révélée fausse ici) |
+  | **b. Règles métier élargies** | Le trigger enveloppes laisse passer les admins, comme sa fonction sœur ; le trigger d'audit ne réécrit rien quand **seul** `membre_email` change | Chaque changement se défend seul, mais **élargit des droits au-delà du renommage** : un admin pourrait alors modifier n'importe quelle enveloppe |
+  | **c. Désactivation temporaire** | La fonction fait `ALTER TABLE … DISABLE TRIGGER` puis `ENABLE`, comme le script manuel | Simple et déjà éprouvé, mais pose un **verrou exclusif** sur les tables (tout le site attend pendant l'opération) et fait de la DDL depuis du code appelé par le navigateur |
+
+  Je penche pour **a**, sous réserve de la vérification indiquée — et elle se fait sur un banc, pas
+  en recette.
 
 ## Réalisation
 
