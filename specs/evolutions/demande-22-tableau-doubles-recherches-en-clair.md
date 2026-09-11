@@ -4,7 +4,7 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
-> Reflète la version technique du commit `1def716` (11/09/2026).
+> Reflète la version technique du commit `3d60690` (11/09/2026).
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -136,6 +136,7 @@ double** dans l'application, donc mieux vaut ne pas attendre après lui.
 - Est-ce que **ce que l'application ne fera pas** vous convient ?
 - Est-ce qu'il **manque quelque chose** d'évident pour quelqu'un qui pratique l'échange ?
 
-**La validation n'est pas encore ouverte** : la demande attend la réponse de Jean-Philippe à la
-question 1 ci-dessus, puis repassera en « Analyse à valider ». Vos remarques sont bienvenues dès
-maintenant : laissez un commentaire, vous aurez une réponse disant ce qui en a été fait.
+**Mieux vaut attendre la réponse de Jean-Philippe à la question 1 avant de valider** : une seule
+validation fait passer la demande en « Prêt à dev ». Si sa réponse change ce qui est prévu, ce
+document sera repris. Vos remarques sont bienvenues dès maintenant : laissez un commentaire, vous
+aurez une réponse disant ce qui en a été fait.
