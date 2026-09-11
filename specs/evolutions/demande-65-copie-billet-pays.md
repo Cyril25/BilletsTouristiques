@@ -86,6 +86,11 @@ tel que décrit, et la modification (cas 3a) le reproduit aussi.
 rétablit après. Si cette valeur n'est pas dans le référentiel, l'option « (ancien) » est recréée
 — le comportement de `prefillForm()` est ainsi préservé quel que soit l'ordre d'arrivée.
 
+**C'est le motif déjà retenu par #16 pour la liste voisine** : `populateCollecteCollecteurSelect()`
+conserve sa valeur quand `loadCollecteurs()` répond après l'ouverture de la page. La course avait
+été vue et corrigée pour les collecteurs, pas pour les pays, dont le chargement est lancé juste
+avant, sur la ligne précédente.
+
 Écarté : faire attendre `loadPays()` à `initBilletPage()`. Il faudrait le faire pour chaque mode
 (`?dup`, `?id`, `?new`), coupler l'ouverture de la page à une requête dont l'échec n'est
 aujourd'hui qu'un avertissement, et le prochain appelant devrait y penser. Corriger la fonction qui
