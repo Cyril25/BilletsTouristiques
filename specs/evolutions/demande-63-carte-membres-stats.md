@@ -226,6 +226,29 @@ Après cascade : **25/25** sur l'échantillon réel (11 étrangers + 8 sans pays
 La leçon vaut au-delà de cette demande : sur ces 14 colonnes d'adresse saisies à la main depuis
 des années, **tout ce qui suppose un format propre échouera sur une ligne sur quatre**.
 
+### Les communes fusionnées échappent à la BAN — trouvé au premier passage réel
+
+Le rattrapage sur la base de production a placé **65 membres sur 66**. L'échec n'était pas un
+étranger mais un Français : `87320 BUSSIERE-POITEVINE`. Cette commune **n'existe plus** — elle a
+été fondue en 2019 dans **Val-d'Oire-et-Gartempe**. Le membre a écrit le nom historique, ce que
+tout le monde fait et que La Poste accepte ; mais `type=municipality` ne connaît que les
+communes **actuelles**. Environ **2 500 communes** ont fusionné depuis 2015 : le cas reviendra.
+
+L'échantillon de test (25 cas) ne le contenait pas, c'est ce qui l'a laissé passer. Deux replis
+ont été essayés sur les données réelles :
+
+| Repli | Bussière-Poitevine | Une commune normale (s'il se déclenchait) |
+|---|---|---|
+| `q=<ville>&postcode=<cp>&type=locality` | centre de l'ancienne commune — parfait | **une rue au hasard** : « Rue ribera », « Chemin du Pré Poisson » |
+| `q=<cp>&type=municipality` | centre de la commune nouvelle, **à 500 m** | toujours un centre de commune |
+
+**Retenu : le code postal seul.** Le lieu-dit est plus précis sur le cas qui a échoué, mais il
+déraille dès qu'on s'en sert ailleurs ; le code postal ne rend jamais autre chose qu'un centre de
+commune, et 500 m restent très en deçà de la précision voulue par D2. Résultat : **66 sur 66**.
+
+La relance n'a repris **que** le membre manquant : l'idempotence par `geo_adresse` a fonctionné en
+conditions réelles, pas seulement sur le papier.
+
 ### Les contrôles de Leaflet passaient par-dessus le menu
 
 `.leaflet-top` / `.leaflet-bottom` sont à `z-index: 1000` ; `#menu-placeholder` est collant à
@@ -244,11 +267,12 @@ repli à la construction pour le cas où elle n'en aurait jamais.
 
 ## Réalisation
 
-Commit **`8572c0b`** (code) — cache `v303`.
+Commits **`8572c0b`** (code, cache `v303`) et **`c8dfb59`** (repli des communes fusionnées,
+cache `v304`).
 
 | Fichier | Ce qui change |
 |---|---|
-| [global.js](../../global.js) | `cleGeoAdresse`, `geocoderCommune` (cascade), `majPositionMembre` |
+| [global.js](../../global.js) | `cleGeoAdresse`, `geocoderCommune` (cascade étranger + repli code postal France), `majPositionMembre` |
 | [admin-stats.js](../../admin-stats.js) | requête des positions isolée, section carte, `initCarteMembres()` |
 | [admin-stats.html](../../admin-stats.html) | Leaflet 1.9.4 + SRI, styles de la carte, `img-src` des tuiles |
 | [profil.js](../../profil.js), [users.js](../../users.js), [mes-collectes.js](../../mes-collectes.js) | appel à `majPositionMembre()` après enregistrement |
@@ -257,7 +281,13 @@ Commit **`8572c0b`** (code) — cache `v303`.
 | `scripts/migration-demande-63-position-membres.sql` | les 3 colonnes (gitignoré, reproduit plus haut) |
 | `scripts/geocode-membres-63.py` | rattrapage des 67 adresses (gitignoré) |
 
-### ⚠ Dans cet ordre, sinon la carte ne montre rien
+### État au 2026-09-11 : migration jouée, rattrapage fait
+
+Migration jouée par Cyril, rattrapage lancé sur la production : **66 membres situés sur 108,
+42 sans adresse, aucune commune introuvable**, aucune position aberrante. Les chiffres ont
+bougé d'un depuis le relevé de la veille (67/109) : un membre actif avec adresse en moins.
+
+### ⚠ Pour mémoire, l'ordre qui a été suivi
 
 1. **Jouer la migration** dans l'éditeur SQL Supabase. Avant ça, la page des stats fonctionne mais
    la carte affiche « migration non jouée » en nommant le script.
