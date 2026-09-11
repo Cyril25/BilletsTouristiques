@@ -202,10 +202,41 @@ Avec `curl` sous VPN, ajouter `--ssl-no-revoke` : sans ça la requête meurt en 
 (`CRYPT_E_NO_REVOCATION_CHECK`) sans jamais mentionner le VPN. Avec Node/wrangler, exporter
 `NODE_EXTRA_CA_CERTS` vers le bundle de CA du Canton.
 
+## Le rituel en boucle
+
+**Décision de Cyril, 2026-09-11.** Sur son poste, une conversation Claude Code dédiée fait tourner
+`/loop 15m /rituel-demandes`. Chaque passage :
+
+1. contrôle la base (`node scripts/rituel-demandes.mjs etat`) et s'arrête là s'il n'y a rien à faire ;
+2. trie les demandes `nouvelle` ;
+3. reprend les remarques laissées sur une `analyse_a_valider` après la dernière réponse de l'assistant ;
+4. écrit **une** analyse `a_analyser`, la plus prioritaire.
+
+**Ce qui se publie désormais sans supervision** : le tri, les analyses (specs poussées sur `main`,
+donc en ligne), les réponses aux remarques (commentaire et notification aux admins). Ce qui rend ça
+acceptable : une analyse ne part jamais en développement sans qu'un admin l'ait validée, et la
+complexité L l'empêche d'être ramassée au fil de l'eau.
+
+`scripts/rituel-demandes.mjs` est le seul accès du rituel à la base, et il refuse lui-même ce qui
+n'en fait pas partie : toute transition autre que `nouvelle` → `validee` / `a_cadrer` / `a_analyser`,
+`a_analyser` → `analyse_a_valider` et `analyse_a_valider` → `a_analyser` ; l'entrée d'une L en Prêt
+à dev ; l'écrasement du journal ou des documents attachés (il ajoute, il ne remplace jamais). Il crée
+aussi les notifications que seul l'écran créait : au demandeur quand sa demande passe À cadrer, aux
+admins quand l'assistant répond dans un fil.
+
+**Une analyse bloquée sans Cyril** (SQL à jouer, décision qui n'appartient qu'à lui) porte en tête
+de journal une entrée `[date] EN ATTENTE DE CYRIL — …`. Le contrôle la saute jusqu'à ce qu'une entrée
+plus récente soit écrite par-dessus, ou qu'un commentaire soit posté sur la fiche après la mise en
+attente. Sans ce marqueur, chaque passage la reprendrait pour buter au même endroit.
+
+La boucle vit dans sa conversation : elle s'arrête quand on la ferme, et expire au bout de 7 jours.
+La commande `/rituel-demandes` est locale (`.claude/` est ignoré par git) : ce paragraphe et le
+script suffisent à la refaire.
+
 ## Ce qui n'est jamais automatique
 
-Le tri peut se faire sans supervision : il est réversible d'un clic dans l'écran Gestion
-Demandes. **Développer, pousser en production et passer en `a_tester` ne le sont pas.**
+Le tri, l'analyse et la réponse aux remarques se font sans supervision (paragraphe précédent).
+**Développer, mettre du code en production et passer en `a_tester`, jamais.**
 
 La demande #53 en est la démonstration : le correctif est parti en production avec un état
 `:hover` non traité, et ce sont les tests de Cyril sur un vrai téléphone qui l'ont rattrapé —

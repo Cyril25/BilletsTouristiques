@@ -30,6 +30,12 @@ scripts/*
 !scripts/restore-prod-supabase.ps1
 !scripts/RUNBOOK-E0-demande-16.md
 
+# Exception — l'accès à la base du rituel des demandes (CONVENTION-DEMANDES.md,
+# § « Le rituel en boucle »). Sans donnée personnelle ni secret : la clé du
+# Worker est lue dans ~/.claude/secrets/. Versionné parce que la convention y
+# renvoie, et que c'est lui qui borne ce que la boucle a le droit de faire.
+!scripts/rituel-demandes.mjs
+
 # Documentation vide
 docs/
 

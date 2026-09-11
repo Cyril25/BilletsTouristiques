@@ -23,14 +23,11 @@ complète la section **Réalisation** (fichiers touchés + commit). Ça permet d
 ## Demandes de complexité « L »
 
 Les demandes estimées **L** sont de gros chantiers : elles ne se traitent jamais « au fil de l'eau »
-avec les S/M, et **on n'attaque pas le dev directement**. Marche à suivre :
-
-1. Passer la demande au statut **En cours** (`etat=en_cours`) : le chantier est ouvert, mais en phase d'analyse.
-2. Rédiger une **spec détaillée** (nettement plus poussée que pour une S/M), en **posant les questions
-   nécessaires** au porteur du projet plutôt qu'en faisant des hypothèses implicites.
-3. Utiliser la **méthode BMAD** (PRD, architecture, epics/stories, brainstorming…) si l'ampleur du
-   chantier le justifie ; sinon une spec longue dans ce dossier suffit.
-4. **Ne démarrer le développement qu'une fois l'analyse considérée comme terminée d'un commun accord.**
+avec les S/M, et **on n'attaque pas le dev directement**. Le parcours (Prêt à analyser → Analyse à
+valider → Prêt à dev, depuis #59) et la spec en deux documents sont décrits dans
+[CONVENTION-DEMANDES.md](CONVENTION-DEMANDES.md), § « Les demandes de complexité L » : c'est lui qui
+fait foi. Ce paragraphe disait auparavant de passer la demande en `en_cours` pendant l'analyse, ce
+qui n'est plus vrai.
 
 ## Demandes rattachées
 
