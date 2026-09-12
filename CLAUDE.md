@@ -19,3 +19,15 @@ cache, prévenir le demandeur, annoncer la nouveauté).
 
 **À lire avant de toucher à une demande**, y compris depuis une session qui n'a pas d'historique
 sur ce projet.
+
+### « Lance le système de surveillance des demandes »
+
+Cette phrase de Cyril — ou toute formule voisine (« surveille les demandes », « remets la
+surveillance en route ») — veut dire : **taper `/loop 15m /rituel-demandes`**. C'est la boucle
+décrite dans `specs/evolutions/CONVENTION-DEMANDES.md`, § « Le rituel en boucle » : elle trie,
+répond aux remarques et écrit les analyses toute seule, toutes les 15 minutes. Il ne retiendra pas
+le nom exact de la commande : ne pas le lui demander, ne pas proposer autre chose.
+
+La lancer dans la conversation en cours, en signalant en une ligne qu'un onglet dédié vaut mieux
+s'il compte y travailler — les passages s'exécutent là où la boucle a été lancée. Elle meurt avec
+sa conversation et expire au bout de 7 jours : c'est pour ça qu'il la redemande.

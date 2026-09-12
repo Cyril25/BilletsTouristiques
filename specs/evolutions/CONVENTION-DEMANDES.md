@@ -205,7 +205,8 @@ Avec `curl` sous VPN, ajouter `--ssl-no-revoke` : sans ça la requête meurt en 
 ## Le rituel en boucle
 
 **Décision de Cyril, 2026-09-11.** Sur son poste, une conversation Claude Code dédiée fait tourner
-`/loop 15m /rituel-demandes`. Chaque passage :
+`/loop 15m /rituel-demandes`. Il la demande sous le nom de « **système de surveillance des
+demandes** » (cf. `CLAUDE.md`) : c'est de cette commande qu'il parle. Chaque passage :
 
 1. contrôle la base (`node scripts/rituel-demandes.mjs etat`) et s'arrête là s'il n'y a rien à faire ;
 2. trie les demandes `nouvelle` ;
