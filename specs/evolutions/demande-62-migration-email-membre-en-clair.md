@@ -5,12 +5,13 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> *Reflète la version technique du commit `de402c7` (11/09/2026).*
+> Reflète la version technique du commit `593dbe4` (12/09/2026).
 >
-> **Mise à jour du 11/09 : l'analyse est reprise.** En développant la petite correction préalable
-> (demande #64), on a découvert qu'elle ne suffisait pas à ouvrir la voie, contrairement à ce
-> qu'annonçait la première version de ce document. Rien ne change dans ce qui vous est proposé ;
-> c'est un point de mécanique interne à régler avant de pouvoir vous soumettre la version finale.
+> **Mise à jour du 12/09 : le point de mécanique est réglé, l'analyse vous revient.** Le 11/09, en
+> développant la petite correction préalable (demande #64), on avait découvert qu'elle ne suffisait
+> pas à ouvrir la voie, contrairement à ce qu'annonçait la première version de ce document. C'est
+> traité : voir « Le point réglé le 12/09 ». **Rien n'a changé dans ce qui vous est proposé** —
+> c'était de la mécanique interne.
 
 ## De quoi il s'agit
 
@@ -79,6 +80,28 @@ fantômes. **Vérification faite, non** : on peut mettre le mécanisme en place 
 tolérant l'existant, et faire le ménage plus tard, tranquillement. Les *nouvelles* incohérences,
 elles, deviennent impossibles immédiatement.
 
+## Le point réglé le 12/09
+
+Dans la base, il n'y a pas que des données : il y a aussi de petites règles de surveillance qui
+regardent passer chaque modification. « Un membre n'a pas le droit de changer ça. » « Note qui a
+modifié quoi, et quand. » Un changement d'adresse passe devant elles comme n'importe quelle autre
+modification — et c'est ce qu'on avait sous-estimé : l'une le **refusait** purement et simplement,
+une autre **effaçait au passage** la trace de qui avait fait quoi.
+
+En faisant le tour complet, on en a trouvé **cinq** concernées, et non deux comme on le croyait le
+11/09. Les trois nouvelles sont bénignes, mais elles mentaient : elles marquaient comme « modifiées
+aujourd'hui » les demandes, les signalements et les contacts de la personne, alors que personne n'y
+avait touché.
+
+**La solution retenue** : pendant l'opération, et pendant elle seule, la base sait qu'un changement
+d'adresse bien précis est en cours — de telle adresse vers telle autre. Chacune de ces règles laisse
+alors passer **cette modification-là et rien d'autre** : si quoi que ce soit change en même temps,
+elle reprend aussitôt son travail habituel. Les protections restent donc entières pour tout le reste
+du site, y compris pendant le changement d'adresse.
+
+Rien à décider de votre côté : c'est un choix technique, il est tranché, et il ne change rien à ce
+qui vous est proposé plus haut.
+
 ## Un effet de bord qu'il faut accepter en connaissance de cause
 
 Avec cette seconde voie, **supprimer un membre qui a encore des données deviendra refusé**.
@@ -128,7 +151,7 @@ collection ».
    qu'elle n'ouvrait pas la voie au changement d'adresse depuis le site : les protections qui
    entourent les enveloppes et l'historique des inscriptions s'appliquent aussi pendant
    l'opération, et il faut prévoir comment elles la laissent passer — sans les affaiblir pour le
-   reste.*
+   reste. C'est réglé depuis le 12/09, voir « Le point réglé le 12/09 ».*
 2. La mécanique de fond : le lien tenu par la base, et le changement d'adresse lui-même.
 3. Puis le bouton dans Gestion Membres, avec le décompte et la confirmation.
 4. Enfin, un jour, le ménage dans les adresses fantômes. Indépendant du reste.
@@ -145,5 +168,6 @@ collection ».
 4. **Faut-il prévenir le membre ?** Sachant qu'il ne peut justement plus lire son ancienne boîte,
    l'intérêt n'est pas évident.
 5. **Faut-il un garde-fou automatique** qui bloque l'opération et alerte si une nouvelle sorte de
-   données a été ajoutée sans être reliée ? C'est ce qui empêcherait de revivre l'oubli de 2024,
-   au prix d'un peu de complexité en plus.
+   données a été ajoutée sans être reliée — ou si une nouvelle règle de surveillance est apparue
+   sans qu'on y ait pensé, comme celles découvertes le 12/09 ? C'est ce qui empêcherait de revivre
+   l'oubli de 2024, au prix d'un peu de complexité en plus.
