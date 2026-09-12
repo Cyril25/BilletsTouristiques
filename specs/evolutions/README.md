@@ -100,7 +100,7 @@ qui n'est plus vrai.
 | [#59 (prod)](demande-59-flux-analyse-et-validation-spec.md) | Flux d'analyse des demandes L et validation de spec par un admin | M | À tester (migration jouée le 2026-09-10) | ✅ | `def28c1` |
 | [#60 (prod)](demande-60-spec-en-clair-et-technique.md) | Une spec en deux registres : « en clair » et « technique » | M | À tester | ✅ | — |
 | [#61 (prod)](demande-61-journal-replie-en-bas.md) | Le journal de traitement descend et se replie | S | À tester | ✅ | — |
-| [#62 (prod)](demande-62-migration-email-membre.md) | Migrer un membre vers une nouvelle adresse email | L | Prêt à analyser — reprise le 2026-09-11 (Q6) | ✅ | — |
+| [#62 (prod)](demande-62-migration-email-membre.md) | Migrer un membre vers une nouvelle adresse email ([en clair](demande-62-migration-email-membre-en-clair.md)) | L | Analyse à valider — Q6 tranchée le 2026-09-12 | ✅ | — |
 | [#64 (prod)](demande-64-garde-fou-jwt-enveloppes.md) | Garde-fou « hors du site » sur le trigger des enveloppes (débloque la maintenance, **pas** le renommage de #62 depuis l'écran) | S | À tester (migration jouée le 2026-09-11) | ✅ | `dac0c8b` |
 | [#65 (prod)](demande-65-copie-billet-pays.md) | La copie d'un billet perd son pays, puis son département ([en clair](demande-65-copie-billet-pays-en-clair.md)) | S | À tester | ✅ | `1046fc9` |
 
