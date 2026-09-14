@@ -12,6 +12,10 @@
   un **commentaire** sur chaque décision ; la création d'un billet passe par la liste ; et un
   **journal** de ce que l'import a changé. Q1, Q2, Q5 et Q6 tranchées, Q4 reformulée avec un exemple.
   Voir « Les réponses de Cyril ».
+- **Complétée à 16 h 39** avec deux précisions de Cyril : **ce qui identifie un billet** —
+  référence, millésime et version — et ce qu'on compare — version normale et variante, pas le nom ni
+  le pays (Q3) ; et l'**assouplissement de la protection est retenu** (Q4). L'écran d'incohérences
+  est déposé comme demande **#69** (Q7). Plus aucune question ouverte : l'analyse est validable.
 - Version en clair pour les relecteurs : `demande-66-verification-billets-import-en-clair.md`.
 
 ## Les réponses de Cyril *(14/09, 15 h 44)*
@@ -25,7 +29,19 @@
 | **Q5** — champ obligatoire | « non pas spécialement […] par contre on pourrait créer un écran “incohérences des billets” qui remonterait ces cas, ainsi que des billets sans photo, et autres cas problématiques » | Pas de champ obligatoire. L'écran d'incohérences est une **idée à part** : question Q7 |
 | **Q6** — créer un billet absent | « ça doit passer par l'écran de vérification, ça dira “nouveau billet à créer” et on acceptera ou refusera ; pense aussi qu'on pourra mettre un commentaire pour dire pourquoi » | Confirme la ligne `absent_base`. **Un commentaire** accompagne toute décision |
 
-Q3 (comparer d'autres champs) n'a pas reçu de réponse : elle reste ouverte, sans bloquer.
+~~Q3 (comparer d'autres champs) n'a pas reçu de réponse : elle reste ouverte, sans bloquer.~~
+
+### Deuxième série *(14/09, 16 h 39)*
+
+| Question | Sa réponse | Ce que ça change |
+|---|---|---|
+| **Q3** — quels champs comparer | « c'est pourtant primordial […] ce n'est pas ça qu'on doit prendre en compte [le nom, le pays, l'année]. Dans la table billet, un billet est défini par les champs référence, millésime-version, puis VersionNormaleExiste (si oui, c'est un billet) et HasVariante (si A ou D, c'est un billet également) » | **Tranchée, et elle fixe le cœur du rapprochement.** La clé est `Reference` + `Millesime` + `Version` ; on compare `VersionNormaleExiste` et `HasVariante`, rien d'autre. Voir « Ce qui identifie un billet » |
+| **Q4** — l'exemple | « si la fiche dit non renseigné, c'est qu'on cherche l'info, et si le fichier dit qu'il existe un doré, il faut modifier de notre côté. Pour non renseigné et pas de variante : si non renseigné, on n'aura pas d'inscription pour une variante, juste des inscriptions pour le normal. Pour anniversaire et doré, il faut une action d'un admin pour trancher » | **Assouplissement retenu.** Et le deuxième exemple était **mal choisi** : il est corrigé, voir « Le point dur » |
+| **Q7** — l'écran d'incohérences | Déposé comme demande **#69** | Hors de cette demande ; les deux se ressemblent, #69 le regardera |
+
+La question « sans urgence » ne l'était pas : **c'était une erreur de l'analyse de la reléguer**. Le
+nom et le pays n'ont jamais servi à reconnaître un billet dans cette base ; les proposer comme
+« autres champs à comparer » montrait que la clé n'avait pas été pensée.
 
 ## Contexte (demande)
 
@@ -68,11 +84,34 @@ et la suite se fait dans **le module dédié**.
 2. **Première fois pour une source** : l'assistant et Cyril analysent le format ensemble et notent,
    pour cette source, la **correspondance des colonnes** et la **clé de rapprochement**.
 3. **« Traite le fichier des billets de telle source »** : l'assistant lit, normalise, rapproche, et
-   verse le résultat dans la table d'import — une ligne par billet du fichier. ~~Plus une ligne par
-   billet de notre base absent du fichier.~~ *Reportée à un second temps (Q2, 14/09).*
+   verse le résultat dans la table d'import — ~~une ligne par billet du fichier~~ **une ligne par clé**
+   (référence, millésime, version ; voir « Ce qui identifie un billet », 16 h 39). ~~Plus une ligne
+   par billet de notre base absent du fichier.~~ *Reportée à un second temps (Q2, 14/09).*
 4. Chaque ligne reçoit un **type d'écart** et un **statut**. Les corrections sûres sont appliquées
    d'office.
 5. **Les admins examinent les lignes « à valider »** dans le module, et décident.
+
+## Ce qui identifie un billet *(ajouté le 14/09, 16 h 39, d'après Cyril)*
+
+Une ligne de la table `billets` est identifiée par **trois champs** : `Reference`, `Millesime` et `Version`. Elle
+décrit **un ou deux billets physiques** :
+
+- `VersionNormaleExiste` vrai → le billet existe en version normale ;
+- `HasVariante` à `A` ou `D` → il existe aussi (ou seulement) en anniversaire ou en doré.
+
+**Ce qu'on compare** : ces deux champs, et rien d'autre. Le nom, le pays, l'année ne servent ni à
+reconnaître le billet ni à le corriger.
+
+**Conséquence sur la lecture d'un fichier** : un export peut très bien lister **une ligne par billet
+physique** — une pour le normal, une pour le doré — là où notre base n'a qu'une ligne. Avant de
+comparer, l'assistant **regroupe les lignes du fichier par clé** et en déduit, pour cette clé : la
+version normale existe-t-elle ? quelle variante ? Une ligne d'import correspond donc à **une clé**, et
+`ligne_fichier` garde **toutes** les lignes d'origine regroupées. Si le format réel d'une source est
+différent, c'est la correspondance notée pour cette source qui le dit — le principe ne change pas.
+
+**Et une clé qui ne se lit pas** — référence absente, millésime ou version illisibles — donne un écart
+`ambigu`, jamais une supposition. Le constat `scripts/migration-demande-66-1-constat.sql` compte déjà,
+côté base, les doublons de clé et les billets à qui il en manque un morceau (requêtes 5 et 6).
 
 ## Le modèle : deux tables
 
@@ -91,10 +130,10 @@ et la suite se fait dans **le module dédié**.
 | Colonne | Rôle |
 |---|---|
 | `id`, `import_id` | |
-| `cle` | la clé de rapprochement normalisée — par exemple référence, millésime et version, si la source les porte |
+| `cle` | la clé normalisée : **référence, millésime, version** (16 h 39 — ~~« par exemple », « si la source les porte »~~ : c'est la clé, point) |
 | `billet_id` | le billet de notre base correspondant, `NULL` s'il n'y en a pas |
-| `ligne_fichier` | la ligne d'origine, **telle quelle** (`jsonb`) — la preuve de ce qu'a dit le fichier |
-| `valeurs_fichier`, `valeurs_base` | les valeurs comparées, normalisées : les deux champs de version, et ce qui sert à reconnaître le billet (nom, pays). `valeurs_base` est un **instantané** au moment de l'import |
+| `ligne_fichier` | ~~la ligne d'origine~~ **les lignes d'origine regroupées sous cette clé**, telles quelles (`jsonb`) — la preuve de ce qu'a dit le fichier |
+| `valeurs_fichier`, `valeurs_base` | les valeurs comparées, normalisées : `VersionNormaleExiste` et `HasVariante` ~~, et ce qui sert à reconnaître le billet (nom, pays)~~. `valeurs_base` est un **instantané** au moment de l'import |
 | `ecart` | le type d'écart (ci-dessous) |
 | `proposition` | le changement proposé, s'il y en a un |
 | `statut`, `motif` | le statut, et **pourquoi** — en clair, lisible par un admin |
@@ -166,16 +205,24 @@ collecté l'an dernier, avec 12 inscriptions payées, dont 3 portent un billet d
 | Chez nous, variante | Le fichier dit | Aujourd'hui | Avec l'assouplissement |
 |---|---|---|---|
 | non renseigné | doré | refusé (billet protégé) | **accepté** : aucune inscription ne le contredit |
-| non renseigné | pas de variante | refusé | **toujours refusé** : 3 inscriptions portent un doré |
+| non renseigné | pas de variante | refusé | ~~toujours refusé : 3 inscriptions portent un doré~~ **accepté** — voir la correction ci-dessous |
 | anniversaire | doré | refusé | **toujours refusé** : ce n'est plus une case vide, c'est un changement |
 
 La « case vide », c'est la première ligne : une information **jamais saisie**, et non une information
 **fausse**.
 
+> **Corrigé le 14/09 (16 h 39), sur la remarque de Cyril.** Le deuxième exemple supposait un billet
+> « non renseigné » avec des inscriptions portant un doré. **Ce cas ne se produit pas** : depuis #16,
+> une collecte ne s'ouvre aux variantes que si le billet déclare `A` ou `D` (dérivation du `scope`),
+> et l'invariant D4 interdit alors toute inscription de variante. Un billet non renseigné n'a que des
+> inscriptions de billets normaux, et « pas de variante » ne contredit rien. La condition de
+> compatibilité **reste écrite** comme filet : #62 a mesuré, le 10/09, **142 inscriptions anciennes
+> hors de l'invariant**, antérieures à #16. Pour elles, et elles seules, la ligne passerait « à valider ».
+
 **Pourquoi pas un drapeau de transaction, comme pour #62** : il laisserait passer n'importe quel
 changement pendant l'import, contradictions comprises. Ici la règle métier juste existe et s'écrit en
 quelques lignes — et elle profite aussi à l'écran admin, qui pourra compléter un non renseigné au
-lieu de figer le champ. **C'est la question Q4.**
+lieu de figer le champ. ~~C'est la question Q4.~~ **Retenu par Cyril le 14/09 (Q4).**
 
 ## Appliquer, selon l'écart
 
@@ -274,13 +321,13 @@ qu'une table : deux endroits qui racontent la même chose finiraient par ne plus
 - **Pas de lecture du fichier dans le site** : c'est l'assistant qui le lit, sur le poste (#67).
 - **Pas de suppression de billet**, jamais.
 - **Pas de correction d'office d'une contradiction.**
-- **Pas de comparaison des autres champs** (nom, pays, millésime…) au-delà de ce qui sert à reconnaître
-  un billet — Q3.
+- **Pas de comparaison d'autres champs** que la version normale et la variante *(tranché le 14/09,
+  Q3)* : la référence, le millésime et la version servent à reconnaître le billet, rien d'autre ne
+  sert à le comparer.
 - **Pas de vérification inverse** *(14/09, Q2)* : les billets de notre base absents du fichier ne sont
   pas recherchés dans ce lot.
 - **Pas de statut « ignoré »** *(14/09, Q1)* : accepter ou refuser.
-- **Pas d'écran « Incohérences des billets »** *(14/09, Q7)* : idée de Cyril, plus large que cette
-  demande.
+- **Pas d'écran « Incohérences des billets »** *(14/09, Q7)* : c'est la demande **#69**.
 
 ## Questions ouvertes
 
@@ -288,11 +335,11 @@ qu'une table : deux endroits qui racontent la même chose finiraient par ne plus
 |---|---|---|---|
 | ~~Q1~~ | ~~« Ignoré » et « refusé » : quelle différence ?~~ | Cyril | **Tranchée le 14/09 : accepter ou refuser**, pas d'« ignorer » |
 | ~~Q2~~ | ~~Un billet de notre base absent du fichier : seulement « ignorer » ?~~ | Cyril | **Tranchée : vérification inverse reportée** à un second temps |
-| **Q3** | Faut-il aussi comparer d'autres champs que les versions ? | Cyril | Pas dans ce premier temps ; le modèle le permettra. *Sans réponse le 14/09, ne bloque pas* |
-| **Q4** | Assouplir D12 pour une **première déclaration** — une information jamais saisie — que les inscriptions ne contredisent pas ? *(reformulée le 14/09 avec des exemples : voir « Le point dur »)* | Cyril | Oui — c'est la règle métier juste, et elle débloque aussi l'écran admin |
+| ~~Q3~~ | ~~Faut-il aussi comparer d'autres champs que les versions ?~~ | Cyril | **Tranchée à 16 h 39** : la clé est référence, millésime, version ; on compare la version normale et la variante, rien d'autre. ~~Pas dans ce premier temps.~~ La recommandation passait à côté de la question |
+| ~~Q4~~ | ~~Assouplir D12 pour une première déclaration que les inscriptions ne contredisent pas ?~~ | Cyril | **Tranchée à 16 h 39 : oui** |
 | ~~Q5~~ | ~~Après le nettoyage, rendre le champ variante obligatoire à la saisie ?~~ | Cyril | **Tranchée : non** |
 | ~~Q6~~ | ~~Créer un billet absent : quels champs minimum ?~~ | Cyril | **Tranchée** : par la liste, « nouveau billet à créer », accepté ou refusé avec commentaire. Champs : ceux du fichier qui correspondent aux nôtres |
-| **Q7** *(ajoutée le 14/09)* | L'écran « **Incohérences des billets** » proposé par Cyril — versions incohérentes ou non renseignées, billets sans photo, autres cas : une demande à part ? | Cyril | **Oui, une demande à part** : il couvre bien plus que les versions, et n'a pas besoin d'un fichier externe. Il pourra réutiliser les règles de cohérence écrites ici. L'assistant ne peut pas créer de demande : à déposer par Cyril |
+| ~~Q7~~ *(ajoutée le 14/09, tranchée : demande #69 déposée)* | L'écran « **Incohérences des billets** » proposé par Cyril — versions incohérentes ou non renseignées, billets sans photo, autres cas : une demande à part ? | Cyril | **Oui, une demande à part** : il couvre bien plus que les versions, et n'a pas besoin d'un fichier externe. Il pourra réutiliser les règles de cohérence écrites ici. L'assistant ne peut pas créer de demande : à déposer par Cyril |
 
 ## Réalisation
 
