@@ -3,7 +3,14 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `54da13b` (14/09/2026).
+> Reflète la version technique du commit `46f0bbf` (14/09/2026, après la remarque de Cyril).
+
+## Ce qui a changé depuis la première version
+
+Cyril a relu et **validé l'idée** : pas de fichier gardé sur le site. Il l'a même simplifiée : pas de
+dossier imposé, **le chemin du fichier sera simplement écrit dans la demande**. C'est toujours lui
+qui fournira ces fichiers, et c'est l'assistant qui en versera le contenu dans une table de
+vérification — ce qui relève de la demande #66.
 
 ## De quoi il s'agit
 
@@ -27,14 +34,13 @@ c'est trop lourd, dis-moi comment faire ». C'est cette question que l'analyse a
 
 ## Ce qui est proposé
 
-**Pour l'instant, ne rien développer.** Cyril dépose le fichier dans **un dossier convenu** de son
-ordinateur — un dossier par demande, en dehors du code du site — et l'indique sur la fiche : « fichier
-déposé : export-septembre.csv ». L'assistant va l'y chercher quand il traite la demande.
+**Ne rien développer.** Cyril garde le fichier sur son ordinateur, en dehors du code du site, et
+**écrit son chemin dans la demande**. L'assistant va l'y lire quand il traite la demande.
 
-**Plus tard, si c'est utile** : quand l'écran de la demande #66 existera (celui où un admin choisit
-« ignorer » ou « appliquer » pour chaque écart), il pourra accepter le fichier directement. N'importe
-quel admin pourrait alors refaire la vérification, sans passer par l'assistant ni par l'ordinateur de
-Cyril. C'est à décider dans l'analyse de #66.
+~~Plus tard, si c'est utile, l'écran de #66 pourrait accepter le fichier directement, pour que
+n'importe quel admin refasse la vérification.~~ **Écarté par Cyril** : c'est toujours lui qui
+fournira le fichier. La suite — verser les données dans une table de vérification, puis les
+examiner dans un écran dédié — est décrite dans la demande #66.
 
 **Une vraie pièce jointe sur le site** ne se justifierait que si d'autres demandes en avaient besoin.
 Ce n'est pas le cas aujourd'hui.
@@ -54,13 +60,15 @@ exactement les faux écarts qu'on ne veut pas fabriquer.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
-- **Pour Cyril** : le dossier convenu maintenant, l'import dans l'écran de #66 plus tard, et pas de
-  pièce jointe sur le site tant qu'aucun autre besoin n'apparaît — d'accord ?
-- **Pour Cyril** : l'export peut-il sortir en CSV ou en JSON ?
-- **Pour tous** : d'autres admins que Cyril devront-ils fournir ce genre de fichier ? Si oui, c'est
-  l'import dans l'écran de #66 qui y répondra.
+Cyril a déjà répondu aux questions de la première version : la proposition lui convient, le chemin
+sera écrit dans la demande, et c'est lui seul qui fournira les fichiers. Reste :
 
-Si la proposition est retenue, cette demande ne demande aucun développement : il restera à écrire
-la règle « où déposer un fichier » dans la convention des demandes, puis Cyril décidera de la clore.
+- **Pour Cyril, sans urgence** : l'export peut-il sortir en CSV ou en JSON ? La question servira
+  surtout à #66.
+- **Pour tous** : cette façon de faire vous convient-elle ?
+
+Cette demande ne demande aucun développement : une fois validée, il restera à écrire dans la
+convention des demandes la règle « le chemin du fichier est écrit dans la demande, le fichier reste
+hors du code du site », puis Cyril décidera de la clore.
 Vos remarques sont bienvenues : laissez un commentaire, vous aurez une réponse disant ce qui en a été
 fait.
