@@ -59,10 +59,11 @@ var demandesList = [];
 var membresDemandes = {};
 // Demande #59 — { demande_id: [emails des admins ayant validé l'analyse] }
 var validationsParDemande = {};
-// Demande #68 — { demande_id: dernier commentaire {auteur_email, created_at} }. Sur une
-// « Analyse à valider », il dit à qui c'est le tour. Même règle que le rituel des demandes
-// (scripts/rituel-demandes.mjs, etat()) : l'écran et l'assistant ne doivent pas se contredire.
-var dernierCommentaireParDemande = {};
+// Demande #68 — { demande_id: [commentaires {auteur_email, created_at}, du plus ancien au plus
+// récent] }. Sur une « Analyse à valider », le fil dit à qui c'est le tour. Même règle que le
+// rituel des demandes (scripts/rituel-demandes.mjs, etat()) : l'écran et l'assistant ne doivent
+// pas se contredire.
+var commentairesParDemande = {};
 // L'adresse sous laquelle l'assistant publie ses réponses (scripts/rituel-demandes.mjs).
 var ASSISTANT_EMAIL = 'claude-code@assistant.local';
 var currentEtatFilter = 'actives';
@@ -115,9 +116,12 @@ function loadDemandes() {
                 if (!validationsParDemande[v.demande_id]) validationsParDemande[v.demande_id] = [];
                 validationsParDemande[v.demande_id].push((v.admin_email || '').toLowerCase());
             });
-            dernierCommentaireParDemande = {};
-            // Triés par date croissante : le plus récent l'emporte.
-            (res[3] || []).forEach(function(c) { dernierCommentaireParDemande[c.demande_id] = c; });
+            commentairesParDemande = {};
+            // Triés par date croissante : chaque fil garde l'ordre chronologique.
+            (res[3] || []).forEach(function(c) {
+                if (!commentairesParDemande[c.demande_id]) commentairesParDemande[c.demande_id] = [];
+                commentairesParDemande[c.demande_id].push(c);
+            });
             demandesList = rows || [];
             renderEtatFilter();
             renderDemandes();
@@ -278,6 +282,21 @@ function estAssistant(email) {
     return (email || '').trim().toLowerCase() === ASSISTANT_EMAIL;
 }
 
+// Demande #68 (complément du 14/09, retour de test de Cyril) — les personnes dont on attend la
+// réaction : on remonte la dernière série de réponses de l'assistant, puis les commentaires
+// d'admins écrits depuis sa réponse précédente. Leurs auteurs, une fois chacun, sauf ceux qui
+// ont validé l'analyse : valider, c'est avoir réagi. Adresses en minuscules.
+function personnesAttendues(fil, validations) {
+    var i = fil.length - 1;
+    while (i >= 0 && estAssistant(fil[i].auteur_email)) i--;
+    var personnes = [];
+    for (var j = i; j >= 0 && !estAssistant(fil[j].auteur_email); j--) {
+        var e = (fil[j].auteur_email || '').trim().toLowerCase();
+        if (e && personnes.indexOf(e) === -1 && validations.indexOf(e) === -1) personnes.push(e);
+    }
+    return personnes.reverse();
+}
+
 // Demande #49 — le prénom suffit : l'équipe compte six personnes, et une adresse e-mail
 // complète dans un libellé de liste déroulante serait illisible. Repli sur la partie
 // gauche de l'adresse pour les demandes importées, qui n'ont pas de membre associé.
@@ -325,8 +344,11 @@ function renderDemandeRow(d) {
     var aRelire = attendValidationSpec(d.etat);
     // Demande #68 — si le dernier commentaire n'est pas de l'assistant, une remarque attend sa
     // réponse : ce n'est pas le tour des admins, la ligne ne doit pas dire « à vous ».
-    var dernierCom = dernierCommentaireParDemande[d.id];
+    var fil = commentairesParDemande[d.id] || [];
+    var dernierCom = fil.length ? fil[fil.length - 1] : null;
     var attendAssistant = aRelire && !!dernierCom && !estAssistant(dernierCom.auteur_email);
+    // Et quand l'assistant a répondu en dernier : de qui attend-on la réaction ?
+    var attendus = (aRelire && dernierCom && !attendAssistant) ? personnesAttendues(fil, validations) : [];
     var aMoiDeRelire = aRelire && !jaiValide && !attendAssistant;
 
     var specIcon = '';
@@ -353,6 +375,13 @@ function renderDemandeRow(d) {
                          + formatDateFr(dernierCom.created_at) + ' — réponse de l\'assistant attendue') + '">'
                      + '<i class="fa-solid fa-hourglass-half"></i> Assistant</span>';
         }
+        attendus.forEach(function(email) {
+            var nom = nomTesteur(email);
+            specIcon += ' <span class="demande-badge demande-badge-attente-personne" title="'
+                     + escapeAttr('L\'assistant a répondu à ' + nom + ' le ' + formatDateFr(dernierCom.created_at)
+                         + ' — sa réaction est attendue') + '">'
+                     + '<i class="fa-solid fa-hourglass-half"></i> ' + escapeHtml(nom) + '</span>';
+        });
     }
 
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')

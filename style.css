@@ -11666,6 +11666,14 @@ button.collecte-badge-status {
     font-weight: 600;
     white-space: nowrap;
 }
+/* Demande #68 (complément) — l'assistant a répondu : on attend la réaction de cette personne.
+   Ambre, de la famille de « à relire », distinct de l'étiquette Assistant. */
+.demande-badge-attente-personne {
+    background: var(--color-badge-warning-bg);
+    color: var(--color-badge-warning-text);
+    font-weight: 600;
+    white-space: nowrap;
+}
 
 /* ---------- Bloc de validation sur la fiche ---------- */
 .fiche-validations {
