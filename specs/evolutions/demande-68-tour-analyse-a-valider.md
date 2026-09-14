@@ -48,6 +48,28 @@ l'écran et l'assistant ne se contredisent jamais : sur une demande en « Analys
 Aucune modification de la base : la lecture de `demande_commentaires` est déjà ouverte aux admins
 (policy `demande_commentaires_select`, #58), et l'écran est réservé aux admins.
 
+## Complément du 14/09 : qui doit réagir *(retour de test de Cyril)*
+
+> « Je trouve que c'est bien ce tag Assistant, mais j'aimerais aussi pouvoir dire que l'IA a répondu à
+> un commentaire de JP, ou Cyril, ou les deux, ou autre, et que du coup on attend une réaction de
+> cette personne ou ces personnes (un tag par personne avec le petit sablier ?) »
+
+**La règle** — sur une « Analyse à valider » dont le dernier commentaire **est** de l'assistant :
+
+1. on remonte le fil depuis la fin : la dernière série de réponses de l'assistant ;
+2. juste avant, **les commentaires d'admins auxquels ces réponses font suite** — ceux écrits depuis
+   la réponse précédente de l'assistant ;
+3. leurs auteurs sont les **personnes dont on attend la réaction** : une étiquette par personne,
+   sablier et prénom, infobulle « L'assistant a répondu à Prénom le … — sa réaction est attendue » ;
+4. une personne qui a **validé l'analyse** a réagi : pas d'étiquette pour elle.
+
+Pas d'étiquette de personne quand l'assistant a écrit sans répondre à personne (par exemple le premier
+message qui annonce l'analyse) : la ligne reste « à relire » pour tous, comme avant.
+
+Couleurs : jetons `--color-badge-warning-bg` / `--color-badge-warning-text` (ambre, de la famille de
+« à relire »), définis en clair et en sombre. L'étiquette « Assistant » garde les couleurs « info » :
+les deux attentes ne se confondent pas.
+
 ## Critères d'acceptation
 
 1. Une « Analyse à valider » dont le dernier commentaire est d'un admin affiche le badge
@@ -58,6 +80,10 @@ Aucune modification de la base : la lecture de `demande_commentaires` est déjà
 4. Les autres états ne changent pas.
 5. Si le chargement des commentaires échoue, la liste s'affiche quand même, comme avant.
 6. Lisible en mode sombre et sur téléphone.
+7. *(Complément du 14/09.)* Quand l'assistant a répondu en dernier à des remarques, chaque auteur de
+   ces remarques a son étiquette (sablier et prénom), sauf s'il a validé l'analyse.
+8. *(Complément du 14/09.)* Deux personnes ont commenté avant la réponse de l'assistant → deux
+   étiquettes ; la même personne deux fois → une seule.
 
 ## Ce que cette spec ne fait pas
 

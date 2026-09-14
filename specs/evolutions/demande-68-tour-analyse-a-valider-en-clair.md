@@ -24,6 +24,17 @@ Sur une demande en « Analyse à valider » :
 C'est exactement la règle que l'assistant utilise lui-même pour savoir qu'une remarque l'attend :
 l'écran et lui ne pourront pas se contredire.
 
+### Et quand l'assistant a répondu *(ajouté le 14/09, après les tests de Cyril)*
+
+Si l'assistant a répondu en dernier **à des remarques**, la ligne dit **de qui on attend la
+réaction** : une petite étiquette par personne, avec un sablier et son prénom — « ⏳ Jean-Philippe »,
+« ⏳ Cyril ». En passant la souris dessus : « L'assistant a répondu à Jean-Philippe le … ».
+
+- Si Jean-Philippe et Cyril avaient tous deux commenté avant la réponse, il y a deux étiquettes.
+- Dès qu'une de ces personnes **valide** l'analyse, son étiquette disparaît : elle a réagi.
+- Si l'assistant a écrit sans répondre à personne (par exemple pour annoncer l'analyse), pas
+  d'étiquette : c'est à tous les admins de relire, comme avant.
+
 ## Ce que ça ne fait PAS
 
 - Rien ne change pour les autres états.
