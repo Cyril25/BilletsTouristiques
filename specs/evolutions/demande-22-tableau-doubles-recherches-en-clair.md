@@ -4,7 +4,8 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
-> Reflète la version technique du commit `3d60690` (11/09/2026).
+> Reflète la version technique du commit `4adb2bb` (14/09/2026 — seul l'ordre des travaux avec la
+> demande #1 a changé depuis le 11/09).
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -102,8 +103,9 @@ dites-le maintenant.**
 Enregistrer une vente ou un échange conclu ailleurs — sur Facebook, par message — comme tous ceux
 d'aujourd'hui ; suivre qui doit quoi ; confirmer les paiements et les enveloppes ; consulter son
 historique.
-*Pourquoi en premier :* c'est la fondation, et elle sert aussi à la demande #1 (la vente du rab
-d'une collecte par son collecteur).
+*Pourquoi en premier :* c'est la fondation~~, et elle sert aussi à la demande #1 (la vente du rab
+d'une collecte par son collecteur)~~. *Depuis le 14/09, la vente du rab n'a plus besoin de ce
+premier lot : voir le lot 2.*
 
 **2. Les annonces**
 C'est là que Marie pourra **« mettre son double dans l'application »**, comme le décrit
@@ -111,7 +113,13 @@ Jean-Philippe, en disant si elle le cède **contre de l'argent, contre un échan
 surtout : **l'application vous préviendra quand ce que vous avez en double est justement ce qu'un
 autre recherche.** C'est la seule chose que Facebook ne sait pas faire.
 *Pourquoi pas dès le premier lot :* le premier lot sert déjà à tous les échanges qui se concluent
-aujourd'hui sur Facebook, et le garder court évite de retarder la vente du rab (#1).
+aujourd'hui sur Facebook~~, et le garder court évite de retarder la vente du rab (#1)~~.
+
+**Changement du 14/09, décidé par Cyril sur la demande #1** : la vente du rab aura elle aussi sa
+« mise en vente » — le collecteur met ses billets en vente, un membre les demande, le collecteur
+répond. Ce sont exactement les gestes des annonces. Plutôt que de construire deux fois la même
+chose, **la mise en vente sera construite d'abord pour le rab, et les annonces s'appuieront dessus**
+en y ajoutant les doubles des membres, les recherches, l'échange et le rapprochement.
 
 **3. Ouvrir « Ma collection » à tous les membres** *(indépendant)*
 La page existe mais n'est visible que des admins. L'ouvrir permettrait un jour de publier ses
