@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `46f0bbf` (14/09/2026, après la remarque de Cyril).
+> Reflète la version technique du commit `c9a5a12` (14/09/2026, après les réponses de Cyril).
 
 ## Ce qui a changé depuis la première version
 
@@ -61,10 +61,9 @@ exactement les faux écarts qu'on ne veut pas fabriquer.
 ## Ce sur quoi on vous demande de vous prononcer
 
 Cyril a déjà répondu aux questions de la première version : la proposition lui convient, le chemin
-sera écrit dans la demande, et c'est lui seul qui fournira les fichiers. Reste :
+sera écrit dans la demande, et c'est lui seul qui fournira les fichiers — **en CSV ou en JSON**,
+quitte à convertir lui-même un fichier Excel. Il n'y a plus de question ouverte ; reste la vôtre :
 
-- **Pour Cyril, sans urgence** : l'export peut-il sortir en CSV ou en JSON ? La question servira
-  surtout à #66.
 - **Pour tous** : cette façon de faire vous convient-elle ?
 
 Cette demande ne demande aucun développement : une fois validée, il restera à écrire dans la
