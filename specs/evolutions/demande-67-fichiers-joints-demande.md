@@ -115,4 +115,19 @@ abandonnée — revient à Cyril : l'assistant n'a pas le droit de clore une dem
 
 ## Réalisation
 
-*(à compléter : règle ajoutée à la convention, commit)*
+Réalisée le 2026-09-14, après validation de l'analyse par Cyril (14 h 51). Aucun code, aucune
+migration, aucun redéploiement.
+
+| Fichier | Ce qui change | Commit |
+|---|---|---|
+| `specs/evolutions/CONVENTION-DEMANDES.md` | Nouvelle section « Fournir un fichier de données pour une demande » : chemin écrit dans la demande, fichier sur le poste de Cyril hors de tout dépôt, CSV UTF-8 ou JSON, lu là où il est | `72bd23d` |
+
+Critères d'acceptation :
+
+1. lu par l'assistant quand le chemin est écrit dans la demande — **se vérifiera au premier usage**,
+   avec l'export de #66 ;
+2. aucun fichier de données dans un dépôt — écrit dans la règle ;
+3. la convention dit où écrire le chemin et que le fichier reste hors de tout dépôt — fait.
+
+Pas de nouveauté à annoncer aux membres : la règle ne concerne que la façon de travailler avec
+l'assistant.
