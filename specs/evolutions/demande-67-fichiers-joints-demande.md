@@ -61,7 +61,8 @@ traite d'abord : **quel est le moyen le plus léger de faire arriver ce fichier 
 | « mettre le chemin du fichier est suffisant » | **Q2** : pas de dossier imposé — **le chemin est écrit dans la demande** |
 | « l'IA, quand on lui demandera “traite le fichier des billets de telle source”, lira les datas, les importera dans une table d'import (autre que table billets), mettra un statut (traité, ignoré, à valider, validé, refusé) et la suite se fera sur le module dédié » | Le fichier n'a jamais besoin d'entrer dans le site : c'est l'assistant qui le lit sur le poste et en verse le contenu dans une **table d'import**. **C est remplacée** par ce parcours, qui appartient à **#66** |
 
-**Q3** (le format de l'export) reste ouverte.
+~~Q3 (le format de l'export) reste ouverte.~~ Répondue à 14 h 31 : CSV ou JSON. **Toutes les
+questions sont tranchées.**
 
 Sur la demande de Cyril, #66 reçoit ce parcours dans son journal : l'assistant ne peut pas modifier
 le texte d'une demande, seulement son journal et ses documents.
@@ -84,7 +85,8 @@ le texte d'une demande, seulement son journal et ses documents.
 
 **B est retenue : #67 ne demande aucun développement.** Il reste à écrire la règle dans
 `CONVENTION-DEMANDES.md` : un fichier de données fourni pour une demande reste sur le poste de
-Cyril, **hors de tout dépôt**, et son chemin est écrit dans la demande (texte ou commentaire).
+Cyril, **hors de tout dépôt**, son chemin est écrit dans la demande (texte ou commentaire), et il est
+fourni en **CSV UTF-8 ou JSON** (Q3).
 Elle sera écrite une fois l'analyse validée. Le sort de la demande ensuite — terminée ou
 abandonnée — revient à Cyril : l'assistant n'a pas le droit de clore une demande.
 
@@ -108,7 +110,7 @@ abandonnée — revient à Cyril : l'assistant n'a pas le droit de clore une dem
 |---|---|---|---|
 | ~~Q1~~ | ~~B maintenant, C éventuellement dans #66, A seulement si un autre besoin apparaît ?~~ | Cyril | **Répondue le 14/09 : B.** A écartée, C remplacée par le parcours de #66 |
 | ~~Q2~~ | ~~Le dossier : celui proposé, ou un autre ?~~ | Cyril | **Répondue : aucun dossier imposé**, le chemin est écrit dans la demande |
-| **Q3** | L'export peut-il sortir en CSV ou en JSON ? | Cyril | CSV UTF-8 ou JSON — toujours ouverte, et c'est à #66 qu'elle servira |
+| ~~Q3~~ | ~~L'export peut-il sortir en CSV ou en JSON ?~~ | Cyril | **Répondue le 14/09 (14 h 31) : oui**, « au pire je transformerai l'Excel avant de te donner le fichier ». La conversion reste de son côté, où il voit ce qu'il convertit |
 | ~~Q4~~ | ~~D'autres admins devront-ils fournir des fichiers ?~~ | Cyril | **Répondue : non**, toujours Cyril |
 
 ## Réalisation
