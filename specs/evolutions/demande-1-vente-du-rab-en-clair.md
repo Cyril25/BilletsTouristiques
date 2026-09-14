@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `caf6057` (14/09/2026, après-midi).
+> Reflète la version technique du commit `c0cc8a9` (14/09/2026, après les décisions de Cyril).
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -88,8 +88,8 @@ collecte : la somme apparaît chez ce membre sans qu'il ait rien fait.
 
 Ce que demande Jean-Philippe pour le rab, un collecteur le fait donc déjà pour une collecte. La
 recommandation est de **faire pareil pour le rab**, plutôt que de lui imposer une règle que le reste
-de l'application ne suit pas. Comme ça revient sur une décision prise avec Cyril, **c'est à lui de
-confirmer** (question 1 plus bas).
+de l'application ne suit pas. Comme ça revient sur une décision prise avec Cyril, c'était à lui de
+confirmer — **c'est fait** : « pour l'attribution directe, je suis ce que préconise JP ».
 
 Entre deux membres ordinaires (demande #22), rien ne change : là, personne n'a d'autorité sur
 l'autre, et l'acceptation reste le seul garde-fou.
@@ -100,7 +100,7 @@ l'autre, et l'acceptation reste le seul garde-fou.
 |---|---|
 | **Le rab est mis en vente dans l'application** | C'est ce que décrit Jean-Philippe : le collecteur n'a plus à se souvenir de qui a répondu quoi sur Facebook. |
 | **Le membre demande, le collecteur valide** | Le collecteur est le seul à savoir s'il a encore le billet. Et le membre a fait le premier geste. |
-| **Le collecteur peut aussi attribuer directement** *(à confirmer par Cyril)* | Pour les accords conclus sur Facebook, comme le demande Jean-Philippe. C'est ce qu'un collecteur fait déjà quand il inscrit un membre à sa collecte. |
+| **Le collecteur peut aussi attribuer directement** *(confirmé par Cyril)* | Pour les accords conclus sur Facebook, comme le demande Jean-Philippe. C'est ce qu'un collecteur fait déjà quand il inscrit un membre à sa collecte. |
 | **Un billet demandé est réservé** | Deux personnes ne peuvent pas acheter le même n° 00042. La première demande l'emporte ; la seconde voit « déjà demandé ». |
 | **Le numéro de série reste facultatif** | Le collecteur vend tantôt « 2 billets du rab » sans précision, tantôt « le billet n° 00042 ». Les deux doivent marcher. |
 | **La vente s'affiche à part** | Le membre voit une ligne « Vente du rab — billet n° 00042 : 8,00 € » dans ce qu'il doit. Aucun risque de lui facturer en plus le prix de la collecte. |
@@ -146,23 +146,20 @@ accepte. La construire deux fois — une pour le rab, une pour les doubles des m
 erreur.
 
 La recommandation : **construire la mise en vente d'abord pour le rab des collecteurs**, le cas le
-plus simple, en la pensant dès le départ pour qu'elle serve ensuite aux annonces de #22. C'est à
-Cyril de décider de l'ordre des travaux.
+plus simple, en la pensant dès le départ pour qu'elle serve ensuite aux annonces de #22. **Cyril a
+retenu cette proposition.** Cette demande n'attend donc plus rien de #22 ; ce sont les annonces de
+#22 qui viendront après, en s'appuyant sur ce que celle-ci aura construit.
 
 ## Ce qui reste à trancher
 
 Les trois questions posées à Jean-Philippe ont leur réponse : le numéro reste facultatif, il veut
 pouvoir attribuer directement un billet, et le membre déjà servi est un cas réel, désormais réglé
-(voir plus haut). Restent :
+(voir plus haut). Et Cyril a tranché ses deux questions : l'attribution directe est retenue, et
+la mise en vente sera construite d'abord pour le rab.
 
-1. **Pour Cyril — la question qui compte.** Accepte-t-on que le collecteur **attribue directement**
-   un billet du rab à un membre, sans action de ce membre ? Ça revient sur la décision du
-   9 septembre, prise sur une phrase fausse (voir « Une règle qu'on croyait suivre »). On le
-   recommande, avec une notification au membre et la possibilité pour le collecteur d'annuler tant
-   que ce n'est pas payé.
-2. **Pour Cyril.** L'ordre des travaux entre cette demande et #22 (voir « Et la demande #22 ? »).
-3. **Pour tous.** Qui voit le rab, et où ? Proposition : **tous les membres**, sur la page du
-   billet — le rab va souvent à ceux qui ne se sont pas inscrits à temps.
+**Il ne reste qu'un point, qui peut attendre le développement** : qui voit le rab, et où ?
+Proposition : **tous les membres**, sur la page du billet — le rab va souvent à ceux qui ne se sont
+pas inscrits à temps.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
@@ -173,7 +170,6 @@ pouvoir attribuer directement un billet, et le membre déjà servi est un cas r�
   sachant qu'un collecteur peut déjà inscrire un membre à sa collecte ?
 - Est-ce que **ce que l'application ne fera pas** vous convient ?
 
-**Mieux vaut attendre les réponses de Cyril aux questions 1 et 2 avant de valider** : une seule
-validation fait passer la demande en « Prêt à dev ». Si ses réponses changent ce qui est prévu, ce
-document sera repris. Vos remarques sont bienvenues dès
-maintenant : laissez un commentaire, vous aurez une réponse disant ce qui en a été fait.
+**L'analyse est complète et peut être validée.** Si tout vous va, cochez « J'ai lu et je valide
+l'analyse » sur la fiche : une seule validation fait passer la demande en « Prêt à dev ». Sinon,
+laissez un commentaire : vous aurez une réponse disant ce qui en a été fait.
