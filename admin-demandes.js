@@ -59,6 +59,12 @@ var demandesList = [];
 var membresDemandes = {};
 // Demande #59 — { demande_id: [emails des admins ayant validé l'analyse] }
 var validationsParDemande = {};
+// Demande #68 — { demande_id: dernier commentaire {auteur_email, created_at} }. Sur une
+// « Analyse à valider », il dit à qui c'est le tour. Même règle que le rituel des demandes
+// (scripts/rituel-demandes.mjs, etat()) : l'écran et l'assistant ne doivent pas se contredire.
+var dernierCommentaireParDemande = {};
+// L'adresse sous laquelle l'assistant publie ses réponses (scripts/rituel-demandes.mjs).
+var ASSISTANT_EMAIL = 'claude-code@assistant.local';
 var currentEtatFilter = 'actives';
 
 // ============================================================
@@ -95,6 +101,9 @@ function loadDemandes() {
         // tant que la migration n'est pas jouée, la table n'existe pas et la
         // liste doit quand même s'afficher.
         supabaseFetch('/rest/v1/demande_validations?select=demande_id,admin_email', { method: 'GET' })
+            .catch(function() { return []; }),
+        // Demande #68 — même repli : sans les commentaires, la liste s'affiche comme avant.
+        supabaseFetch('/rest/v1/demande_commentaires?select=demande_id,auteur_email,created_at&order=created_at.asc', { method: 'GET' })
             .catch(function() { return []; })
     ])
         .then(function(res) {
@@ -106,6 +115,9 @@ function loadDemandes() {
                 if (!validationsParDemande[v.demande_id]) validationsParDemande[v.demande_id] = [];
                 validationsParDemande[v.demande_id].push((v.admin_email || '').toLowerCase());
             });
+            dernierCommentaireParDemande = {};
+            // Triés par date croissante : le plus récent l'emporte.
+            (res[3] || []).forEach(function(c) { dernierCommentaireParDemande[c.demande_id] = c; });
             demandesList = rows || [];
             renderEtatFilter();
             renderDemandes();
@@ -261,6 +273,11 @@ function renderDemandes() {
         + '</tbody></table>';
 }
 
+// Demande #68 — un commentaire publié par l'assistant (rituel des demandes).
+function estAssistant(email) {
+    return (email || '').trim().toLowerCase() === ASSISTANT_EMAIL;
+}
+
 // Demande #49 — le prénom suffit : l'équipe compte six personnes, et une adresse e-mail
 // complète dans un libellé de liste déroulante serait illisible. Repli sur la partie
 // gauche de l'adresse pour les demandes importées, qui n'ont pas de membre associé.
@@ -306,7 +323,11 @@ function renderDemandeRow(d) {
     var moi = (window.getActiveEmail() || '').trim().toLowerCase();
     var jaiValide = validations.indexOf(moi) !== -1;
     var aRelire = attendValidationSpec(d.etat);
-    var aMoiDeRelire = aRelire && !jaiValide;
+    // Demande #68 — si le dernier commentaire n'est pas de l'assistant, une remarque attend sa
+    // réponse : ce n'est pas le tour des admins, la ligne ne doit pas dire « à vous ».
+    var dernierCom = dernierCommentaireParDemande[d.id];
+    var attendAssistant = aRelire && !!dernierCom && !estAssistant(dernierCom.auteur_email);
+    var aMoiDeRelire = aRelire && !jaiValide && !attendAssistant;
 
     var specIcon = '';
     if (d.docs && d.docs.trim()) {
@@ -318,11 +339,20 @@ function renderDemandeRow(d) {
         var titreValid = validations.length === 0
             ? 'Analyse à relire — aucune validation pour l\'instant'
             : validations.length + ' validation(s)' + (jaiValide ? ', dont la vôtre' : ', pas la vôtre');
+        if (dernierCom && !attendAssistant) {
+            titreValid += ' — dernier commentaire : l\'assistant, le ' + formatDateFr(dernierCom.created_at);
+        }
         specIcon += ' <span class="demande-badge demande-badge-validation'
                  + (jaiValide ? ' demande-badge-validation--faite' : '')
                  + '" title="' + escapeAttr(titreValid) + '">'
                  + '<i class="fa-solid fa-' + (jaiValide ? 'circle-check' : 'eye') + '"></i> '
                  + validations.length + '</span>';
+        if (attendAssistant) {
+            specIcon += ' <span class="demande-badge demande-badge-attente-assistant" title="'
+                     + escapeAttr('Remarque de ' + nomTesteur(dernierCom.auteur_email) + ' le '
+                         + formatDateFr(dernierCom.created_at) + ' — réponse de l\'assistant attendue') + '">'
+                     + '<i class="fa-solid fa-hourglass-half"></i> Assistant</span>';
+        }
     }
 
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')

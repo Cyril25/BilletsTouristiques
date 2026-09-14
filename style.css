@@ -11658,6 +11658,14 @@ button.collecte-badge-status {
 .demande-badge-validation--faite {
     background: var(--color-success);
 }
+/* Demande #68 — une remarque attend la réponse de l'assistant : ce n'est pas le tour des admins.
+   Couleurs « info », définies pour le clair et le sombre. */
+.demande-badge-attente-assistant {
+    background: var(--color-badge-info-bg);
+    color: var(--color-badge-info-text);
+    font-weight: 600;
+    white-space: nowrap;
+}
 
 /* ---------- Bloc de validation sur la fiche ---------- */
 .fiche-validations {
