@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `d416754` (14/09/2026).
+> Reflète la version technique du commit `563f0e1` (14/09/2026, après-midi).
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -18,6 +18,15 @@ mot, et elle change trois choses :
 
 Avant, c'était l'inverse : le collecteur enregistrait une vente conclue sur Facebook, et le membre
 devait l'accepter.
+
+**Et depuis ce matin**, Jean-Philippe a répondu aux deux questions qu'on lui posait :
+
+- le numéro de série reste **facultatif** ;
+- quand il s'est **déjà mis d'accord avec Marie sur Facebook**, il doit pouvoir **lui attribuer
+  directement** le billet, **sans que Marie ait quoi que ce soit à faire**.
+
+Ce second point revient sur une règle qu'on croyait suivre — et qui, vérification faite, n'existait
+pas. C'est expliqué plus bas, dans « Une règle qu'on croyait suivre ».
 
 ## De quoi il s'agit
 
@@ -53,16 +62,43 @@ Si JP n'a plus le billet, il le dit : le billet sort de la vente et Marie est pr
 n'a pas répondu, Marie peut retirer sa demande, et le billet redevient disponible pour les autres.
 L'application ne relance personne.
 
-**Le point important, qui ne change pas** : personne ne se voit attribuer une somme à payer sans
-l'avoir voulu. Avant, ce geste était « j'accepte la vente » ; maintenant, c'est « je demande à
-acheter ».
+### Quand l'accord est déjà conclu sur Facebook
+
+JP a proposé le **n° 1000 à 5 €** à Marie sur Facebook, et elle a dit oui.
+
+1. **JP attribue le billet à Marie** depuis « Mes collectes » — qu'il l'ait déjà mis en vente ou
+   non.
+2. Les 5 € apparaissent aussitôt dans ce que Marie doit à JP. **Marie n'a rien à faire** : elle
+   reçoit simplement une notification.
+3. La suite est la même : paiement, puis enveloppe.
+
+Si JP s'est trompé de personne, il **annule la vente** tant qu'elle n'est pas payée — comme il peut
+aujourd'hui désinscrire quelqu'un d'une collecte.
+
+## Une règle qu'on croyait suivre
+
+Les versions précédentes de ce document disaient : **« aujourd'hui, aucun montant n'apparaît chez
+un membre sans qu'il se soit inscrit lui-même, et on ne veut pas créer d'exception »**. C'est sur
+cette phrase que la décision « le membre doit accepter » avait été prise avec Cyril, le 9 septembre.
+
+**Elle est fausse.** Dans « Mes collectes », un collecteur peut déjà **inscrire un membre** à sa
+collecte : la somme apparaît chez ce membre sans qu'il ait rien fait.
+
+Ce que demande Jean-Philippe pour le rab, un collecteur le fait donc déjà pour une collecte. La
+recommandation est de **faire pareil pour le rab**, plutôt que de lui imposer une règle que le reste
+de l'application ne suit pas. Comme ça revient sur une décision prise avec Cyril, **c'est à lui de
+confirmer** (question 1 plus bas).
+
+Entre deux membres ordinaires (demande #22), rien ne change : là, personne n'a d'autorité sur
+l'autre, et l'acceptation reste le seul garde-fou.
 
 ## Ce qui a été décidé, et pourquoi
 
 | Décision | La raison |
 |---|---|
 | **Le rab est mis en vente dans l'application** | C'est ce que décrit Jean-Philippe : le collecteur n'a plus à se souvenir de qui a répondu quoi sur Facebook. |
-| **Le membre demande, le collecteur valide** | Le collecteur est le seul à savoir s'il a encore le billet. Et le membre a fait le premier geste : rien n'entre dans ce qu'il doit sans qu'il l'ait voulu. |
+| **Le membre demande, le collecteur valide** | Le collecteur est le seul à savoir s'il a encore le billet. Et le membre a fait le premier geste. |
+| **Le collecteur peut aussi attribuer directement** *(à confirmer par Cyril)* | Pour les accords conclus sur Facebook, comme le demande Jean-Philippe. C'est ce qu'un collecteur fait déjà quand il inscrit un membre à sa collecte. |
 | **Un billet demandé est réservé** | Deux personnes ne peuvent pas acheter le même n° 00042. La première demande l'emporte ; la seconde voit « déjà demandé ». |
 | **Le numéro de série reste facultatif** | Le collecteur vend tantôt « 2 billets du rab » sans précision, tantôt « le billet n° 00042 ». Les deux doivent marcher. |
 | **La vente s'affiche à part** | Le membre voit une ligne « Vente du rab — billet n° 00042 : 8,00 € » dans ce qu'il doit. Aucun risque de lui facturer en plus le prix de la collecte. |
@@ -73,8 +109,8 @@ acheter ».
 - **Elle ne négocie pas.** Le prix est celui que le collecteur affiche. Pour le baisser, il le
   modifie tant que personne n'a demandé le billet.
 - **Elle ne relance pas** un collecteur qui tarde à répondre, ni un membre qui tarde à payer.
-- **Elle ne vend pas directement à un membre sans passer par la mise en vente** — sauf si
-  Jean-Philippe nous dit qu'il le voulait aussi (question 1 plus bas).
+- **Elle n'a pas de système de vente à part** : même attribué directement, le billet passe par la
+  liste du rab de la collecte. Jean-Philippe l'a confirmé.
 - **Elle ne gère pas les ventes entre deux membres ordinaires** — c'est la demande #22.
 - **Elle ne reprend pas les ventes passées.**
 
@@ -108,16 +144,17 @@ Cyril de décider de l'ordre des travaux.
 
 ## Ce qui reste à trancher
 
-1. **Pour Jean-Philippe — la question qui compte.** Vous avez gardé « JP enregistre la vente depuis
-   Mes collectes : pour Marie ». On l'a comprise comme **la validation de la demande de Marie**.
-   Faut-il **aussi** que le collecteur puisse enregistrer directement une vente conclue sur
-   Facebook, sans mise en vente ? On le déconseille : ça ramènerait le « j'accepte / je refuse »
-   côté membre.
-2. **Pour Jean-Philippe, sans urgence.** Le numéro de chaque billet : obligatoire, ou facultatif pour
-   les billets dont le collecteur n'a pas noté le numéro ? On le garde facultatif.
-3. **Pour Cyril.** L'ordre des travaux entre cette demande et #22 (voir juste au-dessus).
-4. **Pour tous.** Le membre déjà servi (voir « Un cas qui n'est pas encore réglé »).
-5. **Pour tous.** Qui voit le rab, et où ? Proposition : **tous les membres**, sur la page du
+Les deux questions posées ce matin à Jean-Philippe ont leur réponse : le numéro reste facultatif, et
+il veut pouvoir attribuer directement un billet (voir plus haut). Restent :
+
+1. **Pour Cyril — la question qui compte.** Accepte-t-on que le collecteur **attribue directement**
+   un billet du rab à un membre, sans action de ce membre ? Ça revient sur la décision du
+   9 septembre, prise sur une phrase fausse (voir « Une règle qu'on croyait suivre »). On le
+   recommande, avec une notification au membre et la possibilité pour le collecteur d'annuler tant
+   que ce n'est pas payé.
+2. **Pour Cyril.** L'ordre des travaux entre cette demande et #22 (voir « Et la demande #22 ? »).
+3. **Pour tous.** Le membre déjà servi (voir « Un cas qui n'est pas encore réglé »).
+4. **Pour tous.** Qui voit le rab, et où ? Proposition : **tous les membres**, sur la page du
    billet — le rab va souvent à ceux qui ne se sont pas inscrits à temps.
 
 ## Ce sur quoi on vous demande de vous prononcer
@@ -125,9 +162,11 @@ Cyril de décider de l'ordre des travaux.
 - Est-ce que **le parcours réécrit d'après Jean-Philippe** correspond à la façon dont vous vendez, ou
   vendriez, votre rab ?
 - **Réserver un billet dès qu'il est demandé**, jusqu'à la réponse du collecteur : ça vous va ?
+- **L'attribution directe par le collecteur, sans action du membre** : vous paraît-elle normale,
+  sachant qu'un collecteur peut déjà inscrire un membre à sa collecte ?
 - Est-ce que **ce que l'application ne fera pas** vous convient ?
 
-**Mieux vaut attendre la réponse de Jean-Philippe à la question 1, et celle de Cyril à la
-question 3, avant de valider** : une seule validation fait passer la demande en « Prêt à dev ». Si
-leurs réponses changent ce qui est prévu, ce document sera repris. Vos remarques sont bienvenues dès
+**Mieux vaut attendre les réponses de Cyril aux questions 1 et 2 avant de valider** : une seule
+validation fait passer la demande en « Prêt à dev ». Si ses réponses changent ce qui est prévu, ce
+document sera repris. Vos remarques sont bienvenues dès
 maintenant : laissez un commentaire, vous aurez une réponse disant ce qui en a été fait.
