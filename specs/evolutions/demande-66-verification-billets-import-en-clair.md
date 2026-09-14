@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `9a3a618` (14/09/2026, après les réponses de Cyril).
+> Reflète la version technique du commit `a097f86` (14/09/2026, après la deuxième série de réponses de Cyril).
 
 ## Ce qui a changé depuis la première version
 
@@ -71,18 +71,35 @@ Un onglet de l'écran montre, pour chaque fichier traité, **tout ce qui a chang
 
 ## « Sans aucun doute », avec un exemple
 
-Prenons un billet collecté l'an dernier : 12 inscriptions payées, dont 3 pour un billet doré.
+Prenons un billet collecté l'an dernier, avec 12 inscriptions payées.
 
 | Sur la fiche, variante | Le fichier dit | Ce qui se passe |
 |---|---|---|
 | **non renseigné** | doré | **Corrigé d'office** : l'information n'avait jamais été saisie, et rien ne s'y oppose |
-| **non renseigné** | pas de variante | **Un admin décide** : 3 inscriptions portent un doré, le fichier se trompe peut-être |
+| **non renseigné** | pas de variante | **Corrigé d'office** aussi *(corrigé le 14/09, voir ci-dessous)* |
 | **anniversaire** | doré | **Un admin décide** : ce n'est plus une information manquante, c'est une contradiction |
 
-C'est la première ligne qui pose la question de la protection : aujourd'hui, même elle serait refusée
-par la base, parce que le billet a des inscriptions. **On propose d'autoriser ce cas-là seulement** —
-remplir une information jamais saisie, quand aucune inscription ne la contredit. Changer une
-information déjà remplie resterait protégé.
+~~Deuxième ligne : un admin décide, 3 inscriptions portent un doré.~~ **Cyril a relevé que cet exemple
+ne tenait pas** : un billet dont la variante n'est pas renseignée ne peut pas avoir d'inscriptions
+pour un doré — une collecte ne s'ouvre aux variantes que si le billet en déclare une. Il n'a que des
+inscriptions pour le billet normal, et « pas de variante » ne contredit rien. La vérification reste
+faite quand même, pour quelques très anciennes inscriptions d'avant la refonte des collectes.
+
+Aujourd'hui, même ces cas simples seraient refusés par la base, parce que le billet a des
+inscriptions. **Cyril a validé qu'on autorise ce cas-là seulement** — remplir une information jamais
+saisie, quand aucune inscription ne la contredit. Changer une information déjà remplie reste protégé.
+
+## Comment on reconnaît un billet *(précisé par Cyril le 14/09)*
+
+Un billet se reconnaît à **sa référence, son millésime et sa version** — et à rien d'autre : ni le nom,
+ni le pays, ni l'année. C'est avec ces trois informations qu'on retrouve, dans le fichier, la fiche
+qui lui correspond.
+
+Ce qu'on compare ensuite, ce sont **deux informations seulement** : le billet existe-t-il en version
+normale ? A-t-il une variante, et laquelle ?
+
+Une fiche peut correspondre à **deux billets en main** — le normal et le doré, par exemple. Si le
+fichier les liste sur deux lignes, l'assistant les **regroupe** avant de comparer.
 
 ## Ce qui a été décidé, et pourquoi
 
@@ -100,20 +117,17 @@ information déjà remplie resterait protégé.
 - **Elle ne supprimera aucun billet**, et ne tranchera aucune contradiction.
 - **Elle ne cherchera pas, pour l'instant, les billets qu'on a et que le fichier n'a pas.**
 - **Elle ne proposera pas « ignorer »** : accepter ou refuser.
-- **Elle ne comparera, pour l'instant, que la version normale et la variante** — pas le nom, le pays
-  ou l'année, sauf pour reconnaître un billet.
+- **Elle ne comparera que la version normale et la variante** — ni le nom, ni le pays, ni l'année.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
-1. **Autoriser la saisie d'une information jamais renseignée** sur un billet déjà collecté, quand
-   aucune inscription ne la contredit (la première ligne de l'exemple) : d'accord ?
-2. **L'écran « Incohérences des billets » proposé par Cyril** — types incohérents ou non renseignés,
-   billets sans photo, autres cas problématiques : c'est une bonne idée, mais plus large que cette
-   demande, et il n'a pas besoin de fichier externe. On propose d'en faire **une demande à part**, que
-   Cyril pourra déposer.
-3. **Sans urgence** : faudra-t-il un jour comparer aussi d'autres informations que le type de billet
-   (nom, pays, année) ?
+Cyril a répondu à toutes les questions posées jusqu'ici :
 
-Ces réponses peuvent venir pendant la relecture : aucune ne change la façon dont la liste de
-vérification est construite. Vos remarques sont bienvenues : laissez un commentaire, vous aurez une
-réponse disant ce qui en a été fait.
+- ~~Autoriser la saisie d'une information jamais renseignée sur un billet déjà collecté ?~~ **Oui.**
+- ~~L'écran « Incohérences des billets » : une demande à part ?~~ **Oui : c'est la demande #69.**
+- ~~Comparer d'autres informations que le type de billet ?~~ **Non** — et c'était la question qui
+  comptait le plus : elle fixe comment on reconnaît un billet (voir plus haut).
+
+**L'analyse est complète et peut être validée.** Si tout vous va, cochez « J'ai lu et je valide
+l'analyse » sur la fiche. Sinon, laissez un commentaire : vous aurez une réponse disant ce qui en a
+été fait.
