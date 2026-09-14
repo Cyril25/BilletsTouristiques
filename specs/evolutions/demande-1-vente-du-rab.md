@@ -14,6 +14,9 @@
   facultatif, et le collecteur doit pouvoir **attribuer directement** un billet à un membre avec qui
   il s'est déjà mis d'accord, sans action de ce membre. La règle Q5 qui l'interdisait reposait sur un
   fait inexact — voir « Les réponses de Jean-Philippe » et la question R6, pour Cyril.
+- **Et à 13 h 40**, Jean-Philippe répond à R3 : un membre déjà servi achète bien du rab, « si c'est un
+  numéro spécial ». Le billet du rab ne passe donc plus par une inscription : il va **directement
+  dans l'enveloppe** du membre — voir « Le billet part dans l'enveloppe », retranché.
 - ~~Statut du 10/09 : « elle dépend maintenant du lot 1 de #22 ».~~ Ne tient plus le 14/09 : voir
   « L'ordre des travaux, revu ».
 - **Origine :** issue du cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, dont les
@@ -58,6 +61,7 @@ Aux deux questions qui lui étaient posées :
 |---|---|---|
 | **R1** — faut-il aussi pouvoir enregistrer une vente conclue sur Facebook, sans mise en vente ? | « non, par contre imaginons que je vende le billet numéro 1000 à 5 euros et que je l'avais proposé à Marie sur Facebook, il me faut pouvoir le mettre à Marie directement sans que Marie ait une action à faire » | Pas de mécanisme de vente à part. Mais depuis la mise en vente, le collecteur **attribue** un billet à un membre — et la somme apparaît **sans geste du membre** |
 | **R5** — le numéro de série, obligatoire ou facultatif ? | « facultatif » | Confirme Q3. Rien à changer |
+| **R3** *(13 h 40)* — un membre déjà servi achète-t-il ensuite du rab ? | « oui si c'est un numéro spécial » | Le cas n'est pas marginal : c'est la moitié « numéros spéciaux » du titre de la demande. Le passage par une inscription ne sait pas le traiter — voir « Le billet part dans l'enveloppe », retranché |
 
 **L'attribution directe contredit Q5**, décidée avec Cyril le 09/09 : « la vente ne compte dans le
 solde du membre qu'après acceptation — le précédent “aucun montant sans inscription volontaire” est
@@ -87,9 +91,9 @@ Jean-Philippe a 3 billets en trop d'une collecte terminée, dont le **n° 00042*
 2. **Marie voit le rab** (où : question R4) et **demande à acheter** le n° 00042 à 8,00 €. L'offre
    passe `demandee` : plus personne d'autre ne peut la demander. JP reçoit une notification.
 3. **JP valide qu'il a encore le billet.** L'offre passe `vendue` ; dans la même opération, une
-   ligne de `dettes` de 8,00 € naît à la charge de Marie, et le billet est rattaché à une
-   inscription de Marie sur la collecte (point dur n° 5). Les 8,00 € apparaissent dans son
-   « vous devez ».
+   ligne de `dettes` de 8,00 € naît à la charge de Marie, ~~et le billet est rattaché à une
+   inscription de Marie sur la collecte (point dur n° 5)~~ et le billet est placé dans l'enveloppe en
+   cours de Marie chez JP *(retranché à 13 h 45)*. Les 8,00 € apparaissent dans son « vous devez ».
 4. **Marie déclare avoir payé, JP confirme** — le parcours de #44, inchangé.
 5. **JP met le billet dans l'enveloppe de Marie**, avec ses autres billets s'il y en a ; l'envoi
    suit le processus habituel.
@@ -104,7 +108,7 @@ JP a proposé le **n° 1000 à 5,00 €** à Marie sur Facebook, et elle a dit o
 
 1. **JP attribue le billet à Marie** depuis « Mes collectes » : soit depuis une offre déjà en vente,
    soit en créant l'offre et en l'attribuant du même geste.
-2. L'offre passe `vendue`, la dette de 5,00 € naît, le billet rejoint une inscription de Marie —
+2. L'offre passe `vendue`, la dette de 5,00 € naît, le billet rejoint l'enveloppe en cours de Marie —
    **exactement la même opération que la validation d'une demande**, sans la demande.
 3. **Marie n'a rien à faire.** Elle reçoit une notification : « JP vous a attribué le billet
    n° 1000 du rab : 5,00 € ». La suite est celle du parcours ci-dessus : paiement, puis enveloppe.
@@ -179,9 +183,14 @@ C'est juste pour un écart de prix — la ligne ferait double emploi. C'est **fa
 elle a sa propre existence, elle ne disparaît pas parce qu'un paiement a été annulé. Le trigger
 doit être restreint à `motif = 'changement_prix'`.
 
-**Plus probable depuis le 14/09** : quand l'acheteur est déjà inscrit à la collecte, la dette pointe
-vers **son inscription existante** (point dur n° 5), dont le paiement peut réellement être annulé.
-La restriction n'est plus une précaution, c'est un correctif nécessaire.
+~~Plus probable depuis le 14/09 : quand l'acheteur est déjà inscrit à la collecte, la dette pointe
+vers son inscription existante (point dur n° 5), dont le paiement peut réellement être annulé.
+La restriction n'est plus une précaution, c'est un correctif nécessaire.~~
+
+> **Revu à 13 h 45.** Une vente du rab ne se rattache plus à aucune inscription : sa dette porte
+> `inscription_id` à `NULL` — la colonne l'autorise, elle est en `ON DELETE SET NULL` dans la
+> migration #44. Le trigger R4 ne la touche donc jamais. Restreindre son `DELETE` à
+> `motif = 'changement_prix'` redevient une précaution, qu'on garde : elle ne coûte qu'une ligne.
 
 ### 3. La somme du menu compterait une vente non acceptée
 
@@ -201,6 +210,9 @@ pas dans le vide — c'est aussi ce qui évite d'inventer un rattachement. *Inch
 est posée sur une collecte, la dette en hérite.*
 
 ### 5. Une seule inscription par membre et par collecte *(ajouté le 14/09)*
+
+*Sans objet depuis 13 h 45 : le billet du rab ne passe plus par une inscription. Conservé parce que
+le constat sur la version du 10/09 reste vrai.*
 
 Depuis #16, `inscriptions` porte `UNIQUE (collecte_id, membre_email)` — contrainte
 `inscriptions_collecte_membre_uk`,
@@ -222,8 +234,13 @@ inscrit à la collecte, la base la refuserait. Il y a donc deux cas :
 
 Une inscription ne porte **qu'une enveloppe** (`inscriptions.enveloppe_id`). Si Marie est inscrite à
 la collecte et que son enveloppe est déjà partie, le billet du rab n'a plus de véhicule : le
-rattacher à cette inscription réécrirait l'historique d'un envoi terminé. **Non tranché** —
-question R3.
+rattacher à cette inscription réécrirait l'historique d'un envoi terminé. ~~Non tranché — question
+R3.~~
+
+> **Réglé à 13 h 45, avec le n° 5.** Jean-Philippe confirme que le cas existe — pour les numéros
+> spéciaux. Plutôt que deux mécanismes (une inscription quand c'est possible, autre chose sinon), le
+> billet du rab ne passe plus du tout par une inscription : il va directement dans l'enveloppe. Les
+> points durs n° 5 et 6 disparaissent avec le véhicule. Voir « Le billet part dans l'enveloppe ».
 
 ### 7. Deux membres demandent le même billet *(ajouté le 14/09)*
 
@@ -255,15 +272,53 @@ Deux façons de l'éviter :
 | **Quantités à zéro** *(recommandé)* | L'inscription est créée avec `nb_normaux = 0` et `nb_variantes = 0`. Les quantités réellement vendues sont portées par `dettes.nb_normaux` / `nb_variantes`, colonnes **qui existent déjà**. | **Aucun calcul de montant à modifier** : tout multiplie par zéro et tombe juste tout seul. Le trigger de #44 s'auto-protège même (`IF v_montant = 0 THEN CONTINUE`). | Une ligne « 0 billet » s'afficherait telle quelle. À corriger dans l'affichage : mes-inscriptions doit reconnaître l'inscription liée (via `dettes.inscription_id`) et la rendre **dans le bloc de vente**, pas comme une inscription normale. |
 | **Drapeau sur l'inscription** (`inscriptions.vente_rab`) | Une colonne booléenne, et chaque calcul de montant force 0 quand elle est vraie. | Quantités honnêtes à l'affichage. | **Le calcul de prix n'est pas centralisé** : `prixDepuisCollecte()` ne vit que dans mes-collectes.js ; mes-inscriptions.js et global.js calculent chacun le leur. C'est précisément le défaut qui avait fait écarter le modèle B — un oubli = un montant faux et silencieux. |
 
-**Recommandation : les quantités à zéro.** C'est la seule des deux qui ne demande à aucun calcul
+~~Recommandation : les quantités à zéro. C'est la seule des deux qui ne demande à aucun calcul
 d'argent d'apprendre une règle nouvelle, et le travail restant est un travail d'affichage, où une
-erreur se voit au lieu de se cacher dans un montant.
+erreur se voit au lieu de se cacher dans un montant.~~
 
-> **Complété le 14/09** : les quantités à zéro valent pour un membre qui n'a **pas encore**
-> d'inscription sur la collecte. S'il en a une, le billet la rejoint sans en changer les quantités —
-> et le calcul tombe juste de la même façon, puisque la vente reste portée par la dette. Voir points
-> durs n° 5 et 6. Et l'inscription se crée désormais **à la validation par le collecteur**, plus à
-> l'acceptation par le membre.
+~~Complété le 14/09 au matin : les quantités à zéro valent pour un membre qui n'a pas encore
+d'inscription sur la collecte ; s'il en a une, le billet la rejoint sans en changer les quantités.~~
+
+### Retranché le 14/09 à 13 h 45 : la ligne de rab va directement dans l'enveloppe
+
+**Pourquoi les deux options ci-dessus tombent.** Elles partaient d'une contrainte posée comme « non
+négociable » : un billet qui n'est pas une inscription ne peut pas voyager dans une enveloppe. C'est
+vrai **du code actuel**, pas du modèle : l'enveloppe ne sait rien de son contenu, ce sont les
+inscriptions qui pointent vers elle (`inscriptions.enveloppe_id`). Rien n'empêche une seconde sorte de
+ligne de pointer vers la même enveloppe. Et l'inscription-véhicule échoue exactement sur le cas que
+Jean-Philippe confirme : le membre déjà servi, qui achète un numéro spécial. Son unique inscription
+sur la collecte a déjà voyagé.
+
+**Ce qui est retenu** : `rab_offres.enveloppe_id`. À la vente (demande validée ou attribution), la
+ligne est placée dans **l'enveloppe en cours** du membre chez ce collecteur — créée si elle n'existe
+pas, comme le fait déjà `creerEnveloppeSiAbsente()` quand un collecteur inscrit un membre. La ligne
+n'a pas de statut de livraison propre : elle **suit celui de son enveloppe** (en cours, expédiée,
+reçue). La confirmation de réception de l'enveloppe par le membre la couvre sans rien ajouter.
+
+**Ce que ça fait disparaître** : l'inscription à quantités nulles, son masquage dans « Mes
+inscriptions », la contrainte d'unicité (point dur n° 5), le membre déjà servi (n° 6), et le risque
+du trigger R4 (n° 2), puisque la dette n'a plus d'inscription. Le membre ne peut plus payer le prix
+de la collecte en plus : il n'y a plus d'inscription à facturer.
+
+**Ce que ça coûte, et c'est le vrai travail du lot** : les écrans d'enveloppes doivent connaître une
+seconde sorte de contenu. Relevé le 14/09 dans `mes-collectes.js` — une douzaine d'endroits lisent le
+contenu d'une enveloppe par `inscriptions.enveloppe_id` :
+
+- la **préparation** : répartir, retirer d'une enveloppe (lignes 925, 940, 2247, 2262, 4293) ;
+- l'**affichage** du contenu (1510, 1564, 2121) et son **chargement** (1657, 2310) ;
+- l'**expédition** (2529) et le **renvoi** d'une enveloppe expédiée vers une autre (2700) ;
+- le **calcul des frais de port** (2404) : le tarif dépend du nombre de billets
+  (`findFdpPriceCollecte`, tranches `qte_min` / `qte_max`) — **une ligne de rab doit compter**, sinon
+  le port d'une enveloppe est sous-évalué ;
+- et, côté membre, « Mes envois » dans `mes-inscriptions.js` (1309).
+
+C'est plus de surface que l'inscription-véhicule, mais une surface **visible** : un oubli se voit à
+l'écran (une ligne absente d'une enveloppe), il ne se cache pas dans un montant. Et une seule règle
+pour tous les cas.
+
+> Utile au-delà de #1 : c'est la brique qui manque au second cas de la question O4 de #22 (un double
+> glissé dans une enveloppe de collecte), qui y était décrit comme « le plus gros coût et le plus gros
+> risque ». À signaler dans #22 quand ses documents seront repris.
 
 ## Le modèle de données
 
@@ -300,7 +355,7 @@ rien casser :
 | `statut` | `disponible` → `demandee` → `vendue`, plus `retiree` |
 | `demandeur_email` | le membre qui a demandé — clé étrangère vers `membres.email` en `ON UPDATE CASCADE`, comme le prévoit #62 pour toute table qui référence un membre |
 | `demandee_at`, `repondue_at` | |
-| `dette_id`, `inscription_id` | posés à la validation |
+| `dette_id`, `enveloppe_id` | posés à la vente ; l'enveloppe remplace l'inscription prévue le matin (retranché à 13 h 45). Le statut de livraison se lit sur l'enveloppe |
 
 **Une ligne = un billet.** Trois billets sans numéro au même prix, ce sont trois lignes identiques :
 la saisie « même prix pour tous » les crée d'un coup. Pas de colonne de quantité — c'est ce qui
@@ -320,19 +375,20 @@ Toutes `SECURITY DEFINER`, appelées en RPC — le motif de #22 pour ses envois 
 - `repondre_demande_rab(p_offre_id, p_valide)` — seul le collecteur de la collecte, seulement sur
   une offre `demandee`.
   Validée : crée la dette (`motif = 'vente_rab'`, montant = prix, `nb_normaux` ou `nb_variantes` à 1
-  selon la version, `numero_serie`), rattache le billet à l'inscription existante du membre ou en
-  crée une à quantités nulles (point dur n° 5), passe l'offre `vendue`, notifie le membre.
+  selon la version, `numero_serie`), ~~rattache le billet à l'inscription existante du membre ou en
+  crée une à quantités nulles (point dur n° 5)~~ place la ligne dans l'enveloppe en cours du membre
+  chez ce collecteur, passe l'offre `vendue`, notifie le membre — c'est-à-dire appelle `vendre_rab`.
   Refusée (« je ne l'ai plus ») : l'offre passe `retiree`, le membre est notifié.
-  Le cas du membre déjà servi attend R3.
+  ~~Le cas du membre déjà servi attend R3.~~ Réglé à 13 h 45 par l'enveloppe.
 - `vendre_rab(p_offre_id, p_membre_email)` *(ajouté l'après-midi, sous réserve de R6)* — seul le
   collecteur de la collecte, sur une offre `disponible`. **C'est l'opération « validée » ci-dessus,
-  sans demande** : même dette, même rattachement à l'inscription, offre `vendue`, notification au
-  membre. `repondre_demande_rab` validée l'appelle avec le demandeur ; l'attribution directe l'appelle
+  sans demande** : même dette (`inscription_id` à `NULL`), ligne placée dans l'enveloppe en cours du
+  membre, offre `vendue`, notification au membre. `repondre_demande_rab` validée l'appelle avec le demandeur ; l'attribution directe l'appelle
   avec le membre choisi. Une seule écriture de la règle. Créer l'offre et l'attribuer du même geste,
   c'est un INSERT suivi de cet appel.
 - `annuler_vente_rab(p_offre_id)` *(ajouté l'après-midi)* — seul le collecteur, tant que la dette
-  est `non_paye` : supprime la dette, retire le billet de l'inscription de véhicule (supprimée si elle
-  a été créée pour lui et ne porte rien d'autre), l'offre redevient `disponible`. Nécessaire dès lors
+  est `non_paye` **et** que l'enveloppe n'est pas partie : supprime la dette, retire la ligne de
+  l'enveloppe, l'offre redevient `disponible`. Nécessaire dès lors
   que le membre n'a plus de geste à faire : c'est son seul recours contre une erreur de personne,
   par l'intermédiaire du collecteur.
 
@@ -341,7 +397,7 @@ Toutes `SECURITY DEFINER`, appelées en RPC — le motif de #22 pour ses envois 
 - **Lecture** : les offres `disponible`, par tout membre (R4) ; toutes les offres de sa collecte, par
   le collecteur ; ses propres demandes, par le demandeur ; tout, par les admins.
 - **Écriture directe** : le collecteur crée, modifie le prix et retire **ses offres encore
-  disponibles**. Les colonnes `statut`, `demandeur_email`, `dette_id` et `inscription_id` ne
+  disponibles**. Les colonnes `statut`, `demandeur_email`, `dette_id` et `enveloppe_id` ne
   changent **que par les fonctions** — garde-fou par colonne, sur le modèle de celui que #22 ajoute
   aux dettes (trouvé le 11/09).
 - Aucune policy en `TO authenticated` (rôle anon, cf. point dur n° 8).
@@ -353,9 +409,9 @@ Cyril dans l'éditeur SQL Supabase, et son contenu reproduit dans cette spec au 
 
 | Écran | Ce qui change |
 |---|---|
-| `mes-collectes.js` | ~~Action « Vendre du rab » : choix du membre, quantité, prix, numéro de série facultatif.~~ **Mettre du rab en vente** sur une collecte du collecteur : lignes avec ou sans numéro, prix par ligne ou commun. **Demandes reçues** : « Je l'ai encore » / « Je ne l'ai plus ». **Attribuer à un membre** *(ajouté l'après-midi, R6)* : depuis une offre disponible, ou en la créant ; et « Annuler la vente » tant qu'elle n'est pas réglée. Suivi : disponible, demandée, vendue, retirée — puis le règlement par l'écran de #44. |
+| `mes-collectes.js` | ~~Action « Vendre du rab » : choix du membre, quantité, prix, numéro de série facultatif.~~ **Mettre du rab en vente** sur une collecte du collecteur : lignes avec ou sans numéro, prix par ligne ou commun. **Demandes reçues** : « Je l'ai encore » / « Je ne l'ai plus ». **Attribuer à un membre** *(ajouté l'après-midi, R6)* : depuis une offre disponible, ou en la créant ; et « Annuler la vente » tant qu'elle n'est pas réglée. Suivi : disponible, demandée, vendue, retirée — puis le règlement par l'écran de #44. **Enveloppes** *(retranché à 13 h 45)* : les lignes de rab apparaissent dans le contenu, la préparation, l'expédition et le renvoi d'une enveloppe, et **comptent dans le nombre de billets du calcul des frais de port** — une douzaine d'endroits, relevés dans « Le billet part dans l'enveloppe ». |
 | Où le membre voit le rab *(nouveau)* | Selon R4. Proposition : un bloc « Rab disponible » sur la page du billet (`billet.html`), là où un membre regarde déjà un billet et ses collectes, avec « Je le veux ». |
-| `mes-inscriptions.js` | ~~Bloc « Ventes proposées » avec J'accepte / Je refuse.~~ **Mes demandes de rab** : en attente, avec « Retirer ma demande » ; puis la vente validée dans le solde, comme une dette de #44. Doit masquer l'inscription à quantités nulles qui sert de véhicule d'envoi. |
+| `mes-inscriptions.js` | ~~Bloc « Ventes proposées » avec J'accepte / Je refuse.~~ **Mes demandes de rab** : en attente, avec « Retirer ma demande » ; puis la vente validée dans le solde, comme une dette de #44. ~~Doit masquer l'inscription à quantités nulles qui sert de véhicule d'envoi.~~ Plus de véhicule depuis 13 h 45 ; en revanche **« Mes envois »** montre les billets du rab dans le contenu de l'enveloppe. |
 | `global.js` | ~~Somme du menu : exclure les ventes non acceptées.~~ **Aucun changement** depuis le 14/09 (point dur n° 3 sans objet). |
 | Notifications | ~~Une à la proposition, vers le membre ; une au refus, vers le collecteur.~~ Une à la **demande**, vers le collecteur ; une à la **réponse**, vers le membre, qu'elle soit positive ou non ; une à l'**attribution** et une à l'**annulation**, vers le membre *(ajoutées l'après-midi)*. Le règlement réutilise celles de #44. |
 
@@ -379,12 +435,13 @@ réécrits ; 6 à 10 sont repris.
    #44, écrans inchangés. Le collecteur refuse → l'offre sort de la vente et le membre est prévenu.
 6. Les états « demandée » et « vendue » d'une offre ne se posent **que par les fonctions** : aucune
    écriture directe ne peut les poser, même celle du collecteur.
-7. Le billet vendu **part dans l'enveloppe** du membre chez ce collecteur, suivi comme les autres —
-   avec ses autres billets de la collecte s'il y est déjà inscrit.
+7. Le billet vendu **part dans l'enveloppe en cours** du membre chez ce collecteur, avec ce qu'elle
+   contient déjà, et suit son statut — **y compris pour un membre déjà servi** sur cette collecte
+   *(retranché à 13 h 45)*.
 8. Le membre ne paie **que le prix de la vente** — jamais le prix de la collecte en plus, qu'il y
-   soit déjà inscrit ou non.
+   soit inscrit ou non.
 9. Un changement de prix de la collecte d'origine **ne crée aucune dette** sur une vente du rab.
-10. Une annulation de paiement sur l'inscription qui porte le billet **ne supprime pas** la vente.
+10. Une annulation de paiement sur une inscription du membre **ne supprime pas** la vente.
 11. Le numéro de série s'affiche chez le membre, sur l'offre comme sur la dette, et reste
     facultatif.
 12. Renommer l'adresse d'un membre (#62) fait suivre ses demandes de rab.
@@ -392,7 +449,10 @@ réécrits ; 6 à 10 sont repris.
     un membre — ou crée l'offre et l'attribue d'un seul geste : la dette naît aussitôt, **sans action
     du membre**, qui reçoit une notification. Le résultat est identique à une demande validée.
 14. Le collecteur **annule** une vente tant qu'elle n'est pas réglée : la dette disparaît, l'offre
-    redevient disponible, le membre est prévenu. Une vente déclarée payée ne s'annule plus.
+    redevient disponible, le membre est prévenu. Une vente déclarée payée, ou dont l'enveloppe est
+    partie, ne s'annule plus.
+15. *(Ajouté à 13 h 45.)* Les **frais de port** d'une enveloppe comptent les billets du rab qu'elle
+    contient, comme ceux des inscriptions.
 
 ## Ce que la reprise de #22 change ici (2026-09-10)
 
@@ -422,7 +482,8 @@ lot 2 de #22 (annonces).~~
 Les décisions **Q3** (numéro de série optionnel), **Q4** (le prix vit dans une ligne de dette et
 non sur l'inscription) et **Q5** (confirmation préalable du membre) **restent valables** —
 Q5 dans son principe, depuis le 14/09. Les points durs n° 1, 2 et 4 identifiés dans la migration #44
-et le mécanisme d'inscription à quantités nulles également, complétés le 14/09.
+~~et le mécanisme d'inscription à quantités nulles~~ également, complétés le 14/09. *L'inscription à
+quantités nulles est abandonnée à 13 h 45 au profit de l'enveloppe.*
 
 ~~Un détail gagne même en cohérence : la Q5 de #1 (rien ne compte sans un geste du membre) et la
 règle de #22 (celui qui reçoit confirme) sont le même principe — rien n'apparaît dans le solde
@@ -495,15 +556,15 @@ fois R2 tranchée. Si A est retenue, la question O5 de #22 reçoit la même rép
 |---|---|---|---|
 | ~~R1~~ | ~~« JP enregistre la vente depuis Mes collectes : pour Marie » : validation de la demande de Marie, ou aussi une vente conclue sur Facebook sans offre ?~~ **Répondue le 14/09** : pas de mécanisme à part, mais l'attribution directe d'une offre à un membre, sans action de sa part | Jean-Philippe | ~~La lecture retenue, seule : le second chemin ramènerait la vente attribuée que le membre doit accepter.~~ Recommandation tombée : elle supposait que toute attribution devait être acceptée par le membre. Jean-Philippe demande justement le contraire — voir R6 |
 | **R2** | L'ordre des travaux : A, B ou C (« L'ordre des travaux, revu ») | Cyril | A |
-| **R3** | Le membre **déjà servi** : son enveloppe de la collecte est partie, comment voyage le billet du rab ? | Les relecteurs, pour la fréquence du cas ; puis le dev | Selon la fréquence : refuser la demande avec un message clair (le plus simple) ; suivre l'argent dans l'application et l'envoi hors d'elle ; ou porter l'envoi sur l'offre (le plus complet, mais touche la machinerie d'enveloppes de mes-collectes.js) |
+| ~~R3~~ | ~~Le membre déjà servi : son enveloppe de la collecte est partie, comment voyage le billet du rab ?~~ **Répondue à 13 h 40** : le cas existe, pour les numéros spéciaux | Jean-Philippe | **Tranchée à 13 h 45** : la ligne de rab va directement dans l'enveloppe en cours, pour tous les cas. Refuser la demande ou envoyer hors application laisserait tomber la moitié « numéros spéciaux » de la demande |
 | **R4** | Qui voit le rab, et où ? | Les relecteurs | Tous les membres, sur la page du billet |
 | ~~R5~~ | ~~Le numéro de série : facultatif ou obligatoire dans la mise en vente ?~~ **Répondue le 14/09 : facultatif** | Jean-Philippe | — |
 | **R6** *(ajoutée l'après-midi)* | **L'attribution directe** : le collecteur peut-il faire devoir une vente du rab à un membre **sans action de ce membre**, comme Jean-Philippe le demande ? Ça revient sur Q5, décidée avec Cyril le 09/09 — mais Q5 reposait sur un précédent inexact : « Inscrire un membre » le permet déjà pour les inscriptions | Cyril | **Oui**, avec notification au membre et annulation possible par le collecteur tant que la vente n'est pas réglée. S'aligner sur ce qu'un collecteur fait déjà plutôt que d'imposer au rab une règle que le reste de l'application ne suit pas |
 
 ~~R1 et R2 sont à trancher avant de valider : R1 change ce que les relecteurs valident, R2 ce qui
 sera construit.~~ **Mis à jour l'après-midi : R2 et R6 sont à trancher avant de valider**, toutes
-deux par Cyril — R6 change ce que les relecteurs valident, R2 ce qui sera construit. R3 et R4
-peuvent l'être au moment du dev.
+deux par Cyril — R6 change ce que les relecteurs valident, R2 ce qui sera construit. R4 peut l'être
+au moment du dev ; R3 est tranchée depuis 13 h 45.
 
 ## Réalisation
 
