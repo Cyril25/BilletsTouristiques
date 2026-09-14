@@ -14,6 +14,11 @@
 > peuvent changer une adresse ; le membre n'est pas prévenu. Q1 à Q3 sont tranchées, Q4 (le
 > garde-fou) reste ouverte après explication. Voir « La désactivation » et « Questions ouvertes ».
 >
+> **Le même jour (15 h 47)**, Cyril propose une autre voie : un identifiant de membre utilisé
+> partout, l'email ne servant plus qu'à l'authentification. Elle est analysée, avec son coût mesuré,
+> dans « Voie C » ; la recommandation devient « B maintenant, C dans une demande à part » — à
+> trancher par Cyril (Q7).
+>
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
 > Demande déposée par Cyril le 2026-09-10, écran visé : **Gestion Membres** (`users.html`).
@@ -97,7 +102,7 @@ Faite le 2026-09-10 (`<ancienne adresse>` → `<nouvelle adresse>` : 139 inscrip
    `UPDATE OF nb_normaux, nb_variantes, collecte_id`. Les 142 inscriptions hors invariant ne
    bloquent pas un renommage.
 
-## Les deux voies
+## Les voies
 
 ### Voie A — la liste de colonnes écrite à la main
 
@@ -130,6 +135,54 @@ l'existant. Les déclencheurs d'intégrité sont bien installés et actifs.
 **On peut donc adopter la voie B tout de suite, sans arbitrer une seule ligne orpheline.** Le
 nettoyage devient un chantier séparé, et le jour où il est fait, un `VALIDATE CONSTRAINT` referme
 le dossier.
+
+### Voie C — un identifiant de membre *(proposée par Cyril le 2026-09-14)*
+
+> « Tu dis “la solution retenue”, mais pour moi c'est une des solutions. La meilleure solution ne
+> serait-elle pas plutôt de faire une table de correspondance email / membre id ? On utiliserait
+> partout le membre id, et l'email juste pour l'authentification et la table de correspondance, ce
+> qui permettrait un changement d'adresse beaucoup plus simple. »
+
+**Sur le mot, Cyril a raison** : rien n'était retenu. La voie B était recommandée, pas décidée — et
+la version en clair disait « la solution retenue » à un endroit. C'est corrigé.
+
+**Sur le fond, c'est le modèle correct**, celui qu'on choisirait en partant de zéro : `membres.id`
+comme clé, un `membre_id` dans chaque table d'appartenance, l'email seulement dans `membres`.
+Changer une adresse devient **une seule mise à jour d'une seule ligne**. Plus de cascade, donc plus
+de triggers à traverser (Q6 sans objet), et plus besoin du garde-fou d'exhaustivité pour le
+renommage (Q4 sans objet). Et un pas vers la fusion de comptes, exclue aujourd'hui.
+
+**Ce qu'elle coûte ici, mesuré le 14/09 dans le dépôt** :
+
+| Où | Ce qu'il faudrait reprendre |
+|---|---|
+| Le site | **323 références** aux colonnes qui portent un email de membre, dans **17 fichiers** — dont **109** dans `mes-collectes.js`, le cœur des collecteurs —, plus **116** usages de l'email de la personne connectée |
+| Les règles d'accès | Elles comparent presque toutes `auth.jwt() ->> 'email'` à une colonne de la table : **155 occurrences** dans les scripts de migration *(plafond : ces scripts contiennent aussi des versions remplacées)*. Le jeton Firebase porte un email, pas un identifiant : chaque règle devrait passer par une fonction « mon identifiant de membre » |
+| Les données | 16 tables à doter d'une colonne, à remplir, à rendre obligatoire. **Les 15 adresses orphelines n'ont pas d'identifiant** : elles doivent être arbitrées avant, ce que la voie B évitait |
+| Les triggers | Ceux qui comparent l'email du jeton à une colonne (enveloppes, paiements, audit) sont à réécrire |
+
+C'est une migration **de la taille de la refonte des collectes (#16)**, qui a demandé une répétition
+générale et un jour J — dans un projet sans tests automatisés, où chaque écran touché se vérifie à
+la main.
+
+**Ce qui les rapproche** : la voie B n'est pas un détour. Ses clés étrangères garantissent que
+**chaque email recopié correspond à un membre existant** — et c'est exactement la condition pour
+remplir un jour les `membre_id` par une simple jointure, sans orpheline. B prépare C.
+
+**Ce qui les oppose** : les parties de B propres à la cascade — la sortie de renommage dans les
+triggers (Q6) et le garde-fou d'exhaustivité (Q4) — deviendraient inutiles le jour où C serait faite.
+C'est le coût d'aller vite.
+
+| | Délai jusqu'au premier changement d'adresse depuis l'écran | Risque | Fin de parcours |
+|---|---|---|---|
+| **B seule** | Court : 16 clés, une fonction, cinq triggers, un écran | Contenu | L'email reste recopié partout |
+| **C directement** | Long : une refonte de la taille de #16 | Élevé : 17 fichiers du site, la plupart des règles d'accès | Le modèle propre |
+| **B maintenant, C ensuite** *(recommandé)* | Court | Contenu d'abord, puis réparti sur un chantier planifié | Le modèle propre, atteint sans orphelines ; une partie de B jetée en route |
+
+**Recommandation : B maintenant, C dans une demande à part**, planifiée comme #16. Deux raisons :
+Cyril a dit que le besoin était **urgent**, et C ne peut pas l'être ; et B nettoie le terrain dont C a
+besoin. Entre-temps, un cas isolé reste traitable par le script manuel éprouvé le 10/09. **C'est une
+décision d'architecture, qui revient à Cyril : question Q7.**
 
 ## Conséquence à assumer : supprimer un membre change de comportement
 
@@ -507,6 +560,9 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
   de l'incident de 2024. Je le recommande, mais c'est de la complexité en plus dans un projet dont la
   simplicité est une contrainte assumée. *14/09 : Cyril n'en voit pas bien l'intérêt et demande une
   explication — donnée dans la version en clair et en réponse sur la fiche. Toujours ouverte.*
+- **Q7 — Voie B, voie C, ou B puis C ?** *(ajoutée le 14/09 après la proposition de Cyril, voir
+  « Voie C — un identifiant de membre »)* Recommandé : B maintenant, C dans une demande à part.
+  **C'est la question qui compte avant de valider** : elle change ce qui sera construit.
 - **Q5 — les deux définitions d'is_admin().** Elles coexistent dans le dépôt : `migration-4-1-membres.sql`
   (rôle `admin` seul) et `migration-inscription-publique.sql` (`admin` + `superadmin` + actif). À
   vérifier en base laquelle est vivante ; la spec utilise `is_admin_ou_superadmin()`, non ambigu.
