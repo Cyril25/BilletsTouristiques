@@ -262,6 +262,13 @@ Les 7 questions ont été tranchées avec Cyril. Q2 tombe d'elle-même avec la r
 | **Q6** | #22 : ouvrir « Ma collection » aux membres — périmètre ou projet à part ? | **Deux lots.** L'ouverture de « Ma collection » est un lot séparé ; #22 démarre en saisie manuelle et ne l'attend pas. |
 | **Q7** | Le troc est-il vraiment demandé ? | **Non — « vendre » est ce qui compte.** Le troc sort du périmètre. |
 
+> **Correction du 2026-09-14, venue de la demande #1.** La prémisse de Q5 est inexacte : il est
+> faux qu'« aucun montant n'apparaît chez un membre sans qu'il se soit inscrit lui-même ». Depuis
+> « Mes collectes », le bouton « Inscrire un membre » (`mes-collectes.js:4015`, policy
+> `inscriptions_insert_collecteur`) crée une inscription, donc une somme due, sans aucune action du
+> membre. La décision Q5 est remise en question pour #1 : question R6 de sa spec,
+> [demande-1-vente-du-rab.md](demande-1-vente-du-rab.md).
+
 ### Ce que ces décisions changent
 
 **#22 s'allège nettement — mais reste un L.** Elle était L parce qu'elle supposait un solde membre ↔ membre, un casier
