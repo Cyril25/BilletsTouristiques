@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `563f0e1` (14/09/2026, après-midi).
+> Reflète la version technique du commit `caf6057` (14/09/2026, après-midi).
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -19,9 +19,11 @@ mot, et elle change trois choses :
 Avant, c'était l'inverse : le collecteur enregistrait une vente conclue sur Facebook, et le membre
 devait l'accepter.
 
-**Et depuis ce matin**, Jean-Philippe a répondu aux deux questions qu'on lui posait :
+**Et depuis ce matin**, Jean-Philippe a répondu aux questions qu'on lui posait :
 
 - le numéro de série reste **facultatif** ;
+- un membre **déjà servi** achète bien du rab, pour un numéro spécial — ce qui change la façon dont
+  le billet part (voir « Le membre déjà servi — réglé ») ;
 - quand il s'est **déjà mis d'accord avec Marie sur Facebook**, il doit pouvoir **lui attribuer
   directement** le billet, **sans que Marie ait quoi que ce soit à faire**.
 
@@ -114,19 +116,24 @@ l'autre, et l'acceptation reste le seul garde-fou.
 - **Elle ne gère pas les ventes entre deux membres ordinaires** — c'est la demande #22.
 - **Elle ne reprend pas les ventes passées.**
 
-## Un cas qui n'est pas encore réglé
+## Le membre déjà servi — réglé
 
-Marie était **déjà inscrite** à cette collecte, et **ses billets lui ont déjà été envoyés**. Le
-billet du rab ne peut pas rejoindre une enveloppe déjà partie.
+Marie était **déjà inscrite** à cette collecte, et **ses billets lui ont déjà été envoyés**. Elle
+veut ensuite un numéro spécial du rab. Est-ce que ça arrive ? **Oui**, a répondu Jean-Philippe :
+« si c'est un numéro spécial ».
 
-Trois possibilités : refuser la demande avec un message clair ; noter l'argent dans l'application
-mais laisser l'envoi se faire à la main ; ou permettre un second envoi pour la même collecte, de
-loin le plus lourd. Tout dépend de la fréquence : **est-ce que ça arrive, chez vous, qu'un membre
-déjà servi achète du rab ?**
+Les versions précédentes faisaient voyager le billet du rab « accroché » à l'inscription de Marie
+sur la collecte. Dans ce cas-là, ça ne marche pas : son inscription a déjà voyagé, elle ne peut pas
+repartir. Et les numéros spéciaux, c'est la moitié du titre de la demande.
 
-En regardant ce cas de près, on a aussi découvert que la version du 10/09 **n'aurait pas marché**
-pour un membre déjà inscrit à la collecte, même avant l'envoi. C'est corrigé : son billet du rab
-part simplement avec ses autres billets.
+**Ce qui est retenu** : le billet du rab va **directement dans l'enveloppe en cours** de Marie chez
+JP, celle où s'accumulent ses prochains billets — qu'elle ait déjà été servie ou non. Il part avec
+elle, et quand Marie confirme la réception de l'enveloppe, le billet du rab est reçu avec le reste.
+Les frais de port de l'enveloppe le comptent, comme n'importe quel billet.
+
+C'est plus de travail côté « Mes collectes », qui doit apprendre qu'une enveloppe peut contenir
+autre chose que des inscriptions. Mais c'est une seule règle pour tous les cas, et un oubli se verra
+à l'écran au lieu de se cacher dans un montant.
 
 ## Et la demande #22 ?
 
@@ -144,8 +151,9 @@ Cyril de décider de l'ordre des travaux.
 
 ## Ce qui reste à trancher
 
-Les deux questions posées ce matin à Jean-Philippe ont leur réponse : le numéro reste facultatif, et
-il veut pouvoir attribuer directement un billet (voir plus haut). Restent :
+Les trois questions posées à Jean-Philippe ont leur réponse : le numéro reste facultatif, il veut
+pouvoir attribuer directement un billet, et le membre déjà servi est un cas réel, désormais réglé
+(voir plus haut). Restent :
 
 1. **Pour Cyril — la question qui compte.** Accepte-t-on que le collecteur **attribue directement**
    un billet du rab à un membre, sans action de ce membre ? Ça revient sur la décision du
@@ -153,8 +161,7 @@ il veut pouvoir attribuer directement un billet (voir plus haut). Restent :
    recommande, avec une notification au membre et la possibilité pour le collecteur d'annuler tant
    que ce n'est pas payé.
 2. **Pour Cyril.** L'ordre des travaux entre cette demande et #22 (voir « Et la demande #22 ? »).
-3. **Pour tous.** Le membre déjà servi (voir « Un cas qui n'est pas encore réglé »).
-4. **Pour tous.** Qui voit le rab, et où ? Proposition : **tous les membres**, sur la page du
+3. **Pour tous.** Qui voit le rab, et où ? Proposition : **tous les membres**, sur la page du
    billet — le rab va souvent à ceux qui ne se sont pas inscrits à temps.
 
 ## Ce sur quoi on vous demande de vous prononcer
