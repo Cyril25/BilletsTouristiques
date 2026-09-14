@@ -9,6 +9,11 @@
 > repart en **Analyse à valider** : ce qui reste ouvert (Q1 à Q5) appartient aux relecteurs, plus à
 > l'analyse.
 >
+> **Reprise le 2026-09-14** avec les réponses de Cyril (commentaire de 14 h 57) : le besoin est
+> confirmé ; **supprimer un membre qui a des données devient une désactivation** ; tous les admins
+> peuvent changer une adresse ; le membre n'est pas prévenu. Q1 à Q3 sont tranchées, Q4 (le
+> garde-fou) reste ouverte après explication. Voir « La désactivation » et « Questions ouvertes ».
+>
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
 > Demande déposée par Cyril le 2026-09-10, écran visé : **Gestion Membres** (`users.html`).
@@ -145,6 +150,37 @@ Trois options :
 Si `NO ACTION` est retenu, [users.js](../../users.js) doit être adapté : le contrôle actuel ne
 regarde que `inscriptions`, il doit énumérer **tout** ce qui bloque et le dire clairement, au lieu
 de laisser remonter une erreur Postgres brute. Sinon un admin verra un message incompréhensible.
+
+### La désactivation *(décision de Cyril, 2026-09-14)*
+
+> « La suppression d'un membre qui a des données devient en fait une désactivation de compte. »
+
+`NO ACTION` **reste le bon choix en base** : une suppression physique qui laisserait des données
+orphelines est refusée. Ce qui change, c'est ce que l'écran en fait. ~~Refuser la suppression avec un
+message qui énumère ce qui bloque.~~ Quand le membre a des données, **« Supprimer » devient
+« Désactiver »** ; un membre sans aucune donnée se supprime comme aujourd'hui.
+
+**Le mécanisme existe déjà à moitié.** `membres.statut` porte `'actif'`, `'en_attente'` ou `'refuse'`
+(`scripts/migration-inscription-publique.sql`), et
+`is_whitelisted()` n'admet que `statut = 'actif'` : un membre qui n'est pas actif ne passe plus la
+porte d'entrée du site. La désactivation, c'est **une valeur de plus**, `'desactive'` — distincte de
+`'refuse'`, qui dit qu'une inscription a été rejetée, pas qu'un compte a vécu :
+
+- ses données restent intactes : inscriptions, collection, enveloppes, dettes ;
+- il ne peut plus se connecter ;
+- un admin peut le **réactiver** (`statut` → `'actif'`) ;
+- les listes où l'on choisit un membre — « Inscrire un membre » d'un collecteur, qui charge
+  aujourd'hui **tous** les membres sans filtre ([mes-collectes.js:4020](../../mes-collectes.js#L4020)) —
+  doivent l'exclure. Relevé exhaustif au moment du dev.
+
+⚠ **Un point de sécurité trouvé en préparant.** `is_admin_ou_superadmin()`, sur laquelle reposent
+les règles d'accès des admins, **ne regarde pas le statut** : elle ne vérifie que le rôle
+(`scripts/migration-notif-cibles-3-niveaux.sql`).
+Un admin désactivé ne passerait plus la porte du site, mais un jeton encore valide lui garderait
+ses droits d'admin sur les appels directs à la base. Deux parades : ajouter `AND statut = 'actif'`
+à la fonction (une ligne, et c'est le sens qu'on lui prête déjà), ou interdire de désactiver un
+admin sans lui retirer d'abord son rôle. **Recommandé : la première**, parce qu'elle protège aussi
+de tout autre chemin qui ferait perdre son statut à un admin.
 
 ## Classement des 20 colonnes
 
@@ -398,13 +434,17 @@ l'opération est irréversible. Au retour, message de succès nommant les deux a
 **Le décompte avant confirmation n'est pas un ornement** : c'est ce qui permet à l'admin de voir
 qu'il s'apprête à déplacer 139 inscriptions, et donc de s'arrêter s'il s'est trompé de personne.
 
+*Ajouté le 14/09* : le bouton « Supprimer » d'un membre qui a des données devient **« Désactiver »**
+(avec le décompte de ce qui est conservé), et un membre désactivé affiche **« Réactiver »**. Aucune
+notification n'est envoyée au membre lors d'un changement d'adresse (Q3).
+
 ## Découpage
 
 | Lot | Contenu | Dépend de |
 |---|---|---|
 | ~~**0**~~ | ~~**#64** — garde-fou JWT sur la fonction du trigger des enveloppes~~ *(faite le 2026-09-11 — utile à la maintenance, ne débloque pas l'écran)* | — |
 | **1** | Migration : FK `ON UPDATE CASCADE NOT VALID` sur les 16 colonnes d'appartenance, table de journal, fonction `migrer_email_membre()` + contrôle d'exhaustivité (colonnes **et** triggers) + sortie de renommage dans les **5 triggers concernés** (Q6, tranchée) | constat des triggers joué |
-| **2** | Écran : bouton, simulation, confirmation, message d'erreur de suppression revu dans `users.js` | lot 1 |
+| **2** | Écran : bouton, simulation, confirmation, ~~message d'erreur de suppression revu~~ **désactivation et réactivation** dans `users.js` (14/09) ; valeur `'desactive'` ajoutée au statut, `is_admin_ou_superadmin()` limitée aux membres actifs, listes de choix d'un membre filtrées | lot 1 |
 | **3** *(séparé)* | Arbitrage des 15 adresses orphelines, puis `VALIDATE CONSTRAINT` | indépendant |
 
 Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
@@ -422,7 +462,10 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 6. Un non-admin appelant la fonction directement par l'API est **refusé**.
 7. Après renommage, plus aucune ligne de la base ne porte l'ancienne adresse (contrôle automatique).
 8. Créer une ligne pointant vers un membre inexistant est **refusé** par la base.
-9. Supprimer un membre qui a des données est **refusé**, avec un message lisible qui dit quoi.
+9. ~~Supprimer un membre qui a des données est refusé, avec un message lisible qui dit quoi.~~
+   *(14/09)* Un membre qui a des données **ne se supprime pas, il se désactive** : il ne peut plus se
+   connecter, ses données restent, un admin peut le réactiver. Une suppression directe par l'API
+   reste refusée par la base.
 10. Le renommage est inscrit dans `membres_migrations_email`.
 11. Le membre se reconnecte avec la nouvelle adresse Google et retrouve tout.
 12. Mode sombre et téléphone réel pour la modale — c'est ce qui avait rattrapé #53.
@@ -435,12 +478,18 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
     transaction du renommage.
 15. Un trigger ajouté sur une table cascadée sans être déclaré **fait échouer** le renommage avec un
     message qui le nomme (pendant du critère 8 côté colonnes).
+16. *(14/09)* Un admin désactivé **perd ses droits d'admin**, y compris sur un appel direct à la base
+    avec un jeton encore valide.
+17. *(14/09)* Un membre désactivé n'apparaît plus dans les listes où l'on choisit un membre, et
+    Gestion Membres permet de le retrouver et de le réactiver.
 
 ## Ce que cette spec ne fait pas
 
 - **Fusionner deux comptes qui portent tous les deux des données.** Les trois doublons connus
   (un traité le 2026-09-10, deux restants) ont tout d'un seul côté. Construire l'arbitrage d'un conflit
-  qui n'existe pas doublerait le travail.
+  qui n'existe pas doublerait le travail. *Confirmé par Cyril le 14/09 : « le besoin urgent, c'est de
+  changer l'adresse d'un compte » ; la fusion de deux comptes remplis demanderait de choisir les
+  données de l'un, de l'autre ou des deux, et reste hors du périmètre.*
 - **Permettre à un membre de changer sa propre adresse.** Opération d'admin.
 - **Nettoyer les orphelines existantes** (lot 3, séparé).
 - **Toucher à l'adresse PayPal d'un collecteur** (`collecteurs.paypal_email`) : c'est un compte PayPal, il peut légitimement différer
@@ -448,15 +497,16 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 
 ## Questions ouvertes — à trancher avant le dev
 
-- **Q1 — Suppression d'un membre.** `NO ACTION` (refusée quand il reste des données, recommandé) ou
-  autre chose ? Ça change le comportement d'un écran qui marche aujourd'hui.
-- **Q2 — Qui a le droit ?** `is_admin_ou_superadmin()` comme le reste de Gestion Membres, ou
-  superadmin uniquement vu le caractère irréversible ?
-- **Q3 — Prévenir le membre ?** Une notification privée « votre adresse a été changée » a-t-elle un
-  sens, sachant qu'il ne peut justement plus lire l'ancienne boîte ?
+- ~~Q1 — Suppression d'un membre : NO ACTION (refusée quand il reste des données, recommandé) ou
+  autre chose ?~~ **Tranchée par Cyril le 14/09 : la suppression d'un membre qui a des données
+  devient une désactivation.** NO ACTION reste en base ; voir « La désactivation ».
+- ~~Q2 — Qui a le droit ? Tous les admins, ou le superadmin seul ?~~ **Tranchée le 14/09 : tous les
+  admins** — `is_admin_ou_superadmin()`, comme le reste de Gestion Membres.
+- ~~Q3 — Prévenir le membre ?~~ **Tranchée le 14/09 : non.**
 - **Q4 — Le garde-fou d'exhaustivité vaut-il ses 20 lignes ?** Il protège d'une répétition exacte
   de l'incident de 2024. Je le recommande, mais c'est de la complexité en plus dans un projet dont la
-  simplicité est une contrainte assumée.
+  simplicité est une contrainte assumée. *14/09 : Cyril n'en voit pas bien l'intérêt et demande une
+  explication — donnée dans la version en clair et en réponse sur la fiche. Toujours ouverte.*
 - **Q5 — les deux définitions d'is_admin().** Elles coexistent dans le dépôt : `migration-4-1-membres.sql`
   (rôle `admin` seul) et `migration-inscription-publique.sql` (`admin` + `superadmin` + actif). À
   vérifier en base laquelle est vivante ; la spec utilise `is_admin_ou_superadmin()`, non ambigu.
