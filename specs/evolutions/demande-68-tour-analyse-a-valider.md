@@ -107,5 +107,20 @@ Développée le 2026-09-14 — commit `7166263`.
 
 **Vérifié** : sous Node, `renderDemandeRow()` sur cinq cas simulés — remarque d'un admin (badge, pas
 de surlignage), réponse de l'assistant et aucun commentaire (surlignage, pas de badge), autre état
-(rien), adresse de l'assistant en majuscules (reconnue). **Pas encore vérifié** : le rendu dans le
-navigateur, en mode sombre et sur téléphone (critère 6).
+(rien), adresse de l'assistant en majuscules (reconnue). ~~Pas encore vérifié : le rendu dans le
+navigateur, en mode sombre et sur téléphone (critère 6).~~ Testé par Cyril le 14/09 : l'étiquette
+convient, et son retour a donné le complément ci-dessous.
+
+### Complément du 14/09 — commit `1099d79`
+
+| Fichier | Ce qui change |
+|---|---|
+| `admin-demandes.js` | Le fil complet par demande (`commentairesParDemande`) au lieu du seul dernier commentaire ; `personnesAttendues()` ; une étiquette par personne après les badges de validation |
+| `style.css` | `.demande-badge-attente-personne`, sur `--color-badge-warning-bg` / `--color-badge-warning-text`, clair et sombre |
+| `sw.js` | `billets-v306` → `billets-v307` |
+
+**Vérifié** : sous Node, dix fils simulés — dont deux personnes avant la réponse (deux étiquettes), une
+personne qui a validé (retirée), la même personne deux fois (une étiquette), un message de l'assistant
+sans remarque avant (aucune), et seule la dernière série de réponses prise en compte. Et en lecture
+seule sur les vraies analyses à valider du 14/09 : #1, #62 et #66 attendent Cyril, #22 attend
+Jean-Philippe. **Pas encore vérifié** : le rendu en mode sombre et sur téléphone.

@@ -104,7 +104,7 @@ qui n'est plus vrai.
 | [#64 (prod)](demande-64-garde-fou-jwt-enveloppes.md) | Garde-fou « hors du site » sur le trigger des enveloppes (débloque la maintenance, **pas** le renommage de #62 depuis l'écran) | S | À tester (migration jouée le 2026-09-11) | ✅ | `dac0c8b` |
 | [#65 (prod)](demande-65-copie-billet-pays.md) | La copie d'un billet perd son pays, puis son département ([en clair](demande-65-copie-billet-pays-en-clair.md)) | S | À tester | ✅ | `1046fc9` |
 | [#66 (prod)](demande-66-verification-billets-import.md) | Fiabiliser les versions des billets : import d'un fichier externe et écran de vérification ([en clair](demande-66-verification-billets-import-en-clair.md)) | L | Analyse à valider — clé et comparaison fixées par Cyril le 14/09, plus de question ouverte | ✅ | — |
-| [#68 (prod)](demande-68-tour-analyse-a-valider.md) | Gestion des demandes : savoir qui doit agir sur une analyse à valider ([en clair](demande-68-tour-analyse-a-valider-en-clair.md)) | S | À tester | ✅ | `7166263` |
+| [#68 (prod)](demande-68-tour-analyse-a-valider.md) | Gestion des demandes : savoir qui doit agir sur une analyse à valider ([en clair](demande-68-tour-analyse-a-valider-en-clair.md)) | S | À tester — complément après tests (étiquette par personne) | ✅ | `7166263`, `1099d79` |
 | [#67 (prod)](demande-67-fichiers-joints-demande.md) | Joindre des fichiers de données à une demande ([en clair](demande-67-fichiers-joints-demande-en-clair.md)) | L | À tester — pas de pièce jointe : le chemin du fichier est écrit dans la demande ; règle ajoutée à la convention | ✅ | `72bd23d` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
