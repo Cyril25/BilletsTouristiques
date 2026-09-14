@@ -5,7 +5,10 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `2c12042` (14/09/2026).
+> Reflète la version technique du commit `3a25e9e` (14/09/2026).
+>
+> **Mise à jour du 14/09, 15 h 47 : Cyril propose une autre voie** — un numéro de membre utilisé
+> partout. Voir « Et un numéro de membre ? » : **mieux vaut attendre sa décision avant de valider**.
 >
 > **Mise à jour du 14/09 : Cyril a répondu.** Le besoin est confirmé ; supprimer un membre qui a
 > des données devient une **désactivation** ; tous les admins pourront changer une adresse ; le
@@ -97,7 +100,7 @@ En faisant le tour complet, on en a trouvé **cinq** concernées, et non deux co
 aujourd'hui » les demandes, les signalements et les contacts de la personne, alors que personne n'y
 avait touché.
 
-**La solution retenue** : pendant l'opération, et pendant elle seule, la base sait qu'un changement
+**La solution choisie pour ce point** : pendant l'opération, et pendant elle seule, la base sait qu'un changement
 d'adresse bien précis est en cours — de telle adresse vers telle autre. Chacune de ces règles laisse
 alors passer **cette modification-là et rien d'autre** : si quoi que ce soit change en même temps,
 elle reprend aussitôt son travail habituel. Les protections restent donc entières pour tout le reste
@@ -105,6 +108,38 @@ du site, y compris pendant le changement d'adresse.
 
 Rien à décider de votre côté : c'est un choix technique, il est tranché, et il ne change rien à ce
 qui vous est proposé plus haut.
+
+## Et un numéro de membre ? *(proposé par Cyril le 14/09)*
+
+Cyril pose la bonne question : **plutôt que de faire suivre l'adresse partout, pourquoi ne pas
+donner à chaque membre un numéro**, utilisé partout à la place de l'adresse ? L'adresse ne servirait
+plus qu'à se connecter. Changer d'adresse, ce serait alors corriger **une seule fiche**.
+
+**C'est la meilleure organisation**, celle qu'on choisirait en partant de zéro. Elle rendrait inutiles
+les deux complications de la solution recommandée : le passage des règles de surveillance (réglé le
+12/09) et le garde-fou.
+
+**Mais on ne part pas de zéro.** On a compté ce qu'il faudrait reprendre : **plus de 300 endroits dans
+17 fichiers du site** — dont une centaine dans « Mes collectes », le cœur du travail des collecteurs —,
+et presque toutes les règles qui décident qui a le droit de voir quoi. C'est un chantier **de la taille
+de la refonte des collectes**, qui avait demandé une répétition générale et un jour J. Et les adresses
+fantômes devraient être réglées avant, puisqu'elles n'ont pas de membre à qui donner un numéro.
+
+**Les deux ne s'opposent pas.** Faire suivre l'adresse garantit que chaque adresse recopiée
+correspond à un vrai membre : c'est exactement ce qu'il faut pour, un jour, remplacer toutes ces
+adresses par des numéros sans rien perdre. Le prix : une partie du travail d'aujourd'hui (le passage
+des règles de surveillance, le garde-fou) ne servirait plus ce jour-là.
+
+| | Premier changement d'adresse depuis l'écran | Risque |
+|---|---|---|
+| **Faire suivre l'adresse** | Assez vite | Contenu |
+| **Le numéro de membre tout de suite** | Beaucoup plus tard | Élevé : une grande partie du site à reprendre |
+| **L'adresse maintenant, le numéro ensuite** *(recommandé)* | Assez vite | Contenu, puis un chantier préparé à part |
+
+**Recommandation : faire suivre l'adresse maintenant, et ouvrir une demande à part pour le numéro de
+membre**, à préparer comme la refonte des collectes. Cyril a dit que le besoin était urgent ; le
+numéro ne peut pas l'être. Et d'ici là, un cas isolé peut toujours être réglé par le script qui a servi le
+10 septembre. **C'est une décision qui revient à Cyril.**
 
 ## Supprimer un membre qui a des données : il sera désactivé
 
@@ -184,10 +219,18 @@ Cyril a répondu le 14/09 aux quatre premières questions :
 - ~~Qui a le droit de changer une adresse ?~~ **Tous les admins.**
 - ~~Faut-il prévenir le membre ?~~ **Non.**
 
-**Reste une question : faut-il le garde-fou automatique ?** Cyril n'en voyait pas bien l'intérêt —
+**Restent deux questions.**
+
+**La première, la plus importante : faire suivre l'adresse maintenant, ou passer tout de suite à un
+numéro de membre ?** Voir « Et un numéro de membre ? ». C'est à Cyril de trancher, et **mieux vaut
+attendre sa décision avant de valider** : elle change ce qui sera construit.
+
+**La seconde : faut-il le garde-fou automatique ?** Elle ne se pose que si l'on fait suivre
+l'adresse. Cyril n'en voyait pas bien l'intérêt —
 voici l'explication.
 
-L'adresse d'un membre est recopiée à une vingtaine d'endroits. La solution retenue demande à la base
+L'adresse d'un membre est recopiée à une vingtaine d'endroits. ~~La solution retenue~~ La solution
+recommandée *(corrigé le 14/09 : rien n'était encore retenu, Cyril l'a justement relevé)* demande à la base
 de tenir le lien : quand l'adresse change, tous les endroits **déclarés** suivent seuls. Le risque,
 c'est l'endroit **pas déclaré** : dans un an, quelqu'un ajoute une fonctionnalité qui note l'adresse
 d'un membre dans une nouvelle table, et oublie de la relier. Le jour où un admin change une adresse,
