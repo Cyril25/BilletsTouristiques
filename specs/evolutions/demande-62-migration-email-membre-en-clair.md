@@ -5,7 +5,11 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `593dbe4` (12/09/2026).
+> Reflète la version technique du commit `2c12042` (14/09/2026).
+>
+> **Mise à jour du 14/09 : Cyril a répondu.** Le besoin est confirmé ; supprimer un membre qui a
+> des données devient une **désactivation** ; tous les admins pourront changer une adresse ; le
+> membre ne sera pas prévenu. Reste une question, le garde-fou — expliquée plus bas.
 >
 > **Mise à jour du 12/09 : le point de mécanique est réglé, l'analyse vous revient.** Le 11/09, en
 > développant la petite correction préalable (demande #64), on avait découvert qu'elle ne suffisait
@@ -102,16 +106,27 @@ du site, y compris pendant le changement d'adresse.
 Rien à décider de votre côté : c'est un choix technique, il est tranché, et il ne change rien à ce
 qui vous est proposé plus haut.
 
-## Un effet de bord qu'il faut accepter en connaissance de cause
+## Supprimer un membre qui a des données : il sera désactivé
 
-Avec cette seconde voie, **supprimer un membre qui a encore des données deviendra refusé**.
+Avec cette seconde voie, **un membre qui a encore des données ne pourra plus être effacé**.
+Aujourd'hui ça passe, et ça perd ses données en silence — c'est le défaut qui a créé neuf des dix
+adresses fantômes.
 
-Aujourd'hui ça passe, et ça perd ses données en silence. Demain l'application dira « impossible :
-cette personne a 24 enveloppes et 27 billets en collection ». C'est plus embêtant sur le moment, et
-c'est surtout **la correction du défaut qui a créé neuf des dix adresses fantômes**.
+~~Demain l'application dira « impossible : cette personne a 24 enveloppes et 27 billets en
+collection ».~~ **Décision de Cyril, le 14/09 : à la place, le membre est désactivé.** Concrètement :
 
-Il faudra donc aussi revoir le message affiché à l'admin, pour qu'il explique ce qui bloque au lieu
-d'afficher une erreur technique incompréhensible.
+- le bouton « Supprimer » devient **« Désactiver »** pour un membre qui a des données ; un membre
+  sans aucune donnée se supprime comme aujourd'hui ;
+- un membre désactivé **ne peut plus se connecter**, mais **tout est conservé** : inscriptions,
+  collection, envois ;
+- il n'apparaît plus quand un collecteur choisit un membre à inscrire ;
+- un admin peut le **réactiver** s'il revient.
+
+L'application sait déjà mettre un membre « en attente » ou « refusé » : la désactivation est un état
+de plus, pas un mécanisme nouveau.
+
+**Un détail de sécurité trouvé en préparant**, déjà prévu dans la version technique : un admin
+désactivé doit perdre ses droits d'admin partout, pas seulement à l'entrée du site.
 
 ## Comment ça se passera, concrètement
 
@@ -153,21 +168,39 @@ collection ».
    l'opération, et il faut prévoir comment elles la laissent passer — sans les affaiblir pour le
    reste. C'est réglé depuis le 12/09, voir « Le point réglé le 12/09 ».*
 2. La mécanique de fond : le lien tenu par la base, et le changement d'adresse lui-même.
-3. Puis le bouton dans Gestion Membres, avec le décompte et la confirmation.
+3. Puis le bouton dans Gestion Membres, avec le décompte et la confirmation — et, depuis le 14/09,
+   la désactivation et la réactivation d'un membre.
 4. Enfin, un jour, le ménage dans les adresses fantômes. Indépendant du reste.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
-1. **Est-ce bien le besoin ?** Renommer un membre, et refuser proprement quand les deux comptes
-   ont chacun des données.
-2. **La suppression d'un membre qui a des données doit-elle devenir refusée ?** C'est la
-   conséquence directe de la solution recommandée, et à mon sens une correction — mais ça change
-   un écran qui fonctionne aujourd'hui.
-3. **Qui a le droit de changer une adresse ?** Tous les admins, comme le reste de Gestion Membres,
-   ou seulement le superadmin, vu que l'opération ne se défait pas ?
-4. **Faut-il prévenir le membre ?** Sachant qu'il ne peut justement plus lire son ancienne boîte,
-   l'intérêt n'est pas évident.
-5. **Faut-il un garde-fou automatique** qui bloque l'opération et alerte si une nouvelle sorte de
-   données a été ajoutée sans être reliée — ou si une nouvelle règle de surveillance est apparue
-   sans qu'on y ait pensé, comme celles découvertes le 12/09 ? C'est ce qui empêcherait de revivre
-   l'oubli de 2024, au prix d'un peu de complexité en plus.
+Cyril a répondu le 14/09 aux quatre premières questions :
+
+- ~~Est-ce bien le besoin ?~~ **Oui** : changer l'adresse d'un compte. Fusionner deux comptes qui ont
+  chacun des données reste hors du périmètre — il faudrait choisir les données de l'un, de l'autre,
+  ou des deux.
+- ~~La suppression d'un membre qui a des données doit-elle devenir refusée ?~~ **Elle devient une
+  désactivation** (voir plus haut).
+- ~~Qui a le droit de changer une adresse ?~~ **Tous les admins.**
+- ~~Faut-il prévenir le membre ?~~ **Non.**
+
+**Reste une question : faut-il le garde-fou automatique ?** Cyril n'en voyait pas bien l'intérêt —
+voici l'explication.
+
+L'adresse d'un membre est recopiée à une vingtaine d'endroits. La solution retenue demande à la base
+de tenir le lien : quand l'adresse change, tous les endroits **déclarés** suivent seuls. Le risque,
+c'est l'endroit **pas déclaré** : dans un an, quelqu'un ajoute une fonctionnalité qui note l'adresse
+d'un membre dans une nouvelle table, et oublie de la relier. Le jour où un admin change une adresse,
+cette table est oubliée, **sans erreur ni alerte** — exactement ce qui est arrivé en 2024 avec les
+six enveloppes, restées au nom de l'ancienne adresse pendant des mois.
+
+Le garde-fou, c'est une vérification faite **juste avant chaque changement d'adresse** : « existe-t-il
+un endroit qui ressemble à une adresse de membre, et que je ne connais pas ? » Si oui, il **refuse le
+changement et dit lequel**. L'oubli ne passe plus en silence : il se voit le jour même, avant de faire
+des dégâts. Il fait la même chose pour les petites règles de surveillance découvertes le 12/09.
+
+**Ce qu'il coûte** : une vingtaine de lignes, écrites une fois, sans écran. **Ce qu'il ne fait pas** :
+il ne répare rien tout seul — il empêche seulement de continuer à l'aveugle.
+
+Sans lui, le changement d'adresse marche aussi, tant que personne n'oublie rien. La question est
+donc : **veut-on cette assurance pour une vingtaine de lignes ?** Recommandation : oui.
