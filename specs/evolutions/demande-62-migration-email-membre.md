@@ -21,7 +21,9 @@
 >
 > **⚠ Tranché à 16 h 46 : la voie C.** « Il n'y a plus d'urgence, on peut donc repartir sur l'idée du
 > numéro, qui modifiera un peu l'archi, mais qui finalement simplifiera et réduira le nombre d'erreurs
-> possibles. » **L'analyse est reprise sur cette base et la demande repasse en « Prêt à analyser ».**
+> possibles. » ~~L'analyse est reprise sur cette base et la demande repasse en « Prêt à analyser ».~~
+> **Analyse réécrite le même jour (17 h)** : voir « Le plan retenu : un numéro de membre ». La demande
+> repart en « Analyse à valider ».
 > Tout ce qui décrit la voie B ci-dessous — clés en cascade, traversée des triggers (Q6), garde-fou
 > d'exhaustivité (Q4) — est **conservé pour l'historique mais n'est plus le plan**. Ce qui reste
 > acquis quelle que soit la voie : la désactivation au lieu de la suppression (Q1), tous les admins
@@ -44,6 +46,138 @@
 
 **Réponse à la question posée : c'est l'email, il n'y a pas d'identifiant interne.** `membres.email` est la
 clé primaire, et l'adresse est recopiée telle quelle dans **20 colonnes réparties sur 14 tables**.
+
+## Le plan retenu : un numéro de membre *(analyse du 2026-09-14, voie C)*
+
+> Décision de Cyril, 14/09 à 16 h 46. Cette section **remplace le plan** ; l'analyse de la voie B
+> (10–14/09) reste plus bas, marquée comme historique : ses constats de terrain restent vrais, son
+> plan ne l'est plus.
+
+### Le principe
+
+- `membres` reçoit un **identifiant**, `id`, qui ne change jamais. `email` reste dans `membres`,
+  **unique**, et ne sert plus qu'à retrouver le membre à partir de la connexion Google.
+- Chaque table qui **appartient** à un membre porte un `membre_id` (clé étrangère vers `membres.id`)
+  **à la place** de sa copie d'adresse.
+- **Changer une adresse = `UPDATE membres SET email = … WHERE id = …`.** Une ligne, rien d'autre.
+
+Deviennent **sans objet** : la cascade, la traversée des triggers pendant la cascade (Q6), le
+garde-fou d'exhaustivité (Q4) et la fonction de renommage en huit étapes. Restent **acquis** : la
+désactivation au lieu de la suppression (Q1), tous les admins (Q2), pas de notification (Q3), pas de
+fusion de comptes remplis, et le correctif de `is_admin_ou_superadmin()` sur le statut.
+
+### Ce qui bouge, table par table
+
+Le classement du 10/09 tient (voir « Classement des 20 colonnes », plus bas) :
+
+| Catégorie | Colonnes | Devient |
+|---|---|---|
+| **Appartenance** (16) | `inscriptions.membre_email`, `inscriptions_auto.membre_email`, `inscriptions_auto_pays.membre_email`, `collection.membre_email`, `dettes.membre_email`, `enveloppes.membre_email`, `collecteurs.email_membre`, `collecteur_blacklist.membre_email`, `membre_blocages.membre_email`, `notifications_vues.membre_email`, `contacts_collecteur.proprietaire_email`, `demandes.demandeur`, `demande_commentaires.auteur_email`, `demande_validations.admin_email`, `signalements.auteur_email`, `notifications.cible_email` | `membre_id` (ou un nom qui dit le rôle : `auteur_id`, `demandeur_id`…), clé étrangère vers `membres.id`. La colonne d'adresse **disparaît** en fin de migration |
+| **Trace** (4) | `inscriptions.changed_by`, `membre_blocages.bloque_by`, `signalements.traite_par`, `membres.validated_by` | **Q8** : garder le texte (c'était l'adresse au moment de l'action), ou ajouter un identifiant quand l'auteur est un membre |
+| **Pas un membre** | `contacts_collecteur.email`, `collecteurs.paypal_email` | Inchangées |
+
+### Trois pièges trouvés en préparant
+
+1. **Le deuxième compte existe déjà, et c'est le cas normal.** À la première connexion avec une
+   nouvelle adresse Google, la policy `membres_insert_self_pending`
+   (`scripts/migration-inscription-publique.sql`) crée une ligne « en attente ». Le membre qui a
+   changé d'adresse a donc **déjà** une deuxième fiche, presque vide. Renommer l'ancienne heurterait
+   l'unicité de l'adresse : il faut d'abord **retirer la fiche vide** — après avoir vérifié qu'elle
+   ne porte rien, ou seulement des marqueurs sans valeur comme `notifications_vues` (17 lignes dans le
+   cas du 10/09). Même garde qu'avant : si la fiche cible porte de vraies données, le renommage est
+   refusé et dit lesquelles.
+2. **L'assistant n'est pas un membre.** Il signe ses commentaires `claude-code@assistant.local` dans
+   `demande_commentaires.auteur_email`, sans ligne dans `membres`. Avec une clé étrangère, ses
+   commentaires n'auraient plus d'auteur valide. Et l'écran de #68 le reconnaît justement à cette
+   adresse. **Q9.**
+3. **Des valeurs ne sont pas des adresses.** `demandes.demandeur` porte « Import Google Sheet » sur 13
+   demandes ; les 15 adresses orphelines n'ont pas de membre. Aucune ne peut recevoir un numéro telle
+   quelle. **Q10.**
+
+### Les règles d'accès et les fonctions
+
+- Une fonction **`mon_membre_id()`** (`SECURITY DEFINER`, `STABLE`) rend l'`id` du membre dont
+  l'adresse est celle du jeton, **s'il est actif**. Les règles d'accès comparent `membre_id =
+  mon_membre_id()` au lieu de `membre_email = auth.jwt() ->> 'email'` — sans clause `TO
+  authenticated` (rôle anon pour Firebase).
+- `is_whitelisted()`, `is_admin()`, `is_admin_ou_superadmin()` et `is_collecteur()` gardent leur
+  forme — elles lisent déjà `membres` par l'adresse — mais `is_admin_ou_superadmin()` reçoit le filtre
+  `statut = 'actif'` qui lui manque.
+- Les fonctions des triggers qui comparent une colonne d'adresse à l'adresse du jeton sont à
+  réécrire : paiements d'inscription, enveloppes, audit des inscriptions, et celles que le constat
+  listera.
+- **Combien** : 39 scripts de migration du dépôt comparent l'adresse du jeton, anciens compris. Le
+  nombre réel de règles et de fonctions vivantes vient du constat
+  `scripts/migration-demande-62-5-constat-numero-membre.sql` (lecture seule, requêtes 2 et 3).
+
+### Le site
+
+Relevé du 14/09 — références aux colonnes d'adresse de membre, par fichier :
+
+| Fichier | Réf. | Fichier | Réf. |
+|---|---|---|---|
+| `mes-collectes.js` | 109 | `mes-inscriptions.js` | 8 |
+| `admin.js` | 29 | `users.js` | 6 |
+| `admin-pre-inscriptions.js` | 25 | `ma-collection.js` | 6 |
+| `admin-demandes.js` | 25 | `collecteurs.js` | 4 |
+| `demande.js` | 13 | `billet.js` | 3 |
+| `app-new.js` (chargé par `billets.html`) | 13 | `notifications.js` | 2 |
+| `global.js` | 10 | `mes-contacts.js`, `admin-signalements.js`, `admin-inscriptions.js` | 1 chacun |
+| `admin-notifications.js` | 9 | | |
+
+S'y ajoutent **116 usages de l'adresse de la personne connectée** et l'**impersonation admin**
+(`window.impersonatedEmail`, `global.js:84`), qui « voit en tant que » par l'adresse : le site
+devra connaître l'`id` de la personne connectée — un seul appel au chargement, gardé en mémoire
+comme l'adresse aujourd'hui.
+
+### Comment migrer : par étapes, pas d'un bloc
+
+Deux façons :
+
+- **d'un bloc**, comme #16 : schéma, règles et 17 fichiers le même jour, après répétition sur la copie
+  de test ;
+- **par étapes**, chacune petite, vérifiable en production et réversible.
+
+**Recommandé : par étapes** — un projet sans tests automatiques, où chaque écran se vérifie à la main,
+supporte mal un jour J de cette taille. **Q11.**
+
+| Étape | Contenu | Visible ? | Retour arrière |
+|---|---|---|---|
+| **0 — préalables** | Jouer le constat ; régler les adresses orphelines et les valeurs qui ne sont pas des adresses (Q10) ; décider pour l'assistant (Q9) | Non | — |
+| **1 — ajouter** | `membres.id` ; une colonne `membre_id` à côté de chaque adresse, remplie par jointure ; **un trigger par table** qui la remplit à chaque écriture tant que le site écrit encore des adresses ; clés étrangères posées | Non | Supprimer les colonnes et triggers ajoutés |
+| **2 — règles d'accès** | `mon_membre_id()` ; les règles comparent `membre_id` ; `is_admin_ou_superadmin()` filtrée sur le statut | Non, si l'étape 1 est complète | Remettre les anciennes règles (scriptées avant) |
+| **3 — le site, fichier par fichier** | Chaque écran lit et écrit `membre_id` ; un déploiement par groupe d'écrans, du plus petit à `mes-collectes.js` | Oui, écran par écran | Revenir au commit précédent |
+| **4 — retirer** | Supprimer les triggers de l'étape 1 et les colonnes d'adresse | Non | Plus de retour : c'est la dernière |
+| **5 — l'écran** | Dans Gestion Membres : changer l'adresse (avec le cas du deuxième compte), désactiver, réactiver | Oui | — |
+
+Chaque étape se répète d'abord sur la **copie de test** (`ijxajtxnhbczgiarkefo`, site
+`BilletsTouristiques-TestEnv`), comme pour #16. L'étape 1 est la plus délicate : tant que les
+triggers de synchronisation existent, deux colonnes disent la même chose, et l'étape 4 est là pour
+que ça ne dure pas.
+
+### Critères d'acceptation
+
+1. Changer l'adresse d'un membre depuis Gestion Membres ne modifie **qu'une ligne** ; il se reconnecte
+   avec la nouvelle adresse Google et retrouve tout.
+2. Si la nouvelle adresse a déjà une fiche vide (le deuxième compte), elle est retirée et le
+   renommage passe ; si elle porte de vraies données, il est refusé avec la liste de ce qui bloque.
+3. Plus aucune table d'appartenance ne porte d'adresse de membre à la fin de l'étape 4.
+4. Chaque règle d'accès donne les mêmes droits qu'avant, vérifiée écran par écran sur la copie de
+   test puis en production.
+5. Un membre ou un admin désactivé perd tout accès, y compris par appel direct à la base.
+6. L'impersonation admin fonctionne comme avant.
+7. Les commentaires de l'assistant gardent leur auteur, et l'écran de #68 le reconnaît toujours.
+8. Aucune donnée perdue : les comptes de lignes par table sont identiques avant et après chaque
+   étape.
+
+### Questions ouvertes *(voie C)*
+
+| | Question | Recommandation |
+|---|---|---|
+| **Q8** | Les colonnes de **trace** (qui a modifié, bloqué, traité, validé) : garder le texte, ou ajouter un identifiant ? | Garder le texte : c'est l'adresse au moment de l'action, un historique. Après un changement d'adresse, l'ancienne y reste — acceptable pour une trace |
+| **Q9** | **L'assistant** : lui créer une fiche de membre technique (désactivée, sans droits), ou laisser ses commentaires sans `auteur_id` avec un libellé ? | Une fiche technique : une seule règle pour tous les auteurs, et #68 le reconnaît par son `id` |
+| **Q10** | Les **15 adresses orphelines** et les 13 « Import Google Sheet » : créer pour chacune une fiche **désactivée**, ou supprimer les lignes ? | Des fiches désactivées : rien ne se perd, et c'est exactement le rôle de la désactivation décidée en Q1. « Import Google Sheet » : `demandeur_id` vide, libellé conservé |
+| **Q11** | Migrer **par étapes** ou **d'un bloc** ? | Par étapes |
 
 ## L'état du terrain, mesuré le 2026-09-10
 
@@ -110,6 +244,16 @@ Faite le 2026-09-10 (`<ancienne adresse>` → `<nouvelle adresse>` : 139 inscrip
 3. **L'invariant D4 ne gêne pas** : `trg_inscription_scope_invariant` ne se déclenche que sur
    `UPDATE OF nb_normaux, nb_variantes, collecte_id`. Les 142 inscriptions hors invariant ne
    bloquent pas un renommage.
+
+---
+
+## Historique : l'analyse de la voie B *(10–14 septembre, plan abandonné le 14/09)*
+
+> Tout ce qui suit décrit la voie B — faire suivre l'adresse par des clés en cascade — et son plan
+> (triggers, garde-fou, fonction de renommage, découpage, critères). **Ce n'est plus le plan** : voir
+> « Le plan retenu : un numéro de membre ». Conservé parce que ses constats restent vrais (les
+> colonnes, les orphelines, les triggers, la désactivation) et pour comprendre pourquoi C a été
+> choisie.
 
 ## Les voies
 
