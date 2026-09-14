@@ -17,6 +17,9 @@
 - **Et à 13 h 40**, Jean-Philippe répond à R3 : un membre déjà servi achète bien du rab, « si c'est un
   numéro spécial ». Le billet du rab ne passe donc plus par une inscription : il va **directement
   dans l'enveloppe** du membre — voir « Le billet part dans l'enveloppe », retranché.
+- **Décisions de Cyril, 14 h 29** : l'ordre des travaux suit l'option **A** (R2) et l'**attribution
+  directe** est retenue, comme le demande Jean-Philippe (R6). Plus aucune question ne retient la
+  validation ; seule R4 (où s'affiche le rab) reste à régler au moment du dev.
 - ~~Statut du 10/09 : « elle dépend maintenant du lot 1 de #22 ».~~ Ne tient plus le 14/09 : voir
   « L'ordre des travaux, revu ».
 - **Origine :** issue du cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, dont les
@@ -81,6 +84,10 @@ du rab à un membre, comme il peut déjà l'inscrire à sa collecte. La demande 
 pour ceux qui découvrent le rab sur le site ; l'attribution, celui des accords déjà conclus ailleurs.
 Comme cela revient sur une décision prise avec Cyril, **c'est à lui de le confirmer — question R6.**
 
+> **Confirmé par Cyril le 14/09 à 14 h 29** : « pour l'attribution directe je suis ce que préconise
+> JP ». La décision Q5 du 09/09 est remplacée : le membre n'accepte pas une vente du rab ; il la
+> demande, ou le collecteur la lui attribue — comme il l'inscrit déjà à une collecte.
+
 ## Le parcours *(réécrit le 14/09 d'après Jean-Philippe)*
 
 Jean-Philippe a 3 billets en trop d'une collecte terminée, dont le **n° 00042**.
@@ -102,7 +109,7 @@ Si JP n'a plus le billet, il **refuse** : l'offre sort de la vente, Marie est pr
 n'a pas répondu, Marie peut **retirer sa demande** : l'offre redevient `disponible`. Personne n'est
 relancé et rien n'expire — même principe que #22 (« l'application ne relance pas »).
 
-### Quand l'accord est déjà conclu ailleurs *(ajouté le 14/09, réponse de Jean-Philippe — sous réserve de R6)*
+### Quand l'accord est déjà conclu ailleurs *(ajouté le 14/09, réponse de Jean-Philippe — confirmé par Cyril, R6)*
 
 JP a proposé le **n° 1000 à 5,00 €** à Marie sur Facebook, et elle a dit oui.
 
@@ -133,7 +140,7 @@ peuvent la contester sur la fiche.
 |---|---|
 | **Q3** | La vente porte **un numéro de série optionnel** : le collecteur vend tantôt « 2 billets du rab », tantôt « le billet n° 00042 ». Les deux cas doivent marcher. |
 | **Q4** | **Modèle C** — le prix vit dans une **ligne de dettes**, avec `motif = 'vente_rab'`. Pas de prix sur l'inscription, pas de collecte de vente. |
-| **Q5** | **Confirmation préalable du membre** : une vente qu'on lui affecte ne compte dans son solde qu'**après qu'il l'a acceptée**. *Le 14/09 au matin : principe maintenu, mécanisme inversé — c'est la demande du membre qui fait son geste. Le 14/09 après-midi : la décision reposait sur un fait inexact (un collecteur peut déjà inscrire un membre sans son accord) et Jean-Philippe demande l'attribution directe — à confirmer par Cyril, question R6.* |
+| **Q5** | **Confirmation préalable du membre** : une vente qu'on lui affecte ne compte dans son solde qu'**après qu'il l'a acceptée**. *Le 14/09 au matin : principe maintenu, mécanisme inversé — c'est la demande du membre qui fait son geste. Le 14/09 après-midi : la décision reposait sur un fait inexact (un collecteur peut déjà inscrire un membre sans son accord) et Jean-Philippe demande l'attribution directe — à confirmer par Cyril, question R6. **Remplacée le 14/09 à 14 h 29** : Cyril retient l'attribution directe.* |
 
 Le modèle C tient parce que #44 a livré exactement la primitive qui manquait — *un montant
 arbitraire dû entre un membre et un collecteur, avec un libellé, réglé par le parcours habituel* —
@@ -343,7 +350,10 @@ rien casser :
 
 ### La table des offres *(ajouté le 14/09)*
 
-`rab_offres` — nom provisoire, voir R2.
+`rab_offres` — nom provisoire. R2 ayant retenu l'option A, **cette table est la première version des
+annonces de #22** : son nom et son découpage doivent le permettre (un vendeur qui n'est pas forcément
+un collecteur, une collecte facultative, une contrepartie qui n'est pas forcément de l'argent), sans
+construire ce que le rab n'utilise pas.
 
 | Colonne | Rôle |
 |---|---|
@@ -380,7 +390,7 @@ Toutes `SECURITY DEFINER`, appelées en RPC — le motif de #22 pour ses envois 
   chez ce collecteur, passe l'offre `vendue`, notifie le membre — c'est-à-dire appelle `vendre_rab`.
   Refusée (« je ne l'ai plus ») : l'offre passe `retiree`, le membre est notifié.
   ~~Le cas du membre déjà servi attend R3.~~ Réglé à 13 h 45 par l'enveloppe.
-- `vendre_rab(p_offre_id, p_membre_email)` *(ajouté l'après-midi, sous réserve de R6)* — seul le
+- `vendre_rab(p_offre_id, p_membre_email)` *(ajouté l'après-midi, confirmé par Cyril, R6)* — seul le
   collecteur de la collecte, sur une offre `disponible`. **C'est l'opération « validée » ci-dessus,
   sans demande** : même dette (`inscription_id` à `NULL`), ligne placée dans l'enveloppe en cours du
   membre, offre `vendue`, notification au membre. `repondre_demande_rab` validée l'appelle avec le demandeur ; l'attribution directe l'appelle
@@ -445,7 +455,7 @@ réécrits ; 6 à 10 sont repris.
 11. Le numéro de série s'affiche chez le membre, sur l'offre comme sur la dette, et reste
     facultatif.
 12. Renommer l'adresse d'un membre (#62) fait suivre ses demandes de rab.
-13. *(Ajouté l'après-midi, sous réserve de R6.)* Le collecteur **attribue** une offre disponible à
+13. *(Ajouté l'après-midi, confirmé par Cyril, R6.)* Le collecteur **attribue** une offre disponible à
     un membre — ou crée l'offre et l'attribue d'un seul geste : la dette naît aussitôt, **sans action
     du membre**, qui reçoit une notification. Le résultat est identique à une demande validée.
 14. Le collecteur **annule** une vente tant qu'elle n'est pas réglée : la dette disparaît, l'offre
@@ -492,7 +502,8 @@ de quelqu'un sans un geste de sa part.~~
 > **Corrigé le 14/09 après-midi.** Ce « même principe » s'appuyait sur un précédent qui n'existe pas
 > (voir « Les réponses de Jean-Philippe »). Entre deux membres (#22), personne n'a d'autorité sur
 > l'autre : l'acceptation reste le seul garde-fou. Entre un collecteur et un membre, le collecteur
-> **inscrit déjà** des membres à ses collectes, et donc leur fait déjà devoir une somme. Si R6
+> **inscrit déjà** des membres à ses collectes, et donc leur fait déjà devoir une somme. *(R6 est
+> confirmée par Cyril le 14/09 : les deux demandes n'appliquent donc plus la même règle.)* Si R6
 > confirme l'attribution directe, les deux demandes n'appliquent plus la même règle — et c'est
 > cohérent avec les rôles qui existent déjà.
 
@@ -527,6 +538,12 @@ C'est une décision d'ordre des travaux, qui appartient à Cyril — **question 
 #22 ne sont pas modifiés par cette reprise, puisqu'ils sont en relecture : ils seront alignés une
 fois R2 tranchée. Si A est retenue, la question O5 de #22 reçoit la même réponse.
 
+> **Tranché par Cyril le 14/09 à 14 h 29 : A.** « Je suis ta suggestion qui dit : plutôt que de la
+> construire deux fois, […] la faire d'abord pour le rab des collecteurs, en la pensant pour qu'elle
+> serve ensuite aux annonces. » Conséquences : **#1 n'attend plus le lot 1 de #22**, et **le lot 2 de
+> #22 (annonces) vient après #1** et étend sa mise en vente. L'ordre entre #1 et le lot 1 de #22 n'est
+> pas imposé. #22 est alignée le même jour : sa question O5 est tranchée dans sa spec.
+
 ## Ce que cette spec ne fait pas
 
 - **Pas de vente entre deux membres** — c'est #22. ~~La frontière est désormais nette : #22 fournit
@@ -555,16 +572,16 @@ fois R2 tranchée. Si A est retenue, la question O5 de #22 reçoit la même rép
 | | Question | Pour qui | Recommandation |
 |---|---|---|---|
 | ~~R1~~ | ~~« JP enregistre la vente depuis Mes collectes : pour Marie » : validation de la demande de Marie, ou aussi une vente conclue sur Facebook sans offre ?~~ **Répondue le 14/09** : pas de mécanisme à part, mais l'attribution directe d'une offre à un membre, sans action de sa part | Jean-Philippe | ~~La lecture retenue, seule : le second chemin ramènerait la vente attribuée que le membre doit accepter.~~ Recommandation tombée : elle supposait que toute attribution devait être acceptée par le membre. Jean-Philippe demande justement le contraire — voir R6 |
-| **R2** | L'ordre des travaux : A, B ou C (« L'ordre des travaux, revu ») | Cyril | A |
+| ~~R2~~ | ~~L'ordre des travaux : A, B ou C (« L'ordre des travaux, revu »)~~ **Tranchée par Cyril le 14/09 à 14 h 29 : A** | Cyril | — |
 | ~~R3~~ | ~~Le membre déjà servi : son enveloppe de la collecte est partie, comment voyage le billet du rab ?~~ **Répondue à 13 h 40** : le cas existe, pour les numéros spéciaux | Jean-Philippe | **Tranchée à 13 h 45** : la ligne de rab va directement dans l'enveloppe en cours, pour tous les cas. Refuser la demande ou envoyer hors application laisserait tomber la moitié « numéros spéciaux » de la demande |
 | **R4** | Qui voit le rab, et où ? | Les relecteurs | Tous les membres, sur la page du billet |
 | ~~R5~~ | ~~Le numéro de série : facultatif ou obligatoire dans la mise en vente ?~~ **Répondue le 14/09 : facultatif** | Jean-Philippe | — |
-| **R6** *(ajoutée l'après-midi)* | **L'attribution directe** : le collecteur peut-il faire devoir une vente du rab à un membre **sans action de ce membre**, comme Jean-Philippe le demande ? Ça revient sur Q5, décidée avec Cyril le 09/09 — mais Q5 reposait sur un précédent inexact : « Inscrire un membre » le permet déjà pour les inscriptions | Cyril | **Oui**, avec notification au membre et annulation possible par le collecteur tant que la vente n'est pas réglée. S'aligner sur ce qu'un collecteur fait déjà plutôt que d'imposer au rab une règle que le reste de l'application ne suit pas |
+| ~~R6~~ *(ajoutée l'après-midi, tranchée par Cyril à 14 h 29 : oui)* | **L'attribution directe** : le collecteur peut-il faire devoir une vente du rab à un membre **sans action de ce membre**, comme Jean-Philippe le demande ? Ça revient sur Q5, décidée avec Cyril le 09/09 — mais Q5 reposait sur un précédent inexact : « Inscrire un membre » le permet déjà pour les inscriptions | Cyril | **Oui**, avec notification au membre et annulation possible par le collecteur tant que la vente n'est pas réglée. S'aligner sur ce qu'un collecteur fait déjà plutôt que d'imposer au rab une règle que le reste de l'application ne suit pas |
 
 ~~R1 et R2 sont à trancher avant de valider : R1 change ce que les relecteurs valident, R2 ce qui
-sera construit.~~ **Mis à jour l'après-midi : R2 et R6 sont à trancher avant de valider**, toutes
-deux par Cyril — R6 change ce que les relecteurs valident, R2 ce qui sera construit. R4 peut l'être
-au moment du dev ; R3 est tranchée depuis 13 h 45.
+sera construit.~~ ~~Mis à jour l'après-midi : R2 et R6 sont à trancher avant de valider, toutes
+deux par Cyril.~~ **À 14 h 29, Cyril a tranché R2 (A) et R6 (oui) : plus rien ne retient la
+validation.** Seule R4, où s'affiche le rab, reste ouverte, et peut l'être au moment du dev.
 
 ## Réalisation
 
