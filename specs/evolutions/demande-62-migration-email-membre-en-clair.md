@@ -5,251 +5,109 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `de139b8` (14/09/2026).
->
-> **⚠ Mise à jour du 14/09, 16 h 46 : Cyril a choisi le numéro de membre.** Il n'y a plus
-> d'urgence, et cette organisation simplifiera et limitera les erreurs. **Ce document va être
-> réécrit sur cette base : ne le validez pas en l'état.** Ce qui a déjà été décidé reste valable : la
-> désactivation au lieu de la suppression, tous les admins, pas de notification au membre, pas de
-> fusion de comptes.
->
-> ~~Mise à jour du 14/09, 15 h 47 : Cyril propose une autre voie — un numéro de membre utilisé
-> partout. Mieux vaut attendre sa décision avant de valider.~~
->
-> **Mise à jour du 14/09 : Cyril a répondu.** Le besoin est confirmé ; supprimer un membre qui a
-> des données devient une **désactivation** ; tous les admins pourront changer une adresse ; le
-> membre ne sera pas prévenu. Reste une question, le garde-fou — expliquée plus bas.
->
-> **Mise à jour du 12/09 : le point de mécanique est réglé, l'analyse vous revient.** Le 11/09, en
-> développant la petite correction préalable (demande #64), on avait découvert qu'elle ne suffisait
-> pas à ouvrir la voie, contrairement à ce qu'annonçait la première version de ce document. C'est
-> traité : voir « Le point réglé le 12/09 ». **Rien n'a changé dans ce qui vous est proposé** —
-> c'était de la mécanique interne.
+> Reflète la version technique du commit `7dd4e4d` (14/09/2026).
+
+## Ce qui a changé
+
+Ce document a été **réécrit le 14 septembre**. La version précédente proposait de faire suivre
+l'adresse d'un membre partout où elle est recopiée. **Cyril a choisi une autre voie** : donner à chaque
+membre **un numéro**, utilisé partout à la place de son adresse. Il n'y a plus d'urgence, et cette
+organisation simplifie et limite les erreurs.
+
+Ce qui avait déjà été décidé reste valable :
+
+- supprimer un membre qui a des données le **désactive** au lieu de l'effacer ;
+- **tous les admins** peuvent changer une adresse ;
+- le membre **n'est pas prévenu** ;
+- **pas de fusion** de deux comptes qui ont chacun des données.
 
 ## De quoi il s'agit
 
 De temps en temps, un membre n'arrive plus à se connecter avec son adresse email. Il s'en crée une
-nouvelle, revient sur le site... et **ne retrouve rien**. Ni ses inscriptions, ni sa collection, ni
-ses envois. Pour l'application, la personne avec la nouvelle adresse est **quelqu'un d'autre**.
+nouvelle, revient sur le site... et **ne retrouve rien**. Pour l'application, la personne avec la
+nouvelle adresse est **quelqu'un d'autre**. C'est arrivé le 9 septembre : dix ans d'historique dormaient
+sous l'ancienne adresse.
 
-C'est arrivé le 9 septembre. Dix ans d'historique — 139 inscriptions, 27 billets
-en collection, 24 envois — dormaient sous son ancienne adresse pendant qu'il consultait le site
-avec la nouvelle, où il n'y avait rien.
-
-L'idée est simple : **pouvoir dire à l'application « cette personne a changé d'adresse »**, depuis
-l'écran Gestion Membres, et que tout la suive.
-
-## Ce qu'on a trouvé en regardant sous le capot
-
-Et c'est là que ça devient plus lourd que prévu.
-
-**Dans l'application, l'adresse email n'est pas une simple information de contact : c'est
-l'identité même du membre.** Il n'y a pas de numéro de membre caché derrière. Du coup l'adresse est
-recopiée à beaucoup d'endroits — sur chaque inscription, chaque billet de la collection, chaque
-enveloppe, chaque dette, chaque commentaire.
-
-**Et presque rien ne tient ces copies ensemble.** Sur la vingtaine d'endroits concernés, trois
-seulement sont vraiment reliés à la fiche du membre. Pour tous les autres, l'application peut
-parfaitement se retrouver avec une inscription au nom de quelqu'un qui n'existe plus, sans que
-personne ne s'en aperçoive.
-
-### Ce n'est pas une crainte, c'est déjà arrivé deux fois
-
-**En 2024**, un changement d'adresse a été fait à la main pour un membre. Le script d'alors traitait six
-sortes de données. Il en avait oublié une : les enveloppes. **Six enveloppes sont restées au nom de
-l'ancienne adresse**, et personne ne l'a jamais vu — jusqu'à ce qu'on aille regarder, cette semaine.
-
-**Et à chaque suppression de membre.** Aujourd'hui, supprimer un membre depuis Gestion Membres
-fonctionne même s'il a des enveloppes ou une collection : ces données restent, orphelines. C'est
-comme ça que neuf autres adresses fantômes se sont accumulées. Au total : **23 enveloppes qui
-appartiennent à des gens qui n'existent plus.**
-
-Rien de grave dans l'immédiat — aucune n'a de frais de port impayés — mais c'est le symptôme.
-
-## Ce qui a déjà été fait
-
-**Ce cas a été réglé à la main le 10 septembre**, avec un script écrit pour l'occasion et
-essayé au préalable sur une copie jetable de la base. Il a fonctionné : le membre retrouve tout sous sa nouvelle adresse.
-
-Mais c'est justement le problème : **à la main, à chaque fois, avec le risque d'oublier une case** —
-exactement ce qui est arrivé en 2024.
+La raison : **dans l'application, l'adresse email est l'identité du membre.** Elle est recopiée sur
+chaque inscription, chaque billet de sa collection, chaque enveloppe, chaque commentaire — une
+vingtaine d'endroits. Changer d'adresse, c'est aujourd'hui les retrouver tous, à la main. En 2024, un
+changement fait ainsi en avait oublié un : six enveloppes sont restées au nom de l'ancienne adresse.
 
 ## Ce qui est proposé
 
-Deux façons de faire, et le choix compte plus que le reste.
+**Chaque membre reçoit un numéro qui ne change jamais.** Partout où l'application note aujourd'hui
+« cette inscription est à telle adresse », elle notera « cette inscription est au membre n° 42 ».
+L'adresse ne servira plus qu'à une chose : **reconnaître le membre quand il se connecte avec Google.**
 
-**La première** : écrire dans l'application la liste des endroits à mettre à jour. Rapide, et ça
-marche... jusqu'au jour où quelqu'un ajoute une nouvelle fonctionnalité, donc une nouvelle sorte de
-données, et oublie de compléter la liste. **On aurait reproduit le mécanisme qui a coûté les six
-enveloppes de 2024**, en plus officiel.
+Et changer d'adresse devient trivial : on corrige **l'adresse sur la fiche du membre n° 42**, et
+c'est tout. Tout le reste pointe vers le numéro, qui n'a pas bougé. Plus rien à retrouver, plus rien à
+oublier.
 
-**La seconde, recommandée** : demander à la base de données elle-même de tenir le lien. Une fois
-que c'est fait, changer l'adresse d'un membre entraîne automatiquement tout le reste — **y compris
-les données qui n'existent pas encore**, parce que le lien fait partie de la façon normale de créer
-une nouvelle table. Personne n'a plus de liste à maintenir.
+### Comment ça se passera, pour Marie, admin
 
-On craignait que cette seconde voie oblige d'abord à faire le ménage dans les 23 enveloppes
-fantômes. **Vérification faite, non** : on peut mettre le mécanisme en place dès maintenant en
-tolérant l'existant, et faire le ménage plus tard, tranquillement. Les *nouvelles* incohérences,
-elles, deviennent impossibles immédiatement.
+Paul s'est créé un deuxième compte avec sa nouvelle adresse Google. Marie ouvre la fiche de Paul dans
+Gestion Membres et clique **« Changer l'adresse »**. Elle saisit la nouvelle adresse.
 
-## Le point réglé le 12/09
+L'application voit que cette adresse a **déjà une fiche** — celle que Paul a créée en se connectant, et
+qui est vide. Elle le dit à Marie, **retire la fiche vide**, et met la nouvelle adresse sur la vraie
+fiche de Paul. Paul se reconnecte avec sa nouvelle adresse et **retrouve tout**.
 
-Dans la base, il n'y a pas que des données : il y a aussi de petites règles de surveillance qui
-regardent passer chaque modification. « Un membre n'a pas le droit de changer ça. » « Note qui a
-modifié quoi, et quand. » Un changement d'adresse passe devant elles comme n'importe quelle autre
-modification — et c'est ce qu'on avait sous-estimé : l'une le **refusait** purement et simplement,
-une autre **effaçait au passage** la trace de qui avait fait quoi.
+Si la fiche de la nouvelle adresse contenait de vraies données — des inscriptions, une collection —,
+l'application **refuserait** et dirait ce qui bloque : ce serait une fusion de deux comptes, qui n'est
+pas au programme.
 
-En faisant le tour complet, on en a trouvé **cinq** concernées, et non deux comme on le croyait le
-11/09. Les trois nouvelles sont bénignes, mais elles mentaient : elles marquaient comme « modifiées
-aujourd'hui » les demandes, les signalements et les contacts de la personne, alors que personne n'y
-avait touché.
+## Trois choses qu'on a trouvées en préparant
 
-**La solution choisie pour ce point** : pendant l'opération, et pendant elle seule, la base sait qu'un changement
-d'adresse bien précis est en cours — de telle adresse vers telle autre. Chacune de ces règles laisse
-alors passer **cette modification-là et rien d'autre** : si quoi que ce soit change en même temps,
-elle reprend aussitôt son travail habituel. Les protections restent donc entières pour tout le reste
-du site, y compris pendant le changement d'adresse.
+1. **Le deuxième compte existe presque toujours.** Quand quelqu'un se connecte avec une adresse
+   inconnue, le site lui crée une fiche « en attente ». Le membre qui a changé d'adresse a donc déjà une
+   fiche vide à la nouvelle adresse. C'est pour ça que l'application doit savoir la retirer, comme dans
+   l'exemple de Paul.
+2. **L'assistant n'est pas un membre.** Il signe ses réponses dans les fiches des demandes, mais n'a
+   pas de fiche. Avec des numéros, il lui en faudra un (question 2).
+3. **Certaines « adresses » n'en sont pas.** Les demandes importées d'un ancien tableau portent le nom
+   « Import Google Sheet » ; et une quinzaine d'adresses fantômes appartiennent à des membres supprimés
+   par le passé. On ne peut pas leur donner un numéro telles quelles (question 3).
 
-Rien à décider de votre côté : c'est un choix technique, il est tranché, et il ne change rien à ce
-qui vous est proposé plus haut.
+## Le prix, et comment on le paie
 
-## Et un numéro de membre ? *(proposé par Cyril le 14/09)*
+Le numéro de membre est la bonne organisation, mais il touche **presque tout le site** : plus de
+300 endroits dans 17 fichiers, dont une centaine dans « Mes collectes », et la plupart des règles qui
+décident qui a le droit de voir quoi.
 
-Cyril pose la bonne question : **plutôt que de faire suivre l'adresse partout, pourquoi ne pas
-donner à chaque membre un numéro**, utilisé partout à la place de l'adresse ? L'adresse ne servirait
-plus qu'à se connecter. Changer d'adresse, ce serait alors corriger **une seule fiche**.
+Pour ne pas tout risquer le même jour, on propose d'avancer **par petites étapes**, chacune essayée
+d'abord sur la copie de test du site, puis vérifiée en production, et qu'on peut défaire si quelque
+chose cloche :
 
-**C'est la meilleure organisation**, celle qu'on choisirait en partant de zéro. Elle rendrait inutiles
-les deux complications de la solution recommandée : le passage des règles de surveillance (réglé le
-12/09) et le garde-fou.
+1. **Préparer** : régler les adresses fantômes et le cas de l'assistant. Rien de visible.
+2. **Ajouter les numéros** à côté des adresses, sans rien retirer. Rien de visible.
+3. **Faire passer les règles d'accès** par les numéros. Rien de visible si tout va bien.
+4. **Reprendre les écrans un par un**, du plus simple au plus gros (« Mes collectes » en dernier).
+5. **Retirer les adresses recopiées**, une fois que plus rien ne s'en sert.
+6. **Ajouter le bouton** « Changer l'adresse », la désactivation et la réactivation dans Gestion
+   Membres.
 
-**Mais on ne part pas de zéro.** On a compté ce qu'il faudrait reprendre : **plus de 300 endroits dans
-17 fichiers du site** — dont une centaine dans « Mes collectes », le cœur du travail des collecteurs —,
-et presque toutes les règles qui décident qui a le droit de voir quoi. C'est un chantier **de la taille
-de la refonte des collectes**, qui avait demandé une répétition générale et un jour J. Et les adresses
-fantômes devraient être réglées avant, puisqu'elles n'ont pas de membre à qui donner un numéro.
-
-**Les deux ne s'opposent pas.** Faire suivre l'adresse garantit que chaque adresse recopiée
-correspond à un vrai membre : c'est exactement ce qu'il faut pour, un jour, remplacer toutes ces
-adresses par des numéros sans rien perdre. Le prix : une partie du travail d'aujourd'hui (le passage
-des règles de surveillance, le garde-fou) ne servirait plus ce jour-là.
-
-| | Premier changement d'adresse depuis l'écran | Risque |
-|---|---|---|
-| **Faire suivre l'adresse** | Assez vite | Contenu |
-| **Le numéro de membre tout de suite** | Beaucoup plus tard | Élevé : une grande partie du site à reprendre |
-| **L'adresse maintenant, le numéro ensuite** *(recommandé)* | Assez vite | Contenu, puis un chantier préparé à part |
-
-**Recommandation : faire suivre l'adresse maintenant, et ouvrir une demande à part pour le numéro de
-membre**, à préparer comme la refonte des collectes. Cyril a dit que le besoin était urgent ; le
-numéro ne peut pas l'être. Et d'ici là, un cas isolé peut toujours être réglé par le script qui a servi le
-10 septembre. **C'est une décision qui revient à Cyril.**
-
-## Supprimer un membre qui a des données : il sera désactivé
-
-Avec cette seconde voie, **un membre qui a encore des données ne pourra plus être effacé**.
-Aujourd'hui ça passe, et ça perd ses données en silence — c'est le défaut qui a créé neuf des dix
-adresses fantômes.
-
-~~Demain l'application dira « impossible : cette personne a 24 enveloppes et 27 billets en
-collection ».~~ **Décision de Cyril, le 14/09 : à la place, le membre est désactivé.** Concrètement :
-
-- le bouton « Supprimer » devient **« Désactiver »** pour un membre qui a des données ; un membre
-  sans aucune donnée se supprime comme aujourd'hui ;
-- un membre désactivé **ne peut plus se connecter**, mais **tout est conservé** : inscriptions,
-  collection, envois ;
-- il n'apparaît plus quand un collecteur choisit un membre à inscrire ;
-- un admin peut le **réactiver** s'il revient.
-
-L'application sait déjà mettre un membre « en attente » ou « refusé » : la désactivation est un état
-de plus, pas un mécanisme nouveau.
-
-**Un détail de sécurité trouvé en préparant**, déjà prévu dans la version technique : un admin
-désactivé doit perdre ses droits d'admin partout, pas seulement à l'entrée du site.
-
-## Comment ça se passera, concrètement
-
-Marie, admin, ouvre la fiche du membre concerné dans Gestion Membres. Elle clique sur **« Changer l'adresse
-email »**. L'application lui montre d'abord **ce qui va bouger** :
-
-> 139 inscriptions, 27 billets en collection, 24 enveloppes, 1 fiche membre.
-
-Elle saisit la nouvelle adresse, confirme, et c'est fait. Le membre se reconnecte avec son nouveau
-compte Google et retrouve tout.
-
-**Le décompte affiché avant de confirmer n'est pas décoratif** : c'est ce qui permet à Marie de
-voir qu'elle s'apprête à déplacer dix ans d'historique, et donc de s'arrêter si elle s'est trompée
-de personne dans la liste.
-
-Chaque changement d'adresse est aussi **noté quelque part**, avec qui l'a fait et quand. Sans ça,
-une adresse qui disparaît est inexplicable, et personne ne peut répondre à « où est passée ma
-collection ».
+C'est plus long qu'un grand jour J, mais une erreur ne touche qu'un écran à la fois, et se voit tout de
+suite.
 
 ## Ce que l'application ne fera PAS
 
-- **Fusionner deux comptes réellement utilisés tous les deux.** On a regardé : il reste deux
-  doublons connus, et dans les deux cas, comme dans le cas déjà traité, tout
-  l'historique est d'un seul côté. Il s'agit de renommer, pas d'arbitrer entre deux collections.
-  Construire cet arbitrage doublerait le travail pour une situation qui n'existe pas.
-  Si un jour le cas se présente, l'application **refusera clairement** et dira pourquoi, plutôt que
-  de choisir à votre place.
-- **Laisser un membre changer son adresse lui-même.** C'est une opération d'admin.
-- **Toucher à l'adresse PayPal d'un collecteur** : c'est un compte de paiement, il peut
-  légitimement être différent de l'adresse de connexion.
-- **Faire le ménage dans les 23 enveloppes fantômes** — c'est un chantier à part, sans urgence.
-
-## En combien de fois
-
-1. ~~D'abord une petite correction technique préalable (demande #64), sans effet visible.~~
-   *Faite le 11/09. Elle simplifie l'entretien de la base, mais on a découvert en la testant
-   qu'elle n'ouvrait pas la voie au changement d'adresse depuis le site : les protections qui
-   entourent les enveloppes et l'historique des inscriptions s'appliquent aussi pendant
-   l'opération, et il faut prévoir comment elles la laissent passer — sans les affaiblir pour le
-   reste. C'est réglé depuis le 12/09, voir « Le point réglé le 12/09 ».*
-2. La mécanique de fond : le lien tenu par la base, et le changement d'adresse lui-même.
-3. Puis le bouton dans Gestion Membres, avec le décompte et la confirmation — et, depuis le 14/09,
-   la désactivation et la réactivation d'un membre.
-4. Enfin, un jour, le ménage dans les adresses fantômes. Indépendant du reste.
+- **Fusionner deux comptes qui ont chacun des données.**
+- **Laisser un membre changer son adresse lui-même** : c'est une opération d'admin.
+- **Toucher à l'adresse PayPal d'un collecteur** ni aux adresses de ses contacts : ce ne sont pas des
+  membres.
+- **Prévenir le membre** du changement.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
-Cyril a répondu le 14/09 aux quatre premières questions :
+1. **Avancer par petites étapes** plutôt que tout faire le même jour ? On le recommande.
+2. **L'assistant** : lui créer une fiche de membre « technique », désactivée et sans aucun droit, pour
+   qu'il garde un numéro comme tout le monde ? On le recommande.
+3. **Les adresses fantômes** : leur créer des fiches **désactivées** — comme pour un membre qu'on ne
+   peut plus supprimer —, plutôt que d'effacer ce qui leur appartient ? On le recommande : rien ne se
+   perd.
+4. **Les traces** « modifié par », « bloqué par », « traité par » : elles gardent l'adresse de la
+   personne au moment de l'action. Après un changement d'adresse, l'ancienne y resterait. Acceptable
+   pour un historique ? On le pense.
 
-- ~~Est-ce bien le besoin ?~~ **Oui** : changer l'adresse d'un compte. Fusionner deux comptes qui ont
-  chacun des données reste hors du périmètre — il faudrait choisir les données de l'un, de l'autre,
-  ou des deux.
-- ~~La suppression d'un membre qui a des données doit-elle devenir refusée ?~~ **Elle devient une
-  désactivation** (voir plus haut).
-- ~~Qui a le droit de changer une adresse ?~~ **Tous les admins.**
-- ~~Faut-il prévenir le membre ?~~ **Non.**
-
-**Restent deux questions.**
-
-**La première, la plus importante : faire suivre l'adresse maintenant, ou passer tout de suite à un
-numéro de membre ?** Voir « Et un numéro de membre ? ». C'est à Cyril de trancher, et **mieux vaut
-attendre sa décision avant de valider** : elle change ce qui sera construit.
-
-**La seconde : faut-il le garde-fou automatique ?** Elle ne se pose que si l'on fait suivre
-l'adresse. Cyril n'en voyait pas bien l'intérêt —
-voici l'explication.
-
-L'adresse d'un membre est recopiée à une vingtaine d'endroits. ~~La solution retenue~~ La solution
-recommandée *(corrigé le 14/09 : rien n'était encore retenu, Cyril l'a justement relevé)* demande à la base
-de tenir le lien : quand l'adresse change, tous les endroits **déclarés** suivent seuls. Le risque,
-c'est l'endroit **pas déclaré** : dans un an, quelqu'un ajoute une fonctionnalité qui note l'adresse
-d'un membre dans une nouvelle table, et oublie de la relier. Le jour où un admin change une adresse,
-cette table est oubliée, **sans erreur ni alerte** — exactement ce qui est arrivé en 2024 avec les
-six enveloppes, restées au nom de l'ancienne adresse pendant des mois.
-
-Le garde-fou, c'est une vérification faite **juste avant chaque changement d'adresse** : « existe-t-il
-un endroit qui ressemble à une adresse de membre, et que je ne connais pas ? » Si oui, il **refuse le
-changement et dit lequel**. L'oubli ne passe plus en silence : il se voit le jour même, avant de faire
-des dégâts. Il fait la même chose pour les petites règles de surveillance découvertes le 12/09.
-
-**Ce qu'il coûte** : une vingtaine de lignes, écrites une fois, sans écran. **Ce qu'il ne fait pas** :
-il ne répare rien tout seul — il empêche seulement de continuer à l'aveugle.
-
-Sans lui, le changement d'adresse marche aussi, tant que personne n'oublie rien. La question est
-donc : **veut-on cette assurance pour une vingtaine de lignes ?** Recommandation : oui.
+Si tout vous va, cochez « J'ai lu et je valide l'analyse » sur la fiche. Sinon, laissez un
+commentaire : vous aurez une réponse disant ce qui en a été fait.
