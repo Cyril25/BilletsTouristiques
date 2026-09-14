@@ -6,6 +6,10 @@
 - **Statut :** analyse écrite le 2026-09-14. **Recommandation : ne pas construire de pièce jointe
   dans l'application pour l'instant**, et utiliser un dossier convenu sur le poste de Cyril. Aucun
   développement commencé.
+- **Reprise le même jour (14 h 16)** après la remarque de Cyril : B est retenue sous une forme plus
+  simple encore — **le chemin du fichier est écrit dans la demande**, sans dossier imposé ; c'est
+  toujours Cyril qui fournit le fichier. C, l'import par le navigateur, est remplacée par le
+  parcours que Cyril décrit pour #66. Voir « La remarque de Cyril ».
 - Version en clair pour les relecteurs : `demande-67-fichiers-joints-demande-en-clair.md`.
 
 ## Contexte (demande)
@@ -46,50 +50,66 @@ traite d'abord : **quel est le moyen le plus léger de faire arriver ce fichier 
 |---|---|---|---|---|
 | **A — pièce jointe dans l'application** | Espace de stockage privé, table de liens vers les demandes, envoi et téléchargement sur la fiche, Worker élargi pour que l'assistant lise les fichiers | **L** : infrastructure neuve, règles d'accès, Worker, script du rituel | N'importe quel admin joint un fichier, depuis n'importe où ; servirait à toute demande future | Nouvelle surface de sécurité, dont une clé de Worker élargie. Aucun autre besoin ne l'utiliserait aujourd'hui |
 | **B — un dossier convenu sur le poste** *(recommandée maintenant)* | Cyril dépose le fichier dans un dossier fixé, **hors de tout dépôt git**, un sous-dossier par demande, et le signale sur la fiche (« fichier déposé : export-2026-09.csv ») | **Aucun développement** ; une règle dans la convention | Immédiat. N'ouvre aucun accès nouveau. L'assistant qui analysera #66 travaille sur ce poste | Seul Cyril peut fournir un fichier. Ne tiendrait plus si le rituel tournait un jour dans une routine hébergée |
-| **C — l'import dans l'écran de #66** | L'écran « ignorer / appliquer » de #66 accepte lui-même l'export : l'admin choisit le fichier, le navigateur le lit, les écarts calculés sont enregistrés en base pour être arbitrés | Fait partie de **#66**, pas de #67 | Rejouable par n'importe quel admin, sans assistant ni poste. Le fichier n'a pas besoin d'être conservé | Un xlsx exigerait une bibliothèque et une ouverture de la CSP — un CSV ou un JSON, non |
+| **C — l'import dans l'écran de #66** | L'écran « ignorer / appliquer » de #66 accepte lui-même l'export : l'admin choisit le fichier, le navigateur le lit, les écarts calculés sont enregistrés en base pour être arbitrés | Fait partie de **#66**, pas de #67 | Rejouable par n'importe quel admin, sans assistant ni poste. Le fichier n'a pas besoin d'être conservé | Un xlsx exigerait une bibliothèque et une ouverture de la CSP — un CSV ou un JSON, non. **Écartée le 14/09 (14 h 16)** : c'est toujours Cyril qui fournit le fichier, et c'est l'assistant qui l'importe — voir ci-dessous |
+
+## La remarque de Cyril *(14/09, 14 h 16)*
+
+| Ce qu'écrit Cyril | Ce que ça tranche |
+|---|---|
+| « c'est trop lourd pour garder un fichier, je n'avais pas pensé au fait que je pouvais mettre le fichier sur mon poste » | **Q1** : B est retenue ; A écartée |
+| « c'est moi qui le fera (toujours) » | **Q4** : aucun autre admin ne fournira de fichier. L'argument qui aurait justifié C tombe |
+| « mettre le chemin du fichier est suffisant » | **Q2** : pas de dossier imposé — **le chemin est écrit dans la demande** |
+| « l'IA, quand on lui demandera “traite le fichier des billets de telle source”, lira les datas, les importera dans une table d'import (autre que table billets), mettra un statut (traité, ignoré, à valider, validé, refusé) et la suite se fera sur le module dédié » | Le fichier n'a jamais besoin d'entrer dans le site : c'est l'assistant qui le lit sur le poste et en verse le contenu dans une **table d'import**. **C est remplacée** par ce parcours, qui appartient à **#66** |
+
+**Q3** (le format de l'export) reste ouverte.
+
+Sur la demande de Cyril, #66 reçoit ce parcours dans son journal : l'assistant ne peut pas modifier
+le texte d'une demande, seulement son journal et ses documents.
 
 ## Recommandation
 
-1. **Maintenant : B**, pour la première consolidation. Dossier proposé :
-   `C:\Users\csamson\Documents\Perso\GitHub\imports-demandes\demande-66\` — à côté des dépôts mais
-   dans aucun d'eux, et dans un répertoire que l'assistant lit déjà. À confirmer (Q2).
+1. ~~Maintenant : B, pour la première consolidation, avec un dossier proposé à côté des dépôts.~~
+   **Retenue le 14/09 : B**, sans dossier imposé. Cyril écrit dans la demande le chemin du fichier
+   sur son poste, où qu'il soit — hors de tout dépôt git.
 2. **Le format : CSV en UTF-8 ou JSON plutôt que xlsx** (Q3). Un xlsx est un classeur compressé :
    lisible, mais au prix d'une conversion, où se perdent en silence les zéros en tête (un numéro
    comme `00042` devient `42`), les dates et parfois les accents. Pour un rapprochement ligne à
    ligne, c'est exactement le genre d'écart qu'on ne veut pas fabriquer soi-même.
-3. **Ensuite : C, dans #66**, si le rapprochement doit être rejoué par les admins sans l'assistant.
-   C'est l'analyse de #66 qui le dira.
+3. ~~Ensuite : C, dans #66, si le rapprochement doit être rejoué par les admins sans l'assistant.~~
+   **Écartée le 14/09** : Cyril fournira toujours le fichier, et c'est l'assistant qui l'importe dans
+   une table dédiée (#66).
 4. **A : seulement le jour où d'autres demandes ont besoin de pièces jointes.** Pas aujourd'hui.
 
 ## Ce que ça veut dire pour cette demande
 
-Si B est retenue, **#67 ne demande aucun développement** : il suffit d'écrire la règle dans
-`CONVENTION-DEMANDES.md` (où déposer, comment le signaler, ne jamais le mettre dans un dépôt). Elle
-sera écrite une fois la recommandation validée. Le sort de la demande ensuite — terminée ou
+**B est retenue : #67 ne demande aucun développement.** Il reste à écrire la règle dans
+`CONVENTION-DEMANDES.md` : un fichier de données fourni pour une demande reste sur le poste de
+Cyril, **hors de tout dépôt**, et son chemin est écrit dans la demande (texte ou commentaire).
+Elle sera écrite une fois l'analyse validée. Le sort de la demande ensuite — terminée ou
 abandonnée — revient à Cyril : l'assistant n'a pas le droit de clore une demande.
 
 ## Critères d'acceptation (si B)
 
-1. Un fichier déposé dans le dossier convenu est lu par l'assistant quand il traite la demande
-   indiquée, sans autre manipulation.
+1. Un fichier dont le chemin est écrit dans la demande est lu par l'assistant quand il traite cette
+   demande, sans autre manipulation. *(Formulation du 14/09, 14 h 16 : « déposé dans le dossier
+   convenu » est remplacé par « dont le chemin est écrit dans la demande ».)*
 2. Aucun fichier de données n'entre dans un dépôt git.
-3. La convention dit où déposer un fichier, sous quel nom, et comment le signaler sur la fiche.
+3. La convention dit où écrire le chemin d'un fichier, et qu'il reste hors de tout dépôt.
 
 ## Ce que cette spec ne fait pas
 
 - **Pas de stockage dans l'application**, pas de modification du Worker ni des règles d'accès.
-- **Pas de rapprochement** : c'est #66.
-- **Pas de lecture de xlsx dans le navigateur** : si C est retenue dans #66, le format y sera
-  retranché.
+- **Pas de rapprochement ni de table d'import** : c'est #66.
+- **Pas de lecture de fichier dans le navigateur** : C est écartée.
 
 ## Questions ouvertes
 
 | | Question | Pour qui | Recommandation |
 |---|---|---|---|
-| **Q1** | B maintenant, C éventuellement dans #66, A seulement si un autre besoin apparaît : d'accord ? | Cyril | Oui |
-| **Q2** | Le dossier : celui proposé, ou un autre ? | Cyril | Celui proposé |
-| **Q3** | L'export peut-il sortir en CSV ou en JSON ? | Cyril | CSV UTF-8 ou JSON |
-| **Q4** | D'autres admins devront-ils fournir des fichiers ? | Cyril | Si oui, c'est C (dans #66) qui y répond, pas A |
+| ~~Q1~~ | ~~B maintenant, C éventuellement dans #66, A seulement si un autre besoin apparaît ?~~ | Cyril | **Répondue le 14/09 : B.** A écartée, C remplacée par le parcours de #66 |
+| ~~Q2~~ | ~~Le dossier : celui proposé, ou un autre ?~~ | Cyril | **Répondue : aucun dossier imposé**, le chemin est écrit dans la demande |
+| **Q3** | L'export peut-il sortir en CSV ou en JSON ? | Cyril | CSV UTF-8 ou JSON — toujours ouverte, et c'est à #66 qu'elle servira |
+| ~~Q4~~ | ~~D'autres admins devront-ils fournir des fichiers ?~~ | Cyril | **Répondue : non**, toujours Cyril |
 
 ## Réalisation
 
