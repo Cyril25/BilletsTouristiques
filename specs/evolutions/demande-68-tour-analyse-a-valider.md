@@ -68,4 +68,18 @@ Aucune modification de la base : la lecture de `demande_commentaires` est déjà
 
 ## Réalisation
 
-*(à compléter : fichiers touchés, commit)*
+Développée le 2026-09-14 — commit `7166263`.
+
+| Fichier | Ce qui change |
+|---|---|
+| `admin-demandes.js` | Chargement de `demande_commentaires` (même repli que les validations) ; `dernierCommentaireParDemande` ; `estAssistant()` ; dans `renderDemandeRow()`, le badge « Assistant » et le surlignage « à relire » retiré quand une remarque attend l'assistant ; infobulle du badge de validation complétée |
+| `style.css` | `.demande-badge-attente-assistant`, sur les jetons `--color-badge-info-bg` / `--color-badge-info-text`, définis en clair et en sombre |
+| `sw.js` | `CACHE_NAME` : `billets-v305` → `billets-v306` |
+
+Écart avec la spec, sans conséquence : les dates s'affichent au format déjà utilisé par l'écran
+(« 14 sept. 2026 », `formatDateFr()`), et non « 14/09/2026 » comme dans les exemples ci-dessus.
+
+**Vérifié** : sous Node, `renderDemandeRow()` sur cinq cas simulés — remarque d'un admin (badge, pas
+de surlignage), réponse de l'assistant et aucun commentaire (surlignage, pas de badge), autre état
+(rien), adresse de l'assistant en majuscules (reconnue). **Pas encore vérifié** : le rendu dans le
+navigateur, en mode sombre et sur téléphone (critère 6).

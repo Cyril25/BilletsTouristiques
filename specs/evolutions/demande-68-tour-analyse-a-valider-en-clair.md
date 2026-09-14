@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, admin. Aucune connaissance technique n'est
 > nécessaire. La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit indiqué dans sa section « Réalisation ».
+> Reflète la version technique du commit `6f6dff9` (14/09/2026) ; développée au commit `7166263`.
 
 ## De quoi il s'agit
 
