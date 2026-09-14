@@ -19,6 +19,15 @@
 > dans « Voie C » ; la recommandation devient « B maintenant, C dans une demande à part » — à
 > trancher par Cyril (Q7).
 >
+> **⚠ Tranché à 16 h 46 : la voie C.** « Il n'y a plus d'urgence, on peut donc repartir sur l'idée du
+> numéro, qui modifiera un peu l'archi, mais qui finalement simplifiera et réduira le nombre d'erreurs
+> possibles. » **L'analyse est reprise sur cette base et la demande repasse en « Prêt à analyser ».**
+> Tout ce qui décrit la voie B ci-dessous — clés en cascade, traversée des triggers (Q6), garde-fou
+> d'exhaustivité (Q4) — est **conservé pour l'historique mais n'est plus le plan**. Ce qui reste
+> acquis quelle que soit la voie : la désactivation au lieu de la suppression (Q1), tous les admins
+> (Q2), pas de notification (Q3), la fusion de comptes hors périmètre, et le correctif de
+> `is_admin_ou_superadmin()` sur le statut.
+>
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
 > Demande déposée par Cyril le 2026-09-10, écran visé : **Gestion Membres** (`users.html`).
@@ -179,10 +188,17 @@ C'est le coût d'aller vite.
 | **C directement** | Long : une refonte de la taille de #16 | Élevé : 17 fichiers du site, la plupart des règles d'accès | Le modèle propre |
 | **B maintenant, C ensuite** *(recommandé)* | Court | Contenu d'abord, puis réparti sur un chantier planifié | Le modèle propre, atteint sans orphelines ; une partie de B jetée en route |
 
-**Recommandation : B maintenant, C dans une demande à part**, planifiée comme #16. Deux raisons :
-Cyril a dit que le besoin était **urgent**, et C ne peut pas l'être ; et B nettoie le terrain dont C a
-besoin. Entre-temps, un cas isolé reste traitable par le script manuel éprouvé le 10/09. **C'est une
+~~Recommandation : B maintenant, C dans une demande à part, planifiée comme #16. Deux raisons :
+Cyril a dit que le besoin était urgent, et C ne peut pas l'être ; et B nettoie le terrain dont C a
+besoin. Entre-temps, un cas isolé reste traitable par le script manuel éprouvé le 10/09.~~ **C'est une
 décision d'architecture, qui revient à Cyril : question Q7.**
+
+> **Tranché par Cyril le 14/09 à 16 h 46 : C, dans cette demande.** La recommandation reposait
+> d'abord sur l'urgence, que Cyril lève : « il n'y a plus d'urgence ». L'argument « B prépare C »
+> reste vrai d'une autre manière — les adresses orphelines devront être arbitrées **avant** de
+> pouvoir donner un numéro à chaque ligne, et c'est désormais un préalable de la migration, plus un
+> chantier facultatif. L'analyse est reprise pour décrire C en entier : colonnes, règles d'accès,
+> triggers, écrans, ordre de migration et répétition sur la copie de test.
 
 ## Conséquence à assumer : supprimer un membre change de comportement
 
@@ -560,9 +576,9 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
   de l'incident de 2024. Je le recommande, mais c'est de la complexité en plus dans un projet dont la
   simplicité est une contrainte assumée. *14/09 : Cyril n'en voit pas bien l'intérêt et demande une
   explication — donnée dans la version en clair et en réponse sur la fiche. Toujours ouverte.*
-- **Q7 — Voie B, voie C, ou B puis C ?** *(ajoutée le 14/09 après la proposition de Cyril, voir
-  « Voie C — un identifiant de membre »)* Recommandé : B maintenant, C dans une demande à part.
-  **C'est la question qui compte avant de valider** : elle change ce qui sera construit.
+- ~~Q7 — Voie B, voie C, ou B puis C ?~~ **Tranchée par Cyril le 14/09 à 16 h 46 : C.** L'analyse
+  est reprise sur cette base. Q4 (le garde-fou d'exhaustivité) et Q6 (les triggers pendant la
+  cascade) ne se posent plus pour le renommage.
 - **Q5 — les deux définitions d'is_admin().** Elles coexistent dans le dépôt : `migration-4-1-membres.sql`
   (rôle `admin` seul) et `migration-inscription-publique.sql` (`admin` + `superadmin` + actif). À
   vérifier en base laquelle est vivante ; la spec utilise `is_admin_ou_superadmin()`, non ambigu.
