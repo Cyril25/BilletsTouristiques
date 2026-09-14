@@ -5,10 +5,16 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `3a25e9e` (14/09/2026).
+> Reflète la version technique du commit `de139b8` (14/09/2026).
 >
-> **Mise à jour du 14/09, 15 h 47 : Cyril propose une autre voie** — un numéro de membre utilisé
-> partout. Voir « Et un numéro de membre ? » : **mieux vaut attendre sa décision avant de valider**.
+> **⚠ Mise à jour du 14/09, 16 h 46 : Cyril a choisi le numéro de membre.** Il n'y a plus
+> d'urgence, et cette organisation simplifiera et limitera les erreurs. **Ce document va être
+> réécrit sur cette base : ne le validez pas en l'état.** Ce qui a déjà été décidé reste valable : la
+> désactivation au lieu de la suppression, tous les admins, pas de notification au membre, pas de
+> fusion de comptes.
+>
+> ~~Mise à jour du 14/09, 15 h 47 : Cyril propose une autre voie — un numéro de membre utilisé
+> partout. Mieux vaut attendre sa décision avant de valider.~~
 >
 > **Mise à jour du 14/09 : Cyril a répondu.** Le besoin est confirmé ; supprimer un membre qui a
 > des données devient une **désactivation** ; tous les admins pourront changer une adresse ; le
