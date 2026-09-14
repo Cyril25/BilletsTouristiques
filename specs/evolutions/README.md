@@ -103,7 +103,7 @@ qui n'est plus vrai.
 | [#62 (prod)](demande-62-migration-email-membre.md) | Migrer un membre vers une nouvelle adresse email ([en clair](demande-62-migration-email-membre-en-clair.md)) | L | Analyse à valider — Q6 tranchée le 2026-09-12 | ✅ | — |
 | [#64 (prod)](demande-64-garde-fou-jwt-enveloppes.md) | Garde-fou « hors du site » sur le trigger des enveloppes (débloque la maintenance, **pas** le renommage de #62 depuis l'écran) | S | À tester (migration jouée le 2026-09-11) | ✅ | `dac0c8b` |
 | [#65 (prod)](demande-65-copie-billet-pays.md) | La copie d'un billet perd son pays, puis son département ([en clair](demande-65-copie-billet-pays-en-clair.md)) | S | À tester | ✅ | `1046fc9` |
-| [#67 (prod)](demande-67-fichiers-joints-demande.md) | Joindre des fichiers de données à une demande ([en clair](demande-67-fichiers-joints-demande-en-clair.md)) | L | Analyse à valider — recommandation : un dossier convenu, pas de pièce jointe pour l'instant | ✅ | — |
+| [#67 (prod)](demande-67-fichiers-joints-demande.md) | Joindre des fichiers de données à une demande ([en clair](demande-67-fichiers-joints-demande-en-clair.md)) | L | Analyse à valider — pas de pièce jointe : le chemin du fichier est écrit dans la demande (retenu par Cyril le 14/09) | ✅ | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
