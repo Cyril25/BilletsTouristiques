@@ -323,9 +323,11 @@ endroit — même motif que `mes_notifications_envoyees()` en #51.
   vers une `enveloppes`, et la réception de l'enveloppe de collecte devrait confirmer les lignes de
   transaction. **C'est le plus gros coût et le plus gros risque de tout le lot.**
 
-À noter : le **rab d'une collecte** rejoint déjà l'enveloppe de collecte par #1 (inscription à
-quantités nulles). Seul resterait non couvert le **double personnel** d'un collecteur, glissé dans
-une enveloppe de sa collecte. **Le modèle ci-dessus est écrit pour le premier cas** ; si la réponse
+À noter : le **rab d'une collecte** rejoint déjà l'enveloppe de collecte par #1 ~~(inscription à
+quantités nulles)~~. Seul resterait non couvert le **double personnel** d'un collecteur, glissé dans
+une enveloppe de sa collecte. *Corrigé le 14/09 : #1 ne passe plus par une inscription — la ligne de
+rab pointe elle-même vers l'enveloppe de collecte. C'est précisément la brique qui manquait au second
+cas ci-dessus : une ligne qui n'est pas une inscription, suivie dans une enveloppe de collecte.* **Le modèle ci-dessus est écrit pour le premier cas** ; si la réponse
 est le second, ce § est à refaire avant validation.
 
 ### 4. La règle de clôture
@@ -433,7 +435,20 @@ Le lot grossit par rapport au 10/09 : les envois et la reprise de l'affichage n'
 « lot 1 de #22 → #1 → lot 2 » ; son argument principal est affaibli (voir la correction de
 « L'état du terrain ») — **O5**.
 
+> **O5 tranchée le 14/09 par Cyril, sur la demande #1.** #1 n'attend plus le lot 1 : dans le parcours
+> réécrit par Jean-Philippe, la vente du rab tient dans la table des dettes telle qu'elle est. En
+> revanche #1 a maintenant besoin d'une **mise en vente** (offre affichée, demande, réponse du
+> vendeur) — exactement les gestes du lot 2. Décision : #1 la construit **d'abord, pour le rab des
+> collecteurs, pensée comme la première version des annonces** ; le lot 2 vient après #1 et l'étend.
+> L'ordre entre #1 et le lot 1 n'est pas imposé. Détail :
+> [demande-1-vente-du-rab.md](demande-1-vente-du-rab.md), « L'ordre des travaux, revu ».
+
 ### Lot 2 — les annonces
+
+*Depuis le 14/09 (O5) : le lot 2 s'appuie sur la mise en vente construite par #1 pour le rab — offres,
+demande, réponse du vendeur, réservation pendant l'attente. Il y ajoute les membres comme vendeurs,
+les recherches, l'échange et le rapprochement. La table d'annonces décrite ci-dessous est donc à
+confronter à celle de #1 au moment du dev, pas à créer à côté.*
 
 « J'ai en double » / « je recherche », le **rapprochement automatique** — la seule chose que
 Facebook ne sait pas faire — et le bouton « ça m'intéresse » qui ouvre une transaction pré-remplie.
@@ -510,7 +525,7 @@ le jour où « Ma collection » est remplie, elle pourra proposer les siens en p
 | **O2** | Un membre peut-il **annuler une transaction acceptée** unilatéralement, ou faut-il l'accord des deux ? | Au dev du lot 1 |
 | ~~O3~~ | ~~Une transaction peut-elle naître sans annonce ?~~ **Tranchée le 11/09 : oui** — c'est le lot 1 tel qu'il est maintenu. | — |
 | **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | **À trancher avant de valider** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs |
-| **O5** | L'ordre « lot 1 de #22 → #1 » tient-il encore, maintenant que « `dettes` est vide » ne pèse plus ? | Avant le dev — avec Cyril |
+| ~~O5~~ | ~~L'ordre « lot 1 de #22 → #1 » tient-il encore, maintenant que « la table des dettes est vide » ne pèse plus ?~~ **Tranchée le 14/09 par Cyril** : #1 n'attend plus le lot 1 ; le lot 2 vient après #1 et étend sa mise en vente (voir « Lot 1 ») | — |
 
 ## Réalisation
 
