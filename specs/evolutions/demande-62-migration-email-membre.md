@@ -59,7 +59,7 @@ clé primaire, et l'adresse est recopiée telle quelle dans **20 colonnes répar
   **unique**, et ne sert plus qu'à retrouver le membre à partir de la connexion Google.
 - Chaque table qui **appartient** à un membre porte un `membre_id` (clé étrangère vers `membres.id`)
   **à la place** de sa copie d'adresse.
-- **Changer une adresse = `UPDATE membres SET email = … WHERE id = …`.** Une ligne, rien d'autre.
+- **Changer une adresse, c'est modifier une seule ligne** : `UPDATE membres SET email = … WHERE id = …`. Rien d'autre.
 
 Deviennent **sans objet** : la cascade, la traversée des triggers pendant la cascade (Q6), le
 garde-fou d'exhaustivité (Q4) et la fonction de renommage en huit étapes. Restent **acquis** : la
@@ -96,7 +96,7 @@ Le classement du 10/09 tient (voir « Classement des 20 colonnes », plus bas) :
 
 ### Les règles d'accès et les fonctions
 
-- Une fonction **`mon_membre_id()`** (`SECURITY DEFINER`, `STABLE`) rend l'`id` du membre dont
+- Une **fonction nouvelle**, `mon_membre_id()` (`SECURITY DEFINER`, `STABLE`), rend l'`id` du membre dont
   l'adresse est celle du jeton, **s'il est actif**. Les règles d'accès comparent `membre_id =
   mon_membre_id()` au lieu de `membre_email = auth.jwt() ->> 'email'` — sans clause `TO
   authenticated` (rôle anon pour Firebase).
