@@ -202,6 +202,26 @@ Avec `curl` sous VPN, ajouter `--ssl-no-revoke` : sans ça la requête meurt en 
 (`CRYPT_E_NO_REVOCATION_CHECK`) sans jamais mentionner le VPN. Avec Node/wrangler, exporter
 `NODE_EXTRA_CA_CERTS` vers le bundle de CA du Canton.
 
+## Fournir un fichier de données pour une demande
+
+**Décision de Cyril, 2026-09-14 (demande #67).** Quand une demande s'appuie sur un fichier — un
+export de données de billets venu de l'extérieur, par exemple (#66) — **le site ne le stocke pas** :
+
+1. **le fichier reste sur le poste de Cyril**, et **son chemin est écrit dans la demande** — dans sa
+   description ou dans un commentaire sur la fiche ;
+2. il est fourni en **CSV UTF-8 ou en JSON**. Un classeur Excel est converti par Cyril avant : c'est
+   là qu'on voit ce qu'on convertit, alors qu'une conversion faite plus loin perd en silence les zéros
+   en tête (« 00042 » devient « 42 ») et abîme les dates ;
+3. il **n'entre jamais dans un dépôt git** — pas plus dans celui-ci, qui est public, que dans un
+   commit « pour mémoire ». Il ne se recopie pas non plus dans `specs/` ni dans une réponse publiée ;
+4. l'assistant le lit **là où il est**, quand il traite la demande sur le poste de Cyril.
+
+Pourquoi pas une pièce jointe sur la fiche : le site ne sait garder aucun fichier, et le passage par
+lequel l'assistant lit les demandes a été rendu volontairement étroit. C'est toujours Cyril qui
+fournit ces fichiers, et l'assistant travaille déjà sur son poste : rien à construire. Le jour où
+d'autres admins devront en fournir, la question se reposera — voir
+[demande-67-fichiers-joints-demande.md](demande-67-fichiers-joints-demande.md).
+
 ## Le rituel en boucle
 
 **Décision de Cyril, 2026-09-11.** Sur son poste, une conversation Claude Code dédiée fait tourner
