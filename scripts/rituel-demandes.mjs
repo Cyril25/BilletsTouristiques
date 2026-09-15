@@ -38,8 +38,10 @@ const CA = fs.existsSync(BUNDLE) ? [...tls.rootCertificates, fs.readFileSync(BUN
 
 // Ce que le rituel peut faire d'une demande, selon l'état où il la trouve.
 // Tout le reste (en_cours, a_tester, terminee, abandonnee) est un geste humain.
+// À cadrer → Prêt à dev / Prêt à analyser : le même tri, une fois que le demandeur a précisé.
 const TRANSITIONS = {
     nouvelle: ['validee', 'a_cadrer', 'a_analyser'],
+    a_cadrer: ['validee', 'a_analyser'],
     a_analyser: ['analyse_a_valider'],
     analyse_a_valider: ['a_analyser']
 };
@@ -132,10 +134,13 @@ function nomDe(carnet, email) {
 // ------------------------------------------------------------
 async function etat() {
     const champs = 'id,etat,priorite,complexite,demandeur,ecran,description,docs,commentaire,updated_at';
-    const [nouvelles, aAnalyser, aValider] = await Promise.all([
+    // Les fils suivis : les analyses à valider (remarques des relecteurs) et, depuis le
+    // 15/09 (#72), les demandes à cadrer — la réponse du demandeur, ou une remarque
+    // d'un admin, y attendait sans que personne la voie.
+    const [nouvelles, aAnalyser, suivies] = await Promise.all([
         api('GET', '/rest/v1/demandes?etat=eq.nouvelle&select=' + champs + '&order=id.asc'),
         api('GET', '/rest/v1/demandes?etat=eq.a_analyser&select=' + champs + '&order=id.asc'),
-        api('GET', '/rest/v1/demandes?etat=eq.analyse_a_valider&select=id&order=id.asc')
+        api('GET', '/rest/v1/demandes?etat=in.(analyse_a_valider,a_cadrer)&select=id,etat&order=id.asc')
     ]);
 
     // Une analyse qui ne peut plus avancer sans Cyril (SQL à jouer, décision à
@@ -146,7 +151,7 @@ async function etat() {
     // (updated_at, tenu par trigger, date la dernière écriture du journal).
     const marquees = aAnalyser.filter((d) => ATTENTE.test((d.commentaire || '').trim()));
 
-    const ids = [...aValider, ...marquees].map((d) => d.id);
+    const ids = [...suivies, ...marquees].map((d) => d.id);
     const coms = ids.length
         ? await api('GET', '/rest/v1/demande_commentaires?demande_id=in.(' + ids.join(',') + ')'
             + '&select=id,demande_id,doc,section,auteur_email,texte,created_at&order=created_at.asc')
@@ -164,11 +169,11 @@ async function etat() {
     // Une remarque est « en attente » tant qu'aucune réponse de l'assistant ne la
     // suit dans le fil : ce sont tous les commentaires postés après sa dernière réponse.
     const remarques = [];
-    for (const d of aValider) {
+    for (const d of suivies) {
         const fil = coms.filter((c) => c.demande_id === d.id);
         let i = fil.length;
         while (i > 0 && !estAssistant(fil[i - 1].auteur_email)) i--;
-        if (i < fil.length) remarques.push({ id: d.id, commentaires: fil.slice(i).map(resume) });
+        if (i < fil.length) remarques.push({ id: d.id, etat: d.etat, commentaires: fil.slice(i).map(resume) });
     }
 
     const reponses = {};
@@ -263,7 +268,7 @@ async function maj(id, fichier) {
         if (entree.etat === 'validee' && complexite === 'L') {
             throw new Error('#' + id + ' est une L : au tri elle part en a_analyser. Seule la validation d\'un admin la fait passer en Prêt à dev.');
         }
-        if (entree.etat === 'a_analyser' && demande.etat === 'nouvelle' && complexite !== 'L') {
+        if (entree.etat === 'a_analyser' && demande.etat !== 'analyse_a_valider' && complexite !== 'L') {
             throw new Error('#' + id + ' : seule une L part en a_analyser au tri (complexité actuelle : ' + (complexite || 'aucune') + ').');
         }
         patch.etat = entree.etat;
@@ -329,7 +334,7 @@ async function notifierDemandeur(demande) {
 // ------------------------------------------------------------
 async function commenter(id, fichier, options) {
     if (!fichier) throw new Error('Usage : commenter <id> <fichier.txt> [--section "…"] [--doc chemin]');
-    await uneDemande(id);
+    const demande = await uneDemande(id);
     const texte = lireFichier(fichier).trim();
     if (!texte) throw new Error('Fichier vide : rien à publier');
 
@@ -351,10 +356,22 @@ async function commenter(id, fichier, options) {
     console.log('Commentaire publié sur #' + id);
 
     let titre = ASSISTANT_NOM + ' a commenté la demande #' + id;
-    if (destinataire) {
-        const carnet = await carnetMembres();
-        const prenom = (nomDe(carnet, destinataire).split(' ')[0]) || destinataire;
-        titre = ASSISTANT_NOM + ' a répondu à ' + prenom + ' sur la demande #' + id;
+    const prenomDe = async (email) => (nomDe(await carnetMembres(), email).split(' ')[0]) || email;
+    if (demande.etat === 'a_cadrer' && /@/.test(demande.demandeur || '')) {
+        // Sur une demande à cadrer, c'est le demandeur qui doit répondre : le titre
+        // le nomme, même si le dernier commentaire venait d'un autre admin (#72).
+        titre = ASSISTANT_NOM + ' a écrit à ' + await prenomDe(demande.demandeur) + ' sur la demande #' + id;
+        // La fiche est réservée aux admins (data-require-admin) : un demandeur
+        // simple membre ne lira jamais ce commentaire.
+        const r = await api('GET', '/rest/v1/membres?email=eq.' + encodeURIComponent(demande.demandeur.trim())
+            + '&select=role').catch(() => []);
+        const role = r && r[0] ? r[0].role : null;
+        if (role !== 'admin' && role !== 'superadmin') {
+            titre += ' — à lui transmettre : il n\'a pas accès à la fiche';
+            console.log('⚠ Le demandeur n\'est pas admin : il ne verra pas ce commentaire, un admin doit le lui transmettre.');
+        }
+    } else if (destinataire) {
+        titre = ASSISTANT_NOM + ' a répondu à ' + await prenomDe(destinataire) + ' sur la demande #' + id;
     }
     try {
         await api('POST', '/rest/v1/notifications', {

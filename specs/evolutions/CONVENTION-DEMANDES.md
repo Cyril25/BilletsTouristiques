@@ -35,7 +35,10 @@ demande » veut dire.
 - assez compréhensible pour être développée **sans reposer de question** → **Prêt à dev**
   (`validee`), en réestimant la complexité (`S`/`M`/`L`) si l'estimation existante paraît fausse ;
 - pas assez claire → écrire dans `commentaire` **ce qui doit être précisé** (en conservant
-  l'existant) et passer en **À cadrer** (`a_cadrer`).
+  l'existant) et passer en **À cadrer** (`a_cadrer`) ; puis **poser les questions au demandeur en
+  commentaire sur la fiche**, en le nommant. *(Remarque de Cyril, 15/09, sur #72 : le journal
+  s'appelle « traitement de la demande » à l'écran, le demandeur ne va pas y chercher des
+  questions.)* Quand il répond, dans le fil, on refait le tri avec sa réponse.
 
 Une demande peut mélanger les deux : un bug précis **et** un souhait vague. Ne pas trancher seul
 le volet vague. Si Cyril est joignable, lui poser la question tout de suite — un commentaire
@@ -230,7 +233,9 @@ demandes** » (cf. `CLAUDE.md`) : c'est de cette commande qu'il parle. Chaque pa
 
 1. contrôle la base (`node scripts/rituel-demandes.mjs etat`) et s'arrête là s'il n'y a rien à faire ;
 2. trie les demandes `nouvelle` ;
-3. reprend les remarques laissées sur une `analyse_a_valider` après la dernière réponse de l'assistant ;
+3. reprend les commentaires postés après la dernière réponse de l'assistant sur une
+   `analyse_a_valider` (remarques des relecteurs) ou, depuis le 15/09, sur une `a_cadrer` (la réponse
+   du demandeur, ou la remarque d'un admin — celle de Cyril sur #72 était restée sans réponse) ;
 4. écrit **une** analyse `a_analyser`, la plus prioritaire.
 
 **Ce qui se publie désormais sans supervision** : le tri, les analyses (specs poussées sur `main`,
@@ -240,8 +245,8 @@ complexité L l'empêche d'être ramassée au fil de l'eau.
 
 `scripts/rituel-demandes.mjs` est le seul accès du rituel à la base, et il refuse lui-même ce qui
 n'en fait pas partie : toute transition autre que `nouvelle` → `validee` / `a_cadrer` / `a_analyser`,
-`a_analyser` → `analyse_a_valider` et `analyse_a_valider` → `a_analyser` ; l'entrée d'une L en Prêt
-à dev ; l'écrasement du journal ou des documents attachés (il ajoute, il ne remplace jamais). Il crée
+`a_cadrer` → `validee` / `a_analyser` (le même tri, une fois la précision obtenue), `a_analyser` →
+`analyse_a_valider` et `analyse_a_valider` → `a_analyser` ; l'entrée d'une L en Prêt à dev ; l'écrasement du journal ou des documents attachés (il ajoute, il ne remplace jamais). Il crée
 aussi les notifications que seul l'écran créait : au demandeur quand sa demande passe À cadrer, aux
 admins quand l'assistant répond dans un fil.
 
