@@ -63,9 +63,9 @@ pour savoir à quel volume s'attendre dans chaque compteur.
 | **C3** | Collecte à plus de deux ans du millésime du billet | suspect | ~~À décider : rattrapages tardifs légitimes possibles~~ **Garder** (15/09, Q3) — un rattrapage légitime s'« accepte » |
 | **C4** | Date avant 2000 ou plus d'un an dans le futur | faux | **Garder** : faute de frappe presque certaine |
 | **C5** | Collecte encore « Pré collecte » ou « Collecte » plus d'un an après sa date | suspect | **Garder** — oubli de clôture probable |
-| **D1** | Collecte sans collecteur | manquant | **Garder** |
+| **D1** | Collecte sans collecteur | manquant | **Garder** — *ajusté le 15/09 : hors pré-collecte, et seulement si la collecte a des inscriptions* |
 | **D2** | Collecte ouverte aux variantes sur un billet sans variante déclarée | faux | **Garder** |
-| **D3** | Collecte sans prix | manquant | ~~À décider : les collectes anciennes importées n'en ont peut-être jamais eu~~ **Garder** (15/09, Q3) — s'il noie l'écran, on l'ajustera |
+| **D3** | Collecte sans prix | manquant | ~~À décider : les collectes anciennes importées n'en ont peut-être jamais eu~~ **Garder** (15/09, Q3) — s'il noie l'écran, on l'ajustera — *ajusté le 15/09 : hors pré-collecte, et seulement si la collecte a des inscriptions* |
 | **E1** | Pays vide ou absent de la liste des pays | manquant | **Garder** |
 | **E2** | Nom du billet vide | manquant | **Garder** |
 
@@ -261,6 +261,18 @@ Contrôle en lecture seule 13/13 et passage « À tester » : voir la réalisati
 - **C4** suit la spec (« plus d'un an dans le futur ») ; le constat 69-1 comptait deux ans.
 - **D3** : « sans prix » = pas de prix, sauf sur une collecte ouverte aux variantes seules qui a un prix
   variante (un prix variante vide veut dire « même prix que le normal »).
+- **D1 et D3, ajustés le 15/09 pendant le test, sur deux remarques de Cyril** : « si c'est
+  pré-collecte c'est normal, et si c'est des collectes qui datent d'avant la mise en place du site, on
+  ne remonte pas l'info » (prix) ; « beaucoup sont aussi des pré-collectes […] c'est même le principe de
+  la pré-collecte » (collecteur). Les chiffres lui ont donné raison : les 70 pré-collectes n'ont ni prix
+  ni collecteur, et sur les collectes terminées sans prix (1 082) ou sans collecteur (353), **3 et 1
+  seulement ont des inscriptions**. Pour « avant le site », aucune date ne concordait (premier commit du
+  site en décembre 2025, premières inscriptions en base en février 2024) : Cyril a retenu **« a au moins
+  une inscription »**, sans date à tenir à jour — sans inscription, personne à faire payer. Le détail
+  dit désormais combien d'inscriptions sont rattachées. Script `migration-demande-69-3-regles-d1-d3.sql`
+  (éditeur SQL) : remplace `verifier_billets()`, **efface** les constats D1/D3 que la règle ne produit
+  plus (sauf acceptés) — sans quoi ils passeraient à tort en « corrigés » —, relance et se contrôle.
+  Éprouvé sur banc (vraies données, état d'avant recréé, un constat accepté conservé).
 - **Accepter demande un commentaire** — c'est lui qui répond au prochain admin. Et **« Rouvrir »**
   existe, pour revenir sur un clic malheureux. Un constat accepté reste accepté, retrouvé ou non.
 - **L'écran montre un contrôle à la fois**, les « faux » d'abord, par pages de 50 : A1 compte à lui seul
@@ -276,6 +288,7 @@ Contrôle en lecture seule 13/13 et passage « À tester » : voir la réalisati
 
 Soit **7 174 constats en 0,2 s**. Recoupés un à un avec un décompte fait à part (script Node sur les
 mêmes données). E1 : 26 billets en « Angleterre », absent de la liste des pays.
+**Après l'ajustement de D1 et D3** (15/09) : D1 = 1, D3 = 3, soit ~5 600 constats.
 
 ### Vérifié
 

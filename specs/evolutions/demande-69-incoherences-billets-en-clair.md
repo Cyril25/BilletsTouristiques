@@ -22,8 +22,8 @@ par 50. L'écran ouvre d'abord les erreurs franches (« faux ») avant les infor
 | Contrôle | Cas |
 |---|---|
 | Variante non renseignée | 5 143 |
-| Collecte sans prix | 1 153 |
-| Collecte sans collecteur | 424 |
+| Collecte sans prix | 1 153, puis **3** après ajustement (voir plus bas) |
+| Collecte sans collecteur | 424, puis **1** après ajustement |
 | Même référence, millésime et version sur plusieurs fiches | 242 |
 | Billet sans image | 76 |
 | Statut de collecte sans la date qui va avec | 59 |
@@ -42,10 +42,18 @@ par 50. L'écran ouvre d'abord les erreurs franches (« faux ») avant les infor
   millésime : elles sont déjà comptées dans « référence, millésime ou version manquant ».
 - **« Collecte sans prix »** ne compte pas une collecte réservée aux variantes qui a un prix variante.
 
-**Ce qu'il faut regarder** : que la liste s'affiche bien sur téléphone et en mode sombre ; qu'une fiche
-corrigée disparaisse après « Relancer la vérification » ; et si les 1 153 collectes sans prix sont bien
-des anciennes collectes — si oui, ce contrôle est à ajuster, comme
-Cyril l'avait prévu.
+**Ajusté le jour même, pendant le test de Cyril** : « Collecte sans prix » et « Collecte sans
+collecteur » ne signalent plus
+- les **pré-collectes** : le prix et le collecteur n'y sont pas encore fixés, c'est le principe ;
+- les **collectes sans aucune inscription**, c'est-à-dire les anciennes collectes d'avant le site :
+  personne à faire payer.
+
+Les chiffres le confirmaient : parmi plus d'un millier de collectes terminées sans prix, trois seulement
+ont des inscriptions ; parmi celles sans collecteur, une seule. Ce sont ces quatre-là qui méritent un
+coup d'œil. Chaque cas dit maintenant combien d'inscriptions sont concernées.
+
+**Ce qu'il faut regarder** : que la liste s'affiche bien sur téléphone et en mode sombre ; et qu'une
+fiche corrigée disparaisse après « Relancer la vérification ».
 
 ## Ce qui a changé depuis la première version
 
