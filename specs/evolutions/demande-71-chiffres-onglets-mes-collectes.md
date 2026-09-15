@@ -143,3 +143,35 @@ de la liste ne se bloquent pas l'un l'autre.
 - **Pas de chiffre dans le menu général** du site (cf. backlog B4).
 - Le comportement de `loadEnveloppes()` sans enveloppe en cours (défaut 3) n'est pas corrigé : il est
   reproduit, pour que le chiffre d'arrivée soit celui de l'onglet.
+
+## Réalisation
+
+Développée le 2026-09-15 — commit `a774077`.
+
+| Fichier | Ce qui change |
+|---|---|
+| `mes-collectes.js` | Section « #71 » : `ecrireBadgeOnglet()` / `majBadgeOnglet()` (D5, D6), `nbPaiementsAVerifier()`, `nbEnveloppesAPreparer()` (D3), `compterOngletsDesLArrivee()` appelée en fin de `loadMesCollectes()` (D1, D4) ; `enveloppe_id` ajouté au `select` des inscriptions de la liste ; `loadVerificationPaiement()` et `renderEnveloppesListe()` écrivent leur chiffre par ces fonctions, le second **après** le tri en groupes ; `renderPaiementsVide()` et `renderEnveloppesVide()` remettent le chiffre à zéro |
+| `sw.js` | `CACHE_NAME` : `billets-v308` → `billets-v309` |
+
+La version en clair reflète `7b52bdc` : la correction de D6 faite au développement ne change rien à
+ce qu'elle décrit.
+
+**Vérifié** : `node --check` ; volumes lus en base (lecture seule) ; banc jsdom sur la vraie
+`mes-collectes.html`, le vrai `global.js` et le vrai `mes-collectes.js`, avec une fausse base qui
+applique les filtres PostgREST des URLs émises (y compris `neq` qui écarte les `NULL`) :
+
+- **5 scénarios, 29/29** — chiffres à l'arrivée sans ouvrir d'onglet (bénéficiaire, collecte d'un autre
+  collecteur, « pas intéressé », port à 0 €, avoir, autre collecteur écartés), aucune écriture à
+  l'arrivée, historique et liste noire sans chiffre ; chiffre qui disparaît ; enveloppe masquée ;
+  onglet ouvert pendant le comptage (non écrasé) et deux rechargements rapprochés ; onglet ouvert
+  avant le chargement de la liste (ne bloque pas). Rejoués sur `7b52bdc`, ils échouent comme attendu :
+  pas de chiffre à l'arrivée, complément de prix non compté, chiffre 1 au-dessus de « Aucune
+  enveloppe en cours » ;
+- **300 bases tirées au hasard, 2 129/2 129** — pour chacune : arrivée = onglet ouvert (paiements et
+  envois), chiffre des envois = cartes affichées, rouvrir l'onglet ne change rien, retour à la liste
+  redonne les mêmes chiffres, aucune erreur console. 177 bases où l'onglet a réellement créé ou annulé
+  des enveloppes, 68 avec des enveloppes masquées ou annulées.
+
+**Pas encore vérifié** : un vrai navigateur, le téléphone (largeur des onglets avec deux chiffres) et
+le mode sombre (classes de badge inchangées). `menu.html` non touché : pas de bump du `?v=` de
+`global.js`.
