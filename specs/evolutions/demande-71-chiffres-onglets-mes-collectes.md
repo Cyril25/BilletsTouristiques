@@ -91,7 +91,7 @@ le même nombre que l'onglet, effets de bord réels compris.
 
 ### D4 — Compter sans rien recharger
 
-- les inscriptions : celles que `loadMesCollectes()` a déjà chargées, avec **`enveloppe_id`** ajouté à
+- les inscriptions : celles que `loadMesCollectes()` a déjà chargées, avec la colonne `enveloppe_id` ajoutée à
   son `select` ;
 - **deux petites requêtes** en parallèle, lancées après le rendu de la liste :
   `enveloppes?collecteur_alias=eq.X&or=(statut.eq.en_cours,statut_paiement_port.eq.declare)` sur
@@ -111,9 +111,13 @@ appelée aussi par `renderPaiementsVide()` et `renderEnveloppesVide()` (défauts
 Si l'utilisateur ouvre un onglet pendant que le comptage d'arrivée est en route, le chiffre de
 l'onglet, calculé sur des données plus fraîches, ne doit pas être écrasé. Chaque écriture d'un badge
 **par un onglet ouvert** incrémente un compteur par onglet ; le comptage d'arrivée relève ces
-compteurs **au début de `loadMesCollectes()`** et n'écrit pas un badge qu'un onglet a écrit
-entre-temps. Ses propres écritures n'incrémentent rien : deux rechargements rapprochés de la liste ne
-se bloquent pas l'un l'autre.
+compteurs **une fois la liste chargée**, juste avant ses deux requêtes, et n'écrit pas un badge qu'un
+onglet a écrit entre-temps. Ses propres écritures n'incrémentent rien : deux rechargements rapprochés
+de la liste ne se bloquent pas l'un l'autre.
+
+*Corrigé au développement (15/09)* : ~~relevé au début du chargement de la liste~~ (`loadMesCollectes()`). Un onglet ouvert
+**avant** que la liste soit chargée s'affiche vide (`mesBillets` encore vide, défaut existant) et
+écrit 0 : relevé trop tôt, ce 0 aurait empêché le comptage d'arrivée d'écrire le vrai chiffre.
 
 ## Critères d'acceptation
 

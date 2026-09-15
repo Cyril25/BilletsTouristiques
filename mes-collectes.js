@@ -224,7 +224,7 @@ function loadMesCollectes() {
             }
             return Promise.all([
                 supabaseFetch('/rest/v1/billets?select=id,"NomBillet","Ville","Categorie","HasVariante","VersionNormaleExiste","Date","Reference","Millesime","Version",attenuee,"LinkSheet"&id=in.(' + billetIds.join(',') + ')&order="Date".desc.nullslast'),
-                supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,collecte_id,membre_email,statut_paiement,envoye,statut_livraison,nb_normaux,nb_variantes&limit=10000')
+                supabaseFetch('/rest/v1/inscriptions?billet_id=in.(' + billetIds.join(',') + ')&pas_interesse=eq.false&select=billet_id,collecte_id,membre_email,statut_paiement,envoye,statut_livraison,enveloppe_id,nb_normaux,nb_variantes&limit=10000')
             ]);
         })
         .then(function(results) {
@@ -269,6 +269,7 @@ function loadMesCollectes() {
                 s.tousExpedies = s.total > 0 && s.expedies === s.total;
             });
             renderCollectesList();
+            compterOngletsDesLArrivee(inscriptions);   // #71
         })
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
@@ -1288,6 +1289,115 @@ function confirmerDesinscrire() {
 var currentEnveloppeId = null;
 var currentEnveloppeData = null;
 
+// ============================================================
+// Demande #71 — CHIFFRES DES ONGLETS DÈS L'ARRIVÉE
+// Les compteurs de #12 n'étaient écrits qu'à l'ouverture de leur onglet : un paiement
+// déclaré passait inaperçu. Une seule règle de comptage par onglet, partagée par
+// l'arrivée sur la page et l'onglet ouvert — sinon le chiffre changerait au premier clic.
+// « Historique des envois » n'a pas de chiffre : c'est une archive (décision de Cyril).
+// ============================================================
+var BADGES_ONGLETS = {
+    paiements: { index: 1, libelle: 'Vérification paiement', classe: 'tab-badge tab-badge-warning' },
+    envois:    { index: 2, libelle: 'Préparation des envois', classe: 'tab-badge' }
+};
+// Écritures faites par un onglet ouvert : le comptage d'arrivée n'écrase pas un chiffre
+// calculé entre-temps sur des données plus fraîches.
+var nbEcrituresBadge = { paiements: 0, envois: 0 };
+
+function ecrireBadgeOnglet(nom, n) {
+    var b = BADGES_ONGLETS[nom];
+    var tab = document.querySelectorAll('.collectes-tabs .tab-btn')[b.index];
+    if (!tab) return;
+    tab.innerHTML = b.libelle + (n > 0 ? ' <span class="' + b.classe + '">' + n + '</span>' : '');
+}
+
+// Écriture par l'onglet ouvert. Un chiffre à zéro disparaît (avant, il restait affiché).
+function majBadgeOnglet(nom, n) {
+    nbEcrituresBadge[nom]++;
+    ecrireBadgeOnglet(nom, n);
+}
+
+// Ce qu'un membre a déclaré payé et qui attend la confirmation du collecteur : billets,
+// frais de port facturés, compléments de prix (#44 — un avoir ne se vérifie pas, il se solde).
+function nbPaiementsAVerifier(inscriptions, enveloppes, dettes) {
+    var emailColl = monCollecteur ? monCollecteur.email_membre : null;
+    var n = 0;
+    (inscriptions || []).forEach(function(i) {
+        if (i.statut_paiement === 'declare' && i.membre_email !== emailColl) n++;
+    });
+    (enveloppes || []).forEach(function(e) {
+        if (e.statut_paiement_port === 'declare' && e.membre_email !== emailColl
+            && e.prix_envoi_reel !== null && e.prix_envoi_reel !== undefined && parseFloat(e.prix_envoi_reel) > 0) n++;
+    });
+    (dettes || []).forEach(function(d) {
+        if (d.statut_paiement === 'declare' && d.membre_email !== emailColl && parseFloat(d.montant || 0) > 0) n++;
+    });
+    return n;
+}
+
+// Nombre d'enveloppes qu'afficherait « Préparation des envois », SANS les effets de bord de
+// loadEnveloppes() (création des enveloppes manquantes, annulation des vides) : même
+// résultat, aucune écriture. Mêmes tests que renderEnveloppesListe() pour masquer une enveloppe.
+function nbEnveloppesAPreparer(enveloppesEnCours, inscriptions, billetsMap) {
+    // Sans enveloppe en cours, loadEnveloppes() s'arrête sur « Aucune enveloppe » sans rien créer.
+    if (!enveloppesEnCours || enveloppesEnCours.length === 0) return 0;
+    var aRepartir = {};   // membre → inscriptions à répartir
+    var dedans = {};      // membre|enveloppe → inscriptions prêtes à envoyer
+    (inscriptions || []).forEach(function(ins) {
+        if (!ins.membre_email) return;
+        var cle = null, table = null;
+        if (ins.statut_livraison === 'non_reparti' || ins.statut_livraison === null) { table = aRepartir; cle = ins.membre_email; }
+        else if (ins.statut_livraison === 'pret_a_envoyer') { table = dedans; cle = ins.membre_email + '|' + ins.enveloppe_id; }
+        if (!table) return;
+        if (!table[cle]) table[cle] = [];
+        table[cle].push(ins);
+    });
+    var n = 0;
+    var avecEnveloppe = {};
+    enveloppesEnCours.forEach(function(env) {
+        avecEnveloppe[env.membre_email] = true;
+        if (countBillets(dedans[env.membre_email + '|' + env.id] || [], billetsMap) > 0
+            || countBillets(aRepartir[env.membre_email] || [], billetsMap) > 0) n++;
+    });
+    // L'enveloppe d'un membre à répartir qui n'en a pas encore serait créée, puis affichée.
+    Object.keys(aRepartir).forEach(function(email) {
+        if (!avecEnveloppe[email] && countBillets(aRepartir[email], billetsMap) > 0) n++;
+    });
+    return n;
+}
+
+// Appelée par loadMesCollectes() une fois la liste affichée. Les inscriptions sont celles
+// que la liste vient de charger ; restent deux petites requêtes, en parallèle.
+function compterOngletsDesLArrivee(inscriptions) {
+    if (!monCollecteur || mesBillets.length === 0) return;
+    // Relevé APRÈS le chargement de la liste : un onglet ouvert avant (vide faute de billets
+    // chargés) ne bloque pas le comptage ; un onglet ouvert pendant les deux requêtes, si.
+    var ecrituresAuDepart = { paiements: nbEcrituresBadge.paiements, envois: nbEcrituresBadge.envois };
+    var alias = encodeURIComponent(monCollecteur.alias);
+    var billetsMap = {};
+    mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
+    // Mêmes inscriptions que les onglets : mes collectes, billets chargés.
+    var inscs = inscriptionsDeMesCollectes(inscriptions).filter(function(ins) { return !!billetsMap[ins.billet_id]; });
+    Promise.all([
+        supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + alias + '&or=(statut.eq.en_cours,statut_paiement_port.eq.declare)&select=id,membre_email,statut,statut_paiement_port,prix_envoi_reel'),
+        supabaseFetch('/rest/v1/dettes?collecteur_alias=eq.' + alias + '&statut_paiement=eq.declare&select=membre_email,statut_paiement,montant')
+            .catch(function() { return []; })
+    ])
+        .then(function(results) {
+            var enveloppes = results[0] || [];
+            if (nbEcrituresBadge.paiements === ecrituresAuDepart.paiements) {
+                ecrireBadgeOnglet('paiements', nbPaiementsAVerifier(inscs, enveloppes, results[1] || []));
+            }
+            if (nbEcrituresBadge.envois === ecrituresAuDepart.envois) {
+                var enCours = enveloppes.filter(function(e) { return e.statut === 'en_cours'; });
+                ecrireBadgeOnglet('envois', nbEnveloppesAPreparer(enCours, inscs, billetsMap));
+            }
+        })
+        .catch(function(error) {
+            console.error('Erreur comptage des onglets:', error);
+        });
+}
+
 // Demande #34 — ordre d'affichage GELE de la verification paiement. Valider un
 // paiement recharge la vue : sans gel, le membre qui vient d'etre valide quitte la
 // tete de liste et repart dans l'ordre alphabetique, alors que le collecteur n'a pas
@@ -1526,10 +1636,6 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
         return;
     }
 
-    // #12 — Compteur onglet envois
-    var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
-    if (tabs[2]) tabs[2].innerHTML = 'Préparation des envois' + (enveloppes.length > 0 ? ' <span class="tab-badge">' + enveloppes.length + '</span>' : '');
-
     // Pré-calculer le nom pour le tri
     var enveloppesMeta = [];
     for (var e = 0; e < enveloppes.length; e++) {
@@ -1591,6 +1697,9 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
         renderEnveloppesVide();
         return;
     }
+    // #12 — Compteur onglet envois. #71 : les enveloppes AFFICHÉES (avant : toutes, masquées
+    // comprises), même nombre que nbEnveloppesAPreparer() à l'arrivée sur la page.
+    majBadgeOnglet('envois', groupeARepartir.length + groupeEnAttentePaiement.length + groupeEnAttenteEnvoi.length);
 
     var html = '';
 
@@ -1816,6 +1925,7 @@ function renderEnveloppePasseeDetail(env, inscriptions, billetsMap) {
 }
 
 function renderEnveloppesVide() {
+    majBadgeOnglet('envois', 0);   // #71 — le chiffre ne reste plus affiché
     var container = document.getElementById('envois-view');
     if (container) {
         container.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-check-circle"></i><p>Aucune enveloppe en cours</p></div>';
@@ -2921,11 +3031,9 @@ function loadVerificationPaiement() {
                     mesBillets.forEach(function(b) { billetsMap[b.id] = b; });
                     verifPaiementData = { inscriptions: inscriptions, billetsMap: billetsMap, enveloppesPort: enveloppesPort, membresMap: membresMap, dettes: dettes };
                     renderVerificationPaiement(inscriptions, billetsMap, enveloppesPort, membresMap, dettes);
-                    // #12 — Compteur onglet paiements (billets déclarés + frais de port déclarés)
-                    var declares = inscriptions.filter(function(i) { return i.statut_paiement === 'declare'; }).length
-                        + enveloppesPort.filter(function(e) { return e.statut_paiement_port === 'declare'; }).length;
-                    var tabs = document.querySelectorAll('.collectes-tabs .tab-btn');
-                    if (tabs[1]) tabs[1].innerHTML = 'Vérification paiement' + (declares > 0 ? ' <span class="tab-badge tab-badge-warning">' + declares + '</span>' : '');
+                    // #12 — Compteur onglet paiements. #71 : même règle qu'à l'arrivée sur la page,
+                    // compléments de prix déclarés compris.
+                    majBadgeOnglet('paiements', nbPaiementsAVerifier(inscriptions, enveloppesPort, dettes));
                 });
         })
         .catch(function(error) {
@@ -3501,6 +3609,7 @@ function validerTousPaiementsVue(ids, portIds) {
 }
 
 function renderPaiementsVide() {
+    majBadgeOnglet('paiements', 0);   // #71 — le chiffre ne reste plus affiché
     var container = document.getElementById('paiements-view');
     if (container) {
         container.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-check-circle"></i><p>Tous les paiements sont vérifiés !</p></div>'
