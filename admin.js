@@ -4873,8 +4873,39 @@ function sortirEditionCollecte() {
     resetCollecteForm();
 }
 
+// Demande #70 — la modale recouvre la fiche : elle rappelle de quel billet il
+// s'agit (miniature + « UEBK 2026-14 NAUSICAA »). Lu sur le formulaire et
+// l'aperçu d'image : c'est ce que l'admin a sous les yeux, même non enregistré.
+function remplirBilletCollecteModal() {
+    var bloc = document.getElementById('collecte-modal-billet');
+    if (!bloc) return;
+    var val = function(id) {
+        var el = document.getElementById(id);
+        return el ? String(el.value || '').trim() : '';
+    };
+    var libelle = libelleBilletComplet({
+        Reference: val('field-reference'),
+        Millesime: val('field-millesime'),
+        Version: val('field-version'),
+        NomBillet: val('field-nom-billet')
+    });
+    var texte = document.getElementById('collecte-modal-billet-libelle');
+    if (texte) texte.textContent = libelle;
+
+    var apercu = document.getElementById('image-preview');
+    var src = (apercu && !apercu.classList.contains('hidden')) ? (apercu.getAttribute('src') || '') : '';
+    var img = document.getElementById('collecte-modal-billet-img');
+    if (img) {
+        if (src) img.setAttribute('src', src);
+        else img.removeAttribute('src');
+        img.style.display = src ? '' : 'none';
+    }
+    bloc.style.display = (libelle || src) ? '' : 'none';
+}
+
 // Demande #41 — ouverture / fermeture de la modale d'ajout/édition de collecte.
 function ouvrirCollecteModalUI() {
+    remplirBilletCollecteModal();
     var ov = document.getElementById('collecte-modal-overlay');
     if (ov) ov.style.display = 'flex';
     var nom = document.getElementById('field-collecte-nom');
