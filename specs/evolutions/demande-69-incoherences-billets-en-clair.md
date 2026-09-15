@@ -4,6 +4,47 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
 > Reflète la version technique du commit `6362673` (15/09/2026, après les réponses de Cyril).
+> La section « Ce qui est livré » reflète le développement du 15/09 (commit `d0e941d`).
+
+## Ce qui est livré *(15/09)*
+
+L'écran existe : menu **Administration → Qualité des billets**, onglet **« Incohérences »**. Il
+n'est pas encore utilisable : Cyril doit d'abord installer la mise à jour de la base de données.
+
+**Ce que vous y verrez.** En haut, chaque contrôle avec son nombre de cas, rangés par famille (le type
+de billet, la photo, les dates, les collectes, le reste). Un clic sur un contrôle affiche ses cas, 50
+par 50. L'écran ouvre d'abord les erreurs franches (« faux ») avant les informations manquantes : sans
+ça, les milliers de variantes non renseignées cacheraient les six dates dans le désordre.
+
+**Les chiffres au premier passage**, sur les données du 15/09 :
+
+| Contrôle | Cas |
+|---|---|
+| Variante non renseignée | 5 143 |
+| Collecte sans prix | 1 152 |
+| Collecte sans collecteur | 423 |
+| Même référence, millésime et version sur plusieurs fiches | 242 |
+| Billet sans image | 76 |
+| Statut de collecte sans la date qui va avec | 59 |
+| Pays vide ou absent de la liste (dont 26 « Angleterre ») | 28 |
+| Référence, millésime ou version manquant | 25 |
+| Collecte encore ouverte plus d'un an après sa date | 19 |
+| Dates d'une collecte dans le désordre | 6 |
+| Collecte à plus de deux ans du millésime | 1 |
+| Les cinq autres contrôles | 0 |
+
+**Trois précisions apportées en le construisant :**
+
+- **« Ce n'est pas une erreur » demande un commentaire.** C'est lui qui répondra au prochain admin qui
+  se posera la question. Un cas accepté par erreur peut être **rouvert**.
+- **Les doublons sont 242, pas 258.** Seize fiches en double n'ont pas de version, ou pas de
+  millésime : elles sont déjà comptées dans « référence, millésime ou version manquant ».
+- **« Collecte sans prix »** ne compte pas une collecte réservée aux variantes qui a un prix variante.
+
+**Ce qu'il faudra regarder**, une fois la base à jour : que la liste s'affiche bien sur téléphone et en
+mode sombre ; qu'une fiche corrigée disparaisse après « Relancer la vérification » ; et si les 1 152
+collectes sans prix sont bien des anciennes collectes — si oui, ce contrôle est à ajuster, comme
+Cyril l'avait prévu.
 
 ## Ce qui a changé depuis la première version
 

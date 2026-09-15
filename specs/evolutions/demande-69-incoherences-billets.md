@@ -3,7 +3,8 @@
 - **Complexité :** L (tri du 2026-09-14).
 - **Demande :** #69, déposée par Cyril le 2026-09-14, priorité normale. Née de #66 (question Q7).
 - **Statut :** analyse écrite le 2026-09-14, reprise le 2026-09-15 après les réponses de Cyril. Plus
-  aucune question ouverte. Aucun développement commencé.
+  aucune question ouverte. **Validée par Cyril le 15/09, développée le même jour** avec #66
+  (commit `d0e941d`) : voir « Réalisation ». **Migration à jouer par Cyril.**
 - Version en clair pour les relecteurs : `demande-69-incoherences-billets-en-clair.md`.
 
 ## Les réponses de Cyril *(15/09, 10 h 50)*
@@ -237,4 +238,52 @@ valeur » est une proposition nouvelle du 15/09 ; un relecteur qui n'en veut pas
 
 ## Réalisation
 
-*(à compléter après le développement : fichiers touchés, commits)*
+Développée le 2026-09-15, avec #66 (écran commun) — commit `d0e941d`. **La migration est à jouer par
+Cyril** : sans elle, l'onglet « Incohérences » nomme le script.
+
+| Où | Ce qui est fait |
+|---|---|
+| `scripts/migration-demande-69-2-incoherences-billets.sql` *(gitignoré, poste de Cyril)* | `controles_billets_catalogue` (les 16 contrôles, libellé, famille, gravité, ordre), `controles_billets`, `controles_billets_verifications` (qui a lancé, quand, combien) ; RLS lecture admins actifs, aucune écriture directe ; `verifier_billets()`, `compteurs_controles_billets()`, `decider_controle_billet()` ; **une première vérification** en fin de script, pour que l'écran ne s'ouvre pas vide |
+| `admin-qualite-billets.html` / `.js`, `style.css`, `menu.html` | L'écran « Qualité des billets », onglet « Incohérences » ; entrée de menu sous « Gestion Billets » |
+| `sw.js`, `global.js` | Cache `billets-v310`, menu `v202` |
+
+### Ce que le développement a précisé
+
+- **Le catalogue est une table**, pas seulement des requêtes : l'écran y lit libellés, familles et
+  gravités. Ajouter un contrôle = une ligne + sa requête ; **retirer un contrôle = supprimer sa ligne**,
+  ce qui efface ses constats (clé étrangère) et le fait ignorer par la vérification suivante, même si sa
+  requête est restée.
+- **A4 porte sur la clé normalisée et complète** (même règle que le rapprochement de #66) : **242**
+  fiches le 15/09, et non 258 — les 16 autres doublons ont une clé incomplète et relèvent de A5.
+- **C4** suit la spec (« plus d'un an dans le futur ») ; le constat 69-1 comptait deux ans.
+- **D3** : « sans prix » = pas de prix, sauf sur une collecte ouverte aux variantes seules qui a un prix
+  variante (un prix variante vide veut dire « même prix que le normal »).
+- **Accepter demande un commentaire** — c'est lui qui répond au prochain admin. Et **« Rouvrir »**
+  existe, pour revenir sur un clic malheureux. Un constat accepté reste accepté, retrouvé ou non.
+- **L'écran montre un contrôle à la fois**, les « faux » d'abord, par pages de 50 : A1 compte à lui seul
+  ~5 100 cas et enterrerait les 6 dates dans le désordre. Les compteurs servent de navigation.
+- **La mention « Un import propose une valeur »** est cherchée page par page (50 billets), et disparaît
+  sans bruit tant que les tables de #66 n'existent pas.
+
+### Les chiffres de la première vérification (données du 15/09, banc)
+
+| A1 | A4 | A5 | B1 | C1 | C2 | C3 | C5 | D1 | D3 | E1 | A2, A3, C4, D2, E2 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 5 143 | 242 | 25 | 76 | 6 | 59 | 1 | 19 | 423 | 1 152 | 28 | 0 |
+
+Soit **7 174 constats en 0,2 s**. Recoupés un à un avec un décompte fait à part (script Node sur les
+mêmes données). E1 : 26 billets en « Angleterre », absent de la liste des pays.
+
+### Vérifié
+
+- **45/45 essais SQL** sur le banc : les chiffres ci-dessus, relance sans doublon, fiche corrigée →
+  « corrigé » d'office, fiche remodifiée → rouvert, le détail suit la fiche, accepter (commentaire
+  obligatoire) / rouvrir, droits (anonyme, membre, admin inactif ; écriture et insertion directes),
+  vérification par l'API sous le plafond de 3 s du rôle anon (≈ 0,2 s), retrait d'un contrôle ;
+- **banc navigateur, 59/59** : la vraie page, le vrai `global.js` et le vrai script dans jsdom,
+  branchés sur un **vrai PostgREST** devant ce Postgres (vraie RLS, vraies requêtes) — base sans
+  migration, compteurs et gravités, pages, lien vers la fiche, mention d'import et arrivée par ce lien,
+  accepter / rouvrir, relance, décisions et journal de #66, membre qui force l'adresse, nom de billet
+  piégé en HTML affiché comme du texte ; aucune erreur de script.
+
+**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; la migration sur la vraie base.

@@ -16,6 +16,8 @@
   référence, millésime et version — et ce qu'on compare — version normale et variante, pas le nom ni
   le pays (Q3) ; et l'**assouplissement de la protection est retenu** (Q4). L'écran d'incohérences
   est déposé comme demande **#69** (Q7). Plus aucune question ouverte : l'analyse est validable.
+- **Analyse validée par Cyril le 14/09. Développée le 15/09** avec #69 (commits `186492a`, `d0e941d`) :
+  voir « Réalisation ». **Migration à jouer par Cyril** avant tout usage.
 - Version en clair pour les relecteurs : `demande-66-verification-billets-import-en-clair.md`.
 
 ## Les réponses de Cyril *(14/09, 15 h 44)*
@@ -343,4 +345,62 @@ qu'une table : deux endroits qui racontent la même chose finiraient par ne plus
 
 ## Réalisation
 
-*(à compléter après le développement : fichiers touchés, commits)*
+Développée le 2026-09-15, avec #69 (écran commun) — commits `186492a` et `d0e941d`.
+**La migration est à jouer par Cyril** : sans elle, l'onglet « Vérification des billets » nomme le
+script et ne fait rien d'autre.
+
+| Où | Ce qui est fait |
+|---|---|
+| `scripts/migration-demande-66-2-verification-billets.sql` *(gitignoré, poste de Cyril)* | Les deux tables et leur RLS (lecture admins actifs, **aucune** policy d'écriture) ; `importer_billets_apercu()`, `importer_billets()`, `decider_ligne_import_billet()`, `compteurs_import_billets()` ; D12 assoupli ; contrôle final |
+| `admin-qualite-billets.html` / `.js`, `style.css`, `menu.html` | L'onglet « Vérification des billets » de l'écran « Qualité des billets » (voir #69) |
+| `admin.js` | Fiche billet : la variante **jamais renseignée** n'est plus figée sur un billet collecté |
+| `scripts/import-billets.mjs` *(versionné par exception)* | `apercu` puis `importer`, d'un fichier **normalisé**, par le Worker |
+| `sw.js`, `global.js` | Cache `billets-v310`, menu `v202` |
+
+### Ce que le développement a précisé
+
+- **L'entrée des fonctions est un fichier normalisé**, une entrée par ligne du fichier d'origine :
+  clé, `normale` (vrai / faux / rien), `variante` (N / A / D / rien), `champs` facultatifs pour un
+  billet à créer, `origine`. Le format est décrit en tête de `import-billets.mjs`. **Regrouper par
+  clé est fait en base** : vraie si une ligne dit que la version normale existe, fausse si une ligne
+  dit que non et aucune le contraire ; une seule variante, sinon `ambigu`. Un élément qui n'est pas un
+  objet JSON est refusé *(trouvé sur banc : il se serait rangé sous une clé vide, en silence)*.
+- **La clé est normalisée** : majuscules et espaces retirés pour la référence et la version, espaces
+  retirés pour le millésime. « zzqa » et « ZZQA » sont la même clé ; la fiche créée garde ce qu'a
+  écrit le fichier.
+- **Qui a le droit** : `qualite_billets_autorise()` — un admin ou superadmin **actif** ; l'éditeur SQL
+  (reconnu à sa connexion, qui n'est pas celle de l'API) ; la clé de service du Worker. Même fonction
+  pour #69.
+- **Garde d'empreinte sur D12** : la migration s'arrête avant d'avoir rien créé si la fonction en base
+  n'est ni celle de #16 ni celle-ci — la remplacer effacerait une modification que personne n'aurait vue.
+- **Un billet à créer dont le fichier ne dit rien de la version normale** est proposé avec la version
+  normale « existe » (la valeur par défaut de la fiche), et le motif le dit. Un fichier qui décrit un
+  billet n'existant sous aucune forme donne `ambigu`, pas une création.
+- **Accepter sur une fiche modifiée depuis l'import** : rien n'est écrit, l'instantané est rafraîchi et
+  le motif dit ce qui a changé ; un second clic, après relecture, applique. Si la fiche a entre-temps
+  été corrigée **exactement comme le fichier le proposait**, la ligne passe « traitée » d'elle-même.
+- **Accepter un billet à créer** alors qu'une fiche porte désormais la clé : rien n'est créé, « à revoir ».
+- **Refus repris au réimport** : seuls les refus **d'un admin** servent de référence (source comparée
+  sans casse ni espaces). Le commentaire d'origine est recopié.
+- **Fiche billet** : la valeur d'origine de la variante reste notée même quand le champ n'est plus figé,
+  pour que choisir « Doré » recalcule les pré-inscriptions comme après « Modifier quand même ».
+
+**Limite connue, laissée volontairement** : deux imports successifs d'une même source peuvent laisser
+deux lignes « à décider » pour la même clé (une par import). La seconde décision sur une fiche déjà
+changée tombe sur « à revoir » : pas de dégât, un clic de plus. À traiter si ça arrive vraiment.
+
+### Vérifié
+
+Postgres 17 jetable chargé des **vraies données** (5 520 billets, 5 374 collectes, 5 450 inscriptions,
+lues par le Worker), triggers de #16 repris du fichier de migration :
+
+- **74/74 essais** : D12 assoupli (13 cas, dont 17 billets réellement protégés à variante non
+  renseignée), droits (anonyme, membre, admin inactif, admin avec casse différente, superadmin, clé de
+  service, éditeur SQL ; écriture directe sans effet), import (15 clés, chaque type d'écart, les cinq
+  conditions), décisions (accepter, bloqué par D12, refuser, ambigu, fiche modifiée, déjà corrigée,
+  création, double clic), réimport ;
+- **volume** : un fichier de 8 779 lignes sur 5 854 clés importé en 1,2 s (aperçu 0,8 s), réimport
+  identique ; migration rejouée sans effet ; migrations #66 et #69 dans les deux ordres ;
+- **écran** : voir #69 (banc navigateur sur un vrai PostgREST, 59/59) ; fiche billet 9/9.
+
+**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; la migration sur la vraie base.

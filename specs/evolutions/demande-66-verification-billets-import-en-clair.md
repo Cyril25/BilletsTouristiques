@@ -4,6 +4,35 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
 > Reflète la version technique du commit `a097f86` (14/09/2026, après la deuxième série de réponses de Cyril).
+> La section « Ce qui est livré » reflète le développement du 15/09 (commits `186492a` et `d0e941d`).
+
+## Ce qui est livré *(15/09)*
+
+**L'écran existe** : menu **Administration → Qualité des billets**, onglet **« Vérification des
+billets »**, à côté des incohérences de #69. Il ne sera utilisable qu'une fois la mise à jour de la
+base installée par Cyril, et **il restera vide jusqu'au premier fichier** : la lecture de la première
+source se fera avec Cyril, quand elle arrivera.
+
+**Une chose change dès maintenant, sans aucun fichier.** Sur la fiche d'un billet déjà collecté, la
+variante était figée, même jamais renseignée. Elle peut maintenant être **choisie**, si elle n'a
+jamais été saisie. Deux limites, voulues :
+
+- « pas de variante » reste refusé si des variantes de ce billet ont déjà été collectées ;
+- une variante **déjà renseignée** reste figée, comme avant.
+
+**Ce qui a été précisé en le construisant :**
+
+- si la fiche a été **modifiée entre l'import et votre décision**, rien n'est écrasé : la ligne vous
+  montre les nouvelles valeurs, et c'est seulement au second clic, après relecture, que la correction
+  se fait. Si quelqu'un a déjà corrigé la fiche exactement comme le fichier le proposait, la ligne se
+  range toute seule dans « rien à faire » ;
+- un **nouveau billet** dont le fichier ne dit pas s'il existe en version normale est proposé comme
+  existant (c'est le réglage par défaut d'une fiche), et la ligne le signale ;
+- un cas **ambigu** (doublon, ligne illisible) ne s'accepte pas : on corrige à la main dans Gestion
+  Billets, puis on refuse la ligne en disant ce qui a été fait.
+
+**Ce qu'il faudra regarder** : la variante d'un billet collecté qui se complète dans sa fiche ; et, au
+premier fichier, l'écran sur téléphone et en mode sombre.
 
 ## Ce qui a changé depuis la première version
 
