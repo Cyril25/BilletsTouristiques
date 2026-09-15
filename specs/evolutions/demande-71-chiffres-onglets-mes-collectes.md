@@ -43,6 +43,10 @@ Trois défauts voisins, trouvés en lisant le même chemin :
    manquante d'un membre qui a des billets à répartir, et annule les enveloppes vides — et, s'il ne
    trouve **aucune** enveloppe `en_cours`, il s'arrête sur « Aucune enveloppe en cours » sans rien
    créer. Le chiffre affiché après ouverture est celui d'après ces effets.
+4. **Préparation des envois compte des enveloppes qu'il n'affiche pas.** Le chiffre est
+   `enveloppes.length`, écrit **avant** le tri en trois groupes ; or le tri masque une enveloppe dont
+   les billets comptés (`countBillets()`, périmètre de versions #46) font 0 dedans et 0 à répartir.
+   Quand toutes sont masquées, l'onglet dit « Aucune enveloppe en cours » et garde son chiffre.
 
 **Volumes mesurés le 15/09** (lecture seule) : le plus gros collecteur a 1 654 billets,
 1 710 inscriptions (`pas_interesse = false`) et 50 enveloppes en cours. Aucun plafond de lignes côté
@@ -71,15 +75,19 @@ Une fonction de comptage par onglet, **pure**, appelée à l'arrivée **et** par
   inscriptions `declare` ; enveloppes `statut_paiement_port = declare` avec `prix_envoi_reel > 0` ;
   dettes `declare` avec `montant > 0` (un avoir ne se vérifie pas, il se solde). Les inscriptions
   reçues sont déjà réduites à mes collectes et à `pas_interesse = false`.
-- `nbEnveloppesAPreparer(enveloppesEnCours, inscriptions)` — reproduit le résultat des effets de bord
-  de `loadEnveloppes()` **sans les exécuter** : 0 s'il n'y a aucune enveloppe en cours ; sinon les
-  enveloppes gardées (au moins une inscription `pret_a_envoyer` dedans, ou un membre qui a des
-  inscriptions à répartir) **plus** celles qui seraient créées (membre à répartir sans enveloppe en
-  cours). Les inscriptions du collecteur bénéficiaire ne sont pas écartées : `loadEnveloppes()` ne les
-  écarte pas.
+- `nbEnveloppesAPreparer(enveloppesEnCours, inscriptions, billetsMap)` — le nombre d'enveloppes
+  **affichées** par l'onglet (défaut 4), en reproduisant le résultat des effets de bord de
+  `loadEnveloppes()` **sans les exécuter** : 0 s'il n'y a aucune enveloppe en cours ; sinon chaque
+  enveloppe en cours dont `countBillets()` donne plus de 0 dedans (inscriptions `pret_a_envoyer` de ce
+  membre dans cette enveloppe) ou à répartir (inscriptions `non_reparti` / nulles du membre), **plus**
+  une par membre à répartir sans enveloppe en cours, si ses billets à répartir comptent plus de 0 (son
+  enveloppe serait créée puis affichée). Une enveloppe qui serait annulée ne passe jamais ce test : ses
+  deux listes sont vides. Les inscriptions du collecteur bénéficiaire ne sont pas écartées :
+  `loadEnveloppes()` ne les écarte pas.
 
-L'onglet « Préparation des envois » ouvert garde son `enveloppes.length`, calculé après les effets de
-bord réels : le banc vérifie que les deux coïncident.
+L'onglet ouvert écrit désormais son chiffre **après** le tri en groupes : la somme des trois groupes,
+0 quand il bascule sur « Aucune enveloppe en cours ». Le banc vérifie que le comptage d'arrivée donne
+le même nombre que l'onglet, effets de bord réels compris.
 
 ### D4 — Compter sans rien recharger
 
@@ -96,21 +104,24 @@ l'onglet, comme aujourd'hui.
 ### D5 — Un chiffre à zéro disparaît
 
 Une seule fonction écrit le libellé d'un onglet (`majBadgeOnglet()`), badge omis à zéro. Elle est
-appelée aussi par `renderPaiementsVide()` et `renderEnveloppesVide()` (défaut 1).
+appelée aussi par `renderPaiementsVide()` et `renderEnveloppesVide()` (défauts 1 et 4).
 
 ### D6 — L'onglet ouvert a le dernier mot
 
 Si l'utilisateur ouvre un onglet pendant que le comptage d'arrivée est en route, le chiffre de
 l'onglet, calculé sur des données plus fraîches, ne doit pas être écrasé. Chaque écriture d'un badge
-incrémente un compteur par onglet ; le comptage d'arrivée relève ces compteurs **au début de
-`loadMesCollectes()`** et n'écrit pas un badge qu'un onglet a écrit entre-temps.
+**par un onglet ouvert** incrémente un compteur par onglet ; le comptage d'arrivée relève ces
+compteurs **au début de `loadMesCollectes()`** et n'écrit pas un badge qu'un onglet a écrit
+entre-temps. Ses propres écritures n'incrémentent rien : deux rechargements rapprochés de la liste ne
+se bloquent pas l'un l'autre.
 
 ## Critères d'acceptation
 
 1. En arrivant sur « Mes collectes » avec un paiement déclaré en attente, « Vérification paiement »
    porte son chiffre, dans sa couleur d'alerte habituelle, sans avoir été ouvert.
 2. Avec des enveloppes à préparer, « Préparation des envois » porte son chiffre sans avoir été ouvert.
-3. Ouvrir l'onglet ne change pas le chiffre.
+3. Ouvrir l'onglet ne change pas le chiffre, et le chiffre de « Préparation des envois » est le
+   nombre d'enveloppes que l'onglet affiche.
 4. Valider le dernier paiement déclaré fait disparaître le chiffre ; envoyer la dernière enveloppe
    aussi.
 5. « Historique des envois » et « Liste noire » n'ont pas de chiffre.
