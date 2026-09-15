@@ -1693,14 +1693,14 @@
     // 17. HELPERS
     // ============================================================
 
-    var QR_OVERLAY = 'l_fetch:aHR0cHM6Ly9hcGkucXJzZXJ2ZXIuY29tL3YxL2NyZWF0ZS1xci1jb2RlLz9zaXplPTE1MHgxNTAmZGF0YT1odHRwczovL2N5cmlsMjUuZ2l0aHViLmlvL0JpbGxldHNUb3VyaXN0aXF1ZXM=,w_0.1,x_0.088,fl_relative,g_west,o_70';
+    // Demande #73 — plus de QR code posé sur l'image : seule la réduction reste.
     function resolveImageUrl(item, size) {
         if (item.ImageUrl) {
-            return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/');
+            return item.ImageUrl.replace('/upload/', '/upload/f_auto,q_auto,w_' + (size || 800) + '/');
         }
         if (item.ImageId) {
             var driveUrl = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.ImageId) + '&sz=w' + (size || 800);
-            return 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_' + (size || 800) + '/' + QR_OVERLAY + '/' + encodeURIComponent(driveUrl);
+            return 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_' + (size || 800) + '/' + encodeURIComponent(driveUrl);
         }
         return '';
     }

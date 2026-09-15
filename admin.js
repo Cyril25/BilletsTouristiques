@@ -3663,15 +3663,14 @@ function openShareModal(billetId) {
     textTopEl.textContent = topLines.join('\n');
 
     // Image du billet — pour l'aperçu Facebook on partage l'URL Cloudinary
-    // avec l'overlay QR appliqué (image protégée + scrapable par FB)
+    // (scrapable par FB). Demande #73 : plus de QR code posé dessus.
     var imgUrl = billet.ImageUrl || '';
     var imgUrlForCopy = '';
-    var QR_OVERLAY_SHARE = 'l_fetch:aHR0cHM6Ly9hcGkucXJzZXJ2ZXIuY29tL3YxL2NyZWF0ZS1xci1jb2RlLz9zaXplPTE1MHgxNTAmZGF0YT1odHRwczovL2N5cmlsMjUuZ2l0aHViLmlvL0JpbGxldHNUb3VyaXN0aXF1ZXM=,w_0.1,x_0.088,fl_relative,g_west,o_70';
     if (imgUrl && imgUrl.indexOf('cloudinary.com') !== -1) {
-        imgUrlForCopy = imgUrl.replace('/upload/', '/upload/f_auto,q_auto,w_1200/' + QR_OVERLAY_SHARE + '/');
+        imgUrlForCopy = imgUrl.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
     } else if (billet.ImageId) {
         var driveUrl = 'https://lh3.googleusercontent.com/d/' + billet.ImageId;
-        imgUrlForCopy = 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_1200/' + QR_OVERLAY_SHARE + '/' + encodeURIComponent(driveUrl);
+        imgUrlForCopy = 'https://res.cloudinary.com/dxoyqxben/image/fetch/f_auto,q_auto,w_1200/' + encodeURIComponent(driveUrl);
     }
     if (imgUrlForCopy) {
         imgEl.src = imgUrlForCopy;
