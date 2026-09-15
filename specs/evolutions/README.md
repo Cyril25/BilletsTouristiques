@@ -107,6 +107,7 @@ qui n'est plus vrai.
 | [#68 (prod)](demande-68-tour-analyse-a-valider.md) | Gestion des demandes : savoir qui doit agir sur une analyse à valider ([en clair](demande-68-tour-analyse-a-valider-en-clair.md)) | S | À tester — complément après tests (étiquette par personne) | ✅ | `7166263`, `1099d79` |
 | [#69 (prod)](demande-69-incoherences-billets.md) | L'écran « Incohérences des billets » : un catalogue de contrôles et un lien vers chaque fiche ([en clair](demande-69-incoherences-billets-en-clair.md)) | L | Analyse à valider | ✅ | — |
 | [#67 (prod)](demande-67-fichiers-joints-demande.md) | Joindre des fichiers de données à une demande ([en clair](demande-67-fichiers-joints-demande-en-clair.md)) | L | À tester — pas de pièce jointe : le chemin du fichier est écrit dans la demande ; règle ajoutée à la convention | ✅ | `72bd23d` |
+| [#70 (prod)](demande-70-billet-dans-modale-collecte.md) | La fenêtre d'une collecte rappelle de quel billet il s'agit ([en clair](demande-70-billet-dans-modale-collecte-en-clair.md)) | S | À tester | ✅ | `f66242a` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

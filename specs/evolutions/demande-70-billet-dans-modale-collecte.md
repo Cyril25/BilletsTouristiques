@@ -71,4 +71,20 @@ remplie, les deux cas en profitent.
 
 ## Réalisation
 
-*À compléter.*
+Développée le 2026-09-15 — commit `f66242a`.
+
+| Fichier | Ce qui change |
+|---|---|
+| `admin-billet.html` | Bloc `#collecte-modal-billet` (miniature + libellé) entre l'en-tête de la modale et le premier champ ; la modale y renvoie par `aria-describedby` |
+| `admin.js` | `remplirBilletCollecteModal()`, appelée en tête d'`ouvrirCollecteModalUI()` : libellé par `libelleBilletComplet()` depuis les champs du formulaire, image reprise de `#image-preview` s'il est visible (D3) |
+| `style.css` | `.collecte-modal-billet`, `-img` (72 × 40, `contain`), `-libelle` (`overflow-wrap: anywhere`) ; jetons de thème, définis en clair et en sombre |
+| `sw.js` | `CACHE_NAME` : `billets-v307` → `billets-v308` |
+
+**Vérifié** : `node --check` ; banc jsdom sur la vraie `admin-billet.html` et les vraies fonctions
+d'`admin.js`, **14/14** — modification avec image (titre inchangé, libellé, image), ajout sans image
+juste après un billet qui en avait une (pas de reste), version vide (pas de tiret orphelin), nom et
+image changés sans enregistrer (la fenêtre suit la fiche), ligne masquée quand il n'y a rien, position
+entre l'en-tête et le premier champ.
+
+**Pas encore vérifié** : le rendu dans un vrai navigateur, en mode sombre et sur téléphone
+(critères 4 et 5). `menu.html` non touché : pas de bump du `?v=` de `global.js`.
