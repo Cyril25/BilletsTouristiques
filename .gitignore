@@ -36,6 +36,11 @@ scripts/*
 # renvoie, et que c'est lui qui borne ce que la boucle a le droit de faire.
 !scripts/rituel-demandes.mjs
 
+# Exception — l'outil d'import des billets de la demande #66. Sans donnée ni secret
+# (la clé est lue dans ~/.claude/secrets/, les fichiers importés restent hors dépôt).
+# Versionné parce que la spec #66 y renvoie pour tout import futur.
+!scripts/import-billets.mjs
+
 # Documentation vide
 docs/
 

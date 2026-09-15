@@ -1563,19 +1563,31 @@ function openBilletPanel(billetData, docId) {
                         cbNormale.classList.add('admin-field-frozen');
                         cbNormale.dataset.frozenValue = cbNormale.checked ? '1' : '0';
                     }
-                    // Gel de HasVariante
+                    // Gel de HasVariante — sauf si elle n'a jamais été renseignée.
+                    // Demande #66 : la base accepte désormais une PREMIÈRE déclaration de la
+                    // variante sur un billet collecté, si aucune inscription ne la contredit
+                    // (le trigger D12 refuse « pas de variante » quand des variantes ont été
+                    // collectées, avec un message clair). Changer une valeur déjà saisie reste figé.
+                    // frozenValue est posée dans les deux cas : c'est elle qui permet à la
+                    // soumission de détecter le changement de type et de recalculer les
+                    // pré-inscriptions (reconcilierTypeChangement), comme après « Modifier quand même ».
                     var hasVarianteEl = document.getElementById('field-has-variante');
+                    var varianteACompleter = hasVarianteEl && !hasVarianteEl.value;
                     if (hasVarianteEl) {
-                        hasVarianteEl.disabled = true;
-                        hasVarianteEl.classList.add('admin-field-frozen');
                         hasVarianteEl.dataset.frozenValue = hasVarianteEl.value || '';
+                        if (!varianteACompleter) {
+                            hasVarianteEl.disabled = true;
+                            hasVarianteEl.classList.add('admin-field-frozen');
+                        }
                     }
                     // Message d'avertissement sur la section Type, avec lien de déverrouillage admin
                     var typeLegend = cbNormale && cbNormale.closest('fieldset');
                     if (typeLegend && !typeLegend.querySelector('.type-frozen-hint')) {
                         var typeHint = document.createElement('small');
                         typeHint.className = 'type-frozen-hint';
-                        typeHint.textContent = 'Type figé — des inscriptions existent pour ce billet. ';
+                        typeHint.textContent = varianteACompleter
+                            ? 'Type figé — des inscriptions existent pour ce billet. La variante, jamais renseignée, peut être complétée. '
+                            : 'Type figé — des inscriptions existent pour ce billet. ';
                         var unlockLink = document.createElement('a');
                         unlockLink.href = '#';
                         unlockLink.className = 'type-frozen-unlock';
