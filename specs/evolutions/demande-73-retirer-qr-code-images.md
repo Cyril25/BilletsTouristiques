@@ -70,4 +70,23 @@ Facebook gardent leur QR : c'est hors d'atteinte.
 
 ## Réalisation
 
-*À compléter après le développement.*
+Développée le 2026-09-15 — commit `316cdf2` (spec `b544321`).
+
+| Fichier | Ce qui change |
+|---|---|
+| `app-new.js` | `QR_OVERLAY` supprimée ; `resolveImageUrl()` garde `f_auto,q_auto,w_<taille>` sans la couche |
+| `ma-collection.js` | Idem (copie locale de `resolveImageUrl()`) |
+| `billet.js` | `getQrUrl()`, `burnQrIntoImage()`, `SITE_BASE` et `QR_REF_*` supprimés ; `renderBillet()` pose l'URL de `resolveImageUrl(b, 1000)` sur l'`<img>` |
+| `billet.html` | `api.qrserver.com` retiré de `img-src` ; méta description sans « QR code » |
+| `admin.js` | Fenêtre « Partager » : `QR_OVERLAY_SHARE` supprimée, image en `w_1200` sans couche |
+| `sw.js` | `CACHE_NAME` : `billets-v310` → `billets-v311` |
+
+**Vérifié** : `node --check` sur les quatre JS ; banc Node **30/30** sur les fonctions réellement
+présentes dans les fichiers (extraites, pas recopiées), appliquées à deux vrais billets — `#5604`
+(image Cloudinary) et `#5292` (image Drive seule) : aucune URL ne porte plus de couche, la réduction
+attendue est conservée (800 / 1000 / 1200), et **Cloudinary répond 200** (`image/jpeg`) pour chacune des
+huit URLs. Plus aucune mention de `l_fetch`, `qrserver` ni QR dans les cinq fichiers ; `partager.js`
+garde la sienne (critère 6).
+
+**Pas encore vérifié** : le rendu dans un vrai navigateur (dont « Enregistrer sous » sur la fiche) et
+sur téléphone. `menu.html` non touché : pas de bump du `?v=` de `global.js`.
