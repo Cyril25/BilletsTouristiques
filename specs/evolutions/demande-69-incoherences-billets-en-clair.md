@@ -8,21 +8,22 @@
 
 ## Ce qui est livré *(15/09)*
 
-L'écran existe : menu **Administration → Qualité des billets**, onglet **« Incohérences »**. Il
-n'est pas encore utilisable : Cyril doit d'abord installer la mise à jour de la base de données.
+L'écran existe : menu **Administration → Qualité des billets**, onglet **« Incohérences »**. La mise à
+jour de la base est installée depuis le 15/09 à 16 h 07 : **l'écran est utilisable**, et la demande est
+« À tester ».
 
 **Ce que vous y verrez.** En haut, chaque contrôle avec son nombre de cas, rangés par famille (le type
 de billet, la photo, les dates, les collectes, le reste). Un clic sur un contrôle affiche ses cas, 50
 par 50. L'écran ouvre d'abord les erreurs franches (« faux ») avant les informations manquantes : sans
 ça, les milliers de variantes non renseignées cacheraient les six dates dans le désordre.
 
-**Les chiffres au premier passage**, sur les données du 15/09 :
+**Les chiffres au premier passage**, en production le 15/09 :
 
 | Contrôle | Cas |
 |---|---|
 | Variante non renseignée | 5 143 |
-| Collecte sans prix | 1 152 |
-| Collecte sans collecteur | 423 |
+| Collecte sans prix | 1 153 |
+| Collecte sans collecteur | 424 |
 | Même référence, millésime et version sur plusieurs fiches | 242 |
 | Billet sans image | 76 |
 | Statut de collecte sans la date qui va avec | 59 |
@@ -41,9 +42,9 @@ par 50. L'écran ouvre d'abord les erreurs franches (« faux ») avant les infor
   millésime : elles sont déjà comptées dans « référence, millésime ou version manquant ».
 - **« Collecte sans prix »** ne compte pas une collecte réservée aux variantes qui a un prix variante.
 
-**Ce qu'il faudra regarder**, une fois la base à jour : que la liste s'affiche bien sur téléphone et en
-mode sombre ; qu'une fiche corrigée disparaisse après « Relancer la vérification » ; et si les 1 152
-collectes sans prix sont bien des anciennes collectes — si oui, ce contrôle est à ajuster, comme
+**Ce qu'il faut regarder** : que la liste s'affiche bien sur téléphone et en mode sombre ; qu'une fiche
+corrigée disparaisse après « Relancer la vérification » ; et si les 1 153 collectes sans prix sont bien
+des anciennes collectes — si oui, ce contrôle est à ajuster, comme
 Cyril l'avait prévu.
 
 ## Ce qui a changé depuis la première version

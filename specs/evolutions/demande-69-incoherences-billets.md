@@ -4,7 +4,8 @@
 - **Demande :** #69, déposée par Cyril le 2026-09-14, priorité normale. Née de #66 (question Q7).
 - **Statut :** analyse écrite le 2026-09-14, reprise le 2026-09-15 après les réponses de Cyril. Plus
   aucune question ouverte. **Validée par Cyril le 15/09, développée le même jour** avec #66
-  (commit `d0e941d`) : voir « Réalisation ». **Migration à jouer par Cyril.**
+  (commit `d0e941d`) : voir « Réalisation ». Migration jouée le 15/09 à 16 h 07 (7 176 constats),
+  contrôle 13/13, **À tester** le même jour.
 - Version en clair pour les relecteurs : `demande-69-incoherences-billets-en-clair.md`.
 
 ## Les réponses de Cyril *(15/09, 10 h 50)*
@@ -238,8 +239,10 @@ valeur » est une proposition nouvelle du 15/09 ; un relecteur qui n'en veut pas
 
 ## Réalisation
 
-Développée le 2026-09-15, avec #66 (écran commun) — commit `d0e941d`. **La migration est à jouer par
-Cyril** : sans elle, l'onglet « Incohérences » nomme le script.
+Développée le 2026-09-15, avec #66 (écran commun) — commit `d0e941d`. **Migration jouée en production
+le 15/09 à 16 h 07** par l'assistant (psql, VPN coupé par Cyril) : première vérification **7 176
+constats en 1,3 s** (dans la transaction de création ; 2 de plus qu'au banc du matin : D1 424, D3 1 153).
+Contrôle en lecture seule 13/13 et passage « À tester » : voir la réalisation de #66, mêmes scripts.
 
 | Où | Ce qui est fait |
 |---|---|
@@ -286,4 +289,5 @@ mêmes données). E1 : 26 billets en « Angleterre », absent de la liste des pa
   accepter / rouvrir, relance, décisions et journal de #66, membre qui force l'adresse, nom de billet
   piégé en HTML affiché comme du texte ; aucune erreur de script.
 
-**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; la migration sur la vraie base.
+**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; le temps d'une relance depuis
+l'écran en production (1,3 s pour la première, qui créait tout ; le plafond du rôle anon est de 3 s).

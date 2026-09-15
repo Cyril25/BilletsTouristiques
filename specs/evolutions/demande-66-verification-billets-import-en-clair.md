@@ -9,9 +9,9 @@
 ## Ce qui est livré *(15/09)*
 
 **L'écran existe** : menu **Administration → Qualité des billets**, onglet **« Vérification des
-billets »**, à côté des incohérences de #69. Il ne sera utilisable qu'une fois la mise à jour de la
-base installée par Cyril, et **il restera vide jusqu'au premier fichier** : la lecture de la première
-source se fera avec Cyril, quand elle arrivera.
+billets »**, à côté des incohérences de #69. La mise à jour de la base est installée depuis le 15/09 à
+16 h 07 et la demande est « À tester ». **L'onglet restera vide jusqu'au premier fichier** : la lecture
+de la première source se fera avec Cyril, quand elle arrivera.
 
 **Une chose change dès maintenant, sans aucun fichier.** Sur la fiche d'un billet déjà collecté, la
 variante était figée, même jamais renseignée. Elle peut maintenant être **choisie**, si elle n'a

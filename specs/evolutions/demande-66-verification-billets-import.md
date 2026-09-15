@@ -17,7 +17,7 @@
   le pays (Q3) ; et l'**assouplissement de la protection est retenu** (Q4). L'écran d'incohérences
   est déposé comme demande **#69** (Q7). Plus aucune question ouverte : l'analyse est validable.
 - **Analyse validée par Cyril le 14/09. Développée le 15/09** avec #69 (commits `186492a`, `d0e941d`) :
-  voir « Réalisation ». **Migration à jouer par Cyril** avant tout usage.
+  voir « Réalisation ». Migration jouée le 15/09 à 16 h 07, contrôle 13/13, **À tester** le même jour.
 - Version en clair pour les relecteurs : `demande-66-verification-billets-import-en-clair.md`.
 
 ## Les réponses de Cyril *(14/09, 15 h 44)*
@@ -346,8 +346,12 @@ qu'une table : deux endroits qui racontent la même chose finiraient par ne plus
 ## Réalisation
 
 Développée le 2026-09-15, avec #69 (écran commun) — commits `186492a` et `d0e941d`.
-**La migration est à jouer par Cyril** : sans elle, l'onglet « Vérification des billets » nomme le
-script et ne fait rien d'autre.
+**Migration jouée en production le 15/09 à 16 h 07** par l'assistant (psql, Session pooler, VPN coupé
+par Cyril) : la garde d'empreinte a reconnu la D12 de #16, contrôle final conforme. Puis contrôle en
+lecture seule joué par Cyril, `scripts/migration-demande-66-69-3-controle.sql` : **13/13** (l'API se
+connecte bien en `authenticator`, 5 policies en lecture seule par la fonction de droits, RLS active,
+toutes les fonctions vérifient l'appelant). Passage « À tester », notification et annonce aux admins par
+`scripts/migration-demande-66-69-4-a-tester.sql`.
 
 | Où | Ce qui est fait |
 |---|---|
@@ -403,4 +407,5 @@ lues par le Worker), triggers de #16 repris du fichier de migration :
   identique ; migration rejouée sans effet ; migrations #66 et #69 dans les deux ordres ;
 - **écran** : voir #69 (banc navigateur sur un vrai PostgREST, 59/59) ; fiche billet 9/9.
 
-**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; la migration sur la vraie base.
+**Non vérifié** : vrai navigateur, téléphone, mode sombre à l'œil ; un import réel (attend la première
+source).
