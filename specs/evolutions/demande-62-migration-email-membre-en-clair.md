@@ -5,9 +5,51 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `7dd4e4d` (14/09/2026).
+> Reflète la version technique du commit `3caf68e` (16/09/2026).
 
-## Ce qui a changé
+## Où on en est (16 septembre)
+
+**L'analyse a été validée par Cyril le 15 septembre**, et les quatre recommandations de la fin de ce
+document sont retenues. **Le développement a commencé le 16.**
+
+Les deux premières étapes sont prêtes et ont été essayées sur une copie fidèle du site et de sa base :
+
+- **Préparer** (étape 0). Le site sait désormais tenir à l'écart un compte **désactivé** : il n'apparaît
+  plus dans les listes où l'on choisit un membre (inscrire quelqu'un à une collecte, la liste noire d'un
+  collecteur, les pré-inscriptions, les annonces), mais son nom reste affiché sur ses anciennes
+  inscriptions. Dans Gestion Membres, un nouveau filtre « Désactivés » les regroupe. Et un membre
+  désactivé qui essaie de se connecter voit un message clair, au lieu d'une page vide.
+  Côté base, on crée une fiche désactivée pour l'assistant et une pour chacune des **dix** adresses
+  fantômes (elles s'afficheront « Ancien membre »).
+- **Ajouter les numéros** (étape 1). Chaque membre reçoit son numéro, et chaque inscription, enveloppe,
+  collection… reçoit le numéro de son membre, **à côté** de l'adresse. Rien n'est retiré, rien ne change
+  à l'écran. Sur la copie, on a vérifié qu'aucune donnée ne bouge d'un octet, et que tout ce que fait le
+  site aujourd'hui (s'inscrire, déclarer un paiement, créer une enveloppe, marquer une annonce comme
+  lue…) continue de fonctionner.
+
+**Rien n'est encore visible en ligne.** Les étapes suivantes — faire passer les règles d'accès par le
+numéro, reprendre les écrans un par un, retirer les adresses recopiées, puis le bouton « Changer
+l'adresse » — restent à écrire.
+
+### Deux points tranchés en cours de route
+
+1. **Deux inscriptions n'appartenaient à personne.** Leur « membre » était le texte « pour 2024 », un
+   reste de l'import de mars (deux billets de 2024, jamais payés ni envoyés). Impossible de leur donner
+   un numéro : **Cyril a décidé de les supprimer.**
+2. **Une erreur corrigée dans l'analyse.** Elle prévoyait, quand on supprime un membre, de garder ses
+   annonces personnelles en effaçant leur destinataire. Or une annonce sans destinataire est montrée à
+   **tout le monde** : un message privé (un complément de paiement, par exemple) serait devenu public.
+   Ses annonces personnelles partent donc avec lui.
+
+### Ce qui change dès l'étape 1 pour les admins
+
+**Supprimer un membre qui a des données devient impossible** : la base le refuse, et Gestion Membres
+dit ce qui bloque (« ce membre a encore des données : enveloppes »). C'est voulu — c'est comme cela
+que des adresses fantômes sont nées. Le bouton « Désactiver », qui remplacera la suppression dans ce
+cas, arrive avec la dernière étape. D'ici là, on ne supprime que les fiches vides, comme une demande
+d'accès restée sans suite.
+
+## Ce qui a changé le 14 septembre
 
 Ce document a été **réécrit le 14 septembre**. La version précédente proposait de faire suivre
 l'adresse d'un membre partout où elle est recopiée. **Cyril a choisi une autre voie** : donner à chaque
@@ -97,7 +139,9 @@ suite.
   membres.
 - **Prévenir le membre** du changement.
 
-## Ce sur quoi on vous demande de vous prononcer
+## Ce sur quoi on vous demandait de vous prononcer
+
+**Validé le 15 septembre : les quatre recommandations sont retenues.**
 
 1. **Avancer par petites étapes** plutôt que tout faire le même jour ? On le recommande.
 2. **L'assistant** : lui créer une fiche de membre « technique », désactivée et sans aucun droit, pour
@@ -109,5 +153,5 @@ suite.
    personne au moment de l'action. Après un changement d'adresse, l'ancienne y resterait. Acceptable
    pour un historique ? On le pense.
 
-Si tout vous va, cochez « J'ai lu et je valide l'analyse » sur la fiche. Sinon, laissez un
-commentaire : vous aurez une réponse disant ce qui en a été fait.
+Une remarque reste bienvenue : laissez un commentaire sur la fiche, vous aurez une réponse disant ce
+qui en a été fait.
