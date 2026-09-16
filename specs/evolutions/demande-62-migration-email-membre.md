@@ -30,6 +30,10 @@
 > (Q2), pas de notification (Q3), la fusion de comptes hors périmètre, et le correctif de
 > `is_admin_ou_superadmin()` sur le statut.
 >
+> **Validée par Cyril le 2026-09-15**, sans objection aux questions Q8 à Q11 : leurs recommandations
+> sont retenues. **Développement ouvert le 2026-09-16** : les étapes 0 et 1 sont écrites et éprouvées
+> sur un banc identique à la production. Voir « Réalisation ».
+>
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
 > Demande déposée par Cyril le 2026-09-10, écran visé : **Gestion Membres** (`users.html`).
@@ -75,6 +79,32 @@ Le classement du 10/09 tient (voir « Classement des 20 colonnes », plus bas) :
 | **Appartenance** (16) | `inscriptions.membre_email`, `inscriptions_auto.membre_email`, `inscriptions_auto_pays.membre_email`, `collection.membre_email`, `dettes.membre_email`, `enveloppes.membre_email`, `collecteurs.email_membre`, `collecteur_blacklist.membre_email`, `membre_blocages.membre_email`, `notifications_vues.membre_email`, `contacts_collecteur.proprietaire_email`, `demandes.demandeur`, `demande_commentaires.auteur_email`, `demande_validations.admin_email`, `signalements.auteur_email`, `notifications.cible_email` | `membre_id` (ou un nom qui dit le rôle : `auteur_id`, `demandeur_id`…), clé étrangère vers `membres.id`. La colonne d'adresse **disparaît** en fin de migration |
 | **Trace** (4) | `inscriptions.changed_by`, `membre_blocages.bloque_by`, `signalements.traite_par`, `membres.validated_by` | **Q8** : garder le texte (c'était l'adresse au moment de l'action), ou ajouter un identifiant quand l'auteur est un membre |
 | **Pas un membre** | `contacts_collecteur.email`, `collecteurs.paypal_email` | Inchangées |
+
+*Complété le 2026-09-16 (export du catalogue de la production).* Quatre colonnes de **trace** sont nées
+depuis le relevé du 10/09, avec #66 et #69 : `controles_billets.decide_par`,
+`controles_billets_verifications.lancee_par`, `imports_billets.importe_par`,
+`imports_billets_lignes.decide_par`. Elles gardent leur texte, comme les quatre autres (Q8).
+
+**Les noms retenus au développement** (étape 1) :
+
+| Table | Adresse | Numéro | Obligatoire | Si le membre est supprimé |
+|---|---|---|---|---|
+| `inscriptions`, `inscriptions_auto`, `inscriptions_auto_pays`, `collection`, `dettes`, `enveloppes` | `membre_email` | `membre_id` | oui | refusé |
+| `collecteurs` | `email_membre` | `membre_id` | non (65 collecteurs sans membre) | refusé |
+| `collecteur_blacklist`, `membre_blocages` | `membre_email` | `membre_id` | oui | la ligne part avec lui (comme leur clé actuelle) |
+| `notifications_vues` | `membre_email` | `membre_id` | oui | la ligne part avec lui (simple marqueur) |
+| `contacts_collecteur` | `proprietaire_email` | `proprietaire_id` | oui | refusé |
+| `demandes` | `demandeur` | `demandeur_id` | non (13 demandes importées) | refusé |
+| `demande_commentaires` | `auteur_email` | `auteur_id` | oui | refusé |
+| `demande_validations` | `admin_email` | `admin_id` | oui | refusé |
+| `signalements` | `auteur_email` | `auteur_id` | oui | refusé |
+| `notifications` | `cible_email` | `cible_membre_id` | non (annonces à un groupe) | l'annonce part avec lui |
+
+> ~~Annonces : colonne facultative, prévoir de vider le destinataire à la suppression~~ (classement du 10/09, plus bas : `ON DELETE SET NULL`).
+> **Corrigé le 2026-09-16 : ce serait une fuite.** Une annonce privée se reconnaît à son destinataire
+> renseigné ; la policy `notifications_select` montre à **tout le monde** une annonce `cible = 'tous'`
+> sans destinataire. Vider le destinataire à la suppression du membre transformerait son annonce
+> privée (un complément de paiement, par exemple) en annonce publique. Elle est donc supprimée avec lui.
 
 ### Trois pièges trouvés en préparant
 
@@ -155,6 +185,25 @@ Chaque étape se répète d'abord sur la **copie de test** (`ijxajtxnhbczgiarkef
 triggers de synchronisation existent, deux colonnes disent la même chose, et l'étape 4 est là pour
 que ça ne dure pas.
 
+> **Précisé au développement (16/09).**
+>
+> - **L'étape 0 a un volet site, à mettre en ligne AVANT son volet base.** Le site ne filtrait le
+>   statut presque nulle part : Gestion Membres et les listes où l'on choisit un membre chargeaient
+>   toutes les fiches. Créer les onze fiches désactivées avant d'adapter ces écrans les y aurait fait
+>   apparaître comme des membres ordinaires. Et la page de connexion restait **muette** pour tout
+>   statut autre qu'« en attente » ou « refusé » : un membre désactivé n'aurait vu aucun message.
+> - **La copie de test est remplacée par un banc local** pour les étapes 0 et 1. La copie date de
+>   juillet (avant #44, #58, #59, #63, #64, #66, #69) et la rafraîchir demande un accès direct à la
+>   base, celui qui a déclenché l'alerte de sécurité du 15/09. Le banc est plus fidèle : image
+>   Supabase officielle, **schéma exporté de la production le jour même** (99 policies, 40 fonctions,
+>   16 triggers), données de production lues par le Worker, vrai PostgREST devant. La copie de test
+>   reste utile à l'étape 3, où l'on vérifie des écrans à la main.
+> - **Jusqu'à l'étape 2, un compte désactivé lit encore ses propres lignes par appel direct** : les
+>   règles comparent l'adresse sans regarder le statut. Idem pour un admin désactivé sur les règles qui
+>   testent le rôle sans le statut (`frais_port_admin_*`, `inscriptions_auto*_admin_*`,
+>   `inscriptions_insert_admin`) et dans `enforce_inscription_statut_paiement()`. Sans conséquence tant
+>   que personne n'est désactivé — et rien ne permet de désactiver quelqu'un avant l'étape 5.
+
 ### Critères d'acceptation
 
 1. Changer l'adresse d'un membre depuis Gestion Membres ne modifie **qu'une ligne** ; il se reconnecte
@@ -178,6 +227,19 @@ que ça ne dure pas.
 | **Q9** | **L'assistant** : lui créer une fiche de membre technique (désactivée, sans droits), ou laisser ses commentaires sans `auteur_id` avec un libellé ? | Une fiche technique : une seule règle pour tous les auteurs, et #68 le reconnaît par son `id` |
 | **Q10** | Les **15 adresses orphelines** et les 13 « Import Google Sheet » : créer pour chacune une fiche **désactivée**, ou supprimer les lignes ? | Des fiches désactivées : rien ne se perd, et c'est exactement le rôle de la désactivation décidée en Q1. « Import Google Sheet » : `demandeur_id` vide, libellé conservé |
 | **Q11** | Migrer **par étapes** ou **d'un bloc** ? | Par étapes |
+
+**Q8 à Q11 : recommandations retenues** (validation de Cyril du 15/09, sans objection). La fiche
+technique de l'assistant s'appelle « Claude Assistant », statut désactivé ; les dix adresses fantômes
+reçoivent une fiche désactivée au pseudo « Ancien membre ».
+
+**Une question de plus, tranchée le 16/09 (Q10 bis).** Le relevé du jour trouve **2 inscriptions dont le
+« membre » n'est pas une adresse** : le texte `pour 2024` (n° 1182 et 1183, billets USAR et TUBJ 2024, non payées, non
+envoyées, créées par l'import du 31/03). Elles n'appartiennent à personne. **Décision de Cyril : les
+supprimer** (étape 0, seulement si elles sont encore exactement dans cet état).
+
+**Q5 est tranchée par la base** (export du 16/09) : la version vivante d'`is_admin()` est celle de
+`migration-inscription-publique.sql` — `admin` ou `superadmin`, **et actif**. Seules
+`is_admin_ou_superadmin()` et `is_collecteur()` ignoraient le statut ; l'étape 0 les corrige.
 
 ## L'état du terrain, mesuré le 2026-09-10
 
@@ -752,4 +814,82 @@ Le lot 3 n'est **pas** un prérequis : c'est tout l'intérêt du `NOT VALID`.
 
 ## Réalisation
 
-*(à compléter après le développement : fichiers touchés, hash de commit)*
+### Relevé de la production, 2026-09-16 (lecture seule)
+
+| Constat | Chiffre |
+|---|---|
+| Fiches de membres | 109 (108 actives, 1 refusée) |
+| Adresses sans fiche | **10**, toutes dans `enveloppes` (23 lignes) |
+| Valeurs qui ne sont pas des adresses | 13 demandes « Import Google Sheet », 2 inscriptions « pour 2024 » |
+| Commentaires de l'assistant (sans fiche) | 24 |
+| Deux fiches actives qui ne diffèrent que par une majuscule | 1 paire (la fiche en majuscule n'a aucune inscription) — sans effet sur la migration, qui compare les adresses exactement comme les règles d'accès |
+
+### Étape 0 — préalables
+
+**Site** (à mettre en ligne en premier) :
+
+| Fichier | Changement |
+|---|---|
+| `global.js` | `membreSelectionnable(m)` (statut actif) ; « Se connecter en tant que » ne propose que les actifs ; la connexion d'un compte ni actif, ni en attente, ni refusé affiche « Compte désactivé » |
+| `login.html` | l'écran « Compte désactivé » |
+| `users.js`, `users.html`, `style.css` | Gestion Membres : les fiches désactivées n'apparaissent que sous le filtre « Désactivés », badgées, sans « Supprimer » ni « Promouvoir » ; un refus de suppression par la base dit quelles données bloquent |
+| `admin.js`, `mes-collectes.js`, `admin-pre-inscriptions.js`, `collecteurs.js`, `admin-notifications.js` | les listes où l'on choisit un membre (inscrire, réaffecter, liste noire, pré-inscription, collecteur, destinataire d'une annonce) ne proposent plus que les actifs (les annonces gardent aussi les demandes en attente, comme avant). Le nom d'un membre désactivé reste affiché sur ses inscriptions |
+
+**Base** — `scripts/migration-demande-62-e0-{1-constat,2-migration,3-controle}.sql` (non versionnés,
+sur le poste de Cyril, comme toutes les migrations) : statut `desactive` autorisé ;
+`is_admin_ou_superadmin()` et `is_collecteur()` limitées aux membres actifs (empreintes vérifiées avant
+remplacement) ; fiche technique de l'assistant ; dix fiches « Ancien membre » ; suppression des deux
+inscriptions « pour 2024 ». Un seul bloc, qui refait les contrôles du constat et se vérifie lui-même.
+
+**Banc** : 27 vérifications — parcours nominal, rejeu (refusé, rien ne change), perte des droits d'un
+admin ou d'un collecteur désactivé par le vrai PostgREST, écran « Compte désactivé » (le compte lit sa
+propre fiche), et cinq gardes (assistant déjà présent, fonction modifiée, adresse fantôme en plus ou
+ailleurs, inscription « pour 2024 » modifiée). Volet site : 17 vérifications dans jsdom sur la base du
+banc (Gestion Membres, filtre, compteurs, sélecteurs, message de refus).
+
+### Étape 1 — les numéros
+
+`scripts/migration-demande-62-e1-{1-constat,2-migration,3-controle}.sql`, plus un retour arrière
+testé (`-e1-9-retour-arriere.sql`), qui ne se joue que sur décision.
+
+- `membres.id` : `bigint`, identité, unique, **immuable** (trigger `membres_id_immuable`). Numérotation
+  initiale par date de validation, puis adresse.
+- Une colonne de numéro par table d'appartenance (tableau plus haut), **remplie triggers utilisateur
+  suspendus** : l'empreinte des 17 tables, colonnes d'origine, est identique avant et après — auteurs et
+  dates d'audit des 5 484 inscriptions compris. Le bloc refuse de démarrer si un trigger est déjà
+  désactivé, et d'aboutir s'il en reste un.
+- **Un seul trigger de synchronisation, générique**, `synchroniser_membre_id(colonne adresse, colonne
+  numéro[, valeur vide])`, posé sur les 16 tables sous le nom `a0_synchroniser_membre_id` : les triggers
+  s'exécutant par ordre alphabétique, il passe avant les autres, qui voient une ligne cohérente. Adresse
+  seule → il met le numéro ; numéro seul → il met l'adresse ; les deux → ils doivent désigner le même
+  membre, sinon refus. Adresse sans fiche → refus clair (`foreign_key_violation`). `SECURITY DEFINER` :
+  il doit voir toutes les fiches, quelles que soient les règles de lecture de `membres`.
+- Clés étrangères, dix unicités doublées sur le numéro (pour que les fusions `on_conflict` du site
+  puissent passer au numéro), douze index.
+
+**Banc** : 53 vérifications, jouées deux fois — dont, par le vrai PostgREST et les règles de la
+production : inscription et déclaration de paiement d'un membre (l'audit nomme toujours le membre),
+usurpations refusées (inscrire un autre, adresse et numéro contradictoires, réaffecter par le numéro),
+fusions de la collection et des pré-inscriptions par adresse **et** par numéro, enveloppe créée par un
+collecteur puis reçue par le membre, réaffectation par un admin (le numéro suit), inscription par le
+numéro seul (la règle d'accès, écrite sur l'adresse, passe : elle s'évalue après le trigger), collecteur
+relié puis délié, annonces ciblée et diffusée, demande, commentaire (écran et assistant), validation,
+signalement, contact, **dettes et annonces privées créées par un changement de prix**, inscription
+publique d'un nouveau membre, suppression refusée d'un membre qui a des données, suppression acceptée
+d'une fiche vide, retour arrière puis nouvelle migration.
+
+**Mesuré** : la migration prend moins d'une seconde sur le volume de la production.
+
+### Reste à faire
+
+| Étape | État |
+|---|---|
+| 0 — site | écrit, testé sur banc ; **à mettre en ligne** |
+| 0 — base | écrit, testé sur banc ; **à jouer par Cyril**, après la mise en ligne du site |
+| 1 — base | écrit, testé sur banc ; **à jouer par Cyril**, après l'étape 0 |
+| 2 — règles d'accès | à écrire |
+| 3 — le site, écran par écran | à écrire |
+| 4 — retirer les adresses recopiées | à écrire |
+| 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
+
+*Commits : voir l'index des demandes.*
