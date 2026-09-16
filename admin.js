@@ -4144,7 +4144,7 @@ function renderInscriptionsModalContent(billet) {
 // --- Chargement des membres (cache admin) ---
 function chargerAdminMembres() {
     if (adminMembresCache) return Promise.resolve(adminMembresCache);
-    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays&order=nom.asc')
+    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
         .then(function(data) {
             adminMembresCache = data || [];
             return adminMembresCache;
@@ -4221,6 +4221,8 @@ function renderAdminInscriptionForm(billet, membres, editInscription, collecte) 
     var optionsMembres = '<option value="">— Sélectionner un membre —</option>';
     membres.forEach(function(m) {
         if (!isEdit && emailsInscrits[m.email]) return;
+        // Demande #62 — pas de membre désactivé à choisir, sauf celui de l'inscription modifiée
+        if (!membreSelectionnable(m) && m.email !== defEmail) return;
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var selected = (m.email === defEmail) ? ' selected' : '';
         optionsMembres += '<option value="' + m.email + '"' + selected + '>' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
@@ -4316,6 +4318,7 @@ function filtrerAdminMembresModal() {
     var html = '<option value="">— Sélectionner un membre —</option>';
     adminMembresCache.forEach(function(m) {
         if (emailsInscrits[m.email]) return;
+        if (!membreSelectionnable(m)) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) return;

@@ -4128,7 +4128,7 @@ var membresCache = null;
 
 function chargerMembres() {
     if (membresCache) return Promise.resolve(membresCache);
-    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays&order=nom.asc')
+    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
         .then(function(data) {
             membresCache = data || [];
             return membresCache;
@@ -4179,6 +4179,7 @@ function renderInscriptionModal(membres, editInscription) {
     var optionsMembres = '<option value="">— Sélectionner un membre —</option>';
     membres.forEach(function(m) {
         if (!isEdit && emailsInscrits[m.email]) return;
+        if (!membreSelectionnable(m) && m.email !== defEmail) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var selected = (m.email === defEmail) ? ' selected' : '';
         optionsMembres += '<option value="' + m.email + '"' + selected + '>' + label + ' (' + m.email + ')</option>';
@@ -4260,6 +4261,7 @@ function filtrerMembresModal() {
     membresCache.forEach(function(m) {
         if (emailsInscrits[m.email]) return;
         if (blacklistEmails[m.email]) return;
+        if (!membreSelectionnable(m)) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) return;
@@ -4594,6 +4596,7 @@ function filtrerMembresBlacklist() {
     var html = '<option value="">— Sélectionner un membre —</option>';
     membresCache.forEach(function(m) {
         if (emailsBlacklistes[m.email]) return;
+        if (!membreSelectionnable(m)) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) return;
@@ -4837,9 +4840,9 @@ function openMembreReassignModal(oldEmail) {
     document.addEventListener('keydown', onReassignKeydown);
 
     // Charger les membres
-    supabaseFetch('/rest/v1/membres?select=email,nom,prenom&order=nom.asc,prenom.asc')
+    supabaseFetch('/rest/v1/membres?select=email,nom,prenom,statut&order=nom.asc,prenom.asc')
         .then(function(data) {
-            _reassignMembresCache = data || [];
+            _reassignMembresCache = (data || []).filter(membreSelectionnable); // Demande #62
             renderReassignList('');
             var searchInput = document.getElementById('reassign-search');
             if (searchInput) searchInput.focus();

@@ -345,9 +345,9 @@ function openMembreSelectPopup(collecteurId) {
     var listDiv = document.getElementById('membre-list');
     if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint)">Chargement...</p>';
 
-    supabaseFetch('/rest/v1/membres?select=email,nom,prenom&order=nom.asc,prenom.asc')
+    supabaseFetch('/rest/v1/membres?select=email,nom,prenom,statut&order=nom.asc,prenom.asc')
         .then(function(data) {
-            membresCache = data || [];
+            membresCache = (data || []).filter(membreSelectionnable); // Demande #62
             renderMembreList('');
         })
         .catch(function(error) {

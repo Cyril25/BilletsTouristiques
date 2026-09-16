@@ -38,7 +38,7 @@ function preInscInit() {
 // Chargement membres et pays
 // ============================================================
 function preInscLoadMembres() {
-    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays&order=nom.asc')
+    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
         .then(function(data) {
             preInscMembresCache = data || [];
         });
@@ -392,6 +392,7 @@ function preInscFilterMembres() {
     for (var j = 0; j < preInscMembresCache.length; j++) {
         var m = preInscMembresCache[j];
         if (emailsParametres[m.email]) continue;
+        if (!membreSelectionnable(m)) continue; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) continue;

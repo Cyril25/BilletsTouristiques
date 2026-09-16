@@ -135,6 +135,13 @@ function supabaseFetch(path, options) {
         });
 }
 
+// Demande #62 — un membre désactivé (ou en attente, ou refusé) garde ses données et
+// son nom s'affiche toujours sur ses inscriptions, mais on ne le propose plus quand
+// il faut CHOISIR un membre. La requête doit sélectionner `statut`.
+function membreSelectionnable(m) {
+    return !!m && m.statut === 'actif';
+}
+
 // ============================================================
 // 1c. COULEURS DE STATUT — SOURCE UNIQUE (demande #44)
 // ============================================================
@@ -321,6 +328,10 @@ document.addEventListener("DOMContentLoaded", function() {
                             window.showStatusPending(rows[0].demande_at);
                         } else if (statut === 'refuse' && typeof window.showStatusRefused === 'function') {
                             window.showStatusRefused(rows[0].refuse_motif);
+                        } else if (typeof window.showStatusDesactive === 'function') {
+                            // Demande #62 — compte désactivé (ou tout autre statut non actif) :
+                            // sans ce cas, la page de connexion restait muette.
+                            window.showStatusDesactive();
                         }
                     } else {
                         // Sur les autres pages : rediriger vers login pour voir le statut
@@ -1496,8 +1507,9 @@ function renderImpersonateBanner() {
 window.showImpersonateModal = function() {
     if (window.userRole !== 'superadmin') return;
 
-    supabaseFetch('/rest/v1/membres?select=email,prenom,nom')
+    supabaseFetch('/rest/v1/membres?select=email,prenom,nom,statut')
     .then(function(membres) {
+        membres = (membres || []).filter(membreSelectionnable); // Demande #62
         membres.sort(function(a, b) {
             var na = ((a.nom || '') + ' ' + (a.prenom || '')).trim().toLowerCase() || a.email.toLowerCase();
             var nb = ((b.nom || '') + ' ' + (b.prenom || '')).trim().toLowerCase() || b.email.toLowerCase();

@@ -2806,6 +2806,17 @@ body.login-page {
     border-color: var(--color-danger);
 }
 
+/* --- Membre désactivé (demande #62) : contour, pas de fond, lisible dans les deux thèmes --- */
+.user-badge-desactive {
+    background-color: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-text-muted);
+}
+
+.user-card-desactive {
+    border-style: dashed;
+}
+
 .user-card-blocage-motif {
     font-size: 0.8125rem;
     color: var(--color-danger);

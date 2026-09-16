@@ -298,8 +298,10 @@ function loadNotifsAdmin() {
 function loadMembres() {
     supabaseFetch('/rest/v1/membres?select=email,prenom,nom,pseudo,statut&order=prenom.asc')
         .then(function(rows) {
+            // Demande #62 — ni refusés ni désactivés (la fiche technique de l'assistant,
+            // les anciens membres) : on garde les demandes en attente, comme avant.
             membresListe = (rows || []).filter(function(m) {
-                return m.email && m.statut !== 'refuse';
+                return m.email && (m.statut === 'actif' || m.statut === 'en_attente');
             });
             renderMembresPicker();
         })

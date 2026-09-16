@@ -123,7 +123,7 @@ function loadUsers() {
     if (!grid) return;
 
     Promise.all([
-        supabaseFetch('/rest/v1/membres?select=email,role,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
+        supabaseFetch('/rest/v1/membres?select=email,role,statut,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
         supabaseFetch('/rest/v1/membre_blocages?select=membre_email,motif,bloque_at', { method: 'GET' })
             .catch(function() { return []; }),
         // Demande #38 — un pays indisponible ne doit pas empêcher d'afficher les membres.
@@ -209,7 +209,9 @@ function populateCountryFilter() {
     if (!select) return;
     // Compter les membres par pays (clé normalisée → { label, count })
     var counts = {};
-    usersList.forEach(function(user) {
+    // Demande #62 — les comptes désactivés ne comptent pas parmi les membres
+    var comptes = usersList.filter(function(user) { return user.statut !== 'desactive'; });
+    comptes.forEach(function(user) {
         var label = paysAffiche(user);
         var key = _normPays(label);
         if (!counts[key]) counts[key] = { label: label, count: 0 };
@@ -218,7 +220,7 @@ function populateCountryFilter() {
     var keys = Object.keys(counts).sort(function(a, b) {
         return counts[a].label.localeCompare(counts[b].label, 'fr');
     });
-    var html = '<option value="">Tous les pays (' + usersList.length + ')</option>';
+    var html = '<option value="">Tous les pays (' + comptes.length + ')</option>';
     keys.forEach(function(k) {
         var c = counts[k];
         var code = window.paysCode(c.label);
@@ -236,7 +238,11 @@ function renderUserCards(searchQuery) {
     if (!grid) return;
 
     var query = (searchQuery || '').toLowerCase();
-    var filtered = usersList;
+    // Demande #62 — les comptes désactivés (anciens membres, fiche technique de
+    // l'assistant) n'apparaissent que sous leur propre filtre.
+    var filtered = usersList.filter(function(user) {
+        return (activeRoleFilter === 'desactive') === (user.statut === 'desactive');
+    });
     if (activeRoleFilter === 'admin') {
         filtered = filtered.filter(function(user) { return user.role === 'admin' || user.role === 'superadmin'; });
     } else if (activeRoleFilter === 'member') {
@@ -262,8 +268,11 @@ function renderUserCards(searchQuery) {
     // Afficher le compteur
     var countEl = document.getElementById('user-count');
     if (countEl) {
+        var nbVisibles = usersList.filter(function(user) {
+            return (activeRoleFilter === 'desactive') === (user.statut === 'desactive');
+        }).length;
         countEl.textContent = filtered.length + ' membre' + (filtered.length > 1 ? 's' : '')
-            + (query ? ' sur ' + usersList.length : '');
+            + (query ? ' sur ' + nbVisibles : '');
     }
 
     var html = '';
@@ -282,11 +291,13 @@ function renderUserCards(searchQuery) {
         var btnIcon = isAdmin ? 'fa-solid fa-user-minus' : 'fa-solid fa-user-plus';
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
         var isBloque = !!user._bloque;
+        var isDesactive = user.statut === 'desactive'; // Demande #62
 
         var flagH = window.flagImg(paysAffiche(user));
-        html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
+        html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + (isDesactive ? ' user-card-desactive' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
                 '<span class="user-card-name">' + (flagH ? flagH + ' ' : '') + escapeHtml(displayName) + '</span>' +
+                (isDesactive ? '<span class="user-badge-role user-badge-desactive" title="Ne peut plus se connecter ; ses données sont conservées"><i class="fa-solid fa-user-slash"></i> Désactivé</span>' : '') +
                 (isBloque ? '<span class="user-badge-role user-badge-bloque" title="' + escapeAttr(user._blocageMotif || 'Bloqué pour les inscriptions') + '"><i class="fa-solid fa-ban"></i> Bloqué</span>' : '') +
                 '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +
@@ -323,18 +334,20 @@ function renderUserCards(searchQuery) {
                     'title="' + (isBloque ? 'Débloquer les inscriptions' : 'Bloquer les inscriptions') + '">' +
                     '<i class="fa-solid ' + (isBloque ? 'fa-lock-open' : 'fa-ban') + '"></i> ' + (isBloque ? 'Débloquer' : 'Bloquer') +
                 '</button>' +
-                (role === 'superadmin' ? '' :
+                (role === 'superadmin' || isDesactive ? '' :
                 '<button class="' + btnClass + '" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'data-current-role="' + escapeAttr(role) + '" ' +
                     'title="' + escapeAttr(btnText) + '">' +
                     '<i class="' + btnIcon + '"></i> ' + escapeHtml(btnText) +
                 '</button>') +
+                // Demande #62 — un compte désactivé garde ses données : on ne le supprime pas
+                (isDesactive ? '' :
                 '<button class="user-delete-btn" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'title="Supprimer ce membre">' +
                     '<i class="fa-solid fa-trash"></i> Supprimer' +
-                '</button>' +
+                '</button>') +
             '</div>' +
             '</div>';
     });
@@ -651,9 +664,31 @@ function confirmDeleteUser() {
             }
         })
         .catch(function(error) {
-            showToast('Erreur lors de la suppression : ' + error.message, 'error');
             console.error('Erreur suppression membre:', error);
+            var bloquant = tableBloquantSuppression(error.message);
+            if (bloquant) {
+                showToast('Impossible de supprimer : ce membre a encore des données (' + bloquant + '). Elles sont conservées.', 'error');
+                return;
+            }
+            showToast('Erreur lors de la suppression : ' + error.message, 'error');
         });
+}
+
+// Demande #62 — la base refuse de supprimer un membre dont des données dépendent
+// (« … violates foreign key constraint … on table "enveloppes" »). On le dit en clair.
+var LIBELLES_DONNEES_MEMBRE = {
+    inscriptions: 'inscriptions', inscriptions_auto: 'pré-inscriptions',
+    inscriptions_auto_pays: 'pré-inscriptions', collection: 'collection',
+    dettes: 'compléments de paiement', enveloppes: 'enveloppes',
+    collecteurs: 'fiche collecteur', collecteur_blacklist: 'liste noire d\'un collecteur',
+    contacts_collecteur: 'contacts', demandes: 'demandes d\'amélioration',
+    demande_commentaires: 'commentaires de demandes', demande_validations: 'validations de demandes',
+    signalements: 'signalements'
+};
+function tableBloquantSuppression(message) {
+    var m = /violates foreign key constraint .* on table "([a-z_]+)"/.exec(message || '');
+    if (!m) return '';
+    return LIBELLES_DONNEES_MEMBRE[m[1]] || m[1];
 }
 
 function onDeleteUserKeydown(e) {

@@ -135,6 +135,13 @@
                 <p id="status-refused-motif" style="display:none; background:var(--color-badge-warning-bg); border-left:3px solid var(--color-badge-warning-border); padding:12px; text-align:left; margin:16px 0;"></p>
                 <p>Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.</p>
             </div>
+            <!-- Demande #62 — compte désactivé par un administrateur -->
+            <div id="status-desactive" style="display:none;">
+                <i class="fa-solid fa-user-slash logo-icon" style="color:var(--color-text-muted);"></i>
+                <h2>Compte désactivé</h2>
+                <p>Ce compte a été désactivé par un administrateur. Vos données sont conservées.</p>
+                <p>Si vous pensez qu'il s'agit d'une erreur, ou si vous vous connectez désormais avec une autre adresse, contactez un administrateur.</p>
+            </div>
             <button onclick="signOutAndReload()" class="btn-secondary" style="margin-top:20px;">
                 <i class="fa-solid fa-power-off"></i> Se déconnecter
             </button>
@@ -216,6 +223,7 @@ function showSignupForm(email) {
 function showStatusPending(demandeAt) {
     document.getElementById('status-pending').style.display = '';
     document.getElementById('status-refused').style.display = 'none';
+    document.getElementById('status-desactive').style.display = 'none';
     if (demandeAt) {
         try {
             var d = new Date(demandeAt);
@@ -228,11 +236,21 @@ function showStatusPending(demandeAt) {
 function showStatusRefused(motif) {
     document.getElementById('status-pending').style.display = 'none';
     document.getElementById('status-refused').style.display = '';
+    document.getElementById('status-desactive').style.display = 'none';
     if (motif) {
         var el = document.getElementById('status-refused-motif');
         el.textContent = 'Motif : ' + motif;
         el.style.display = 'block';
     }
+    showView('status');
+}
+
+// Demande #62 — appelée par global.js pour tout statut qui n'est ni actif, ni en
+// attente, ni refusé.
+function showStatusDesactive() {
+    document.getElementById('status-pending').style.display = 'none';
+    document.getElementById('status-refused').style.display = 'none';
+    document.getElementById('status-desactive').style.display = '';
     showView('status');
 }
 
