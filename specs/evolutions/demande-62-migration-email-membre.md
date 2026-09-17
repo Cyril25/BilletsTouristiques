@@ -887,7 +887,7 @@ d'une fiche vide, retour arrière puis nouvelle migration.
 généré depuis l'export du 17/09 (`-e2-9-retour-arriere.sql` : textes d'origine embarqués en base64,
 restaurés à l'octet près).
 
-- **`mon_membre_id()`** (`STABLE`, `SECURITY DEFINER`, `search_path` fixé) : le numéro de la fiche
+- La fonction `mon_membre_id()` (`STABLE`, `SECURITY DEFINER`, `search_path` fixé) rend le numéro de la fiche
   dont l'adresse est celle du jeton, **si elle est active**, sinon rien. Les règles l'appellent sous
   la forme `(SELECT mon_membre_id())`, calculée une fois par requête. `membre_bloque_inscription(id)`
   remplace `is_bloque_inscription(adresse)` dans la règle d'inscription (l'ancienne reste jusqu'à
