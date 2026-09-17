@@ -109,6 +109,7 @@ qui n'est plus vrai.
 | [#67 (prod)](demande-67-fichiers-joints-demande.md) | Joindre des fichiers de données à une demande ([en clair](demande-67-fichiers-joints-demande-en-clair.md)) | L | À tester — pas de pièce jointe : le chemin du fichier est écrit dans la demande ; règle ajoutée à la convention | ✅ | `72bd23d` |
 | [#70 (prod)](demande-70-billet-dans-modale-collecte.md) | La fenêtre d'une collecte rappelle de quel billet il s'agit ([en clair](demande-70-billet-dans-modale-collecte-en-clair.md)) | S | À tester | ✅ | `f66242a` |
 | [#71 (prod)](demande-71-chiffres-onglets-mes-collectes.md) | Les chiffres des onglets de « Mes collectes » dès l'arrivée ([en clair](demande-71-chiffres-onglets-mes-collectes-en-clair.md)) | M | À tester | ✅ | `a774077` |
+| [#72 (prod)](demande-72-veille-comptes-inactifs.md) | Mettre en veille les comptes inactifs, faire compléter les fiches ([en clair](demande-72-veille-comptes-inactifs-en-clair.md)) | L | Analyse à valider | — | — |
 | [#73 (prod)](demande-73-retirer-qr-code-images.md) | Retirer le QR code des images de billets ([en clair](demande-73-retirer-qr-code-images-en-clair.md)) | S | À tester | ✅ | `316cdf2` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
