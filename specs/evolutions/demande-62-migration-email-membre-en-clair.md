@@ -5,14 +5,19 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `3caf68e` (16/09/2026).
+> Reflète la version technique du commit `6b40924` (17/09/2026).
 
-## Où on en est (16 septembre)
+## Où on en est (17 septembre)
 
 **L'analyse a été validée par Cyril le 15 septembre**, et les quatre recommandations de la fin de ce
 document sont retenues. **Le développement a commencé le 16.**
 
-Les deux premières étapes sont prêtes et ont été essayées sur une copie fidèle du site et de sa base :
+**Les deux premières étapes sont faites, en ligne depuis le 17 septembre.** Elles avaient d'abord été
+essayées sur une copie fidèle du site et de sa base, puis Cyril les a appliquées à la vraie base ;
+toutes les vérifications sont passées. Chaque membre a désormais son numéro (120 fiches, anciens
+membres et assistant compris), et toutes ses données le portent.
+
+Ce que contiennent ces deux étapes :
 
 - **Préparer** (étape 0). Le site sait désormais tenir à l'écart un compte **désactivé** : il n'apparaît
   plus dans les listes où l'on choisit un membre (inscrire quelqu'un à une collecte, la liste noire d'un
@@ -27,9 +32,10 @@ Les deux premières étapes sont prêtes et ont été essayées sur une copie fi
   site aujourd'hui (s'inscrire, déclarer un paiement, créer une enveloppe, marquer une annonce comme
   lue…) continue de fonctionner.
 
-**Rien n'est encore visible en ligne.** Les étapes suivantes — faire passer les règles d'accès par le
-numéro, reprendre les écrans un par un, retirer les adresses recopiées, puis le bouton « Changer
-l'adresse » — restent à écrire.
+**Pour vous, presque rien n'a changé à l'écran** : le filtre « Désactivés » de Gestion Membres montre
+maintenant 11 fiches. Les étapes suivantes — faire passer les règles d'accès par le numéro, reprendre
+les écrans un par un, retirer les adresses recopiées, puis le bouton « Changer l'adresse » — restent à
+écrire.
 
 ### Deux points tranchés en cours de route
 
@@ -41,7 +47,7 @@ l'adresse » — restent à écrire.
    **tout le monde** : un message privé (un complément de paiement, par exemple) serait devenu public.
    Ses annonces personnelles partent donc avec lui.
 
-### Ce qui change dès l'étape 1 pour les admins
+### Ce qui a changé pour les admins avec l'étape 1
 
 **Supprimer un membre qui a des données devient impossible** : la base le refuse, et Gestion Membres
 dit ce qui bloque (« ce membre a encore des données : enveloppes »). C'est voulu — c'est comme cela
