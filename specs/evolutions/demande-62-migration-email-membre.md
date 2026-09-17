@@ -32,7 +32,8 @@
 >
 > **Validée par Cyril le 2026-09-15**, sans objection aux questions Q8 à Q11 : leurs recommandations
 > sont retenues. **Développement ouvert le 2026-09-16** : les étapes 0 et 1 sont écrites et éprouvées
-> sur un banc identique à la production. Voir « Réalisation ».
+> sur un banc identique à la production, **puis jouées en production le 2026-09-17**. Voir
+> « Réalisation ».
 >
 > Version en clair pour les relecteurs : `demande-62-migration-email-membre-en-clair.md`.
 >
@@ -884,9 +885,9 @@ d'une fiche vide, retour arrière puis nouvelle migration.
 
 | Étape | État |
 |---|---|
-| 0 — site | écrit, testé sur banc ; **à mettre en ligne** |
-| 0 — base | écrit, testé sur banc ; **à jouer par Cyril**, après la mise en ligne du site |
-| 1 — base | écrit, testé sur banc ; **à jouer par Cyril**, après l'étape 0 |
+| 0 — site | **en ligne** le 16/09 (`333b89b`, cache v312) |
+| 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
+| 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | à écrire |
 | 3 — le site, écran par écran | à écrire |
 | 4 — retirer les adresses recopiées | à écrire |
