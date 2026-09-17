@@ -111,6 +111,7 @@ qui n'est plus vrai.
 | [#71 (prod)](demande-71-chiffres-onglets-mes-collectes.md) | Les chiffres des onglets de « Mes collectes » dès l'arrivée ([en clair](demande-71-chiffres-onglets-mes-collectes-en-clair.md)) | M | À tester | ✅ | `a774077` |
 | [#72 (prod)](demande-72-veille-comptes-inactifs.md) | Mettre en veille les comptes inactifs, faire compléter les fiches ([en clair](demande-72-veille-comptes-inactifs-en-clair.md)) | L | Analyse à valider | — | — |
 | [#73 (prod)](demande-73-retirer-qr-code-images.md) | Retirer le QR code des images de billets ([en clair](demande-73-retirer-qr-code-images-en-clair.md)) | S | À tester | ✅ | `316cdf2` |
+| [#74 (prod)](demande-74-notifications-telephone.md) | De vraies notifications sur le téléphone ([en clair](demande-74-notifications-telephone-en-clair.md)) | L | Analyse à valider | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
