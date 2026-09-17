@@ -881,6 +881,54 @@ d'une fiche vide, retour arrière puis nouvelle migration.
 
 **Mesuré** : la migration prend moins d'une seconde sur le volume de la production.
 
+### Étape 2 — les règles d'accès par le numéro *(écrite le 2026-09-17)*
+
+`scripts/migration-demande-62-e2-{1-constat,2-migration,3-controle}.sql`, plus un retour arrière
+généré depuis l'export du 17/09 (`-e2-9-retour-arriere.sql` : textes d'origine embarqués en base64,
+restaurés à l'octet près).
+
+- **`mon_membre_id()`** (`STABLE`, `SECURITY DEFINER`, `search_path` fixé) : le numéro de la fiche
+  dont l'adresse est celle du jeton, **si elle est active**, sinon rien. Les règles l'appellent sous
+  la forme `(SELECT mon_membre_id())`, calculée une fois par requête. `membre_bloque_inscription(id)`
+  remplace `is_bloque_inscription(adresse)` dans la règle d'inscription (l'ancienne reste jusqu'à
+  l'étape 4).
+- **Les 50 règles** qui comparaient une adresse à celle du jeton (liste exacte : le script) comparent
+  le numéro ; celles qui cherchaient un admin dans `membres` par l'adresse appellent
+  `is_admin_ou_superadmin()`. Mêmes noms, mêmes commandes. `notifications_select` garde sa forme :
+  une annonce qui a un destinataire (numéro **ou** adresse, tant que les deux coexistent) n'est
+  visible que par lui. Les règles de `membres` ne changent pas : c'est la table de correspondance.
+- **Quatre fonctions** : `is_collecteur()`, `marquer_signalement_vu()` (droits d'exécution
+  conservés), et les triggers `enforce_enveloppe_membre_update()` (le numéro rejoint les champs que
+  le destinataire ne peut pas modifier) et `enforce_inscription_statut_paiement()`.
+- **Garde** : empreinte des 50 règles et des 4 fonctions identique à l'export du 17/09 (calculée en
+  ordre binaire, `COLLATE "C"`, pour ne pas dépendre du classement de la base).
+
+**Changements voulus** (et seuls changements) :
+
+| Qui | Avant | Après |
+|---|---|---|
+| Compte désactivé, refusé ou en attente | lisait ses propres lignes par appel direct ; un admin ou un collecteur désactivé gardait ses droits sur les règles qui testaient le rôle sans le statut | plus rien |
+| Tout compte, même en attente ou refusé | lisait **toutes** les pré-inscriptions (`inscriptions_auto`, `inscriptions_auto_pays`) et les frais de port | pré-inscriptions : leur membre et les admins seulement (seuls les écrans d'admin les lisent) ; frais de port : membres actifs |
+| Jeton dont l'adresse diffère de la fiche par la casse | reconnu par les rares règles en `lower()` | non reconnu — comme partout ailleurs (`is_whitelisted()` compare exactement : un tel compte n'entre pas sur le site) |
+
+**Conservé tel quel, à signaler** : dans `enforce_inscription_statut_paiement()`, seul le rôle
+`admin` a la main sur les paiements — un **superadmin** qui n'est pas le collecteur de la collecte
+ne peut pas confirmer un paiement (le banc le vérifie). Antérieur à #62, non corrigé ici. De même,
+une annonce diffusée à tous (`cible = 'tous'`, sans destinataire) reste lisible avec la seule clé
+publique.
+
+**Banc** : une **photo des droits** (`scripts/banc-62/photo-droits.mjs`) essaie, pour 16 profils
+(superadmin, admin, collecteur, membres dans diverses situations, admin et collecteur désactivés,
+ancien membre, assistant, compte refusé, demande en attente, clé publique seule, compte inconnu…) et
+un échantillon de lignes de chacune des 16 tables concernées, la **lecture, la modification, la
+suppression et la création** avec les vraies règles ; et, pour les 121 fiches, le nombre de lignes
+lisibles par table. Photo avant, migration, photo après : **3 897 essais, 0 anomalie** — chaque écart
+tombe dans les changements voulus ci-dessus, aucun droit n'est gagné. Puis les parcours du site
+(inscription et paiement, confirmation par le collecteur et par l'admin, membre bloqué, enveloppes,
+pré-inscriptions, signalement, annonces privées et aux collecteurs, commentaires et validations,
+dettes, collection, contacts), le rejeu (refusé), le **retour arrière (droits identiques à l'avant,
+vérifiés par une troisième photo)** et une nouvelle migration.
+
 ### Reste à faire
 
 | Étape | État |
@@ -888,7 +936,7 @@ d'une fiche vide, retour arrière puis nouvelle migration.
 | 0 — site | **en ligne** le 16/09 (`333b89b`, cache v312) |
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
-| 2 — règles d'accès | à écrire |
+| 2 — règles d'accès | écrite et éprouvée sur banc le 17/09 ; **à jouer par Cyril** |
 | 3 — le site, écran par écran | à écrire |
 | 4 — retirer les adresses recopiées | à écrire |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
