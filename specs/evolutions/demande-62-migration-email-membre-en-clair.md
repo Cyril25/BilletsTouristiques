@@ -5,9 +5,9 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `6b40924` (17/09/2026).
+> Reflète la version technique du commit `fbe1d4b` (17/09/2026).
 
-## Où on en est (17 septembre)
+## Où on en est (17 septembre, soir)
 
 **L'analyse a été validée par Cyril le 15 septembre**, et les quatre recommandations de la fin de ce
 document sont retenues. **Le développement a commencé le 16.**
@@ -33,9 +33,32 @@ Ce que contiennent ces deux étapes :
   lue…) continue de fonctionner.
 
 **Pour vous, presque rien n'a changé à l'écran** : le filtre « Désactivés » de Gestion Membres montre
-maintenant 11 fiches. Les étapes suivantes — faire passer les règles d'accès par le numéro, reprendre
-les écrans un par un, retirer les adresses recopiées, puis le bouton « Changer l'adresse » — restent à
-écrire.
+maintenant 11 fiches.
+
+### L'étape 2 est prête (17 septembre)
+
+**Les règles qui décident qui a le droit de voir ou de modifier quoi passent au numéro.** Jusqu'ici,
+elles comparaient l'adresse de la personne connectée à celle recopiée sur chaque ligne. Elles comparent
+désormais les numéros — et ne reconnaissent la personne que si **son compte est actif**.
+
+Pour un membre actif, **rien ne change**. Trois choses changent volontairement :
+
+- **un compte désactivé ne voit plus rien**, même en s'y prenant autrement que par le site — y compris
+  un admin ou un collecteur désactivé, qui gardait jusqu'ici une partie de ses droits ;
+- **les pré-inscriptions d'un membre ne sont plus lisibles que par lui et par les admins.** Jusqu'ici,
+  n'importe quel compte, même en attente de validation, pouvait techniquement lire celles de tout le
+  monde. Seuls les écrans d'admin s'en servent : personne ne verra la différence ;
+- **les frais de port ne sont plus lisibles par un compte qui n'est pas actif.**
+
+Comment on s'en est assuré, sur la copie : pour seize profils différents (admin, collecteur, membres dans
+diverses situations, comptes désactivés, en attente, refusés, visiteur anonyme…), on a essayé **ligne par
+ligne** de lire, modifier, supprimer et créer, avant et après. Près de 3 900 essais : les seules
+différences sont les trois ci-dessus, et **personne n'a gagné un seul droit**. Puis on a rejoué les gestes
+du site (s'inscrire, payer, confirmer un paiement, créer une enveloppe, commenter une demande…), et vérifié
+qu'on peut revenir en arrière à l'identique.
+
+Elle attend que Cyril l'applique. Viendront ensuite : reprendre les écrans un par un, retirer les adresses
+recopiées, puis le bouton « Changer l'adresse ».
 
 ### Deux points tranchés en cours de route
 
