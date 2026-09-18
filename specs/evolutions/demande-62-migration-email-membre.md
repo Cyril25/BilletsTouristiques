@@ -933,6 +933,43 @@ pré-inscriptions, signalement, annonces privées et aux collecteurs, commentair
 dettes, collection, contacts), le rejeu (refusé), le **retour arrière (droits identiques à l'avant,
 vérifiés par une troisième photo)** et une nouvelle migration.
 
+### Étape 3 — le site, écran par écran *(commencée le 2026-09-18)*
+
+**Le socle**, dans `global.js` : `chargerMembreIdActif()` rend le numéro de la personne dont on
+regarde les données (impersonation comprise), `chargerMembreIdReel()` celui de la personne
+réellement connectée. Une requête par adresse, mise en cache sous forme de promesse, et le numéro
+est **amorcé dès la connexion** (il arrive avec le rôle et le statut : pas une requête de plus).
+Un échec n'est pas mis en cache. Les 37 usages de `getActiveEmail()` restent valables : l'adresse
+demeure ce que Google donne, et `membres` reste la table de correspondance.
+
+**L'ordre des groupes**, du plus petit au plus gros — le relevé compte les références aux colonnes
+d'appartenance :
+
+| Groupe | Fichiers | Réf. | État |
+|---|---|---|---|
+| 1 | socle `global.js`, `notifications.js`, `mes-contacts.js`, `billet.js`, `admin-signalements.js` | 17 | **en ligne** le 18/09 (`b0fb923`, cache v313) |
+| 2 | `ma-collection.js`, `users.js`, `collecteurs.js` | 16 | à faire |
+| 3 | `mes-inscriptions.js`, `app-new.js`, `admin-notifications.js` | 33 | à faire |
+| 4 | `demande.js`, `admin-demandes.js` | 50 | à faire |
+| 5 | `admin-pre-inscriptions.js`, `admin.js` | 66 | à faire |
+| 6 | `mes-collectes.js` | 159 | à faire |
+
+**Deux points de méthode retenus au groupe 1** :
+
+- **un signalement appartient au compte réellement connecté**, jamais à l'identité empruntée : la
+  règle d'accès compare le numéro déduit du jeton, et l'impersonation n'existe que côté navigateur.
+  C'est le comportement d'avant (spec #5), préservé en passant par `chargerMembreIdReel()` ;
+- **là où un écran affichait l'adresse d'un autre membre** — l'auteur d'un signalement, côté admin —
+  elle vient maintenant de sa fiche, par jointure sur le numéro (`signalements?select=…,membres(…)`).
+  C'est ce qui rendra l'étape 4 possible sans perdre l'affichage.
+
+**Banc** : 14 vérifications dans jsdom contre le vrai PostgREST — numéro connu sans requête
+supplémentaire, impersonation dans les deux sens, annonces marquées lues par le numéro (et l'adresse
+remplie par la base), contact créé, cycle complet du signalement (bouton, envoi, réouverture), et
+l'écran admin qui affiche l'adresse venue de la fiche. Un piège trouvé là : les scripts étant évalués
+après le chargement du document, `DOMContentLoaded` était déjà passé et la routine de connexion ne
+démarrait jamais — le banc le rejoue désormais une fois.
+
 ### Reste à faire
 
 | Étape | État |
@@ -941,7 +978,7 @@ vérifiés par une troisième photo)** et une nouvelle migration.
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
-| 3 — le site, écran par écran | à écrire |
+| 3 — le site, écran par écran | **commencée** : groupe 1 en ligne le 18/09 (`b0fb923`) ; groupes 2 à 6 à faire |
 | 4 — retirer les adresses recopiées | à écrire |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
 
