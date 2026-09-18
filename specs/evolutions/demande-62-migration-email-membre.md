@@ -952,7 +952,7 @@ d'appartenance :
 | 3 | `mes-inscriptions.js`, `app-new.js`, `admin-notifications.js` | 33 | **en ligne** le 18/09 (même déploiement) |
 | 4 | `demande.js`, `admin-demandes.js` | 50 | **en ligne** le 18/09 (même déploiement) |
 | 5 | `admin-pre-inscriptions.js`, `admin.js` | 66 | **en ligne** le 18/09 (même déploiement) |
-| 6 | `mes-collectes.js` | 159 | à faire |
+| 6 | `mes-collectes.js` | 159 | **développé et vérifié au banc** ; déploiement séparé, sur accord de Cyril |
 
 Les groupes 2 à 5 sont partis **d'un seul déploiement**, choix de Cyril : un déploiement par groupe
 aurait multiplié les allers-retours sans réduire le risque, le banc jouant de toute façon chaque
@@ -996,6 +996,24 @@ groupe 1 reste vert (14/14). Deux manques du banc corrigés au passage : `scroll
 pas dans jsdom (un écran qui fait défiler son formulaire plantait), et une réponse 204 ne peut pas
 porter de corps.
 
+**Le groupe 6** — `mes-collectes.js`, 5 134 lignes, plus gros que les dix autres fichiers réunis —
+tient en une idée : cet écran **groupait tout par adresse**. Les inscriptions à répartir, les
+enveloppes en cours, les paiements à vérifier, les règlements confirmés, les messages de relance :
+chaque table de travail avait l'adresse pour clé. Toutes ont le numéro maintenant, et un petit socle
+local (`fichesParNumero`, `ficheDuNumero()`, `adresseDuNumero()`, `numerosDe()`) rassemble ce que
+l'écran a déjà lu sur les membres, d'où que ça vienne. Deux conséquences utiles :
+
+- **l'adresse ne sert plus qu'à écrire au membre** (le `mailto:` d'une relance) et à l'afficher :
+  elle est lue sur sa fiche, jamais recopiée depuis la ligne ;
+- **la réattribution d'une inscription** (un membre introuvable, cas hérité de l'import) travaille
+  désormais sur des numéros, ce qui la rend exacte : l'ancienne version comparait des adresses qui
+  pouvaient différer par la casse.
+
+**Banc** : 22 vérifications (`test-etape3-g6.mjs`) — reconnaissance du collecteur, détail d'une
+collecte, mise en enveloppe, inscription posée par le collecteur, vérification des paiements (dont
+« je ne me réclame rien à moi-même »), préparation des envois, liste noire (avec le retrait des
+inscriptions), détail d'une enveloppe, historique, relance simple et groupée, récapitulatif.
+
 **Trouvé en chemin, hors #62** : la migration `scripts/migration-demande-51-notif-auteur.sql`
 (envoi ciblé relisible par son auteur) **n'a jamais été jouée en production**. L'écran le détecte et
 désactive proprement le mode « personnes précises » : rien n'est cassé, mais la fonctionnalité #51
@@ -1010,7 +1028,7 @@ sur `cible_email` et devra être reprise à l'étape 4, en même temps que les a
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
-| 3 — le site, écran par écran | **presque finie** : groupes 1 à 5 en ligne le 18/09 (`b0fb923`, `a6d6452`) ; reste `mes-collectes.js` |
+| 3 — le site, écran par écran | groupes 1 à 5 **en ligne** le 18/09 (`b0fb923`, `a6d6452`) ; groupe 6 (`mes-collectes.js`) **développé et vérifié**, en attente de son déploiement |
 | 4 — retirer les adresses recopiées | à écrire (penser à `mes_notifications_envoyees()` si la migration #51 est jouée d'ici là) |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
 

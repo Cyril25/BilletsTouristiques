@@ -85,8 +85,10 @@ envoyer un message à une personne précise, publier un commentaire sur une dema
 pré-inscription, inscrire quelqu'un à une collecte depuis l'administration, la pastille « à payer »
 du menu, une annonce marquée comme lue. Trente-quatre vérifications, toutes passées.
 
-**Reste le plus gros écran, « Mes collectes »**, à lui seul plus volumineux que les dix autres
-réunis : il sera repris seul, pour pouvoir revenir en arrière sans toucher au reste.
+**Le plus gros écran, « Mes collectes »**, à lui seul plus volumineux que les dix autres réunis,
+est écrit et vérifié (vingt-deux gestes rejoués sur la copie : mise en enveloppe, inscription d'un
+membre, vérification des paiements, liste noire, relances…). Il part **dans une mise en ligne
+séparée**, pour qu'un souci se rattache sans hésitation à l'un ou à l'autre.
 
 **Trouvé au passage, sans rapport avec ce chantier** : l'envoi d'une annonce à des personnes
 nommées, développé en juin, n'a jamais été activé en base — l'écran s'en aperçoit et grise
