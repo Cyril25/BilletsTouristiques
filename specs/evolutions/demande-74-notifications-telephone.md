@@ -2,8 +2,21 @@
 
 - **Complexité :** L (tri du 2026-09-17).
 - **Demande :** #74, déposée par Cyril le 2026-09-17, priorité normale.
-- **Statut :** analyse écrite le 2026-09-17. Aucun développement commencé.
+- **Statut :** analyse écrite le 2026-09-17, reprise le 2026-09-18 après les réponses de Cyril. Une
+  seule question reste, et elle dépend d'un constat à jouer. Aucun développement commencé.
 - Version en clair pour les relecteurs : `demande-74-notifications-telephone-en-clair.md`.
+
+## Les réponses de Cyril *(18/09, 11 h 32)*
+
+> « Oui, oui et oui pour les 3 questions. Pour la dernière question je te laisse regarder car j'en ai
+> aucune idée mais je ne pense pas. »
+
+- **Q2 — tout ce qui arrive dans la cloche sonne** sur le téléphone. Retenu.
+- **Q3 — les demandes d'inscription et les signalements** deviennent des lignes de `notifications`,
+  pour sonner chez les admins. Retenu.
+- **Q4 — un seul Worker « messager »** pour #74 et #72. Retenu.
+- **Q1 — l'extension réseau de la base** : un constat en lecture seule est préparé pour lui, et
+  l'option B est retravaillée pour que la réponse, quelle qu'elle soit, ne bloque rien.
 
 ## Contexte (demande)
 
@@ -89,13 +102,37 @@ chaque nuit : **un seul « messager »** plutôt que deux.
 | | Principe | Pour | Contre |
 |---|---|---|---|
 | **A — un déclencheur sur la table** `notifications` *(recommandé)* | À chaque ligne ajoutée, la base appelle le Worker (« webhook » de base Supabase, qui s'appuie sur l'extension réseau `pg_net`) | Toutes les notifications partent, qu'elles viennent de l'écran, d'un déclencheur ou d'un script | Disponibilité de l'extension à vérifier sur ce projet (même question que #72) |
-| **B — l'écran appelle le Worker** | Après avoir créé une notification, la page prévient le Worker | Rien à activer en base | Oublie celles créées par les déclencheurs (#44) et les scripts. Et un membre malveillant pourrait appeler le Worker directement : il faudrait le protéger |
+| **B — l'écran appelle le Worker** | Après avoir créé une notification, la page prévient le Worker | Rien à activer en base | ~~Oublie celles créées par les déclencheurs (#44) et les scripts. Et un membre malveillant pourrait appeler le Worker directement : il faudrait le protéger~~ *(18/09 : les deux objections tombent, voir ci-dessous)* |
 
-**Recommandé : A. Question Q1** pour Cyril, qui seul peut vérifier le projet Supabase.
+~~**Recommandé : A. Question Q1** pour Cyril, qui seul peut vérifier le projet Supabase.~~
+
+**Reprise du 18/09.** Cyril ne sait pas si l'extension réseau est disponible et pense que non ; il
+demande que ce soit vérifié. Deux choses en découlent.
+
+**Un constat, à jouer par lui** : `scripts/migration-demande-74-1-constat.sql`, en lecture seule, sur
+son poste. Il dit si `pg_net` est installée ou installable, et si le schéma des webhooks existe. Trois
+lignes de réponse suffisent à trancher entre A et B.
+
+**Et B devient une vraie solution**, pas un repli bancal, grâce à deux précautions :
+
+- **le Worker ne fait jamais confiance à son appelant.** On ne lui envoie qu'un **numéro de
+  notification**. Il relit lui-même la ligne dans la base avec sa clé de service, et envoie
+  exactement ce qu'elle contient, à exactement la cible qu'elle déclare. Quelqu'un qui appellerait le
+  Worker à tort ne peut donc rien faire d'autre que redemander l'envoi d'une notification qui existe
+  déjà, à ses destinataires légitimes : aucune fuite, aucun message inventé ;
+- **chaque envoi est noté** (`push_envois` : le numéro de la notification, la date). Une notification
+  déjà envoyée ne repart pas — ce qui règle du même coup les doubles appels —, et **un balayage**
+  rattrape au passage toutes les notifications récentes jamais envoyées : celles des déclencheurs en
+  base (#44) et des scripts y compris. Le balayage tourne à chaque appel, et de toute façon chaque
+  nuit avec le messager de #72.
+
+**Recommandé : A si l'extension est là, B sinon** — et B ne perd rien d'essentiel. Dans les deux cas,
+la table `push_envois` et le balayage restent utiles : ils rendent l'envoi idempotent.
 
 Les demandes d'inscription et les signalements ne sont pas des lignes de `notifications` : pour
 qu'ils sonnent aussi, leur arrivée devra **créer** une ligne dans `notifications`, ciblée admins.
-C'est un petit changement, et la cloche y gagne une source unique. **Question Q3.**
+C'est un petit changement, et la cloche y gagne une source unique. ~~Question Q3.~~ **Retenu par
+Cyril le 18/09.**
 
 ### Les abonnements : une table
 
@@ -128,25 +165,26 @@ service, lit ceux de tout le monde. Sans `TO authenticated` (le jeton Firebase a
 Proposition pour commencer : **tout ce qui arrive dans la cloche sonne aussi**, avec la même cible —
 une annonce à tous sonne chez tous les abonnés, un message privé chez le seul destinataire. Des
 réglages par type (« ne me prévenir que pour mes collectes ») viendront si le besoin s'en fait
-sentir. **Question Q2.**
+sentir. ~~Question Q2.~~ **Retenu par Cyril le 18/09.**
 
 ## Découpage
 
 | Lot | Contenu | Dépend de |
 |---|---|---|
 | **1** | Icônes PNG ; bloc « Notifications sur cet appareil » dans le profil ; table `push_abonnements` et ses règles ; écoute `push` dans le service worker | Clés VAPID générées par Cyril |
-| **2** | Le Worker `notifications-push` : lecture de la cible, envoi chiffré, nettoyage des abonnements morts ; un bouton « m'envoyer une notification de test » pour les admins | lot 1 |
-| **3** | Le déclencheur en base sur `notifications` | lot 2, Q1 |
-| **4** | Demandes d'inscription et signalements versés dans `notifications` | lot 3, Q3 |
+| **2** | Le Worker `notifications-push` : il relit la notification par son numéro, envoie à sa cible, note l'envoi dans `push_envois`, balaie les notifications récentes jamais envoyées, nettoie les abonnements morts ; un bouton « m'envoyer une notification de test » pour les admins | lot 1 |
+| **3** | Le déclenchement : le site appelle le Worker (option B) et, si le constat le permet, un déclencheur en base (option A) | lot 2, constat joué |
+| **4** | Demandes d'inscription et signalements versés dans `notifications` *(retenu le 18/09)* | lot 3 |
 
 ## Ce que Cyril aura à faire
 
 Ces gestes-là lui appartiennent, l'assistant ne les fera pas :
 
+- **jouer le constat** `scripts/migration-demande-74-1-constat.sql` (lecture seule, sur son poste) et
+  coller les trois lignes de résultat en commentaire sur la fiche : c'est ce qui tranche entre A et B ;
 - générer la paire de clés VAPID et ranger la privée dans les secrets du nouveau Worker ;
 - déployer le Worker ;
-- vérifier la disponibilité de `pg_net` (ou des « webhooks » de base) sur le projet Supabase, et
-  jouer la migration du déclencheur.
+- si le constat est favorable, jouer la migration du déclencheur.
 
 ## Critères d'acceptation
 
@@ -173,10 +211,13 @@ Ces gestes-là lui appartiennent, l'assistant ne les fera pas :
 
 | | Question | Pour qui | Recommandation |
 |---|---|---|---|
-| **Q1** | Le déclenchement depuis la base : `pg_net` ou les webhooks de base sont-ils disponibles sur le projet ? | Cyril | À vérifier ; sinon, repli sur l'option B avec un Worker protégé |
-| **Q2** | Tout ce qui arrive dans la cloche sonne-t-il sur le téléphone, ou seulement certains types ? | Tous | Tout, pour commencer |
-| **Q3** | Verser les demandes d'inscription et les signalements dans `notifications`, pour qu'ils sonnent chez les admins ? | Cyril | Oui |
-| **Q4** | Un seul Worker « messager » pour #74 et #72 (notifications, mails, tâche de nuit) ? | Cyril | Oui |
+| **Q1** *(18/09 : renvoyée à un constat)* | Le déclenchement depuis la base : l'extension réseau ou les webhooks sont-ils disponibles sur le projet ? | Le constat, joué par Cyril | A si oui, B sinon. Plus rien ne dépend de la réponse : B fait le même travail, avec un balayage |
+| ~~Q2~~ *(tranchée le 18/09 : tout sonne)* | Tout ce qui arrive dans la cloche sonne-t-il sur le téléphone, ou seulement certains types ? | Tous | Tout, pour commencer |
+| ~~Q3~~ *(tranchée le 18/09 : oui)* | Verser les demandes d'inscription et les signalements dans `notifications`, pour qu'ils sonnent chez les admins ? | Cyril | Oui |
+| ~~Q4~~ *(tranchée le 18/09 : oui)* | Un seul Worker « messager » pour #74 et #72 (notifications, mails, tâche de nuit) ? | Cyril | Oui |
+
+**L'analyse est validable** : la question qui reste ne change ni l'écran, ni le modèle, ni le travail
+à faire — seulement par quel chemin le Worker est prévenu.
 
 ## Réalisation
 
