@@ -190,9 +190,28 @@ function grouperEnvoisCibles(lignes) {
             ordre.push(cle);
         }
         parCle[cle].ids.push(n.id);
-        parCle[cle].destinataires.push(n.cible_email);
+        // Demande #62 — la ligne porte le numéro du destinataire ; l'écran travaille
+        // ensuite avec son adresse, comme avant.
+        parCle[cle].destinataires.push(adresseDuNumero(n.cible_membre_id));
     });
     return ordre.map(function(c) { return parCle[c]; });
+}
+
+// Demande #62 — du numéro de membre à son adresse (annuaire déjà chargé)
+function adresseDuNumero(membreId) {
+    for (var i = 0; i < membresListe.length; i++) {
+        if (membresListe[i].id === membreId) return membresListe[i].email;
+    }
+    return '';
+}
+
+// Demande #62 — et l'inverse, pour écrire
+function numeroDeLAdresse(email) {
+    var cible = String(email || '').toLowerCase();
+    for (var i = 0; i < membresListe.length; i++) {
+        if ((membresListe[i].email || '').toLowerCase() === cible) return membresListe[i].id;
+    }
+    return null;
 }
 
 function libelleMembre(email) {
@@ -271,7 +290,7 @@ function labelPageConnue(url) {
 // remonteraient sinon dans un écran de gestion où elles n'ont rien à faire.
 function loadNotifsAdmin() {
     Promise.all([
-        supabaseFetch('/rest/v1/notifications?select=*&cible_email=is.null&order=created_at.desc'),
+        supabaseFetch('/rest/v1/notifications?select=*&cible_membre_id=is.null&order=created_at.desc'),
         // Mes envois ciblés. Un échec signifie presque toujours « migration #51
         // pas encore jouée » : on le traite comme une absence de fonctionnalité,
         // pas comme une erreur — l'étage 1 doit rester utilisable sans elle.
@@ -296,7 +315,7 @@ function loadNotifsAdmin() {
 // L'annuaire alimente le sélecteur de destinataires. Un échec ne doit pas
 // empêcher l'écran de servir pour la diffusion.
 function loadMembres() {
-    supabaseFetch('/rest/v1/membres?select=email,prenom,nom,pseudo,statut&order=prenom.asc')
+    supabaseFetch('/rest/v1/membres?select=id,email,prenom,nom,pseudo,statut&order=prenom.asc')
         .then(function(rows) {
             // Demande #62 — ni refusés ni désactivés (la fiche technique de l'assistant,
             // les anciens membres) : on garde les demandes en attente, comme avant.
@@ -778,7 +797,7 @@ function sauverNotif() {
                 titre: payload.titre,
                 texte: payload.texte,
                 lien: payload.lien,
-                cible_email: membresSelectionnes[cle],
+                cible_membre_id: numeroDeLAdresse(membresSelectionnes[cle]),
                 auteur_email: auteur
             };
         });

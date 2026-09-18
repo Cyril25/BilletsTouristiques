@@ -727,7 +727,12 @@ window.getEffectiveNotifAudience = function() {
         .then(function(role) {
             var isAdmin = (role === 'admin' || role === 'superadmin');
             if (isAdmin) return { isAdmin: true, isCollecteur: true };
-            return supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
+            // Demande #62 — la fiche collecteur porte le numéro du membre
+            return window.chargerMembreIdActif()
+                .then(function(monNumero) {
+                    if (!monNumero) return [];
+                    return supabaseFetch('/rest/v1/collecteurs?membre_id=eq.' + monNumero + '&select=alias&limit=1');
+                })
                 .then(function(rows) { return { isAdmin: false, isCollecteur: !!(rows && rows.length) }; })
                 .catch(function() { return { isAdmin: false, isCollecteur: false }; });
         });
@@ -827,20 +832,24 @@ function loadSommeDue() {
     var email = window.getActiveEmail();
     if (!email) return;
     var annee = new Date().getFullYear();
-    var e = encodeURIComponent(email);
+
+    // Demande #62 — les lignes du membre se retrouvent par son numéro ; l'adresse ne sert
+    // plus qu'à le connaître.
+    window.chargerMembreIdActif().then(function(moi) {
+    if (!moi) return;
 
     Promise.all([
         // Demande #16 — prix / FDP / collecteur viennent de la collecte (embed
         // PostgREST, même requête, ce code tourne sur chaque page). billets.Collecteur
         // supprimé (bascule collecteur).
-        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + e + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi,collectes(prix,prix_variante,payer_fdp,categorie,collecteur)'),
-        supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + e + '&select=alias'),
-        supabaseFetch('/rest/v1/membres?email=eq.' + e + '&select=pays'),
+        supabaseFetch('/rest/v1/inscriptions?membre_id=eq.' + moi + '&pas_interesse=eq.false&statut_paiement=eq.non_paye&select=billet_id,nb_normaux,nb_variantes,mode_envoi,collectes(prix,prix_variante,payer_fdp,categorie,collecteur)'),
+        supabaseFetch('/rest/v1/collecteurs?membre_id=eq.' + moi + '&select=alias'),
+        supabaseFetch('/rest/v1/membres?id=eq.' + moi + '&select=pays'),
         supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=destination,type_envoi,qte_min,qte_max,prix'),
-        supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + e + '&prix_envoi_reel=not.is.null&statut_paiement_port=eq.non_paye&select=prix_envoi_reel'),
+        supabaseFetch('/rest/v1/enveloppes?membre_id=eq.' + moi + '&prix_envoi_reel=not.is.null&statut_paiement_port=eq.non_paye&select=prix_envoi_reel'),
         // Demande #44 — les écarts de prix non réglés. Seules les DETTES comptent :
         // un avoir n'est pas une somme due, le retrancher reviendrait à compenser.
-        supabaseFetch('/rest/v1/dettes?membre_email=eq.' + e + '&statut_paiement=eq.non_paye&montant=gt.0&select=montant')
+        supabaseFetch('/rest/v1/dettes?membre_id=eq.' + moi + '&statut_paiement=eq.non_paye&montant=gt.0&select=montant')
             .catch(function() { return []; })   // migration pas encore jouée : la pastille ne doit pas disparaître
     ])
     .then(function(res) {
@@ -896,13 +905,15 @@ function loadSommeDue() {
         }
     })
     .catch(function(err) { console.warn('Erreur calcul somme due:', err); });
+    })
+    .catch(function(err) { console.warn('Somme due : numéro de membre indisponible', err); });
 }
 
 function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=202")
+    fetch("menu.html?v=203")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -977,7 +988,12 @@ function loadMenu() {
                 }
 
                 // QW-1 — Masquer "Mes collectes" pour les non-collecteurs
-                supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(activeEmail) + '&select=id')
+                // Demande #62 — la fiche collecteur porte le numéro du membre
+                window.chargerMembreIdActif()
+                    .then(function(monNumero) {
+                        if (!monNumero) return [];
+                        return supabaseFetch('/rest/v1/collecteurs?membre_id=eq.' + monNumero + '&select=id');
+                    })
                     .then(function(data) {
                         if (!data || data.length === 0) {
                             var collectesLink = document.querySelector('a[href="mes-collectes.html"]');
@@ -1015,16 +1031,25 @@ function refreshNotifications(effectiveRole) {
     // ré-applique côté front le filtrage du point de vue de la personne impersonnée.
     if (email) {
         var effIsAdmin = (effectiveRole === 'admin' || effectiveRole === 'superadmin');
+        // Demande #62 — annonces lues et fiche collecteur se retrouvent par le numéro
+        var numeroPromise = window.chargerMembreIdActif().catch(function() { return null; });
         var collecteurPromise = effIsAdmin
             ? Promise.resolve(true)
-            : supabaseFetch('/rest/v1/collecteurs?email_membre=eq.' + encodeURIComponent(email) + '&select=alias&limit=1')
+            : numeroPromise
+                .then(function(monNumero) {
+                    if (!monNumero) return [];
+                    return supabaseFetch('/rest/v1/collecteurs?membre_id=eq.' + monNumero + '&select=alias&limit=1');
+                })
                 .then(function(rows) { return !!(rows && rows.length); })
                 .catch(function() { return false; });
 
         promises.push(
             Promise.all([
                 supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,cible,created_at&order=created_at.desc'),
-                supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id'),
+                numeroPromise.then(function(monNumero) {
+                    if (!monNumero) return [];
+                    return supabaseFetch('/rest/v1/notifications_vues?membre_id=eq.' + monNumero + '&select=notification_id');
+                }),
                 collecteurPromise
             ]).then(function(res) {
                 var notifs = res[0] || [];
@@ -1091,13 +1116,18 @@ function refreshNotifications(effectiveRole) {
     }
 
     // Demande #5 — Réponse à MES signalements (clôturés et pas encore vus).
-    // Toujours sur l'email RÉEL : la RLS filtre sur le vrai JWT, pas sur l'identité impersonnée.
+    // Toujours sur l'identité RÉELLE : la RLS filtre sur le vrai JWT, pas sur l'identité
+    // impersonnée. Demande #62 — le signalement porte le numéro de son auteur.
     var realEmail = firebase.auth().currentUser && firebase.auth().currentUser.email;
     if (realEmail) {
         promises.push(
-            supabaseFetch('/rest/v1/signalements?auteur_email=eq.' + encodeURIComponent(realEmail) +
+            window.chargerMembreIdReel()
+                .then(function(monNumero) {
+                    if (!monNumero) return [];
+                    return supabaseFetch('/rest/v1/signalements?auteur_id=eq.' + monNumero +
                           '&etat=in.(traite,rejete)&auteur_vu_at=is.null' +
-                          '&select=id,billet_id,billet_ref,etat,reponse_admin,traite_at&order=traite_at.desc')
+                          '&select=id,billet_id,billet_ref,etat,reponse_admin,traite_at&order=traite_at.desc');
+                })
                 .then(function(rows) {
                     (rows || []).forEach(function(s) {
                         window.__notifs.push({
@@ -1157,13 +1187,18 @@ window.marquerNotifLue = function(e, notifId, href) {
     var email = window.getActiveEmail();
     var dest = href || 'notifications.html';
     if (!email || !notifId) { window.location.href = dest; return; }
-    supabaseFetch('/rest/v1/notifications_vues', {
-        method: 'POST',
-        headers: { Prefer: 'resolution=ignore-duplicates' },
-        body: JSON.stringify({ notification_id: notifId, membre_email: email })
-    })
-    .then(function() { window.location.href = dest; })
-    .catch(function() { window.location.href = dest; });
+    // Demande #62 — la ligne « vue » porte le numéro du membre
+    window.chargerMembreIdActif()
+        .then(function(moi) {
+            if (!moi) return null;
+            return supabaseFetch('/rest/v1/notifications_vues', {
+                method: 'POST',
+                headers: { Prefer: 'resolution=ignore-duplicates' },
+                body: JSON.stringify({ notification_id: notifId, membre_id: moi })
+            });
+        })
+        .then(function() { window.location.href = dest; })
+        .catch(function() { window.location.href = dest; });
 };
 
 function renderNotifications() {

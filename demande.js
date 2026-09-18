@@ -117,11 +117,15 @@ function chargerFiche() {
         // Un échec ici ne doit pas empêcher la fiche de s'afficher : on retombe
         // sur la partie locale de l'adresse pour nommer les gens (même repli
         // que la liste, demande #49).
-        supabaseFetch('/rest/v1/membres?select=email,nom,prenom').catch(function() { return []; }),
+        supabaseFetch('/rest/v1/membres?select=id,email,nom,prenom').catch(function() { return []; }),
         chargerCommentaires(id),
-        chargerValidations(id)
+        chargerValidations(id),
+        // Demande #62 — mon numéro de membre : il décide de « c'est mon commentaire »,
+        // de ma validation et du droit de clore la demande.
+        window.chargerMembreIdActif().catch(function() { return null; })
     ])
         .then(function(res) {
+            monNumeroFiche = res[4] || null;
             var rows = res[0] || [];
             if (rows.length === 0) {
                 afficherIntrouvable('La demande #' + id + ' n\'existe pas (ou plus).');
@@ -129,7 +133,11 @@ function chargerFiche() {
             }
             laDemande = rows[0];
             membresMap = {};
-            (res[1] || []).forEach(function(m) { membresMap[(m.email || '').toLowerCase()] = m; });
+            membresParNumero = {};
+            (res[1] || []).forEach(function(m) {
+                membresMap[(m.email || '').toLowerCase()] = m;
+                membresParNumero[m.id] = m;          // demande #62
+            });
 
             document.getElementById('fd-contenu').style.display = '';
             renderFiche();
@@ -178,6 +186,23 @@ function chargerValidations(id) {
         });
 }
 
+// Demande #62 — l'écran parle en numéros de membre ; l'annuaire donne le nom et
+// l'adresse. Le numéro de la personne connectée est chargé avec la fiche.
+var membresParNumero = {};
+var monNumeroFiche = null;
+
+function nomAfficheParNumero(membreId) {
+    var m = membresParNumero[membreId];
+    if (m && (m.prenom || m.nom)) return (m.prenom || m.nom);
+    if (m && m.email) return m.email.indexOf('@') > 0 ? m.email.slice(0, m.email.indexOf('@')) : m.email;
+    return membreId ? ('membre n° ' + membreId) : 'Inconnu';
+}
+
+function adresseDuNumero(membreId) {
+    var m = membresParNumero[membreId];
+    return m ? (m.email || '') : '';
+}
+
 function nomAffiche(email) {
     var e = (email || '').trim();
     if (!e) return 'Inconnu';
@@ -221,7 +246,9 @@ function renderFiche() {
         document.getElementById('fd-qui-' + v).checked = (quiValues.indexOf(v) !== -1);
     });
 
-    document.getElementById('fd-demandeur').textContent = d.demandeur || '—';
+    // Demande #62 — l'adresse du demandeur vient de sa fiche ; les demandes importées
+    // gardent leur libellé.
+    document.getElementById('fd-demandeur').textContent = adresseDuNumero(d.demandeur_id) || d.demandeur || '—';
 
     var dates = 'Créée le ' + formatDateFr(d.created_at);
     if (d.updated_at && d.updated_at.slice(0, 10) !== (d.created_at || '').slice(0, 10)) {
@@ -238,9 +265,8 @@ function renderFiche() {
 function peutTerminer(demande) {
     if (!demande) return true;
     if (window.userRole === 'superadmin') return true;
-    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
-    var dem = (demande.demandeur || '').trim().toLowerCase();
-    return !!moi && moi === dem;
+    // Demande #62 — on compare les numéros de membre
+    return !!monNumeroFiche && demande.demandeur_id === monNumeroFiche;
 }
 
 function enregistrerFiche() {
@@ -307,8 +333,8 @@ function resumeDemande(d) {
 function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
     if (!demande || nouvelEtat === ancienEtat) return;
     if (nouvelEtat !== 'a_cadrer' && nouvelEtat !== 'a_tester') return;
-    var email = (demande.demandeur || '').trim();
-    if (!estEmailValide(email)) return;
+    // Demande #62 — le destinataire est désigné par son numéro
+    if (!demande.demandeur_id) return;
 
     var resume = resumeDemande(demande);
     var titre, texte;
@@ -326,7 +352,7 @@ function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
     supabaseFetch('/rest/v1/notifications', {
         method: 'POST',
         headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ type: 'demande_suivi', titre: titre, texte: texte, cible_email: email })
+        body: JSON.stringify({ type: 'demande_suivi', titre: titre, texte: texte, cible_membre_id: demande.demandeur_id })
     }).catch(function(e) {
         console.warn('Notif demandeur (#33) : échec', e);
     });
@@ -817,16 +843,15 @@ function renderValidation() {
     } else {
         liste.innerHTML = lesValidations.map(function(v) {
             return '<div class="fiche-validation-ligne"><i class="fa-solid fa-circle-check"></i> '
-                 + '<strong>' + escapeHtml(nomAffiche(v.admin_email)) + '</strong> a validé '
+                 + '<strong>' + escapeHtml(nomAfficheParNumero(v.admin_id)) + '</strong> a validé '
                  + '<span class="fiche-validation-date">le ' + escapeHtml(formatDateHeureFr(v.created_at)) + '</span>'
                  + '</div>';
         }).join('');
     }
 
-    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
     var maValidation = null;
     for (var i = 0; i < lesValidations.length; i++) {
-        if ((lesValidations[i].admin_email || '').trim().toLowerCase() === moi) {
+        if (lesValidations[i].admin_id === monNumeroFiche) {   // demande #62
             maValidation = lesValidations[i];
         }
     }
@@ -843,15 +868,14 @@ function renderValidation() {
 }
 
 function validerSpec() {
-    var email = (window.getActiveEmail() || '').trim();
-    if (!email) {
+    if (!monNumeroFiche) {
         showToast('Session expirée : reconnectez-vous', 'error');
         return;
     }
     supabaseFetch('/rest/v1/demande_validations', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ demande_id: laDemande.id, admin_email: email })
+        body: JSON.stringify({ demande_id: laDemande.id, admin_id: monNumeroFiche })
     })
         .then(function(rows) {
             if (rows && rows.length) lesValidations.push(rows[0]);
@@ -917,9 +941,8 @@ function renderCommentaires() {
         return;
     }
 
-    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
     liste.innerHTML = lesCommentaires.map(function(c) {
-        var estMien = (c.auteur_email || '').trim().toLowerCase() === moi;
+        var estMien = c.auteur_id === monNumeroFiche;   // demande #62
         var contexte = '';
         if (c.doc) {
             contexte = '<span class="fiche-com-contexte"><i class="fa-solid fa-file-lines"></i> '
@@ -930,7 +953,7 @@ function renderCommentaires() {
 
         if (commentaireEnEdition === c.id) {
             return '<article class="fiche-com">'
-                + '<header class="fiche-com-tete"><strong>' + escapeHtml(nomAffiche(c.auteur_email)) + '</strong>'
+                + '<header class="fiche-com-tete"><strong>' + escapeHtml(nomAfficheParNumero(c.auteur_id)) + '</strong>'
                 + '<span class="fiche-com-date">' + escapeHtml(formatDateHeureFr(c.created_at)) + '</span>'
                 + contexte + '</header>'
                 + '<textarea class="fiche-textarea" id="fd-com-edit-' + c.id + '" rows="4">'
@@ -942,7 +965,7 @@ function renderCommentaires() {
         }
 
         return '<article class="fiche-com">'
-            + '<header class="fiche-com-tete"><strong>' + escapeHtml(nomAffiche(c.auteur_email)) + '</strong>'
+            + '<header class="fiche-com-tete"><strong>' + escapeHtml(nomAfficheParNumero(c.auteur_id)) + '</strong>'
             + '<span class="fiche-com-date">' + escapeHtml(formatDateHeureFr(c.created_at)) + '</span>'
             + modifie + contexte + '</header>'
             + '<div class="fiche-com-texte">' + escapeHtml(c.texte).replace(/\n/g, '<br>') + '</div>'
@@ -962,8 +985,7 @@ function posterCommentaire() {
         showToast('Écrivez votre remarque avant de publier', 'error');
         return;
     }
-    var email = (window.getActiveEmail() || '').trim();
-    if (!email) {
+    if (!monNumeroFiche) {
         showToast('Session expirée : reconnectez-vous', 'error');
         return;
     }
@@ -976,7 +998,7 @@ function posterCommentaire() {
             demande_id: laDemande.id,
             doc: docCourant || null,
             section: section,
-            auteur_email: email,
+            auteur_id: monNumeroFiche,
             texte: texte
         })
     })

@@ -4,6 +4,8 @@
 // ============================================================
 
 var mesInscriptions = [];
+// Demande #62 — le numéro de membre de la personne dont on regarde les inscriptions
+var monNumeroMembre = null;
 var billetsMap = {};
 var collecteursMap = {};
 // Demande #16 — {collecte_id: {nom, prix, prix_variante, payer_fdp, fdp_com, scope,
@@ -93,7 +95,11 @@ function loadMesInscriptions() {
     var annee = new Date().getFullYear();
 
     // Étape 1 : charger les inscriptions du membre (pas_interesse = false)
-    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.false&select=*&order=date_inscription.desc')
+    window.chargerMembreIdActif()
+        .then(function(moi) {
+            monNumeroMembre = moi;
+            return supabaseFetch('/rest/v1/inscriptions?membre_id=eq.' + moi + '&pas_interesse=eq.false&select=*&order=date_inscription.desc');
+        })
         .then(function(data) {
             mesInscriptions = data || [];
 
@@ -119,13 +125,13 @@ function loadMesInscriptions() {
 
             // Étape 3 : charger collecteurs, pays du membre, frais de port, enveloppes dues en parallèle
             var promises = [
-                supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,email_membre'),
+                supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,membre_id'),
                 supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=pays'),
                 supabaseFetch('/rest/v1/frais_port?annee=eq.' + annee + '&select=*'),
                 // Frais de port dus : enveloppes avec prix saisi, non encore confirmé payé
-                supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc'),
+                supabaseFetch('/rest/v1/enveloppes?membre_id=eq.' + monNumeroMembre + '&prix_envoi_reel=not.is.null&statut_paiement_port=neq.confirme&select=*&order=date_expedition.asc'),
                 // Demande #44 — mes lignes de dette/avoir encore ouvertes.
-                supabaseFetch('/rest/v1/dettes?membre_email=eq.' + encodeURIComponent(email) + '&statut_paiement=neq.confirme&select=*&order=date_creation.asc')
+                supabaseFetch('/rest/v1/dettes?membre_id=eq.' + monNumeroMembre + '&statut_paiement=neq.confirme&select=*&order=date_creation.asc')
                     .catch(function() { return []; })   // migration pas encore jouée : on n'empêche pas la page de s'afficher
             ];
             // Demande #16 — la collecte porte prix/FDP/statut : on la charge toujours,
@@ -284,16 +290,17 @@ function portMatchesSearch(env) {
     return String(env.collecteur_alias || '').toLowerCase().indexOf(currentInscSearch) !== -1;
 }
 
-function estBeneficiaire(insc, activeEmail) {
+function estBeneficiaire(insc) {
     // Demande #16 (bascule) — le collecteur vient de la collecte de l'inscription
+    // Demande #62 — on compare les numéros de membre, plus les adresses
     var col = collecteursMap[getTarif(insc).collecteur];
-    return !!(col && col.email_membre && col.email_membre === activeEmail);
+    return !!(col && col.membre_id && monNumeroMembre && col.membre_id === monNumeroMembre);
 }
 
 // Le membre est-il le collecteur (bénéficiaire) de cette enveloppe ? → pas de frais à payer
-function estBeneficiairePort(env, activeEmail) {
+function estBeneficiairePort(env) {
     var col = collecteursMap[env.collecteur_alias];
-    return !!(col && col.email_membre && col.email_membre === activeEmail);
+    return !!(col && col.membre_id && monNumeroMembre && col.membre_id === monNumeroMembre);
 }
 
 // Construit un "pseudo-item" frais de port pour traverser le même regroupement que les inscriptions
@@ -500,7 +507,7 @@ function renderInscriptions() {
         var nbVariantes = insc.nb_variantes || 0;
         var montant = (prix * nbNormaux) + (prixVar * nbVariantes);
         var statut = insc.statut_paiement || 'non_paye';
-        var isBenef = estBeneficiaire(insc, activeEmail);
+        var isBenef = estBeneficiaire(insc);
         var exigible = montantExigible(insc);
 
         var fdpMontant = 0;
@@ -675,7 +682,7 @@ function renderInscriptions() {
         var tarifG = getTarif(insc);
         if (tarifG.categorie === 'Pré collecte' || tarifG.indisponible) {
             statGroups[3].items.push(insc);
-        } else if (estBeneficiaire(insc, activeEmail)) {
+        } else if (estBeneficiaire(insc)) {
             statGroups[5].items.push(insc);
         } else {
             var statut = insc.statut_paiement || 'non_paye';
@@ -687,7 +694,7 @@ function renderInscriptions() {
 
     // Frais de port dus : même filtrage par statut (non chargés si déjà confirmés)
     var filteredPort = mesFraisPort.filter(function(env) {
-        if (estBeneficiairePort(env, activeEmail)) return false;
+        if (estBeneficiairePort(env)) return false;
         if (!portMatchesSearch(env)) return false;
         var s = env.statut_paiement_port || 'non_paye';
         if (currentInscFilter === 'prix_non_defini' || currentInscFilter === 'pas_de_collecte') return false;
@@ -794,7 +801,7 @@ function renderInscriptions() {
         }
         var total = m + fdp;
         var s = insc.statut_paiement || 'non_paye';
-        if (exigible && !estBeneficiaire(insc, activeEmail)) {
+        if (exigible && !estBeneficiaire(insc)) {
             if (s === 'non_paye') totalDuGlobal += total;
             else if (s === 'declare') totalEnAttenteGlobal += total;
         }
@@ -811,7 +818,7 @@ function renderInscriptions() {
 
     // Inclure les frais de port dus dans le total
     mesFraisPort.forEach(function(env) {
-        if (estBeneficiairePort(env, activeEmail)) return;
+        if (estBeneficiairePort(env)) return;
         var s = env.statut_paiement_port || 'non_paye';
         var m = parseFloat(env.prix_envoi_reel || 0);
         if (s === 'non_paye') totalDuGlobal += m;
@@ -1293,10 +1300,12 @@ function loadMesEnvois() {
     if (!email) return;
 
     // Charger en parallèle : enveloppes + toutes les inscriptions actives du membre
-    var pEnveloppes = supabaseFetch('/rest/v1/enveloppes?membre_email=eq.' + encodeURIComponent(email) + '&select=*&order=date_creation.desc');
-    var pInscriptions = supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.false&select=*');
+    window.chargerMembreIdActif().then(function(moi) {
+    monNumeroMembre = moi;
+    var pEnveloppes = supabaseFetch('/rest/v1/enveloppes?membre_id=eq.' + moi + '&select=*&order=date_creation.desc');
+    var pInscriptions = supabaseFetch('/rest/v1/inscriptions?membre_id=eq.' + moi + '&pas_interesse=eq.false&select=*');
 
-    Promise.all([pEnveloppes, pInscriptions])
+    return Promise.all([pEnveloppes, pInscriptions])
         .then(function(results) {
             var enveloppes = results[0] || [];
             var toutesInscriptions = results[1] || [];
@@ -1354,10 +1363,11 @@ function loadMesEnvois() {
                     });
                     renderMesEnvois();
                 });
-        })
-        .catch(function(error) {
-            console.error('Erreur chargement envois:', error);
         });
+    })
+    .catch(function(error) {
+        console.error('Erreur chargement envois:', error);
+    });
 }
 
 function renderMesEnvois() {

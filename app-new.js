@@ -198,8 +198,12 @@ if (typeof firebase !== 'undefined') {
             loadCollecteursForCatalogue();
             loadCompteursInscriptions();
             loadFraisPortCatalogue(window.getActiveEmail());
-            loadBlacklistMembre(window.getActiveEmail());
-            loadBlocageMembre(window.getActiveEmail());
+            // Demande #62 — ce qui dépend de l'identité attend le numéro de membre
+            window.chargerMembreIdActif().then(function(moi) {
+                monNumeroCatalogue = moi;
+                loadBlacklistMembre(moi);
+                loadBlocageMembre(moi);
+            }).catch(function(e) { console.warn('Numéro de membre indisponible :', e); });
         }
     });
 }
@@ -969,8 +973,11 @@ function loadMesInscriptions() {
     // Demande #16 — plus de pas_interesse dans inscriptions (déplacé en collection) ;
     // on charge les deux en parallèle pour rafraîchir la vue d'un coup.
     Promise.all([
-        supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id,billet_id,collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,mode_paiement,mode_envoi'),
-        loadMaCollectionPasInteresse(email)
+        window.chargerMembreIdActif().then(function(moi) {
+            monNumeroCatalogue = moi;
+            return supabaseFetch('/rest/v1/inscriptions?membre_id=eq.' + moi + '&select=id,billet_id,collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,mode_paiement,mode_envoi');
+        }),
+        window.chargerMembreIdActif().then(loadMaCollectionPasInteresse)
     ])
         .then(function(results) {
             var data = results[0];
@@ -1004,9 +1011,9 @@ function estPasInteresse(billetId) {
     return maCollectionPasInteresse[billetId] === true;
 }
 
-function loadMaCollectionPasInteresse(email) {
-    if (!email) return Promise.resolve();
-    return supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&pas_interesse=eq.true&select=billet_id')
+function loadMaCollectionPasInteresse(moi) {
+    if (!moi) return Promise.resolve();
+    return supabaseFetch('/rest/v1/collection?membre_id=eq.' + moi + '&pas_interesse=eq.true&select=billet_id')
         .then(function(data) {
             maCollectionPasInteresse = {};
             (data || []).forEach(function(r) { maCollectionPasInteresse[r.billet_id] = true; });
@@ -1020,11 +1027,11 @@ function loadMaCollectionPasInteresse(email) {
 // concernee : sur un billet porte par deux collecteurs, le collecteur de la
 // collecte B n'est pas beneficiaire de la collecte A.
 function estBeneficiaireCollecte(collecte) {
-    var email = window.getActiveEmail && window.getActiveEmail();
     var colr = (collecte && collecte.collecteur) || '';
-    if (!email || !colr) return false;
+    if (!monNumeroCatalogue || !colr) return false;
     var col = collecteursMap[colr];
-    return !!(col && col.email_membre && col.email_membre === email);
+    // Demande #62 — on compare les numéros de membre, plus les adresses
+    return !!(col && col.membre_id && col.membre_id === monNumeroCatalogue);
 }
 function estBeneficiaireCatalogue(item) {
     return estBeneficiaireCollecte(item && collectePrincipaleByBillet[item.id]);
@@ -1032,7 +1039,7 @@ function estBeneficiaireCatalogue(item) {
 
 // --- Chargement des collecteurs pour liens contact ---
 function loadCollecteursForCatalogue() {
-    supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,email_membre')
+    supabaseFetch('/rest/v1/collecteurs?select=alias,paypal_email,paypal_me,membre_id')
         .then(function(data) {
             (data || []).forEach(function(c) {
                 collecteursMap[c.alias] = c;
@@ -1046,9 +1053,11 @@ function loadCollecteursForCatalogue() {
 // --- Chargement de la blacklist pour le membre connecté ---
 // Stocke les alias des collecteurs qui ont blacklisté ce membre
 var blacklistCollecteurs = {};
+// Demande #62 — numéro de membre de la personne dont on affiche le catalogue
+var monNumeroCatalogue = null;
 
-function loadBlacklistMembre(email) {
-    supabaseFetch('/rest/v1/collecteur_blacklist?membre_email=eq.' + encodeURIComponent(email) + '&select=collecteur_alias')
+function loadBlacklistMembre(moi) {
+    supabaseFetch('/rest/v1/collecteur_blacklist?membre_id=eq.' + moi + '&select=collecteur_alias')
         .then(function(data) {
             blacklistCollecteurs = {};
             (data || []).forEach(function(e) {
@@ -1065,8 +1074,8 @@ function loadBlacklistMembre(email) {
 var membreBloqueInscription = false;
 var membreBlocageMotif = '';
 
-function loadBlocageMembre(email) {
-    supabaseFetch('/rest/v1/membre_blocages?membre_email=eq.' + encodeURIComponent(email) + '&select=motif')
+function loadBlocageMembre(moi) {
+    supabaseFetch('/rest/v1/membre_blocages?membre_id=eq.' + moi + '&select=motif')
         .then(function(data) {
             membreBloqueInscription = !!(data && data.length > 0);
             membreBlocageMotif = membreBloqueInscription ? (data[0].motif || '') : '';
@@ -1549,6 +1558,7 @@ function confirmerInscription(billetId) {
 // Demande #24 — corps de l'inscription sur la collecte principale, extrait de
 // confirmerInscription() pour que la garde de plafond puisse le lancer après recomptage.
 function inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes) {
+    if (!avecMonNumero(function() { inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbVariantes); })) return;
     // Charger l'adresse du profil pour le snapshot
     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
         .then(function(membreData) {
@@ -1556,7 +1566,7 @@ function inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbV
             var body = {
                 billet_id: billetId,
                 collecte_id: colPrinc.id,
-                membre_email: email,
+                membre_id: monNumeroCatalogue,
                 nb_normaux: nbNormaux,
                 nb_variantes: nbVariantes,
                 mode_paiement: document.getElementById('insc-paiement-' + billetId).value,
@@ -1582,7 +1592,7 @@ function inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbV
             // Créer l'enveloppe en_cours si elle n'existe pas encore (collecteur de
             // la collecte principale, sur laquelle porte cette inscription)
             if (colPrinc && colPrinc.collecteur) {
-                creerEnveloppeSiAbsente(colPrinc.collecteur, email);
+                creerEnveloppeSiAbsente(colPrinc.collecteur, monNumeroCatalogue);
             }
         })
         .catch(function(error) {
@@ -1591,15 +1601,15 @@ function inscrireSurCollectePrincipale(billetId, colPrinc, email, nbNormaux, nbV
         });
 }
 
-function creerEnveloppeSiAbsente(collecteurAlias, membreEmail) {
-    return supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&membre_email=eq.' + encodeURIComponent(membreEmail) + '&statut=eq.en_cours&select=id')
+function creerEnveloppeSiAbsente(collecteurAlias, membreId) {
+    return supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&membre_id=eq.' + membreId + '&statut=eq.en_cours&select=id')
         .then(function(enveloppes) {
             if (enveloppes && enveloppes.length > 0) return;
             return supabaseFetch('/rest/v1/enveloppes', {
                 method: 'POST',
                 body: JSON.stringify({
                     collecteur_alias: collecteurAlias,
-                    membre_email: membreEmail,
+                    membre_id: membreId,
                     statut: 'en_cours'
                 })
             });
@@ -1610,16 +1620,29 @@ function creerEnveloppeSiAbsente(collecteurAlias, membreEmail) {
 }
 
 // --- Marquage "Pas intéressé" ---
+// Demande #62 — ces gestes écrivent avec le numéro de membre. S'il n'est pas encore
+// chargé (clic très rapide après l'arrivée sur la page), on l'attend et on rejoue.
+function avecMonNumero(rejouer) {
+    if (monNumeroCatalogue) return true;
+    window.chargerMembreIdActif()
+        .then(function(moi) { monNumeroCatalogue = moi; rejouer(); })
+        .catch(function(e) {
+            console.error('Numéro de membre indisponible :', e);
+            showToast('Erreur : identité introuvable', 'error');
+        });
+    return false;
+}
+
 function marquerPasInteresse(billetId) {
-    var email = window.getActiveEmail();
+    if (!avecMonNumero(function() { marquerPasInteresse(billetId); })) return;
     // Demande #16 (C7) — « Pas intéressé » = relation membre ↔ billet, écrite dans
     // collection (et masque le billet du catalogue). Upsert sur la PK.
     var body = {
-        membre_email: email,
+        membre_id: monNumeroCatalogue,
         billet_id: billetId,
         pas_interesse: true
     };
-    supabaseFetch('/rest/v1/collection?on_conflict=membre_email,billet_id', {
+    supabaseFetch('/rest/v1/collection?on_conflict=membre_id,billet_id', {
         method: 'POST',
         headers: { 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify(body)
@@ -1637,10 +1660,10 @@ function marquerPasInteresse(billetId) {
 
 // --- Annulation "Pas intéressé" ---
 function annulerPasInteresse(billetId) {
-    var email = window.getActiveEmail();
+    if (!avecMonNumero(function() { annulerPasInteresse(billetId); })) return;
     // Demande #16 (C7) — on remet pas_interesse à false dans collection (sans
     // supprimer la ligne : elle peut porter d'autres données de collection).
-    supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
+    supabaseFetch('/rest/v1/collection?membre_id=eq.' + monNumeroCatalogue + '&billet_id=eq.' + billetId, {
         method: 'PATCH',
         body: JSON.stringify({ pas_interesse: false })
     })
@@ -1875,6 +1898,7 @@ function buildInscriptionHtmlForCollecte(item, collecte) {
 }
 
 function ouvrirInscriptionCollecte(billetId, collecteId) {
+    if (!avecMonNumero(function() { ouvrirInscriptionCollecte(billetId, collecteId); })) return;
     if (membreBloqueInscription) {
         showToast('Vous êtes bloqué pour les inscriptions. Contactez un administrateur.', 'error');
         return;
@@ -1970,7 +1994,7 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
             var body = {
                 billet_id: billetId,
                 collecte_id: collecteId,
-                membre_email: email,
+                membre_id: monNumeroCatalogue,
                 nb_normaux: nbNormaux,
                 nb_variantes: nbVariantes,
                 mode_paiement: document.getElementById('insc-paiement-' + suffix).value,
@@ -1995,7 +2019,7 @@ function confirmerInscriptionCollecte(billetId, collecteId) {
             loadCollectesByBillet(); // Demande #24 — rafraîchir le total/plafond de la collecte
             // Enveloppe pour le collecteur de LA collecte visée (bascule collecteur)
             var colE = collecteByIdCatalogue[collecteId] || collecteObj;
-            if (colE && colE.collecteur) creerEnveloppeSiAbsente(colE.collecteur, email);
+            if (colE && colE.collecteur) creerEnveloppeSiAbsente(colE.collecteur, monNumeroCatalogue);
         })
         .catch(function(error) {
             console.error('Erreur inscription collecte supplémentaire:', error);

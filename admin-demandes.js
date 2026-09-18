@@ -59,7 +59,7 @@ var demandesList = [];
 var membresDemandes = {};
 // Demande #59 — { demande_id: [emails des admins ayant validé l'analyse] }
 var validationsParDemande = {};
-// Demande #68 — { demande_id: [commentaires {auteur_email, created_at}, du plus ancien au plus
+// Demande #68 — { demande_id: [commentaires {auteur_id, created_at}, du plus ancien au plus
 // récent] }. Sur une « Analyse à valider », le fil dit à qui c'est le tour. Même règle que le
 // rituel des demandes (scripts/rituel-demandes.mjs, etat()) : l'écran et l'assistant ne doivent
 // pas se contredire.
@@ -96,25 +96,34 @@ function loadDemandes() {
         supabaseFetch('/rest/v1/demandes?select=*&order=created_at.desc', { method: 'GET' }),
         // Demande #49 — un échec ici ne doit pas empêcher la liste de s'afficher :
         // on retombe alors sur la partie locale de l'adresse.
-        supabaseFetch('/rest/v1/membres?select=email,nom,prenom', { method: 'GET' })
+        supabaseFetch('/rest/v1/membres?select=id,email,nom,prenom', { method: 'GET' })
             .catch(function() { return []; }),
         // Demande #59 — qui a validé quelle analyse. Même repli que ci-dessus :
         // tant que la migration n'est pas jouée, la table n'existe pas et la
         // liste doit quand même s'afficher.
-        supabaseFetch('/rest/v1/demande_validations?select=demande_id,admin_email', { method: 'GET' })
+        supabaseFetch('/rest/v1/demande_validations?select=demande_id,admin_id', { method: 'GET' })
             .catch(function() { return []; }),
         // Demande #68 — même repli : sans les commentaires, la liste s'affiche comme avant.
-        supabaseFetch('/rest/v1/demande_commentaires?select=demande_id,auteur_email,created_at&order=created_at.asc', { method: 'GET' })
-            .catch(function() { return []; })
+        supabaseFetch('/rest/v1/demande_commentaires?select=demande_id,auteur_id,created_at&order=created_at.asc', { method: 'GET' })
+            .catch(function() { return []; }),
+        // Demande #62 — mon numéro de membre : « à moi de tester », « j'ai validé »,
+        // et le droit de clore une demande s'y comparent.
+        window.chargerMembreIdActif().catch(function() { return null; })
     ])
         .then(function(res) {
+            monNumeroDemandes = res[4] || null;
             var rows = res[0];
             membresDemandes = {};
-            (res[1] || []).forEach(function(m) { membresDemandes[(m.email || '').toLowerCase()] = m; });
+            membresParNumero = {};
+            (res[1] || []).forEach(function(m) {
+                membresDemandes[(m.email || '').toLowerCase()] = m;
+                membresParNumero[m.id] = m;                       // demande #62
+                if ((m.email || '').toLowerCase() === ASSISTANT_EMAIL) numeroAssistant = m.id;
+            });
             validationsParDemande = {};
             (res[2] || []).forEach(function(v) {
                 if (!validationsParDemande[v.demande_id]) validationsParDemande[v.demande_id] = [];
-                validationsParDemande[v.demande_id].push((v.admin_email || '').toLowerCase());
+                validationsParDemande[v.demande_id].push(v.admin_id);   // demande #62
             });
             commentairesParDemande = {};
             // Triés par date croissante : chaque fil garde l'ordre chronologique.
@@ -185,7 +194,7 @@ function getDemandesFiltrees() {
             if (d.etat !== currentEtatFilter) return false;
         }
         if (!terme) return true;
-        var texte = (d.description + ' ' + d.commentaire + ' ' + d.ecran + ' ' + d.demandeur).toLowerCase();
+        var texte = (d.description + ' ' + d.commentaire + ' ' + d.ecran + ' ' + (adresseDuNumero(d.demandeur_id) || d.demandeur)).toLowerCase();
         return texte.indexOf(terme) !== -1;
     });
 }
@@ -209,7 +218,7 @@ function getSortValue(d, key) {
         case 'priorite': return PRIORITE_ORDER[d.priorite] !== undefined ? PRIORITE_ORDER[d.priorite] : 1;
         case 'complexite': return COMPLEXITE_ORDER[d.complexite] !== undefined ? COMPLEXITE_ORDER[d.complexite] : 3;
         case 'ecran': return (d.ecran || '').toLowerCase();
-        case 'demandeur': return (d.demandeur || '').toLowerCase();
+        case 'demandeur': return (adresseDuNumero(d.demandeur_id) || d.demandeur || '').toLowerCase();
         case 'date': return d.created_at || '';
         default: return 0;
     }
@@ -278,8 +287,9 @@ function renderDemandes() {
 }
 
 // Demande #68 — un commentaire publié par l'assistant (rituel des demandes).
-function estAssistant(email) {
-    return (email || '').trim().toLowerCase() === ASSISTANT_EMAIL;
+// Demande #62 — l'assistant a une fiche de membre : on le reconnait a son numero
+function estAssistant(membreId) {
+    return !!numeroAssistant && membreId === numeroAssistant;
 }
 
 // Demande #68 (complément du 14/09, retour de test de Cyril) — les personnes dont on attend la
@@ -288,10 +298,10 @@ function estAssistant(email) {
 // ont validé l'analyse : valider, c'est avoir réagi. Adresses en minuscules.
 function personnesAttendues(fil, validations) {
     var i = fil.length - 1;
-    while (i >= 0 && estAssistant(fil[i].auteur_email)) i--;
+    while (i >= 0 && estAssistant(fil[i].auteur_id)) i--;
     var personnes = [];
-    for (var j = i; j >= 0 && !estAssistant(fil[j].auteur_email); j--) {
-        var e = (fil[j].auteur_email || '').trim().toLowerCase();
+    for (var j = i; j >= 0 && !estAssistant(fil[j].auteur_id); j--) {
+        var e = fil[j].auteur_id;
         if (e && personnes.indexOf(e) === -1 && validations.indexOf(e) === -1) personnes.push(e);
     }
     return personnes.reverse();
@@ -300,6 +310,24 @@ function personnesAttendues(fil, validations) {
 // Demande #49 — le prénom suffit : l'équipe compte six personnes, et une adresse e-mail
 // complète dans un libellé de liste déroulante serait illisible. Repli sur la partie
 // gauche de l'adresse pour les demandes importées, qui n'ont pas de membre associé.
+// Demande #62 — l'ecran travaille en numeros de membre. L'annuaire donne nom et
+// adresse ; une demande importee garde son libelle.
+var membresParNumero = {};
+var numeroAssistant = null;
+var monNumeroDemandes = null;
+
+function adresseDuNumero(membreId) {
+    var m = membresParNumero[membreId];
+    return m ? (m.email || '') : '';
+}
+
+function nomTesteurParNumero(membreId, repli) {
+    var m = membresParNumero[membreId];
+    if (m && (m.prenom || m.nom)) return (m.prenom || m.nom);
+    if (m && m.email) return m.email.indexOf('@') > 0 ? m.email.slice(0, m.email.indexOf('@')) : m.email;
+    return repli || (membreId ? 'membre n' + String.fromCharCode(176) + ' ' + membreId : '');
+}
+
 function nomTesteur(email) {
     var e = (email || '').trim();
     if (!e) return '';
@@ -320,7 +348,7 @@ function renderDemandeRow(d) {
     // Demande #49 — sur une demande À TESTER, l'option correspondante annonce qui doit
     // tester. On ne crée aucun statut supplémentaire : la liste garde ses sept entrées,
     // c'est le libellé de l'une d'elles qui se précise, et seulement sur cette ligne.
-    var testeur = (d.etat === 'a_tester') ? nomTesteur(d.demandeur) : '';
+    var testeur = (d.etat === 'a_tester') ? nomTesteurParNumero(d.demandeur_id, d.demandeur) : '';
     var etatOptions = ETATS.map(function(e) {
         var label = (e.value === 'a_tester' && testeur) ? (e.label + ' par ' + testeur) : e.label;
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
@@ -328,8 +356,7 @@ function renderDemandeRow(d) {
 
     // Et si c'est à MOI de tester, la ligne se signale d'elle-même : c'est la question
     // qu'on se pose en ouvrant l'écran, elle ne doit pas demander un survol.
-    var aMoiDeTester = (d.etat === 'a_tester')
-        && (d.demandeur || '').trim().toLowerCase() === (window.getActiveEmail() || '').trim().toLowerCase();
+    var aMoiDeTester = (d.etat === 'a_tester') && !!monNumeroDemandes && d.demandeur_id === monNumeroDemandes;
 
     var commentaireIcon = d.commentaire
         ? ' <i class="fa-solid fa-comment-dots demande-desc-comment" title="' + escapeAttr(d.commentaire) + '"></i>'
@@ -339,14 +366,13 @@ function renderDemandeRow(d) {
     // qui attend quelque chose de MOI ». Avant, il fallait ouvrir la fiche pour
     // découvrir qu'une spec y dormait.
     var validations = validationsParDemande[d.id] || [];
-    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
-    var jaiValide = validations.indexOf(moi) !== -1;
+    var jaiValide = validations.indexOf(monNumeroDemandes) !== -1;   // demande #62
     var aRelire = attendValidationSpec(d.etat);
     // Demande #68 — si le dernier commentaire n'est pas de l'assistant, une remarque attend sa
     // réponse : ce n'est pas le tour des admins, la ligne ne doit pas dire « à vous ».
     var fil = commentairesParDemande[d.id] || [];
     var dernierCom = fil.length ? fil[fil.length - 1] : null;
-    var attendAssistant = aRelire && !!dernierCom && !estAssistant(dernierCom.auteur_email);
+    var attendAssistant = aRelire && !!dernierCom && !estAssistant(dernierCom.auteur_id);
     // Et quand l'assistant a répondu en dernier : de qui attend-on la réaction ?
     var attendus = (aRelire && dernierCom && !attendAssistant) ? personnesAttendues(fil, validations) : [];
     var aMoiDeRelire = aRelire && !jaiValide && !attendAssistant;
@@ -371,7 +397,7 @@ function renderDemandeRow(d) {
                  + validations.length + '</span>';
         if (attendAssistant) {
             specIcon += ' <span class="demande-badge demande-badge-attente-assistant" title="'
-                     + escapeAttr('Remarque de ' + nomTesteur(dernierCom.auteur_email) + ' le '
+                     + escapeAttr('Remarque de ' + nomTesteurParNumero(dernierCom.auteur_id) + ' le '
                          + formatDateFr(dernierCom.created_at) + ' — réponse de l\'assistant attendue') + '">'
                      + '<i class="fa-solid fa-hourglass-half"></i> Assistant</span>';
         }
@@ -398,7 +424,7 @@ function renderDemandeRow(d) {
         + '<td class="demande-qui-cell"><span class="demande-badge demande-badge-qui" title="Qui est concerné"><i class="fa-solid fa-user-group"></i> ' + escapeHtml(quiLabel(d.qui)) + '</span></td>'
         + '<td class="demande-ecran-cell">' + (d.ecran ? '<span class="demande-badge demande-badge-ecran"><i class="fa-solid fa-display"></i> ' + escapeHtml(d.ecran) + '</span>' : '') + '</td>'
         + '<td class="demande-desc-cell"><span class="demande-desc-text" title="' + escapeAttr(d.description) + '">' + escapeHtml(d.description) + '</span>' + commentaireIcon + specIcon + '</td>'
-        + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'
+        + '<td class="demande-demandeur-cell" title="Demandé par ' + escapeAttr(adresseDuNumero(d.demandeur_id) || d.demandeur) + '"><i class="fa-solid fa-user"></i></td>'
         + '<td class="demande-date-cell" title="' + escapeAttr(dateInfo) + '"><i class="fa-solid fa-calendar-day"></i></td>'
         + '<td class="demande-actions-cell"><button type="button" class="demande-edit-btn" onclick="event.stopPropagation(); ouvrirFicheDemande(' + d.id + ')" title="Ouvrir la fiche de la demande"><i class="fa-solid fa-up-right-from-square"></i></button></td>'
         + '</tr>';
@@ -417,13 +443,12 @@ function renderDemandeRow(d) {
 function peutTerminer(demande) {
     if (!demande) return true;
     if (window.userRole === 'superadmin') return true;
-    var moi = (window.getActiveEmail() || '').trim().toLowerCase();
-    var dem = (demande.demandeur || '').trim().toLowerCase();
-    return !!moi && moi === dem;
+    // Demande #62 — comparaison de numeros de membre
+    return !!monNumeroDemandes && demande.demandeur_id === monNumeroDemandes;
 }
 
 function refuserCloture(demande) {
-    var dem = (demande && demande.demandeur) ? demande.demandeur : 'le demandeur';
+    var dem = (demande && (adresseDuNumero(demande.demandeur_id) || demande.demandeur)) || 'le demandeur';
     showToast('Seul ' + dem + ' peut clore cette demande : c\'est à lui de vérifier que le développement répond à son besoin.', 'error');
 }
 
@@ -479,8 +504,9 @@ function resumeDemande(d) {
 function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
     if (!demande || nouvelEtat === ancienEtat) return;
     if (nouvelEtat !== 'a_cadrer' && nouvelEtat !== 'a_tester') return;
-    var email = (demande.demandeur || '').trim();
-    if (!estEmailValide(email)) return; // demandeur non nominatif (import, vide…)
+    // Demande #62 — le destinataire est designe par son numero ; une demande
+    // importee n'en a pas, il n'y a personne a prevenir.
+    if (!demande.demandeur_id) return;
 
     var resume = resumeDemande(demande);
     var titre, texte;
@@ -502,7 +528,7 @@ function notifierDemandeurSiSuivi(demande, nouvelEtat, ancienEtat) {
             type: 'demande_suivi',
             titre: titre,
             texte: texte,
-            cible_email: email
+            cible_membre_id: demande.demandeur_id
         })
     }).catch(function(e) {
         console.warn('Notif demandeur (#33) : échec — migration cible_email jouée ?', e);
@@ -576,7 +602,7 @@ function creerDemande() {
         complexite: document.getElementById('dm-complexite').value,
         etat: document.getElementById('dm-etat').value,
         commentaire: document.getElementById('dm-commentaire').value.trim(),
-        demandeur: (firebase.auth().currentUser && firebase.auth().currentUser.email) || ''
+        demandeur_id: monNumeroDemandes
     };
 
     supabaseFetch('/rest/v1/demandes', {

@@ -2204,10 +2204,11 @@ function saveBillet(billetData) {
 // Charge la liste des emails bloqués par un admin (membre_blocages).
 // Ces membres sont exclus des auto-inscriptions (y compris pré-collecte).
 function chargerEmailsBloques() {
-    return supabaseFetch('/rest/v1/membre_blocages?select=membre_email')
+    // Demande #62 — releves par numero de membre
+    return supabaseFetch('/rest/v1/membre_blocages?select=membre_id')
         .then(function(data) {
             var map = {};
-            (data || []).forEach(function(b) { map[b.membre_email] = true; });
+            (data || []).forEach(function(b) { map[b.membre_id] = true; });
             return map;
         })
         .catch(function(err) {
@@ -2247,7 +2248,7 @@ function creerAutoInscriptions(billet, collecte) {
             // Filtrer selon type de billet, en excluant les membres bloqués et
             // (N1) ceux déjà inscrits sur une collecte au périmètre recouvrant.
             function eligible(a) {
-                return !emailsBloques[a.membre_email] && !dejaInscrits[a.membre_email];
+                return !emailsBloques[a.membre_id] && !dejaInscrits[a.membre_id];
             }
             var qualifies;
             if (isFrance) {
@@ -2279,7 +2280,7 @@ function creerAutoInscriptions(billet, collecte) {
         });
 }
 
-// N1 — anti-réinscription automatique. La nouvelle UK (collecte_id, membre_email)
+// N1 — anti-réinscription automatique. L'UK (collecte_id, membre — demande #62 : le numéro)
 // autorise volontairement un membre sur plusieurs collectes d'un même billet
 // (reliquat, rachat : inscriptions manuelles). Le hook automatique, lui, ne doit
 // jamais réinscrire quelqu'un dont une inscription couvre déjà la même version.
@@ -2295,7 +2296,7 @@ function scopesSeRecouvrent(a, b) {
 function chargerDejaInscrits(billetId, collecte) {
     var scopeNouvelle = (collecte && collecte.scope) || 'normal';
     var nouvelleId = collecte && collecte.id;
-    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&select=membre_email,collecte_id')
+    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&select=membre_id,collecte_id')
         .then(function(inscriptions) {
             var autresIds = {};
             (inscriptions || []).forEach(function(i) {
@@ -2311,7 +2312,7 @@ function chargerDejaInscrits(billetId, collecte) {
                     (inscriptions || []).forEach(function(i) {
                         if (!i.collecte_id || i.collecte_id === nouvelleId) return;
                         if (scopesSeRecouvrent(scopeParCollecte[i.collecte_id], scopeNouvelle)) {
-                            dejaInscrits[i.membre_email] = true;
+                            dejaInscrits[i.membre_id] = true;
                         }
                     });
                     return dejaInscrits;
@@ -2337,7 +2338,7 @@ function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFra
         } else {
             // Vérifier si le membre a des lignes pays spécifiques
             var membrePays = paysData.filter(function(p) {
-                return p.membre_email === auto.membre_email && p.annee === auto.annee;
+                return p.membre_id === auto.membre_id && p.annee === auto.annee;
             });
 
             if (membrePays.length > 0) {
@@ -2366,7 +2367,7 @@ function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFra
         var membreTrouve = false;
         if (adminMembresCache) {
             for (var m = 0; m < adminMembresCache.length; m++) {
-                if (adminMembresCache[m].email === auto.membre_email) {
+                if (adminMembresCache[m].id === auto.membre_id) {
                     var membre = adminMembresCache[m];
                     adresseSnapshot = {
                         nom: membre.nom || '',
@@ -2382,13 +2383,13 @@ function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFra
             }
         }
         if (!membreTrouve) {
-            console.warn('Auto-inscription: membre non trouvé dans le cache pour ' + auto.membre_email + ', adresse_snapshot vide');
+            console.warn('Auto-inscription: membre non trouvé dans le cache pour le numéro ' + auto.membre_id + ', adresse_snapshot vide');
         }
 
         inscriptions.push({
             billet_id: billet.id,
             collecte_id: collecte.id,
-            membre_email: auto.membre_email,
+            membre_id: auto.membre_id,
             nb_normaux: nbNormaux,
             nb_variantes: nbVariantes,
             mode_paiement: auto.mode_paiement,
@@ -2406,8 +2407,9 @@ function creerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, isFra
     if (inscriptions.length === 0) return Promise.resolve(0);
 
     // POST batch (Supabase accepte un array)
-    // Demande #16 — cible de conflit alignée sur la nouvelle UK (corrige FR31)
-    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
+    // Demande #16 — cible de conflit alignée sur l'UK ; demande #62 — celle qui
+    // porte le numéro de membre.
+    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_id', {
         method: 'POST',
         body: JSON.stringify(inscriptions),
         headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
@@ -2587,7 +2589,7 @@ function recalculerAutoInscriptions(billet) {
             var autoData = res[0];
             var emailsBloques = res[1] || {};
             if (!autoData || autoData.length === 0) return 0;
-            var qualifies = autoData.filter(function(a) { return (isFrance ? a.france : a.etranger) && !emailsBloques[a.membre_email]; });
+            var qualifies = autoData.filter(function(a) { return (isFrance ? a.france : a.etranger) && !emailsBloques[a.membre_id]; });
             if (qualifies.length === 0) return 0;
 
             if (isFrance) {
@@ -2626,7 +2628,7 @@ function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, 
             nbVariantes = hasVariante ? auto.nb_variantes_fr : 0;
         } else {
             var membrePays = paysData.filter(function(p) {
-                return p.membre_email === auto.membre_email && p.annee === auto.annee;
+                return p.membre_id === auto.membre_id && p.annee === auto.annee;
             });
             if (membrePays.length > 0) {
                 var paysMatch = null;
@@ -2645,7 +2647,7 @@ function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, 
         updates.push({
             billet_id: billet.id,
             collecte_id: collecte.id,
-            membre_email: auto.membre_email,
+            membre_id: auto.membre_id,
             nb_normaux: nbNormaux,
             nb_variantes: nbVariantes
         });
@@ -2653,9 +2655,9 @@ function recalculerAutoInscriptionsBatch(billet, collecte, qualifies, paysData, 
 
     if (updates.length === 0) return Promise.resolve(0);
 
-    // Demande #16 — merge sur la nouvelle UK (collecte_id, membre_email) : corrige
+    // Demande #16 — merge sur l'UK (collecte_id, membre) — demande #62 : le numéro. Corrige
     // nativement FR31 (merge-duplicates ne réinitialise plus les lignes existantes).
-    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
+    return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_id', {
         method: 'POST',
         body: JSON.stringify(updates),
         headers: { 'Prefer': 'return=minimal, resolution=merge-duplicates' }
@@ -3353,14 +3355,14 @@ function nettoyerInscriptionsBlacklist(collecteurAlias, billetId) {
     // portait sur `billet_id` et effaçait aussi les inscriptions d'un autre collecteur
     // ayant une collecte sur le même billet (destructif et silencieux).
     Promise.all([
-        supabaseFetch('/rest/v1/collecteur_blacklist?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&select=membre_email'),
+        supabaseFetch('/rest/v1/collecteur_blacklist?collecteur_alias=eq.' + encodeURIComponent(collecteurAlias) + '&select=membre_id'),
         supabaseFetch('/rest/v1/collectes?billet_id=eq.' + billetId + '&collecteur=eq.' + encodeURIComponent(collecteurAlias) + '&select=id')
     ])
         .then(function(res) {
             var blacklist = res[0] || [];
             var collectes = res[1] || [];
             if (blacklist.length === 0 || collectes.length === 0) return;
-            var emailsFilter = 'membre_email=in.(' + blacklist.map(function(e) { return '"' + e.membre_email + '"'; }).join(',') + ')';
+            var emailsFilter = 'membre_id=in.(' + blacklist.map(function(e) { return e.membre_id; }).join(',') + ')';
             var idsFilter = 'collecte_id=in.(' + collectes.map(function(c) { return c.id; }).join(',') + ')';
             return supabaseFetch('/rest/v1/inscriptions?' + idsFilter + '&' + emailsFilter, {
                 method: 'DELETE'
@@ -3997,8 +3999,8 @@ function renderInscriptionsModalContent(billet) {
     // Tri des inscriptions par nom puis prénom (une seule fois, avant regroupement)
     if (adminMembresCache) {
         adminCurrentInscriptions.sort(function(a, b) {
-            var ma = adminMembresCache.find(function(m) { return m.email === a.membre_email; }) || {};
-            var mb = adminMembresCache.find(function(m) { return m.email === b.membre_email; }) || {};
+            var ma = adminMembresCache.find(function(m) { return m.id === a.membre_id; }) || {};
+            var mb = adminMembresCache.find(function(m) { return m.id === b.membre_id; }) || {};
             var na = (ma.nom || '').toLowerCase(), nb = (mb.nom || '').toLowerCase();
             if (na < nb) return -1; if (na > nb) return 1;
             var pa = (ma.prenom || '').toLowerCase(), pb = (mb.prenom || '').toLowerCase();
@@ -4019,9 +4021,17 @@ function renderInscriptionsModalContent(billet) {
         parCollecte[c.id].push(insc);
     });
 
+    // Demande #62 — la ligne porte le numero du membre ; nom et adresse viennent de sa fiche
+    function membreDe(insc) {
+        return adminMembresCache ? adminMembresCache.find(function(x) { return x.id === insc.membre_id; }) : null;
+    }
+    function adresseMembreDe(insc) {
+        var m = membreDe(insc);
+        return (m && m.email) || ('membre n' + String.fromCharCode(176) + ' ' + insc.membre_id);
+    }
     function nomMembreDe(insc) {
-        var m = adminMembresCache ? adminMembresCache.find(function(x) { return x.email === insc.membre_email; }) : null;
-        return m ? (((m.nom || '') + ' ' + (m.prenom || '')).trim() || insc.membre_email) : insc.membre_email;
+        var m = membreDe(insc);
+        return m ? (((m.nom || '') + ' ' + (m.prenom || '')).trim() || adresseMembreDe(insc)) : adresseMembreDe(insc);
     }
 
     function tableauHtml(list, versions) {
@@ -4032,7 +4042,7 @@ function renderInscriptionsModalContent(billet) {
         html += '<th>Actions</th></tr></thead><tbody>';
         list.forEach(function(insc) {
             html += '<tr id="admin-insc-row-' + insc.id + '">';
-            html += '<td title="' + escapeAttr(insc.membre_email) + '">' + escapeHtml(nomMembreDe(insc)) + '</td>';
+            html += '<td title="' + escapeAttr(adresseMembreDe(insc)) + '">' + escapeHtml(nomMembreDe(insc)) + '</td>';
             if (versions.normale) {
                 html += '<td class="admin-insc-qty" id="admin-insc-normaux-' + insc.id + '">' + (insc.nb_normaux || 0) + '</td>';
             }
@@ -4144,7 +4154,7 @@ function renderInscriptionsModalContent(billet) {
 // --- Chargement des membres (cache admin) ---
 function chargerAdminMembres() {
     if (adminMembresCache) return Promise.resolve(adminMembresCache);
-    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
+    return supabaseFetch('/rest/v1/membres?select=id,email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
         .then(function(data) {
             adminMembresCache = data || [];
             return adminMembresCache;
@@ -4202,7 +4212,7 @@ function renderAdminInscriptionForm(billet, membres, editInscription, collecte) 
     var titre = (isEdit ? 'Modifier l\'inscription' : 'Inscrire un membre')
         + (collecte ? ' \u2014 ' + (collecte.nom || 'collecte') : '');
 
-    var defEmail = isEdit ? editInscription.membre_email : '';
+    var defMembreId = isEdit ? editInscription.membre_id : null;   // demande #62
     var defNormaux = isEdit ? (editInscription.nb_normaux || 0) : (varianteActive && vne ? 0 : (vne ? 1 : 0));
     var defVariantes = isEdit ? (editInscription.nb_variantes || 0) : (!vne ? 1 : 0);
     var defPaiement = isEdit ? (editInscription.mode_paiement || 'PayPal') : 'PayPal';
@@ -4211,21 +4221,20 @@ function renderAdminInscriptionForm(billet, membres, editInscription, collecte) 
 
     // Demande #48 — on ne filtre que les membres déjà inscrits À CETTE collecte : le
     // même membre peut légitimement s'inscrire aux deux collectes d'un billet.
-    var emailsInscrits = {};
+    var numerosInscrits = {};
     if (!isEdit) {
         adminInscriptionsDeCollecte(adminInscFormCollecteId).forEach(function(ins) {
-            emailsInscrits[ins.membre_email] = true;
+            numerosInscrits[ins.membre_id] = true;
         });
     }
 
     var optionsMembres = '<option value="">— Sélectionner un membre —</option>';
     membres.forEach(function(m) {
-        if (!isEdit && emailsInscrits[m.email]) return;
-        // Demande #62 — pas de membre désactivé à choisir, sauf celui de l'inscription modifiée
-        if (!membreSelectionnable(m) && m.email !== defEmail) return;
+        if (!isEdit && numerosInscrits[m.id]) return;
+        if (!membreSelectionnable(m) && m.id !== defMembreId) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
-        var selected = (m.email === defEmail) ? ' selected' : '';
-        optionsMembres += '<option value="' + m.email + '"' + selected + '>' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
+        var selected = (m.id === defMembreId) ? ' selected' : '';
+        optionsMembres += '<option value="' + m.id + '"' + selected + '>' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
     });
 
     var html = '<div class="admin-insc-form">';
@@ -4233,8 +4242,9 @@ function renderAdminInscriptionForm(billet, membres, editInscription, collecte) 
 
     // Sélecteur de membre
     if (isEdit) {
-        var membreEdit = adminMembresCache ? adminMembresCache.find(function(m) { return m.email === defEmail; }) : null;
-        var nomAffiche = membreEdit ? ((membreEdit.nom || '') + ' ' + (membreEdit.prenom || '')).trim() || defEmail : defEmail;
+        var membreEdit = adminMembresCache ? adminMembresCache.find(function(m) { return m.id === defMembreId; }) : null;
+        var replEdit = (membreEdit && membreEdit.email) || ('membre n' + String.fromCharCode(176) + ' ' + defMembreId);
+        var nomAffiche = membreEdit ? (((membreEdit.nom || '') + ' ' + (membreEdit.prenom || '')).trim() || replEdit) : replEdit;
         html += '<div class="admin-insc-form-field"><label>Membre</label><span class="admin-insc-readonly">' + escapeHtml(nomAffiche) + '</span></div>';
     } else {
         html += '<div class="admin-insc-form-field"><label>Membre</label>' +
@@ -4250,7 +4260,7 @@ function renderAdminInscriptionForm(billet, membres, editInscription, collecte) 
         var autresCollectes = adminCollectesDuBillet(adminCurrentBilletId).filter(function(c) {
             if (String(c.id) === String(editInscription.collecte_id)) return true;
             return !adminInscriptionsDeCollecte(c.id).some(function(ins) {
-                return ins.membre_email === editInscription.membre_email;
+                return ins.membre_id === editInscription.membre_id;
             });
         });
         if (autresCollectes.length > 1) {
@@ -4310,19 +4320,19 @@ function filtrerAdminMembresModal() {
 
     var terme = searchInput.value.toLowerCase().trim();
     // Demande #48 — exclusion par collecte visée, pas par billet.
-    var emailsInscrits = {};
+    var numerosInscrits = {};
     adminInscriptionsDeCollecte(adminInscFormCollecteId).forEach(function(ins) {
-        emailsInscrits[ins.membre_email] = true;
+        numerosInscrits[ins.membre_id] = true;
     });
 
     var html = '<option value="">— Sélectionner un membre —</option>';
     adminMembresCache.forEach(function(m) {
-        if (emailsInscrits[m.email]) return;
+        if (numerosInscrits[m.id]) return;
         if (!membreSelectionnable(m)) return; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) return;
-        html += '<option value="' + m.email + '">' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
+        html += '<option value="' + m.id + '">' + escapeHtml(label) + ' (' + escapeHtml(m.email) + ')</option>';
     });
     selectEl.innerHTML = html;
 }
@@ -4341,7 +4351,7 @@ function submitAdminAddInscription(collecteId) {
         showToast('Veuillez sélectionner un membre', 'error');
         return;
     }
-    var email = selectEl.value;
+    var membreId = Number(selectEl.value) || null;   // demande #62
     var normauxEl = document.getElementById('admin-insc-nb-normaux');
     var nbNormaux = normauxEl ? parseInt(normauxEl.value) || 0 : 0;
     var variantesEl = document.getElementById('admin-insc-nb-variantes');
@@ -4371,7 +4381,7 @@ function submitAdminAddInscription(collecteId) {
     var membre = null;
     if (adminMembresCache) {
         for (var i = 0; i < adminMembresCache.length; i++) {
-            if (adminMembresCache[i].email === email) {
+            if (adminMembresCache[i].id === membreId) {
                 membre = adminMembresCache[i];
                 break;
             }
@@ -4392,7 +4402,7 @@ function submitAdminAddInscription(collecteId) {
     var body = {
         billet_id: adminCurrentBilletId,
         collecte_id: collecteInsc.id,
-        membre_email: email,
+        membre_id: membreId,
         nb_normaux: nbNormaux,
         nb_variantes: nbVariantes,
         mode_paiement: document.getElementById('admin-insc-paiement').value,
@@ -5007,7 +5017,7 @@ function supprimerPreCollecte(collecteId, billetId, nomCollecte) {
         + 'Les pré-inscriptions automatiques seront supprimées.\n'
         + 'Le billet repassera en « Pas de collecte ».')) return;
 
-    supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&select=id,membre_email,statut_paiement,envoye,fdp_regles,changed_by')
+    supabaseFetch('/rest/v1/inscriptions?collecte_id=eq.' + collecteId + '&select=id,membre_id,statut_paiement,envoye,fdp_regles,changed_by')
         .then(function(inscriptions) {
             var toutes = inscriptions || [];
             // Définition « valeur métier » alignée sur le trigger D12 côté base.

@@ -38,7 +38,7 @@ function preInscInit() {
 // Chargement membres et pays
 // ============================================================
 function preInscLoadMembres() {
-    return supabaseFetch('/rest/v1/membres?select=email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
+    return supabaseFetch('/rest/v1/membres?select=id,email,nom,prenom,rue,code_postal,ville,pays,statut&order=nom.asc')
         .then(function(data) {
             preInscMembresCache = data || [];
         });
@@ -81,8 +81,8 @@ function preInscLoadYear() {
     container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--color-text-muted); font-style:italic;">Chargement des pré-inscriptions ' + preInscCurrentYear + '...</p>';
 
     Promise.all([
-        supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + preInscCurrentYear + '&select=*&order=membre_email.asc'),
-        supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + preInscCurrentYear + '&select=*&order=membre_email.asc,pays_nom.asc')
+        supabaseFetch('/rest/v1/inscriptions_auto?annee=eq.' + preInscCurrentYear + '&select=*&order=membre_id.asc'),
+        supabaseFetch('/rest/v1/inscriptions_auto_pays?annee=eq.' + preInscCurrentYear + '&select=*&order=membre_id.asc,pays_nom.asc')
     ])
     .then(function(results) {
         preInscData = results[0] || [];
@@ -113,8 +113,8 @@ function preInscRender() {
 
     // Tri par nom puis prénom
     preInscData.sort(function(a, b) {
-        var ma = preInscFindMembre(a.membre_email) || {};
-        var mb = preInscFindMembre(b.membre_email) || {};
+        var ma = preInscFindMembreParNumero(a.membre_id) || {};
+        var mb = preInscFindMembreParNumero(b.membre_id) || {};
         var na = (ma.nom || '').toLowerCase(), nb = (mb.nom || '').toLowerCase();
         if (na < nb) return -1; if (na > nb) return 1;
         var pa = (ma.prenom || '').toLowerCase(), pb = (mb.prenom || '').toLowerCase();
@@ -136,20 +136,22 @@ function preInscRender() {
 }
 
 function preInscRenderCard(item) {
-    var membre = preInscFindMembre(item.membre_email);
-    var displayName = membre ? ((membre.nom || '') + ' ' + (membre.prenom || '')).trim() || item.membre_email : item.membre_email;
+    // Demande #62 — la ligne porte le numero du membre ; nom et adresse viennent de sa fiche
+    var membre = preInscFindMembreParNumero(item.membre_id);
+    var adresse = membre ? (membre.email || '') : ('membre n' + String.fromCharCode(176) + ' ' + item.membre_id);
+    var displayName = membre ? ((membre.nom || '') + ' ' + (membre.prenom || '')).trim() || adresse : adresse;
 
     // Résumé pays étrangers
     var paysItems = preInscPaysData.filter(function(p) {
-        return p.membre_email === item.membre_email && p.annee === item.annee;
+        return p.membre_id === item.membre_id && p.annee === item.annee;
     });
 
     var html = '<div class="preinsc-member-card">';
     html += '<div class="preinsc-card-header">';
-    html += '<div class="preinsc-card-name"><i class="fa-solid fa-user"></i> ' + preInscEscapeHtml(displayName) + ' <span class="preinsc-card-email">(' + preInscEscapeHtml(item.membre_email) + ')</span></div>';
+    html += '<div class="preinsc-card-name"><i class="fa-solid fa-user"></i> ' + preInscEscapeHtml(displayName) + ' <span class="preinsc-card-email">(' + preInscEscapeHtml(adresse) + ')</span></div>';
     html += '<div class="preinsc-card-actions">';
-    html += '<button class="btn-admin-primary btn-sm" onclick="preInscOpenForm(\'' + preInscEscapeHtml(item.membre_email) + '\')"><i class="fa-solid fa-pen"></i> Modifier</button>';
-    html += '<button class="btn-admin-danger btn-sm" onclick="preInscDelete(\'' + preInscEscapeHtml(item.membre_email) + '\')"><i class="fa-solid fa-trash"></i> Supprimer</button>';
+    html += '<button class="btn-admin-primary btn-sm" onclick="preInscOpenForm(' + item.membre_id + ')"><i class="fa-solid fa-pen"></i> Modifier</button>';
+    html += '<button class="btn-admin-danger btn-sm" onclick="preInscDelete(' + item.membre_id + ')"><i class="fa-solid fa-trash"></i> Supprimer</button>';
     html += '</div>';
     html += '</div>';
 
@@ -188,21 +190,21 @@ function preInscRenderCard(item) {
 // ============================================================
 // Formulaire ajout/modification
 // ============================================================
-function preInscOpenForm(membreEmail) {
+function preInscOpenForm(membreId) {
     var container = document.getElementById('preinsc-form-container');
-    var isEdit = !!membreEmail;
+    var isEdit = !!membreId;
     var existing = null;
     var existingPays = [];
 
     if (isEdit) {
         for (var i = 0; i < preInscData.length; i++) {
-            if (preInscData[i].membre_email === membreEmail) {
+            if (preInscData[i].membre_id === membreId) {
                 existing = preInscData[i];
                 break;
             }
         }
         existingPays = preInscPaysData.filter(function(p) {
-            return p.membre_email === membreEmail && p.annee === preInscCurrentYear;
+            return p.membre_id === membreId && p.annee === preInscCurrentYear;
         });
     }
 
@@ -219,10 +221,13 @@ function preInscOpenForm(membreEmail) {
         html += '</select>';
         html += '</div>';
     } else {
-        var membreDisplay = preInscFindMembre(membreEmail);
-        var label = membreDisplay ? ((membreDisplay.nom || '') + ' ' + (membreDisplay.prenom || '')).trim() + ' (' + membreEmail + ')' : membreEmail;
+        var membreDisplay = preInscFindMembreParNumero(membreId);
+        var repliMembre = 'membre n' + String.fromCharCode(176) + ' ' + membreId;
+        var label = membreDisplay
+            ? (((membreDisplay.nom || '') + ' ' + (membreDisplay.prenom || '')).trim() + ' (' + (membreDisplay.email || '') + ')')
+            : repliMembre;
         html += '<div class="preinsc-form-group"><label>Membre :</label><strong>' + preInscEscapeHtml(label) + '</strong>';
-        html += '<input type="hidden" id="preinsc-membre-select" value="' + preInscEscapeHtml(membreEmail) + '">';
+        html += '<input type="hidden" id="preinsc-membre-select" value="' + membreId + '">';
         html += '</div>';
     }
 
@@ -383,20 +388,20 @@ function preInscFilterMembres() {
     var terme = searchInput.value.toLowerCase().trim();
 
     // Exclure les membres déjà paramétrés pour cette année
-    var emailsParametres = {};
+    var dejaParametres = {};
     for (var i = 0; i < preInscData.length; i++) {
-        emailsParametres[preInscData[i].membre_email] = true;
+        dejaParametres[preInscData[i].membre_id] = true;
     }
 
     var html = '<option value="">— Sélectionner un membre —</option>';
     for (var j = 0; j < preInscMembresCache.length; j++) {
         var m = preInscMembresCache[j];
-        if (emailsParametres[m.email]) continue;
+        if (dejaParametres[m.id]) continue;
         if (!membreSelectionnable(m)) continue; // Demande #62
         var label = ((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.email;
         var searchable = (label + ' ' + m.email).toLowerCase();
         if (terme && searchable.indexOf(terme) === -1) continue;
-        html += '<option value="' + preInscEscapeHtml(m.email) + '">' + preInscEscapeHtml(label) + ' (' + preInscEscapeHtml(m.email) + ')</option>';
+        html += '<option value="' + m.id + '">' + preInscEscapeHtml(label) + ' (' + preInscEscapeHtml(m.email) + ')</option>';
     }
     selectEl.innerHTML = html;
 }
@@ -413,10 +418,10 @@ function preInscCancelForm() {
 // Sauvegarde
 // ============================================================
 function preInscSave() {
-    // Récupérer l'email du membre
+    // Demande #62 — le sélecteur porte le numéro du membre
     var selectEl = document.getElementById('preinsc-membre-select');
-    var membreEmail = selectEl ? selectEl.value : '';
-    if (!membreEmail) {
+    var membreId = Number(selectEl ? selectEl.value : '') || null;
+    if (!membreId) {
         preInscShowNotification('Veuillez sélectionner un membre.', 'error');
         return;
     }
@@ -468,7 +473,7 @@ function preInscSave() {
                 }
             }
             paysSelections.push({
-                membre_email: membreEmail,
+                membre_id: membreId,
                 annee: preInscCurrentYear,
                 pays_nom: paysNom,
                 nb_normaux: normaux,
@@ -479,7 +484,7 @@ function preInscSave() {
 
     // Objet principal
     var mainRecord = {
-        membre_email: membreEmail,
+        membre_id: membreId,
         annee: preInscCurrentYear,
         france: france,
         nb_normaux_fr: nbNormauxFr,
@@ -494,12 +499,12 @@ function preInscSave() {
 
     // DELETE + INSERT pattern (comme fdp)
     // 1. Supprimer les anciennes lignes pays pour ce membre+année
-    supabaseFetch('/rest/v1/inscriptions_auto_pays?membre_email=eq.' + encodeURIComponent(membreEmail) + '&annee=eq.' + preInscCurrentYear, {
+    supabaseFetch('/rest/v1/inscriptions_auto_pays?membre_id=eq.' + membreId + '&annee=eq.' + preInscCurrentYear, {
         method: 'DELETE'
     })
     .then(function() {
         // 2. Supprimer l'ancienne ligne principale
-        return supabaseFetch('/rest/v1/inscriptions_auto?membre_email=eq.' + encodeURIComponent(membreEmail) + '&annee=eq.' + preInscCurrentYear, {
+        return supabaseFetch('/rest/v1/inscriptions_auto?membre_id=eq.' + membreId + '&annee=eq.' + preInscCurrentYear, {
             method: 'DELETE'
         });
     })
@@ -523,7 +528,7 @@ function preInscSave() {
     })
     .then(function() {
         // 5. Créer les inscriptions sur les pré-collectes et collectes ouvertes
-        return appliquerPreInscriptionsBilletsMembre(membreEmail, mainRecord, paysSelections);
+        return appliquerPreInscriptionsBilletsMembre(membreId, mainRecord, paysSelections);
     })
     .then(function(nbCrees) {
         var msg = 'Paramétrage sauvegardé avec succès !';
@@ -540,26 +545,27 @@ function preInscSave() {
 // ============================================================
 // Suppression
 // ============================================================
-function preInscDelete(membreEmail) {
-    var membre = preInscFindMembre(membreEmail);
-    var displayName = membre ? ((membre.nom || '') + ' ' + (membre.prenom || '')).trim() || membreEmail : membreEmail;
+function preInscDelete(membreId) {
+    var membre = preInscFindMembreParNumero(membreId);
+    var repli = 'membre n' + String.fromCharCode(176) + ' ' + membreId;
+    var displayName = membre ? (((membre.nom || '') + ' ' + (membre.prenom || '')).trim() || membre.email || repli) : repli;
 
     if (!confirm('Supprimer le paramétrage de ' + displayName + ' pour ' + preInscCurrentYear + ' ?\n\nLes inscriptions créées automatiquement (non modifiées par le membre) seront également supprimées.')) {
         return;
     }
 
     // Supprimer pays puis principal
-    supabaseFetch('/rest/v1/inscriptions_auto_pays?membre_email=eq.' + encodeURIComponent(membreEmail) + '&annee=eq.' + preInscCurrentYear, {
+    supabaseFetch('/rest/v1/inscriptions_auto_pays?membre_id=eq.' + membreId + '&annee=eq.' + preInscCurrentYear, {
         method: 'DELETE'
     })
     .then(function() {
-        return supabaseFetch('/rest/v1/inscriptions_auto?membre_email=eq.' + encodeURIComponent(membreEmail) + '&annee=eq.' + preInscCurrentYear, {
+        return supabaseFetch('/rest/v1/inscriptions_auto?membre_id=eq.' + membreId + '&annee=eq.' + preInscCurrentYear, {
             method: 'DELETE'
         });
     })
     .then(function() {
         // Supprimer les inscriptions pré-auto non modifiées par le membre
-        return supprimerPreInscriptionsMembre(membreEmail);
+        return supprimerPreInscriptionsMembre(membreId);
     })
     .then(function(nbSuppr) {
         var msg = 'Paramétrage supprimé.';
@@ -582,12 +588,13 @@ function preInscDelete(membreEmail) {
  * Ignore les billets où le membre est déjà inscrit (ignore-duplicates).
  * @returns {Promise<number>} Nombre d'inscriptions tentées (billets qualifiants)
  */
-function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelections) {
+function appliquerPreInscriptionsBilletsMembre(membreId, config, paysSelections) {
     var annee = preInscCurrentYear;
 
     return Promise.all([
         supabaseFetch('/rest/v1/billets?Millesime=eq.' + annee + '&select=id,Pays,HasVariante,VersionNormaleExiste,Categorie'),
-        supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(membreEmail) + '&select=nom,prenom,rue,code_postal,ville,pays')
+        // Demande #62 — la fiche du membre se retrouve par son numéro
+        supabaseFetch('/rest/v1/membres?id=eq.' + membreId + '&select=nom,prenom,rue,code_postal,ville,pays')
     ])
     .then(function(results) {
         var billets = (results[0] || []).filter(function(b) {
@@ -666,7 +673,7 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
             inscriptions.push({
                 billet_id: billet.id,
                 collecte_id: collecte.id,
-                membre_email: membreEmail,
+                membre_id: membreId,
                 nb_normaux: nbNormaux,
                 nb_variantes: nbVariantes,
                 mode_paiement: config.mode_paiement,
@@ -682,8 +689,9 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
 
         if (inscriptions.length === 0) return 0;
 
-        // Demande #16 — cible de conflit alignée sur la nouvelle UK (collecte_id, membre_email)
-        return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_email', {
+        // Demande #16 — cible de conflit alignée sur l'UK (collecte_id, membre) ;
+        // demande #62 — c'est désormais celle qui porte le numéro.
+        return supabaseFetch('/rest/v1/inscriptions?on_conflict=collecte_id,membre_id', {
             method: 'POST',
             body: JSON.stringify(inscriptions),
             headers: { 'Prefer': 'return=minimal, resolution=ignore-duplicates' }
@@ -697,7 +705,7 @@ function appliquerPreInscriptionsBilletsMembre(membreEmail, config, paysSelectio
  * (les inscriptions modifiées par le membre sont conservées).
  * @returns {Promise<number>} Nombre d'inscriptions supprimées
  */
-function supprimerPreInscriptionsMembre(membreEmail) {
+function supprimerPreInscriptionsMembre(membreId) {
     var annee = preInscCurrentYear;
 
     return supabaseFetch('/rest/v1/billets?Millesime=eq.' + annee + '&select=id')
@@ -705,7 +713,7 @@ function supprimerPreInscriptionsMembre(membreEmail) {
             if (!billets || billets.length === 0) return 0;
 
             var billetIds = billets.map(function(b) { return b.id; }).join(',');
-            var filter = 'membre_email=eq.' + encodeURIComponent(membreEmail) +
+            var filter = 'membre_id=eq.' + membreId +
                          '&billet_id=in.(' + billetIds + ')' +
                          '&changed_by=eq.' + encodeURIComponent('pré-inscription');
 
@@ -738,7 +746,7 @@ function preInscDuplicateYear() {
     // Préparer les données dupliquées (depuis le cache mémoire)
     var newMainRecords = preInscData.map(function(item) {
         return {
-            membre_email: item.membre_email,
+            membre_id: item.membre_id,
             annee: targetYear,
             france: item.france,
             nb_normaux_fr: item.nb_normaux_fr,
@@ -754,7 +762,7 @@ function preInscDuplicateYear() {
 
     var newPaysRecords = preInscPaysData.map(function(item) {
         return {
-            membre_email: item.membre_email,
+            membre_id: item.membre_id,
             annee: targetYear,
             pays_nom: item.pays_nom,
             nb_normaux: item.nb_normaux,
@@ -802,6 +810,15 @@ function preInscDuplicateYear() {
 // ============================================================
 // Utilitaires
 // ============================================================
+// Demande #62 — l'ecran travaille en numeros de membre ; l'annuaire donne le reste.
+function preInscFindMembreParNumero(membreId) {
+    if (!preInscMembresCache) return null;
+    for (var i = 0; i < preInscMembresCache.length; i++) {
+        if (preInscMembresCache[i].id === membreId) return preInscMembresCache[i];
+    }
+    return null;
+}
+
 function preInscFindMembre(email) {
     if (!preInscMembresCache) return null;
     for (var i = 0; i < preInscMembresCache.length; i++) {

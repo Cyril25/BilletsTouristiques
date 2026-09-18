@@ -60,13 +60,30 @@ if (typeof firebase !== 'undefined') {
 }
 
 // ============================================================
+// 4 bis. ADRESSE SAISIE -> NUMÉRO DE MEMBRE (demande #62)
+// ============================================================
+// Les deux formulaires laissent saisir l'adresse du membre rattaché à la main.
+// La base attend désormais un numéro : on traduit ici, et on le dit clairement
+// si l'adresse ne correspond à aucune fiche (avant, la ligne partait quand même
+// et le rattachement était silencieusement faux).
+function numeroDeLAdresse(email) {
+    if (!email) return Promise.resolve(null);
+    return supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=id')
+        .then(function(rows) {
+            if (!rows || !rows.length) throw new Error('Aucun membre avec cette adresse : ' + email);
+            return rows[0].id;
+        });
+}
+
+// ============================================================
 // 5. CHARGEMENT DES COLLECTEURS DEPUIS SUPABASE
 // ============================================================
 function loadCollecteursPage() {
     var grid = document.getElementById('collecteur-cards-grid');
     if (!grid) return;
 
-    supabaseFetch('/rest/v1/collecteurs?select=*&order=alias.asc')
+    // Demande #62 — le membre rattaché est désigné par son numéro : son adresse vient de sa fiche
+    supabaseFetch('/rest/v1/collecteurs?select=*,membres(email)&order=alias.asc')
         .then(function(data) {
             collecteursData = data || [];
             renderCollecteurs();
@@ -102,7 +119,7 @@ function renderCollecteurs() {
         var prenom = c.prenom || '';
         var paypalEmail = c.paypal_email || '';
         var paypalMe = c.paypal_me || '';
-        var emailMembre = c.email_membre || '';
+        var emailMembre = (c.membres && c.membres.email) || '';
         var masque = c.masque || false;
         var displayName = alias;
         var fullName = [nom, prenom].filter(function(s) { return s; }).join(' ');
@@ -285,7 +302,7 @@ function initCollecteurEvents() {
     if (membreClear) {
         membreClear.addEventListener('click', function() {
             if (membreSelectTargetId) {
-                saveEmailMembre(membreSelectTargetId, '');
+                saveMembreRattache(membreSelectTargetId, null, '');
             }
         });
     }
@@ -345,7 +362,7 @@ function openMembreSelectPopup(collecteurId) {
     var listDiv = document.getElementById('membre-list');
     if (listDiv) listDiv.innerHTML = '<p style="text-align:center;color:var(--color-text-hint)">Chargement...</p>';
 
-    supabaseFetch('/rest/v1/membres?select=email,nom,prenom,statut&order=nom.asc,prenom.asc')
+    supabaseFetch('/rest/v1/membres?select=id,email,nom,prenom,statut&order=nom.asc,prenom.asc')
         .then(function(data) {
             membresCache = (data || []).filter(membreSelectionnable); // Demande #62
             renderMembreList('');
@@ -382,7 +399,7 @@ function renderMembreList(filter) {
     var html = '';
     filtered.forEach(function(m) {
         var displayName = [m.nom, m.prenom].filter(function(s) { return s; }).join(' ');
-        html += '<div class="membre-list-item" data-email="' + escapeAttr(m.email) + '">' +
+        html += '<div class="membre-list-item" data-email="' + escapeAttr(m.email) + '" data-membre-id="' + escapeAttr(m.id) + '">' +
             '<span class="membre-list-name">' + escapeHtml(displayName || '—') + '</span>' +
             '<span class="membre-list-email">' + escapeHtml(m.email) + '</span>' +
             '</div>';
@@ -394,17 +411,19 @@ function renderMembreList(filter) {
     listDiv.querySelectorAll('.membre-list-item').forEach(function(item) {
         item.addEventListener('click', function() {
             var email = item.getAttribute('data-email');
+            var membreId = Number(item.getAttribute('data-membre-id')) || null;
             if (membreSelectTargetId) {
-                saveEmailMembre(membreSelectTargetId, email);
+                saveMembreRattache(membreSelectTargetId, membreId, email);
             }
         });
     });
 }
 
-function saveEmailMembre(collecteurId, email) {
+// Demande #62 — on rattache un membre par son NUMÉRO (l'adresse suit, remplie par la base)
+function saveMembreRattache(collecteurId, membreId, email) {
     supabaseFetch('/rest/v1/collecteurs?id=eq.' + collecteurId, {
         method: 'PATCH',
-        body: JSON.stringify({ email_membre: email }),
+        body: JSON.stringify({ membre_id: membreId }),
         headers: { 'Prefer': 'return=representation' }
     })
     .then(function() {
@@ -441,11 +460,15 @@ function addCollecteur() {
         nom: document.getElementById('new-collecteur-nom').value.trim(),
         prenom: document.getElementById('new-collecteur-prenom').value.trim(),
         paypal_email: document.getElementById('new-collecteur-paypal-email').value.trim(),
-        paypal_me: document.getElementById('new-collecteur-paypal-me').value.trim(),
-        email_membre: document.getElementById('new-collecteur-email-membre').value.trim()
+        paypal_me: document.getElementById('new-collecteur-paypal-me').value.trim()
     };
 
-    supabaseFetch('/rest/v1/collecteurs', {
+    // Demande #62 — l'adresse saisie sert à retrouver le membre ; c'est son numéro qu'on enregistre
+    numeroDeLAdresse(document.getElementById('new-collecteur-email-membre').value.trim())
+        .then(function(membreId) {
+    body.membre_id = membreId;
+
+    return supabaseFetch('/rest/v1/collecteurs', {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Prefer': 'return=representation' }
@@ -461,6 +484,10 @@ function addCollecteur() {
         console.error('Erreur ajout collecteur:', error);
         showToast('Erreur lors de l\'ajout : ' + error.message, 'error');
     });
+        })
+        .catch(function(error) {
+            showToast(error.message, 'error');
+        });
 }
 
 function resetAddCollecteurForm() {
@@ -489,9 +516,9 @@ function saveCollecteur(id) {
         nom: editPanel.querySelector('.edit-nom').value.trim(),
         prenom: editPanel.querySelector('.edit-prenom').value.trim(),
         paypal_email: editPanel.querySelector('.edit-paypal-email').value.trim(),
-        paypal_me: editPanel.querySelector('.edit-paypal-me').value.trim(),
-        email_membre: editPanel.querySelector('.edit-email-membre').value.trim()
+        paypal_me: editPanel.querySelector('.edit-paypal-me').value.trim()
     };
+    var adresseMembre = editPanel.querySelector('.edit-email-membre').value.trim();
 
     if (!body.alias) {
         showToast('L\'alias est obligatoire', 'error');
@@ -507,7 +534,12 @@ function saveCollecteur(id) {
         return;
     }
 
-    supabaseFetch('/rest/v1/collecteurs?id=eq.' + id, {
+    // Demande #62 — l'adresse saisie est traduite en numéro de membre
+    numeroDeLAdresse(adresseMembre)
+        .then(function(membreId) {
+    body.membre_id = membreId;
+
+    return supabaseFetch('/rest/v1/collecteurs?id=eq.' + id, {
         method: 'PATCH',
         body: JSON.stringify(body),
         headers: { 'Prefer': 'return=representation' }
@@ -520,4 +552,8 @@ function saveCollecteur(id) {
         console.error('Erreur modification collecteur:', error);
         showToast('Erreur lors de la modification : ' + error.message, 'error');
     });
+        })
+        .catch(function(error) {
+            showToast(error.message, 'error');
+        });
 }

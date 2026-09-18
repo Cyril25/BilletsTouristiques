@@ -37,6 +37,10 @@
         return window.getActiveEmail();
     }
 
+    // Demande #62 — le numéro de membre de la personne dont on regarde la collection.
+    // Chargé une fois avec la page ; tous les enregistrements s'en servent ensuite.
+    var collMembreId = null;
+
     // --- Exposer les fonctions appelées depuis le HTML ---
     window.collToggleParams = collToggleParams;
     window.collAddBreakpoint = collAddBreakpoint;
@@ -80,12 +84,15 @@
         var counter = document.getElementById('collection-counter');
         if (counter) counter.innerHTML = '<span class="collection-loading">Chargement...</span>';
 
-        Promise.all([
+        window.chargerMembreIdActif().then(function(moi) {
+        collMembreId = moi;
+        return Promise.all([
             supabaseFetch('/rest/v1/billets?select=id,Millesime,Pays,HasVariante,NomBillet,Reference,Version,ImageUrl,ImageId,Dep,Categorie&order=Millesime.asc.nullslast,Pays.asc'),
             supabaseFetch('/rest/v1/pays?select=nom&order=nom.asc'),
             supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(getCollEmail()) + '&select=collection_rules,collection_overrides,track_serial_numbers'),
-            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(getCollEmail()) + '&select=*')
-        ])
+            supabaseFetch('/rest/v1/collection?membre_id=eq.' + moi + '&select=*')
+        ]);
+        })
         .then(function(results) {
             allBillets = results[0] || [];
             allPays = (results[1] || []).map(function(p) { return p.nom; });
@@ -1200,7 +1207,7 @@
 
             var patch = {};
             patch[field] = checked;
-            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
+            supabaseFetch('/rest/v1/collection?membre_id=eq.' + collMembreId + '&billet_id=eq.' + billetId, {
                 method: 'PATCH',
                 body: JSON.stringify(patch),
                 headers: { 'Prefer': 'return=minimal' }
@@ -1216,7 +1223,7 @@
             });
         } else {
             var row = {
-                membre_email: email,
+                membre_id: collMembreId,
                 billet_id: billetId,
                 owned_normal: false,
                 owned_variante: false,
@@ -1258,7 +1265,7 @@
         if (existing) {
             var patch = {};
             patch[field] = value;
-            supabaseFetch('/rest/v1/collection?membre_email=eq.' + encodeURIComponent(email) + '&billet_id=eq.' + billetId, {
+            supabaseFetch('/rest/v1/collection?membre_id=eq.' + collMembreId + '&billet_id=eq.' + billetId, {
                 method: 'PATCH',
                 body: JSON.stringify(patch),
                 headers: { 'Prefer': 'return=minimal' }
@@ -1273,7 +1280,7 @@
         } else {
             // Créer la ligne avec le numéro de série
             var row = {
-                membre_email: email,
+                membre_id: collMembreId,
                 billet_id: billetId,
                 owned_normal: false,
                 owned_variante: false,
@@ -1921,7 +1928,7 @@
                 chain = chain.then(function() {
                     var rows = batch.map(function(ch) {
                         return {
-                            membre_email: email,
+                            membre_id: collMembreId,
                             billet_id: ch.billet_id,
                             owned_normal: ch.owned_normal,
                             owned_variante: ch.owned_variante,

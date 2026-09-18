@@ -123,8 +123,8 @@ function loadUsers() {
     if (!grid) return;
 
     Promise.all([
-        supabaseFetch('/rest/v1/membres?select=email,role,statut,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
-        supabaseFetch('/rest/v1/membre_blocages?select=membre_email,motif,bloque_at', { method: 'GET' })
+        supabaseFetch('/rest/v1/membres?select=id,email,role,statut,pseudo,nom,prenom,rue,code_postal,ville,pays,indicatif_tel,telephone,last_active_at&order=nom.asc.nullslast,prenom.asc.nullslast', { method: 'GET' }),
+        supabaseFetch('/rest/v1/membre_blocages?select=membre_id,motif,bloque_at', { method: 'GET' })
             .catch(function() { return []; }),
         // Demande #38 — un pays indisponible ne doit pas empêcher d'afficher les membres.
         supabaseFetch('/rest/v1/pays?select=nom&order=nom', { method: 'GET' })
@@ -135,11 +135,12 @@ function loadUsers() {
             var blocages = results[1] || [];
             paysListe = (results[2] || []).map(function(p) { return p.nom; });
             var blocagesMap = {};
-            blocages.forEach(function(b) { blocagesMap[b.membre_email] = b; });
+            // Demande #62 — les blocages sont repérés par le numéro du membre
+            blocages.forEach(function(b) { blocagesMap[b.membre_id] = b; });
 
             usersList = rows.map(function(row) {
                 row._id = row.email;
-                var b = blocagesMap[row.email];
+                var b = blocagesMap[row.id];
                 row._bloque = !!b;
                 row._blocageMotif = b ? (b.motif || '') : '';
                 return row;
@@ -166,6 +167,15 @@ function loadUsers() {
                     '</div>';
             }
         });
+}
+
+// Demande #62 — les écrans agissent sur le NUMÉRO du membre. La liste vient d'être
+// chargée avec les numéros : pas besoin d'une requête de plus pour les retrouver.
+function numeroDuMembre(email) {
+    for (var i = 0; i < usersList.length; i++) {
+        if (usersList[i]._id === email) return usersList[i].id;
+    }
+    return null;
 }
 
 // ============================================================
@@ -641,7 +651,7 @@ function confirmDeleteUser() {
     var email = deleteUserTargetEmail;
 
     // Vérifier si le membre a des inscriptions avant de supprimer
-    supabaseFetch('/rest/v1/inscriptions?membre_email=eq.' + encodeURIComponent(email) + '&select=id&limit=1')
+    supabaseFetch('/rest/v1/inscriptions?membre_id=eq.' + numeroDuMembre(email) + '&select=id&limit=1')
         .then(function(rows) {
             if (rows && rows.length > 0) {
                 closeDeleteUserModal();
@@ -752,9 +762,9 @@ function confirmBlocage(email) {
     var motif = ta ? ta.value.trim() : '';
     var bloquePar = (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
 
-    supabaseFetch('/rest/v1/membre_blocages?on_conflict=membre_email', {
+    supabaseFetch('/rest/v1/membre_blocages?on_conflict=membre_id', {
         method: 'POST',
-        body: JSON.stringify({ membre_email: email, motif: motif, bloque_by: bloquePar }),
+        body: JSON.stringify({ membre_id: numeroDuMembre(email), motif: motif, bloque_by: bloquePar }),
         headers: { 'Prefer': 'resolution=merge-duplicates, return=minimal' }
     })
         .then(function() {
@@ -777,7 +787,7 @@ function confirmBlocage(email) {
 }
 
 function debloquerMembre(email) {
-    supabaseFetch('/rest/v1/membre_blocages?membre_email=eq.' + encodeURIComponent(email), {
+    supabaseFetch('/rest/v1/membre_blocages?membre_id=eq.' + numeroDuMembre(email), {
         method: 'DELETE'
     })
         .then(function() {
