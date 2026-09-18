@@ -64,6 +64,35 @@ règle ne le lise.
 Viennent ensuite : reprendre les écrans un par un, retirer les adresses recopiées, puis le bouton
 « Changer l'adresse ».
 
+### L'étape 3 : les écrans (18 septembre)
+
+**Onze écrans sur douze sont passés au numéro**, en deux mises en ligne le même jour : d'abord les
+cinq plus petits (annonces, mes contacts, fiche d'un billet, signalements côté admin), puis les dix
+autres — ma collection, Gestion Membres, collecteurs, mes inscriptions, le catalogue, les annonces
+côté admin, la fiche d'une demande, le suivi des demandes, les pré-inscriptions et l'administration
+des billets.
+
+**Vous ne devriez rien voir de différent.** C'est tout l'enjeu : ces écrans demandaient jusqu'ici
+« les lignes de telle adresse », ils demandent maintenant « les lignes du membre n° tant ». Un seul
+changement se remarque, et il est invisible tant que rien ne cloche : là où un écran affichait
+l'adresse de **quelqu'un d'autre** — l'auteur d'un signalement, le destinataire d'un message —, elle
+est désormais lue sur sa fiche au lieu d'être recopiée sur la ligne. C'est ce qui permettra, à
+l'étape suivante, de retirer les adresses recopiées sans rien perdre à l'écran.
+
+Avant la mise en ligne, chaque geste a été rejoué sur la copie du site : cocher un billet dans ma
+collection, bloquer puis débloquer un membre, rattacher un collecteur, marquer « pas intéressé »,
+envoyer un message à une personne précise, publier un commentaire sur une demande, enregistrer une
+pré-inscription, inscrire quelqu'un à une collecte depuis l'administration, la pastille « à payer »
+du menu, une annonce marquée comme lue. Trente-quatre vérifications, toutes passées.
+
+**Reste le plus gros écran, « Mes collectes »**, à lui seul plus volumineux que les dix autres
+réunis : il sera repris seul, pour pouvoir revenir en arrière sans toucher au reste.
+
+**Trouvé au passage, sans rapport avec ce chantier** : l'envoi d'une annonce à des personnes
+nommées, développé en juin, n'a jamais été activé en base — l'écran s'en aperçoit et grise
+proprement l'option. Rien n'est cassé ; la fonctionnalité, elle, n'existe pas en ligne. À décider
+séparément.
+
 ### Deux points tranchés en cours de route
 
 1. **Deux inscriptions n'appartenaient à personne.** Leur « membre » était le texte « pour 2024 », un

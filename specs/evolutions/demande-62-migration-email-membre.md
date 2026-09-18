@@ -948,11 +948,16 @@ d'appartenance :
 | Groupe | Fichiers | Réf. | État |
 |---|---|---|---|
 | 1 | socle `global.js`, `notifications.js`, `mes-contacts.js`, `billet.js`, `admin-signalements.js` | 17 | **en ligne** le 18/09 (`b0fb923`, cache v313) |
-| 2 | `ma-collection.js`, `users.js`, `collecteurs.js` | 16 | à faire |
-| 3 | `mes-inscriptions.js`, `app-new.js`, `admin-notifications.js` | 33 | à faire |
-| 4 | `demande.js`, `admin-demandes.js` | 50 | à faire |
-| 5 | `admin-pre-inscriptions.js`, `admin.js` | 66 | à faire |
+| 2 | `ma-collection.js`, `users.js`, `collecteurs.js` | 16 | **en ligne** le 18/09 (`a6d6452`, cache v314) |
+| 3 | `mes-inscriptions.js`, `app-new.js`, `admin-notifications.js` | 33 | **en ligne** le 18/09 (même déploiement) |
+| 4 | `demande.js`, `admin-demandes.js` | 50 | **en ligne** le 18/09 (même déploiement) |
+| 5 | `admin-pre-inscriptions.js`, `admin.js` | 66 | **en ligne** le 18/09 (même déploiement) |
 | 6 | `mes-collectes.js` | 159 | à faire |
+
+Les groupes 2 à 5 sont partis **d'un seul déploiement**, choix de Cyril : un déploiement par groupe
+aurait multiplié les allers-retours sans réduire le risque, le banc jouant de toute façon chaque
+écran avant la mise en ligne. `mes-collectes.js`, à lui seul plus gros que les dix autres réunis,
+reste à part.
 
 **Deux points de méthode retenus au groupe 1** :
 
@@ -970,6 +975,33 @@ l'écran admin qui affiche l'adresse venue de la fiche. Un piège trouvé là : 
 après le chargement du document, `DOMContentLoaded` était déjà passé et la routine de connexion ne
 démarrait jamais — le banc le rejoue désormais une fois.
 
+**Les groupes 2 à 5** (dix fichiers, 165 références) ont suivi la même recette, plus une découverte :
+`global.js` gardait, en dehors du socle, six lectures d'appartenance qui tournent sur **chaque
+page** — la pastille « à payer » (inscriptions, enveloppes, dettes, fiche collecteur), les annonces
+déjà lues, le statut de collecteur pour la cloche et pour le masquage de « Mes collectes », et les
+réponses à mes signalements. Elles sont passées au numéro dans le même déploiement : les laisser
+aurait suffi à bloquer l'étape 4.
+
+Le reste est mécanique et sans surprise : filtres `?membre_id=eq.<n>`, écritures `membre_id: <n>`,
+cibles de conflit `on_conflict=collecte_id,membre_id`, sélecteurs de membre dont la **valeur** est
+désormais le numéro (le libellé, lui, continue d'afficher nom et adresse). Partout où un écran
+montrait l'adresse d'un **autre** membre — l'auteur d'un signalement, le destinataire d'une annonce,
+le membre d'une ligne d'inscription — elle vient maintenant de sa fiche.
+
+**Banc** : 34 vérifications dans jsdom contre le vrai PostgREST (`test-etape3-g25.mjs`), une par
+chemin d'écriture et par lecture qui nomme quelqu'un — possession, blocage et déblocage, rattachement
+d'un collecteur, mes inscriptions, « pas intéressé », envoi ciblé, commentaire de demande,
+pré-inscription, inscription posée par un admin, pastille « à payer », annonce marquée lue. Le
+groupe 1 reste vert (14/14). Deux manques du banc corrigés au passage : `scrollIntoView` n'existe
+pas dans jsdom (un écran qui fait défiler son formulaire plantait), et une réponse 204 ne peut pas
+porter de corps.
+
+**Trouvé en chemin, hors #62** : la migration `scripts/migration-demande-51-notif-auteur.sql`
+(envoi ciblé relisible par son auteur) **n'a jamais été jouée en production**. L'écran le détecte et
+désactive proprement le mode « personnes précises » : rien n'est cassé, mais la fonctionnalité #51
+n'existe pas en ligne. Si elle est jouée un jour, sa fonction `mes_notifications_envoyees()` filtre
+sur `cible_email` et devra être reprise à l'étape 4, en même temps que les autres.
+
 ### Reste à faire
 
 | Étape | État |
@@ -978,8 +1010,8 @@ démarrait jamais — le banc le rejoue désormais une fois.
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
-| 3 — le site, écran par écran | **commencée** : groupe 1 en ligne le 18/09 (`b0fb923`) ; groupes 2 à 6 à faire |
-| 4 — retirer les adresses recopiées | à écrire |
+| 3 — le site, écran par écran | **presque finie** : groupes 1 à 5 en ligne le 18/09 (`b0fb923`, `a6d6452`) ; reste `mes-collectes.js` |
+| 4 — retirer les adresses recopiées | à écrire (penser à `mes_notifications_envoyees()` si la migration #51 est jouée d'ici là) |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
 
 *Commits : voir l'index des demandes.*
