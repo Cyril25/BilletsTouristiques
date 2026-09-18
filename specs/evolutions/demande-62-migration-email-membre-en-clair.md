@@ -5,9 +5,9 @@
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
 >
-> Reflète la version technique du commit `fbe1d4b` (17/09/2026).
+> Reflète la version technique du commit `00c43b3` (18/09/2026).
 
-## Où on en est (17 septembre, soir)
+## Où on en est (18 septembre)
 
 **L'analyse a été validée par Cyril le 15 septembre**, et les quatre recommandations de la fin de ce
 document sont retenues. **Le développement a commencé le 16.**
@@ -35,7 +35,7 @@ Ce que contiennent ces deux étapes :
 **Pour vous, presque rien n'a changé à l'écran** : le filtre « Désactivés » de Gestion Membres montre
 maintenant 11 fiches.
 
-### L'étape 2 est prête (17 septembre)
+### L'étape 2 est faite (18 septembre)
 
 **Les règles qui décident qui a le droit de voir ou de modifier quoi passent au numéro.** Jusqu'ici,
 elles comparaient l'adresse de la personne connectée à celle recopiée sur chaque ligne. Elles comparent
@@ -57,8 +57,12 @@ différences sont les trois ci-dessus, et **personne n'a gagné un seul droit**.
 du site (s'inscrire, payer, confirmer un paiement, créer une enveloppe, commenter une demande…), et vérifié
 qu'on peut revenir en arrière à l'identique.
 
-Elle attend que Cyril l'applique. Viendront ensuite : reprendre les écrans un par un, retirer les adresses
-recopiées, puis le bouton « Changer l'adresse ».
+**Cyril l'a appliquée le 18 septembre** : toutes les vérifications sont passées. Le site, qui écrit
+encore des adresses, continue de fonctionner — c'est l'étape 1 qui remplit le numéro juste avant que la
+règle ne le lise.
+
+Viennent ensuite : reprendre les écrans un par un, retirer les adresses recopiées, puis le bouton
+« Changer l'adresse ».
 
 ### Deux points tranchés en cours de route
 
