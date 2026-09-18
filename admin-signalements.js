@@ -45,8 +45,9 @@ function adminSigLoad() {
     var ordre = (adminSigCurrentTab === 'traite' || adminSigCurrentTab === 'rejete')
         ? 'traite_at.desc' : 'created_at.desc';
 
+    // Demande #62 — l'auteur est désigné par son numéro : son adresse vient de sa fiche
     var path = '/rest/v1/signalements?etat=eq.' + adminSigCurrentTab +
-               '&select=*,billets(Reference,NomBillet,Ville,Pays,Millesime,Version)' +
+               '&select=*,billets(Reference,NomBillet,Ville,Pays,Millesime,Version),membres(email,nom,prenom)' +
                '&order=' + ordre;
 
     supabaseFetch(path)
@@ -130,7 +131,7 @@ function adminSigCard(s) {
         '<div class="admin-sig-motif"><i class="fa-solid fa-flag"></i> ' +
             adminSigEsc(window.signalementMotifLabel(s.motif)) + '</div>' +
         '<div class="admin-sig-commentaire">' + adminSigEsc(s.commentaire) + '</div>' +
-        '<div class="admin-sig-auteur"><i class="fa-solid fa-user"></i> ' + adminSigEsc(s.auteur_email) + '</div>' +
+        '<div class="admin-sig-auteur"><i class="fa-solid fa-user"></i> ' + adminSigEsc(adminSigAuteur(s)) + '</div>' +
         reponseHtml +
         '<div class="admin-sig-footer">' +
             clotureHtml +
@@ -189,6 +190,18 @@ function adminSigRouvrir(id) {
         traite_at: null,
         auteur_vu_at: null
     });
+}
+
+// Demande #62 — l'adresse de l'auteur vient de sa fiche (jointure sur le numéro) ;
+// repli sur son nom, puis sur le numéro, si la fiche n'est pas lisible.
+function adminSigAuteur(s) {
+    var m = s.membres;
+    if (m && m.email) return m.email;
+    if (m) {
+        var nom = ((m.prenom || '') + ' ' + (m.nom || '')).trim();
+        if (nom) return nom;
+    }
+    return 'membre n° ' + (s.auteur_id || '?');
 }
 
 function adminSigEsc(s) {

@@ -292,7 +292,10 @@ function enregistrerContact() {
         // POST
         var user = firebase.auth().currentUser;
         if (!user) { showToast('Session expirée', 'error'); return; }
-        payload.proprietaire_email = user.email;
+
+        // Demande #62 — le propriétaire est désigné par son numéro de membre
+        window.chargerMembreIdActif().then(function(moi) {
+        payload.proprietaire_id = moi;
 
         supabaseFetch('/rest/v1/contacts_collecteur', {
             method: 'POST',
@@ -306,6 +309,11 @@ function enregistrerContact() {
         })
         .catch(function(err) {
             console.error('Erreur POST contact:', err);
+            showToast('Erreur : ' + err.message, 'error');
+        });
+        })
+        .catch(function(err) {
+            console.error('Numéro de membre indisponible :', err);
             showToast('Erreur : ' + err.message, 'error');
         });
     }

@@ -201,11 +201,12 @@
     // ============================================================
     var currentBillet = null;
 
-    // Email RÉEL (jamais l'identité impersonnée) : la RLS de `signalements` compare
-    // auteur_email au vrai JWT — un signalement créé en impersonation appartient donc
-    // au superadmin, c'est le comportement retenu (spec #5, point (b)).
-    function realEmail() {
-        return (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+    // Numéro de membre RÉEL (jamais l'identité impersonnée) : la RLS de `signalements`
+    // compare auteur_id au numéro déduit du vrai JWT — un signalement créé en
+    // impersonation appartient donc au superadmin, c'est le comportement retenu
+    // (spec #5, point (b)). Demande #62 : c'était l'adresse, c'est le numéro.
+    function monNumero() {
+        return window.chargerMembreIdReel();
     }
 
     // Cherche un signalement OUVERT de ce membre sur ce billet, et affiche
@@ -215,12 +216,12 @@
         var etat = document.getElementById('signalement-etat');
         if (!btn || !etat || !currentBillet) return;
 
-        var email = realEmail();
-        if (!email) return;
-
-        supabaseFetch('/rest/v1/signalements?billet_id=eq.' + encodeURIComponent(currentBillet.id) +
-                      '&auteur_email=eq.' + encodeURIComponent(email) +
-                      '&etat=in.(nouveau,en_cours)&select=id,created_at&limit=1')
+        monNumero()
+            .then(function(moi) {
+                return supabaseFetch('/rest/v1/signalements?billet_id=eq.' + encodeURIComponent(currentBillet.id) +
+                      '&auteur_id=eq.' + moi +
+                      '&etat=in.(nouveau,en_cours)&select=id,created_at&limit=1');
+            })
             .then(function(rows) {
                 if (rows && rows.length) {
                     var d = rows[0].created_at ? new Date(rows[0].created_at).toLocaleDateString('fr-FR') : '';
@@ -300,17 +301,20 @@
         erreurEl.classList.add('hidden');
         btnEnvoyer.disabled = true;
 
-        supabaseFetch('/rest/v1/signalements', {
-            method: 'POST',
-            headers: { 'Prefer': 'return=minimal' },
-            body: JSON.stringify({
-                billet_id: currentBillet.id,
-                billet_ref: currentBillet.Reference || null,
-                auteur_email: realEmail(),
-                motif: motif,
-                commentaire: commentaire
+        monNumero()
+            .then(function(moi) {
+                return supabaseFetch('/rest/v1/signalements', {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({
+                        billet_id: currentBillet.id,
+                        billet_ref: currentBillet.Reference || null,
+                        auteur_id: moi,
+                        motif: motif,
+                        commentaire: commentaire
+                    })
+                });
             })
-        })
         .then(function() {
             fermerModaleSignalement();
             refreshSignalementUi();

@@ -31,9 +31,11 @@ function loadNotificationsPage() {
     var emptyEl = document.getElementById('notifs-empty');
     if (!listEl) return;
 
+    // Demande #62 — les annonces vues sont repérées par le numéro de membre
+    window.chargerMembreIdActif().then(function(moi) {
     Promise.all([
         supabaseFetch('/rest/v1/notifications?select=id,type,titre,texte,lien,cible,created_at&order=created_at.desc'),
-        supabaseFetch('/rest/v1/notifications_vues?membre_email=eq.' + encodeURIComponent(email) + '&select=notification_id'),
+        supabaseFetch('/rest/v1/notifications_vues?membre_id=eq.' + moi + '&select=notification_id'),
         window.getEffectiveNotifAudience()
     ])
     .then(function(res) {
@@ -55,7 +57,7 @@ function loadNotificationsPage() {
         // celles de la page affichée : ouvrir la page vide la cloche, comme avant la #30.
         var nonLues = notifsFiltrees
             .filter(function(n) { return !notifsVues[n.id]; })
-            .map(function(n) { return { notification_id: n.id, membre_email: email }; });
+            .map(function(n) { return { notification_id: n.id, membre_id: moi }; });
         if (nonLues.length > 0) {
             supabaseFetch('/rest/v1/notifications_vues', {
                 method: 'POST',
@@ -66,6 +68,10 @@ function loadNotificationsPage() {
     })
     .catch(function(error) {
         console.error('Erreur chargement notifications:', error);
+    });
+    })
+    .catch(function(error) {
+        console.error('Numéro de membre indisponible :', error);
     });
 }
 

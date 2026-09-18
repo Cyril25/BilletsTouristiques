@@ -84,6 +84,43 @@ window.getActiveEmail = function() {
     return window.impersonatedEmail || (firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
 };
 
+// ============================================================
+// 1a bis. NUMÉRO DE MEMBRE (demande #62, étape 3)
+// ============================================================
+// La base attend désormais un numéro de membre là où les écrans envoyaient une
+// adresse. L'adresse reste ce que Google nous donne ; le numéro se demande une
+// fois par adresse, et la promesse est mise en cache : chaque écran peut
+// l'attendre sans se coordonner avec les autres.
+var _membreIdParEmail = {};
+window.monMembreId = null;   // renseigné à la connexion, pratique pour déboguer
+
+function chargerMembreIdDe(email) {
+    if (!email) return Promise.reject(new Error('Non authentifié'));
+    if (!_membreIdParEmail[email]) {
+        _membreIdParEmail[email] = supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=id')
+            .then(function(rows) {
+                var id = (rows && rows.length) ? rows[0].id : null;
+                if (!id) throw new Error('Numéro de membre introuvable');
+                return id;
+            })
+            .catch(function(err) {
+                delete _membreIdParEmail[email];   // un échec ne se met pas en cache
+                throw err;
+            });
+    }
+    return _membreIdParEmail[email];
+}
+
+// Le numéro de la personne RÉELLEMENT connectée, jamais celui d'une impersonation.
+window.chargerMembreIdReel = function() {
+    return chargerMembreIdDe((firebase.auth().currentUser && firebase.auth().currentUser.email) || '');
+};
+
+// Le numéro de la personne dont on regarde les données (impersonation comprise).
+window.chargerMembreIdActif = function() {
+    return chargerMembreIdDe(window.getActiveEmail());
+};
+
 /**
  * Helper : fetch authentifié vers Supabase.
  * Récupère le Firebase ID token et l'envoie en Bearer.
@@ -305,7 +342,9 @@ document.addEventListener("DOMContentLoaded", function() {
             firebase.auth().currentUser.getIdToken(false)
             .then(function(token) {
                 return fetch(
-                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=role,statut,demande_at,refuse_motif',
+                    // Demande #62 — `id` au passage : le numéro de membre est demandé
+                    // par tous les écrans, autant le connaître dès la connexion.
+                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=id,role,statut,demande_at,refuse_motif',
                     {
                         headers: {
                             'apikey': SUPABASE_ANON_KEY,
@@ -343,6 +382,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     // --- AUTORISÉ : l'email est dans la table membres ---
                     console.log("Accès autorisé pour : " + user.email);
                     window.userRole = rows[0].role || 'member';
+                    // Demande #62 — le numéro est déjà là : on amorce le cache pour
+                    // que les écrans ne le redemandent pas.
+                    if (rows[0].id) {
+                        window.monMembreId = rows[0].id;
+                        _membreIdParEmail[user.email] = Promise.resolve(rows[0].id);
+                    }
                     // Classe CSS pour les éléments réservés au superadmin (rôle réel, même en impersonation)
                     if (window.userRole === 'superadmin') document.body.classList.add('is-superadmin');
 
