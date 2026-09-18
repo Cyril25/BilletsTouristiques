@@ -917,6 +917,10 @@ ne peut pas confirmer un paiement (le banc le vérifie). Antérieur à #62, non 
 une annonce diffusée à tous (`cible = 'tous'`, sans destinataire) reste lisible avec la seule clé
 publique.
 
+**Jouée en production le 2026-09-18** (constat, migration, contrôle : tout vert). Le site, qui écrit
+encore des adresses, continue de fonctionner : ce sont les triggers de l'étape 1 qui remplissent le
+numéro avant que la règle ne le lise.
+
 **Banc** : une **photo des droits** (`scripts/banc-62/photo-droits.mjs`) essaie, pour 16 profils
 (superadmin, admin, collecteur, membres dans diverses situations, admin et collecteur désactivés,
 ancien membre, assistant, compte refusé, demande en attente, clé publique seule, compte inconnu…) et
@@ -936,7 +940,7 @@ vérifiés par une troisième photo)** et une nouvelle migration.
 | 0 — site | **en ligne** le 16/09 (`333b89b`, cache v312) |
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
-| 2 — règles d'accès | écrite et éprouvée sur banc le 17/09 ; **à jouer par Cyril** |
+| 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
 | 3 — le site, écran par écran | à écrire |
 | 4 — retirer les adresses recopiées | à écrire |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
