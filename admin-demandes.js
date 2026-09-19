@@ -328,14 +328,6 @@ function nomTesteurParNumero(membreId, repli) {
     return repli || (membreId ? 'membre n' + String.fromCharCode(176) + ' ' + membreId : '');
 }
 
-function nomTesteur(email) {
-    var e = (email || '').trim();
-    if (!e) return '';
-    var m = membresDemandes[e.toLowerCase()];
-    if (m && (m.prenom || m.nom)) return (m.prenom || m.nom);
-    return e.indexOf('@') > 0 ? e.slice(0, e.indexOf('@')) : e;
-}
-
 function renderDemandeRow(d) {
     var etatDef = getEtatDef(d.etat);
     var estClose = (d.etat === 'terminee' || d.etat === 'abandonnee');
@@ -401,8 +393,8 @@ function renderDemandeRow(d) {
                          + formatDateFr(dernierCom.created_at) + ' — réponse de l\'assistant attendue') + '">'
                      + '<i class="fa-solid fa-hourglass-half"></i> Assistant</span>';
         }
-        attendus.forEach(function(email) {
-            var nom = nomTesteur(email);
+        attendus.forEach(function(membreId) {
+            var nom = nomTesteurParNumero(membreId);
             specIcon += ' <span class="demande-badge demande-badge-attente-personne" title="'
                      + escapeAttr('L\'assistant a répondu à ' + nom + ' le ' + formatDateFr(dernierCom.created_at)
                          + ' — sa réaction est attendue') + '">'
