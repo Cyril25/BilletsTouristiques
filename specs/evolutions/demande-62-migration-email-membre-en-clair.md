@@ -90,6 +90,37 @@ est écrit et vérifié (vingt-deux gestes rejoués sur la copie : mise en envel
 membre, vérification des paiements, liste noire, relances…). Il part **dans une mise en ligne
 séparée**, pour qu'un souci se rattache sans hésitation à l'un ou à l'autre.
 
+**Une panne le 19 septembre, corrigée dans la journée** : l'écran de suivi des demandes ne se
+chargeait plus (« erreur chargement demandes »). Un seul endroit, dans la petite étiquette qui
+indique de qui on attend une réaction, demandait encore une adresse là où il reçoit désormais un
+numéro. C'était une branche de l'écran qui ne s'affiche que dans un cas précis — une analyse à
+valider dont la dernière réponse vient de l'assistant —, et aucune des données d'essai ne la
+traversait. Le cas est maintenant fabriqué exprès dans les vérifications, avec les formulaires de
+**modification** (et non plus seulement de création), qui étaient dans le même angle mort.
+
+## L'étape 4 est prête (19 septembre)
+
+**Retirer les adresses recopiées.** C'est l'étape qui donne son sens à tout le reste : une fois
+qu'aucun écran ne s'en sert, les copies d'adresses disparaissent de la base, et il ne reste qu'un
+seul endroit où l'adresse d'un membre est écrite — sa fiche.
+
+Ce qui reste, volontairement : **l'adresse de connexion** sur la fiche, bien sûr, et les traces
+« modifié par », « bloqué par », « traité par », qui gardent l'adresse au moment de l'action.
+Les treize demandes importées de mars gardent aussi leur mention « Import Google Sheet ».
+
+**Deux choses ont été vérifiées avant de proposer cette étape** :
+
+- **on peut revenir en arrière.** Le plan disait le contraire (« c'est la dernière, plus de
+  retour »). En fait si : le numéro d'un membre ne changeant jamais, les adresses se recalculent
+  à partir de sa fiche. L'essai sur la copie fait l'aller-retour et compare : tout revient
+  **identique**, jusqu'au moindre détail de structure.
+- **plus aucun écran ne lit d'adresse.** Les vérifications des onze écrans ont été rejouées sur
+  une copie **où les colonnes ont vraiment été supprimées** : 80 vérifications, toutes vertes.
+  Tant que les colonnes existaient, une vérification verte ne prouvait rien — la base remplissait
+  les deux.
+
+Elle sera jouée après la mise en ligne de « Mes collectes ».
+
 **Trouvé au passage, sans rapport avec ce chantier** : l'envoi d'une annonce à des personnes
 nommées, développé en juin, n'a jamais été activé en base — l'écran s'en aperçoit et grise
 proprement l'option. Rien n'est cassé ; la fonctionnalité, elle, n'existe pas en ligne. À décider

@@ -1014,11 +1014,70 @@ collecte, mise en enveloppe, inscription posée par le collecteur, vérification
 « je ne me réclame rien à moi-même »), préparation des envois, liste noire (avec le retrait des
 inscriptions), détail d'une enveloppe, historique, relance simple et groupée, récapitulatif.
 
+**Une régression, le 19/09** : le suivi des demandes est tombé sur
+« Erreur chargement demandes : (email || "").trim is not a function ». `personnesAttendues()`
+(demande #68) rend des numéros depuis la conversion, mais le badge « réaction attendue »
+appelait encore l'ancienne fonction qui attendait une adresse. Corrigé par `6deb74c` (cache
+v315), avec le test qui manquait.
+
+**Ce que la régression apprend sur le banc** : les 34 vérifications ouvraient bien cet écran,
+mais aucune donnée du banc ne traversait cette branche — elle ne s'affiche que sur une analyse
+à valider dont le *dernier* commentaire est de l'assistant. Une branche jamais empruntée n'est
+pas testée, même quand l'écran l'est. Deux réponses :
+
+- `test-demandes-attendus.mjs` **fabrique** la situation (il reproduit l'erreur exacte sur la
+  version d'avant le correctif et passe sur celle d'après) ;
+- les **formulaires en modification** — pré-inscriptions, inscription posée par un admin — étaient
+  dans le même angle mort : la création était jouée, pas la modification. Ajoutés à la suite des
+  groupes 2 à 5, qui compte désormais 42 vérifications.
+
 **Trouvé en chemin, hors #62** : la migration `scripts/migration-demande-51-notif-auteur.sql`
 (envoi ciblé relisible par son auteur) **n'a jamais été jouée en production**. L'écran le détecte et
 désactive proprement le mode « personnes précises » : rien n'est cassé, mais la fonctionnalité #51
 n'existe pas en ligne. Si elle est jouée un jour, sa fonction `mes_notifications_envoyees()` filtre
 sur `cible_email` et devra être reprise à l'étape 4, en même temps que les autres.
+
+### Étape 4 — retirer les adresses recopiées *(écrite et éprouvée au banc le 19/09, en attente du groupe 6)*
+
+**Ce qu'elle retire** : les 16 triggers de synchronisation de l'étape 1 et leur fonction, puis les
+**15 colonnes d'adresse de membre**. `membres.email` reste (c'est l'identifiant de connexion
+Google) et les colonnes de **trace** aussi (`changed_by`, `bloque_by`, `traite_par`… — Q8).
+
+**Ce qu'elle reprend au passage**, parce que ces objets citaient encore une adresse :
+
+| Objet | Avant | Après |
+|---|---|---|
+| `creer_dettes_changement_prix()` | insère la dette et la notification avec l'adresse | le script relit son texte ACTUEL et n'y change que les deux noms de colonnes — 130 lignes de règles de prix ne sont pas recopiées dans une migration |
+| `enforce_enveloppe_membre_update()` | verrouille l'adresse et le numéro | la ligne de l'adresse n'a plus d'objet ; le numéro reste verrouillé |
+| `is_bloque_inscription(text)` | lisait `membre_blocages.membre_email` | supprimée : plus aucune règle ne l'appelle depuis l'étape 2 (`membre_bloque_inscription(bigint)` a pris sa place) |
+| `notifications_select` | « privée si un numéro **ou** une adresse » | « privée si un numéro » |
+| `v_inscriptions_details` | joint `membres` sur l'adresse | joint sur le numéro |
+| PK de `collection`, `membre_blocages`, `notifications_vues` | portaient l'adresse | portent le numéro (PostgREST s'en sert pour `on_conflict` : le site vise déjà les numéros) |
+
+**Le cas du demandeur importé** : dans `demandes.demandeur`, 13 demandes importées n'ont pas de demandeur nominatif, leur
+colonne porte le libellé « Import Google Sheet » (Q10 : le libellé est conservé). La colonne
+**reste** donc, mais devient un libellé d'origine : elle passe *nullable*, les 59 adresses
+recopiées des demandes nominatives sont effacées, et l'écran affiche le nom venu du numéro, avec
+le libellé en repli. Un commentaire SQL le dit sur la colonne.
+
+**Deux écrivains d'adresses restaient hors du site** : `scripts/rituel-demandes.mjs` (la boucle de
+surveillance écrivait `auteur_email` et `cible_email`) et un repli de `demande.js`. Convertis
+(`5776a5b`) ; le rituel a été vérifié en lecture contre la production.
+
+**Retour arrière** : contrairement à ce que prévoyait le plan (« plus de retour : c'est la
+dernière »), l'étape 4 **se défait**. Les adresses se déduisent des numéros, puisque le numéro ne
+change jamais : `migration-demande-62-e4-9-retour-arriere.sql` (généré depuis l'état réel d'avant,
+rien n'est retapé) remet colonnes, contraintes, index, clés primaires, triggers, fonctions, règle
+et vue. Le banc le prouve par empreinte : après aller-retour, **le catalogue et les adresses sont
+identiques au bit près**, et un second retour arrière est refusé.
+
+**Banc** : `test-etape4-retour.mjs` (8 vérifications : migration, contrôle 3/3, aller-retour à
+l'identique, rejeu refusé) et, surtout, **les trois suites d'écran rejouées avec les colonnes
+supprimées** (`AVEC_E4=1`) : 15 + 42 + 23 vérifications vertes. C'est la preuve qu'aucun écran ne
+lit ni n'écrit plus une adresse de membre — une suite verte avant l'étape 4 ne le prouvait pas,
+puisque les triggers remplissaient les deux colonnes.
+
+*Un point d'ordre* : l'étape 4 ne peut être jouée qu'une fois « Mes collectes » en ligne.
 
 ### Reste à faire
 
@@ -1029,7 +1088,7 @@ sur `cible_email` et devra être reprise à l'étape 4, en même temps que les a
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
 | 3 — le site, écran par écran | groupes 1 à 5 **en ligne** le 18/09 (`b0fb923`, `a6d6452`) ; groupe 6 (`mes-collectes.js`) **développé et vérifié**, en attente de son déploiement |
-| 4 — retirer les adresses recopiées | à écrire (penser à `mes_notifications_envoyees()` si la migration #51 est jouée d'ici là) |
+| 4 — retirer les adresses recopiées | **écrite et éprouvée au banc** (constat / migration / contrôle / retour arrière) ; à jouer après la mise en ligne du groupe 6. Penser à `mes_notifications_envoyees()` si la migration #51 est jouée d'ici là |
 | 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
 
 *Commits : voir l'index des demandes.*
