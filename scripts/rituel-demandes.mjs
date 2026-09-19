@@ -98,8 +98,22 @@ function extrait(texte, max) {
     return t.length > max ? t.slice(0, max - 1) + '…' : t;
 }
 
-function estAssistant(email) {
-    return (email || '').trim().toLowerCase() === ASSISTANT;
+// Demande #62 — l'assistant se reconnaît à son numéro de membre. Le carnet est
+// chargé une fois par passage ; sans lui, on ne sait pas répondre (et on le dit).
+let numeroAssistant = null;
+
+function estAssistant(membreId) {
+    return !!numeroAssistant && membreId === numeroAssistant;
+}
+
+// Charge le carnet et retient le numéro de l'assistant.
+async function carnetEtAssistant() {
+    const carnet = await carnetMembres();
+    if (!carnet.assistant) {
+        throw new Error('Pas de fiche membre pour ' + ASSISTANT + ' : l\'étape 0 de la demande #62 n\'est pas jouée ?');
+    }
+    numeroAssistant = carnet.assistant;
+    return carnet;
 }
 
 function listeDocs(docs) {
@@ -112,20 +126,28 @@ async function uneDemande(id) {
     return rows[0];
 }
 
+// Demande #62 — les lignes portent le NUMÉRO de leur membre ; le carnet donne le reste.
+// { parNumero: { 12: { nom, email } }, assistant: 7 }
 async function carnetMembres() {
-    const rows = await api('GET', '/rest/v1/membres?select=email,prenom,nom');
-    const carnet = {};
+    const rows = await api('GET', '/rest/v1/membres?select=id,email,prenom,nom');
+    const carnet = { parNumero: {}, assistant: null };
     for (const m of rows || []) {
-        if (m.email) carnet[m.email.trim().toLowerCase()] = [m.prenom, m.nom].filter(Boolean).join(' ');
+        if (!m.id) continue;
+        carnet.parNumero[m.id] = {
+            nom: [m.prenom, m.nom].filter(Boolean).join(' '),
+            email: (m.email || '').trim()
+        };
+        if ((m.email || '').trim().toLowerCase() === ASSISTANT) carnet.assistant = m.id;
     }
     return carnet;
 }
 
-function nomDe(carnet, email) {
-    const e = (email || '').trim().toLowerCase();
-    if (!e) return 'Inconnu';
-    if (e === ASSISTANT) return ASSISTANT_NOM;
-    return carnet[e] || e.split('@')[0];
+function nomDe(carnet, membreId) {
+    if (!membreId) return 'Inconnu';
+    if (carnet && carnet.assistant === membreId) return ASSISTANT_NOM;
+    const m = carnet && carnet.parNumero ? carnet.parNumero[membreId] : null;
+    if (!m) return 'membre n\u00B0 ' + membreId;
+    return m.nom || (m.email || '').split('@')[0] || ('membre n\u00B0 ' + membreId);
 }
 
 // ------------------------------------------------------------
@@ -133,7 +155,7 @@ function nomDe(carnet, email) {
 // le passage s'arrête là, sans rien lire d'autre.
 // ------------------------------------------------------------
 async function etat() {
-    const champs = 'id,etat,priorite,complexite,demandeur,ecran,description,docs,commentaire,updated_at';
+    const champs = 'id,etat,priorite,complexite,demandeur,demandeur_id,ecran,description,docs,commentaire,updated_at';
     // Les fils suivis : les analyses à valider (remarques des relecteurs) et, depuis le
     // 15/09 (#72), les demandes à cadrer — la réponse du demandeur, ou une remarque
     // d'un admin, y attendait sans que personne la voie.
@@ -154,13 +176,13 @@ async function etat() {
     const ids = [...suivies, ...marquees].map((d) => d.id);
     const coms = ids.length
         ? await api('GET', '/rest/v1/demande_commentaires?demande_id=in.(' + ids.join(',') + ')'
-            + '&select=id,demande_id,doc,section,auteur_email,texte,created_at&order=created_at.asc')
+            + '&select=id,demande_id,doc,section,auteur_id,texte,created_at&order=created_at.asc')
         : [];
-    const carnet = coms.length ? await carnetMembres() : {};
+    const carnet = coms.length ? await carnetEtAssistant() : { parNumero: {}, assistant: null };
     const resume = (c) => ({
         id: c.id,
         date: c.created_at,
-        auteur: nomDe(carnet, c.auteur_email),
+        auteur: nomDe(carnet, c.auteur_id),
         doc: c.doc,
         section: c.section,
         extrait: extrait(c.texte, 200)
@@ -172,13 +194,13 @@ async function etat() {
     for (const d of suivies) {
         const fil = coms.filter((c) => c.demande_id === d.id);
         let i = fil.length;
-        while (i > 0 && !estAssistant(fil[i - 1].auteur_email)) i--;
+        while (i > 0 && !estAssistant(fil[i - 1].auteur_id)) i--;
         if (i < fil.length) remarques.push({ id: d.id, etat: d.etat, commentaires: fil.slice(i).map(resume) });
     }
 
     const reponses = {};
     for (const d of marquees) {
-        const r = coms.filter((c) => c.demande_id === d.id && !estAssistant(c.auteur_email)
+        const r = coms.filter((c) => c.demande_id === d.id && !estAssistant(c.auteur_id)
             && new Date(c.created_at) > new Date(d.updated_at));
         if (r.length) reponses[d.id] = r.map(resume);
     }
@@ -220,15 +242,15 @@ async function lire(id) {
     const [coms, vals, carnet] = await Promise.all([
         api('GET', '/rest/v1/demande_commentaires?demande_id=eq.' + id + '&select=*&order=created_at.asc'),
         api('GET', '/rest/v1/demande_validations?demande_id=eq.' + id + '&select=*&order=created_at.asc').catch(() => []),
-        carnetMembres()
+        carnetEtAssistant()
     ]);
     console.log(JSON.stringify({
-        demande: { ...d, demandeur_nom: nomDe(carnet, d.demandeur), docs: listeDocs(d.docs) },
+        demande: { ...d, demandeur_nom: d.demandeur_id ? nomDe(carnet, d.demandeur_id) : (d.demandeur || 'Inconnu'), docs: listeDocs(d.docs) },
         commentaires: coms.map((c) => ({
             id: c.id,
             date: c.created_at,
-            auteur: nomDe(carnet, c.auteur_email),
-            auteur_email: c.auteur_email,
+            auteur: nomDe(carnet, c.auteur_id),
+            auteur_id: c.auteur_id,
             doc: c.doc,
             section: c.section,
             texte: c.texte
@@ -304,8 +326,9 @@ async function maj(id, fichier) {
 // l'API, aucun déclencheur ne la crée, et le demandeur n'apprendrait jamais
 // que sa demande attend une précision de sa part.
 async function notifierDemandeur(demande) {
-    const email = (demande.demandeur || '').trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Demande #62 — le destinataire est désigné par son numéro ; une demande importée
+    // n'en a pas (son « demandeur » est un libellé), il n'y a personne à prévenir.
+    if (!demande.demandeur_id) {
         console.log('  (demandeur non nominatif : pas de notification)');
         return;
     }
@@ -318,9 +341,9 @@ async function notifierDemandeur(demande) {
             texte: 'Votre demande « ' + resume + ' » est passée « À cadrer » : une précision '
                 + 'est nécessaire avant de pouvoir la développer. Un admin reviendra vers vous'
                 + (demande.commentaire ? ' (voir le commentaire ajouté).' : '.'),
-            cible_email: email
+            cible_membre_id: demande.demandeur_id
         }, 'return=minimal');
-        console.log('  demandeur prévenu (' + email + ')');
+        console.log('  demandeur prévenu (membre n\u00B0 ' + demande.demandeur_id + ')');
     } catch (e) {
         console.error('⚠ État changé, mais la notification au demandeur a échoué : ' + e.message);
         process.exitCode = 2;
@@ -338,32 +361,33 @@ async function commenter(id, fichier, options) {
     const texte = lireFichier(fichier).trim();
     if (!texte) throw new Error('Fichier vide : rien à publier');
 
+    const carnet = await carnetEtAssistant();
     const fil = await api('GET', '/rest/v1/demande_commentaires?demande_id=eq.' + id
-        + '&select=id,auteur_email,texte&order=created_at.asc');
-    if (fil.some((c) => estAssistant(c.auteur_email) && String(c.texte).trim() === texte)) {
+        + '&select=id,auteur_id,texte&order=created_at.asc');
+    if (fil.some((c) => estAssistant(c.auteur_id) && String(c.texte).trim() === texte)) {
         throw new Error('Ce texte est déjà publié sur #' + id + ' : rien n\'est renvoyé.');
     }
     const dernier = fil[fil.length - 1];
-    const destinataire = dernier && !estAssistant(dernier.auteur_email) ? dernier.auteur_email : null;
+    const destinataire = dernier && !estAssistant(dernier.auteur_id) ? dernier.auteur_id : null;
 
     await api('POST', '/rest/v1/demande_commentaires', {
         demande_id: Number(id),
         doc: options.doc || null,
         section: options.section || null,
-        auteur_email: ASSISTANT,
+        auteur_id: numeroAssistant,
         texte
     }, 'return=minimal');
     console.log('Commentaire publié sur #' + id);
 
     let titre = ASSISTANT_NOM + ' a commenté la demande #' + id;
-    const prenomDe = async (email) => (nomDe(await carnetMembres(), email).split(' ')[0]) || email;
-    if (demande.etat === 'a_cadrer' && /@/.test(demande.demandeur || '')) {
+    const prenomDe = (membreId) => nomDe(carnet, membreId).split(' ')[0] || nomDe(carnet, membreId);
+    if (demande.etat === 'a_cadrer' && demande.demandeur_id) {
         // Sur une demande à cadrer, c'est le demandeur qui doit répondre : le titre
         // le nomme, même si le dernier commentaire venait d'un autre admin (#72).
-        titre = ASSISTANT_NOM + ' a écrit à ' + await prenomDe(demande.demandeur) + ' sur la demande #' + id;
+        titre = ASSISTANT_NOM + ' a écrit à ' + prenomDe(demande.demandeur_id) + ' sur la demande #' + id;
         // La fiche est réservée aux admins (data-require-admin) : un demandeur
         // simple membre ne lira jamais ce commentaire.
-        const r = await api('GET', '/rest/v1/membres?email=eq.' + encodeURIComponent(demande.demandeur.trim())
+        const r = await api('GET', '/rest/v1/membres?id=eq.' + demande.demandeur_id
             + '&select=role').catch(() => []);
         const role = r && r[0] ? r[0].role : null;
         if (role !== 'admin' && role !== 'superadmin') {
@@ -371,7 +395,7 @@ async function commenter(id, fichier, options) {
             console.log('⚠ Le demandeur n\'est pas admin : il ne verra pas ce commentaire, un admin doit le lui transmettre.');
         }
     } else if (destinataire) {
-        titre = ASSISTANT_NOM + ' a répondu à ' + await prenomDe(destinataire) + ' sur la demande #' + id;
+        titre = ASSISTANT_NOM + ' a répondu à ' + prenomDe(destinataire) + ' sur la demande #' + id;
     }
     try {
         await api('POST', '/rest/v1/notifications', {

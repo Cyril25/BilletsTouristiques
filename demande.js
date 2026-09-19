@@ -286,7 +286,7 @@ function enregistrerFiche() {
     var nouvelEtat = document.getElementById('fd-etat').value;
     var ancienEtat = laDemande.etat;
     if (nouvelEtat === 'terminee' && ancienEtat !== 'terminee' && !peutTerminer(laDemande)) {
-        var dem = laDemande.demandeur || 'le demandeur';
+        var dem = nomAfficheParNumero(laDemande.demandeur_id) || laDemande.demandeur || 'le demandeur';
         showToast('Seul ' + dem + ' peut clore cette demande : c\'est à lui de vérifier que le '
                 + 'développement répond à son besoin.', 'error');
         document.getElementById('fd-etat').value = ancienEtat;
