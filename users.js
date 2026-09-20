@@ -352,7 +352,27 @@ function renderUserCards(searchQuery) {
                     '<i class="' + btnIcon + '"></i> ' + escapeHtml(btnText) +
                 '</button>') +
                 // Demande #62 — un compte désactivé garde ses données : on ne le supprime pas
-                (isDesactive ? '' :
+                // Demande #62 — le but du chantier : l'adresse ne vit plus que sur la fiche,
+                // la changer ne touche qu'une ligne et tout le reste suit.
+                '<button class="user-email-change-btn" ' +
+                    'data-doc-id="' + escapeAttr(email) + '" ' +
+                    'title="Changer l\'adresse de connexion de ce membre">' +
+                    '<i class="fa-solid fa-envelope-circle-check"></i> Changer l\'adresse' +
+                '</button>' +
+                // Désactiver : il ne peut plus se connecter, ses données restent.
+                (isDesactive
+                    ? '<button class="user-statut-toggle-btn reactiver" ' +
+                          'data-doc-id="' + escapeAttr(email) + '" ' +
+                          'title="Lui rendre l\'accès au site">' +
+                          '<i class="fa-solid fa-user-check"></i> Réactiver' +
+                      '</button>'
+                    : (role === 'superadmin' || estMoi(email) ? '' :
+                      '<button class="user-statut-toggle-btn desactiver" ' +
+                          'data-doc-id="' + escapeAttr(email) + '" ' +
+                          'title="Lui retirer l\'accès au site, sans rien supprimer">' +
+                          '<i class="fa-solid fa-user-slash"></i> Désactiver' +
+                      '</button>')) +
+            (isDesactive ? '' :
                 '<button class="user-delete-btn" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'title="Supprimer ce membre">' +
@@ -386,6 +406,26 @@ function initUserEvents() {
                     return;
                 }
                 changeUserRole(email, newRole);
+                return;
+            }
+
+            // Demande #62 — changer l'adresse, désactiver, réactiver
+            var emailBtn = event.target.closest('.user-email-change-btn');
+            if (emailBtn) {
+                event.stopPropagation();
+                openChangeEmailModal(emailBtn.getAttribute('data-doc-id'));
+                return;
+            }
+
+            var statutBtn = event.target.closest('.user-statut-toggle-btn');
+            if (statutBtn) {
+                event.stopPropagation();
+                var emailStatut = statutBtn.getAttribute('data-doc-id');
+                if (statutBtn.classList.contains('reactiver')) {
+                    changerStatutMembre(emailStatut, 'actif');
+                } else {
+                    openDesactiverModal(emailStatut);
+                }
                 return;
             }
 
@@ -707,6 +747,253 @@ function onDeleteUserKeydown(e) {
 
 function onDeleteUserOverlayClick(e) {
     if (e.target.id === 'delete-user-modal-overlay') closeDeleteUserModal();
+}
+
+// ============================================================
+// 7c-bis. CHANGER L'ADRESSE D'UN MEMBRE  (demande #62, étape 5)
+// ------------------------------------------------------------
+// C'est ce pour quoi tout le chantier a été fait : depuis que les données
+// portent le NUMÉRO du membre, son adresse ne vit plus qu'à un endroit, sa
+// fiche. La changer ne touche qu'une ligne, et ses inscriptions, sa collection,
+// ses enveloppes, ses commentaires suivent sans bouger.
+//
+// Le piège prévu par la spec : à sa première connexion avec la nouvelle adresse
+// Google, le membre s'est créé SANS LE SAVOIR une deuxième fiche « en attente »
+// (policy membres_insert_self_pending). Il faut donc la retirer avant de
+// renommer — et seulement si elle est vide. Le juge de « vide », c'est la base :
+// ses clés étrangères refusent la suppression d'une fiche qui porte des données,
+// et tableBloquantSuppression() traduit son refus en clair.
+// ============================================================
+
+function estMoi(email) {
+    var u = firebase.auth().currentUser;
+    return !!u && (u.email || '').toLowerCase() === (email || '').toLowerCase();
+}
+
+var changeEmailTarget = null;   // { email, id, nom }
+
+function openChangeEmailModal(email) {
+    var user = null;
+    for (var i = 0; i < usersList.length; i++) {
+        if (usersList[i]._id === email) { user = usersList[i]; break; }
+    }
+    if (!user) return;
+    if (!user.id) { showToast('Fiche sans numéro de membre : rechargez la page', 'error'); return; }
+
+    changeEmailTarget = {
+        email: email,
+        id: user.id,
+        nom: ((user.nom || '') + ' ' + (user.prenom || '')).trim() || user.pseudo || email
+    };
+
+    var existing = document.getElementById('change-email-modal-overlay');
+    if (existing) existing.remove();
+
+    var html = '<div id="change-email-modal-overlay" class="user-modal-overlay" onclick="if(event.target===this)closeChangeEmailModal()">';
+    html += '<div class="user-modal" role="dialog" aria-modal="true">';
+    html += '<h2 class="user-modal-title"><i class="fa-solid fa-envelope-circle-check"></i> Changer l\'adresse</h2>';
+    html += '<p class="user-modal-desc"><strong>' + escapeHtml(changeEmailTarget.nom) + '</strong> — membre n' + String.fromCharCode(176) + ' ' + user.id + '<br>'
+         +  'Adresse actuelle : <strong>' + escapeHtml(email) + '</strong></p>';
+    html += '<div class="user-edit-modal-field user-edit-modal-field-full" style="margin-bottom:12px;">';
+    html += '<label for="change-email-nouvelle">Nouvelle adresse de connexion Google</label>';
+    html += '<input type="email" id="change-email-nouvelle" autocomplete="off" placeholder="prenom.nom@exemple.com">';
+    html += '</div>';
+    html += '<p class="user-modal-desc" style="font-size:0.9em;">Tout ce qui lui appartient suit automatiquement : '
+         +  'inscriptions, collection, enveloppes, paiements, commentaires. Il devra se connecter avec le compte '
+         +  'Google correspondant à la nouvelle adresse ; s\'il est connecté, il sera déconnecté.</p>';
+    html += '<div id="change-email-erreur" class="user-modal-desc" style="display:none;color:var(--color-danger);"></div>';
+    html += '<div class="user-modal-actions">';
+    html += '<button type="button" class="user-modal-btn" onclick="closeChangeEmailModal()">Annuler</button>';
+    html += '<button type="button" class="user-modal-btn user-modal-btn-primary" id="change-email-valider" onclick="confirmChangeEmail()">'
+         +  '<i class="fa-solid fa-check"></i> Changer l\'adresse</button>';
+    html += '</div>';
+    html += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var input = document.getElementById('change-email-nouvelle');
+    if (input) {
+        setTimeout(function() { input.focus(); }, 100);
+        input.addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmChangeEmail(); });
+    }
+    document.addEventListener('keydown', onChangeEmailKeydown);
+}
+
+function closeChangeEmailModal() {
+    var overlay = document.getElementById('change-email-modal-overlay');
+    if (overlay) overlay.remove();
+    changeEmailTarget = null;
+    document.removeEventListener('keydown', onChangeEmailKeydown);
+}
+
+function onChangeEmailKeydown(e) {
+    if (e.key === 'Escape') closeChangeEmailModal();
+}
+
+function erreurChangeEmail(message) {
+    var el = document.getElementById('change-email-erreur');
+    if (el) { el.textContent = message; el.style.display = ''; }
+    var btn = document.getElementById('change-email-valider');
+    if (btn) btn.disabled = false;
+}
+
+function confirmChangeEmail() {
+    if (!changeEmailTarget) return;
+    var cible = changeEmailTarget;
+    var input = document.getElementById('change-email-nouvelle');
+    var nouvelle = input ? input.value.trim() : '';
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nouvelle)) {
+        erreurChangeEmail('Ce n\'est pas une adresse e-mail.');
+        return;
+    }
+    if (nouvelle.toLowerCase() === cible.email.toLowerCase()) {
+        erreurChangeEmail('C\'est déjà son adresse.');
+        return;
+    }
+
+    var btn = document.getElementById('change-email-valider');
+    if (btn) btn.disabled = true;
+
+    // La nouvelle adresse a-t-elle déjà une fiche ? (le « deuxième compte »)
+    supabaseFetch('/rest/v1/membres?email=ilike.' + encodeURIComponent(nouvelle) + '&select=id,email,statut')
+        .then(function(rows) {
+            var autre = (rows && rows.length) ? rows[0] : null;
+            if (!autre) return null;
+            if (autre.id === cible.id) return null;   // même fiche, à la casse près
+            // On tente de la retirer : la base refuse si elle porte des données.
+            return supabaseFetch('/rest/v1/membres?id=eq.' + autre.id, { method: 'DELETE' })
+                .then(function() { return autre; })
+                .catch(function(err) {
+                    var bloquant = tableBloquantSuppression(err.message);
+                    // Refus prévu (la spec : « si la fiche cible porte de vraies données,
+                    // le renommage est refusé et dit lesquelles ») : ce n'est pas un échec,
+                    // on l'affiche tel quel.
+                    var refus = new Error(bloquant
+                        ? 'Cette adresse appartient déjà à une autre fiche, qui a des données ('
+                          + bloquant + '). À traiter avant de renommer.'
+                        : 'Cette adresse appartient déjà à une autre fiche, impossible de la retirer : ' + err.message);
+                    refus.refusAttendu = true;
+                    throw refus;
+                });
+        })
+        .then(function(autreRetiree) {
+            return supabaseFetch('/rest/v1/membres?id=eq.' + cible.id, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=minimal' },
+                body: JSON.stringify({ email: nouvelle })
+            }).then(function() { return autreRetiree; });
+        })
+        .then(function(autreRetiree) {
+            for (var i = 0; i < usersList.length; i++) {
+                if (usersList[i].id === cible.id) {
+                    usersList[i].email = nouvelle;
+                    usersList[i]._id = nouvelle;
+                }
+            }
+            if (autreRetiree) {
+                usersList = usersList.filter(function(u) { return u.id !== autreRetiree.id; });
+            }
+            closeChangeEmailModal();
+            renderUserCards(document.getElementById('user-search-input')
+                ? document.getElementById('user-search-input').value.trim() : '');
+            showToast('Adresse changée : ' + cible.nom + ' se connecte désormais avec ' + nouvelle, 'success');
+        })
+        .catch(function(error) {
+            if (error && error.refusAttendu) {
+                erreurChangeEmail(error.message);
+                return;
+            }
+            if (/duplicate key|unique/i.test(error.message || '')) {
+                erreurChangeEmail('Cette adresse est déjà prise par une autre fiche.');
+                return;
+            }
+            console.error('Erreur changement d\'adresse:', error);
+            erreurChangeEmail('Échec : ' + error.message);
+        });
+}
+
+// ============================================================
+// 7c-ter. DESACTIVER / REACTIVER UN MEMBRE  (demande #62, étape 5)
+// ------------------------------------------------------------
+// Désactiver, c'est retirer l'accès sans rien supprimer : depuis l'étape 2, les
+// règles d'accès ne reconnaissent qu'une fiche ACTIVE, et l'étape 0 a appris aux
+// écrans à ne plus proposer un compte désactivé. Ses données restent, son nom
+// continue de s'afficher sur ses anciennes lignes.
+// ============================================================
+
+var desactiverTargetEmail = null;
+
+function openDesactiverModal(email) {
+    var user = null;
+    for (var i = 0; i < usersList.length; i++) {
+        if (usersList[i]._id === email) { user = usersList[i]; break; }
+    }
+    if (!user) return;
+    if (estMoi(email)) { showToast('Vous ne pouvez pas vous désactiver vous-même', 'error'); return; }
+    if (user.role === 'superadmin') { showToast('Un superadmin ne se désactive pas', 'error'); return; }
+
+    desactiverTargetEmail = email;
+    var displayName = ((user.nom || '') + ' ' + (user.prenom || '')).trim() || user.pseudo || email;
+
+    var existing = document.getElementById('desactiver-modal-overlay');
+    if (existing) existing.remove();
+
+    var html = '<div id="desactiver-modal-overlay" class="user-modal-overlay" onclick="if(event.target===this)closeDesactiverModal()">';
+    html += '<div class="user-modal" role="dialog" aria-modal="true">';
+    html += '<h2 class="user-modal-title"><i class="fa-solid fa-user-slash"></i> Désactiver ce membre</h2>';
+    html += '<p class="user-modal-desc"><strong>' + escapeHtml(displayName) + '</strong> ne pourra plus se connecter, '
+         +  'et n\'apparaîtra plus dans les listes où l\'on choisit un membre. <strong>Rien n\'est supprimé</strong> : '
+         +  'ses inscriptions, sa collection et son nom restent sur ses anciennes lignes. C\'est réversible.</p>';
+    html += '<div class="user-modal-actions">';
+    html += '<button type="button" class="user-modal-btn" onclick="closeDesactiverModal()">Annuler</button>';
+    html += '<button type="button" class="user-modal-btn user-modal-btn-danger" onclick="confirmDesactiver()">'
+         +  '<i class="fa-solid fa-user-slash"></i> Désactiver</button>';
+    html += '</div>';
+    html += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.addEventListener('keydown', onDesactiverKeydown);
+}
+
+function closeDesactiverModal() {
+    var overlay = document.getElementById('desactiver-modal-overlay');
+    if (overlay) overlay.remove();
+    desactiverTargetEmail = null;
+    document.removeEventListener('keydown', onDesactiverKeydown);
+}
+
+function onDesactiverKeydown(e) {
+    if (e.key === 'Escape') closeDesactiverModal();
+}
+
+function confirmDesactiver() {
+    var email = desactiverTargetEmail;
+    closeDesactiverModal();
+    if (email) changerStatutMembre(email, 'desactive');
+}
+
+function changerStatutMembre(email, statut) {
+    var membreId = numeroDuMembre(email);
+    if (!membreId) { showToast('Fiche sans numéro de membre : rechargez la page', 'error'); return; }
+
+    supabaseFetch('/rest/v1/membres?id=eq.' + membreId, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ statut: statut })
+    })
+        .then(function() {
+            for (var i = 0; i < usersList.length; i++) {
+                if (usersList[i].id === membreId) usersList[i].statut = statut;
+            }
+            renderUserCards(document.getElementById('user-search-input')
+                ? document.getElementById('user-search-input').value.trim() : '');
+            showToast(statut === 'desactive' ? 'Membre désactivé — ses données sont conservées'
+                                             : 'Membre réactivé : il peut se reconnecter', 'success');
+        })
+        .catch(function(error) {
+            console.error('Erreur changement de statut:', error);
+            showToast('Erreur : ' + error.message, 'error');
+        });
 }
 
 // ============================================================

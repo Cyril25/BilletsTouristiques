@@ -2671,7 +2671,9 @@ body.login-page {
     .user-role-toggle-btn,
     .user-delete-btn,
     .user-edit-toggle-btn,
-    .user-block-toggle-btn {
+    .user-block-toggle-btn,
+    .user-email-change-btn,
+    .user-statut-toggle-btn {
         width: 100%;
         min-height: 44px;
     }
@@ -2852,6 +2854,47 @@ body.login-page {
 }
 
 .user-block-toggle-btn.unblock:hover {
+    background: var(--color-success);
+    color: var(--color-text-inverse);
+}
+
+/* --- Demande #62 (etape 5) : changer l'adresse, desactiver / reactiver --- */
+.user-email-change-btn,
+.user-statut-toggle-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px;
+    background: transparent;
+    color: var(--color-primary);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    font-family: 'Roboto', sans-serif;
+}
+
+.user-email-change-btn:hover {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+
+.user-statut-toggle-btn.desactiver {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.user-statut-toggle-btn.desactiver:hover {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+}
+
+.user-statut-toggle-btn.reactiver {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.user-statut-toggle-btn.reactiver:hover {
     background: var(--color-success);
     color: var(--color-text-inverse);
 }
