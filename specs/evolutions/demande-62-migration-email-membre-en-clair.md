@@ -98,7 +98,43 @@ valider dont la dernière réponse vient de l'assistant —, et aucune des donn�
 traversait. Le cas est maintenant fabriqué exprès dans les vérifications, avec les formulaires de
 **modification** (et non plus seulement de création), qui étaient dans le même angle mort.
 
-## L'étape 4 est prête (19 septembre)
+## C'est fait : on peut changer l'adresse d'un membre (20 septembre)
+
+**Dans Gestion Membres, la carte d'un membre a trois boutons de plus** : « Changer l'adresse »,
+« Désactiver », « Réactiver ».
+
+Changer l'adresse, c'est maintenant une fenêtre et un champ. Tout ce qui appartient au membre suit
+tout seul — ses inscriptions, sa collection, ses enveloppes, ses paiements, ses commentaires — parce
+que ses données ne connaissent plus que son numéro. Il lui suffit ensuite de se connecter avec son
+nouveau compte Google.
+
+Le cas tordu était prévu et il est traité : quand quelqu'un s'est déjà connecté une fois avec sa
+nouvelle adresse, le site lui a créé sans le dire une **deuxième fiche vide**. Elle est retirée
+automatiquement. Et si cette deuxième fiche n'est pas vide — parce qu'il s'en est servi pour de vrai
+—, le changement est **refusé en disant ce qui bloque** (« … qui a des données (enveloppes) »),
+plutôt que de mélanger deux comptes.
+
+**Désactiver** coupe l'accès sans rien supprimer : la personne ne peut plus se connecter ni être
+choisie dans une liste, mais son nom reste sur ses anciennes inscriptions, et c'est réversible d'un
+clic. Impossible de se désactiver soi-même, ni de désactiver un superadmin.
+
+Essayé sur la copie, de bout en bout : un membre renommé retrouve ses 28 inscriptions, sa
+collection et ses 14 enveloppes ; une fois désactivé, il ne lit plus rien du tout — vérifié en
+tapant directement à la base, pas seulement à l'écran.
+
+## L'étape 4 a été jouée (20 septembre)
+
+**Les adresses recopiées sont retirées de la base.** C'est l'étape qui rend le reste possible :
+l'adresse d'un membre n'existe plus qu'à un seul endroit, sa fiche.
+
+Elle a été **refusée au premier essai**, et c'est une bonne nouvelle : le script est fait d'un seul
+bloc, il a buté sur un obstacle imprévu et a tout annulé — rien n'a été modifié. L'obstacle : une
+copie d'un tableau de détail rangée dans un coin de la base que ni l'inventaire ni la copie d'essai
+ne regardaient. Corrigé en posant la question à la base elle-même plutôt qu'à ma liste, puis rejoué :
+tout est passé, et les comptes de lignes sont rigoureusement identiques avant et après (913 lignes
+de collection, 5 606 inscriptions, 673 annonces vues…).
+
+## L'étape 4 était prête (19 septembre)
 
 **Retirer les adresses recopiées.** C'est l'étape qui donne son sens à tout le reste : une fois
 qu'aucun écran ne s'en sert, les copies d'adresses disparaissent de la base, et il ne reste qu'un
@@ -119,7 +155,7 @@ Les treize demandes importées de mars gardent aussi leur mention « Import Goog
   Tant que les colonnes existaient, une vérification verte ne prouvait rien — la base remplissait
   les deux.
 
-Elle sera jouée après la mise en ligne de « Mes collectes ».
+*(Elle a été jouée le lendemain — voir plus haut.)*
 
 **Trouvé au passage, sans rapport avec ce chantier** : l'envoi d'une annonce à des personnes
 nommées, développé en juin, n'a jamais été activé en base — l'écran s'en aperçoit et grise

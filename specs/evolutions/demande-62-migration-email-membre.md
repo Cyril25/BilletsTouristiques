@@ -952,7 +952,7 @@ d'appartenance :
 | 3 | `mes-inscriptions.js`, `app-new.js`, `admin-notifications.js` | 33 | **en ligne** le 18/09 (même déploiement) |
 | 4 | `demande.js`, `admin-demandes.js` | 50 | **en ligne** le 18/09 (même déploiement) |
 | 5 | `admin-pre-inscriptions.js`, `admin.js` | 66 | **en ligne** le 18/09 (même déploiement) |
-| 6 | `mes-collectes.js` | 159 | **développé et vérifié au banc** ; déploiement séparé, sur accord de Cyril |
+| 6 | `mes-collectes.js` | 159 | **en ligne** le 19/09 (`420e734`, cache v316) |
 
 Les groupes 2 à 5 sont partis **d'un seul déploiement**, choix de Cyril : un déploiement par groupe
 aurait multiplié les allers-retours sans réduire le risque, le banc jouant de toute façon chaque
@@ -1079,6 +1079,59 @@ puisque les triggers remplissaient les deux colonnes.
 
 *Un point d'ordre* : l'étape 4 ne peut être jouée qu'une fois « Mes collectes » en ligne.
 
+### Étape 4 — jouée en production le 2026-09-20
+
+**Refusée au premier essai**, et c'est le script qui a bien travaillé : bloc unique, erreur au
+milieu, transaction annulée, rien de modifié. Le motif :
+
+```
+cannot drop column membre_email of table inscriptions because other objects depend on it
+DETAIL: view private.v_inscriptions_details depends on column membre_email
+```
+
+**Il existe un schéma** `private` (une copie de `v_inscriptions_details`, probablement sortie de
+l'API par un correctif de sécurité), et **l'inventaire ne regardait que le schéma** `public` —
+l'export du catalogue comme le banc monté dessus. Un angle mort parfaitement reproductible : le banc ne pouvait
+pas voir ce qu'il n'avait pas.
+
+Ce qui a été corrigé, dans l'ordre :
+
+1. un constat complémentaire (`…-e4-0-constat-dependances.sql`) qui pose la question à **PostgreSQL
+   lui-même** (`pg_depend`, exactement ce sur quoi `DROP COLUMN` se base), **tous schémas
+   confondus** — il a répondu : un seul objet, la vue `private`, et rien d'autre ;
+2. le banc remonte désormais ce que la prod a hors de `public` (`scripts/banc-62/schema-hors-public.sql`,
+   rejoué à chaque réinitialisation — `DROP SCHEMA public CASCADE` l'emporte au passage) ;
+3. les scripts de l'étape 4 travaillent sur **les deux** vues, par une boucle sur les schémas et non
+   par un nom en dur ; le 1/3 a une ligne de plus (9.5) qui refuse de continuer si un objet inconnu
+   dépend encore des colonnes ; la photo du banc, elle aussi limitée à `public`, a été élargie.
+
+**Rejouée le 20/09 : contrôle 12/12**, comptes de lignes rigoureusement identiques avant et après
+(913 lignes de collection, 5 606 inscriptions, 673 annonces vues…). Les quatre suites d'écran ont
+été rejouées colonnes supprimées : **85 vérifications vertes**.
+
+### Étape 5 — l'écran, en ligne le 2026-09-20 (`ed4cb0a`, cache v317)
+
+Trois boutons sur la carte d'un membre, dans Gestion Membres :
+
+- **Changer l'adresse.** Une fenêtre, la nouvelle adresse, et c'est fait : tout ce qui lui
+  appartient suit, puisque ses lignes ne portent que son numéro. Le **deuxième compte** prévu par
+  la spec — la fiche « en attente » qu'il s'est créée sans le savoir à sa première connexion avec
+  la nouvelle adresse Google — est retiré automatiquement **s'il est vide**. Le juge de « vide »
+  n'est pas un comptage côté écran mais **la base** : ses clés étrangères refusent la suppression
+  d'une fiche qui porte des données, et `tableBloquantSuppression()` (déjà écrite pour la
+  suppression d'un membre) traduit le refus en clair. Un refus prévu s'affiche tel quel, sans
+  préfixe d'erreur : ce n'est pas une panne, c'est une réponse.
+- **Désactiver** : l'accès est coupé, rien n'est supprimé. Ni sur soi-même, ni sur un superadmin.
+- **Réactiver** : il se reconnecte.
+
+**Aucune migration** : `whitelist_update_admin` et `whitelist_delete_admin` autorisaient déjà un
+admin — superadmin compris, `is_admin()` les couvre — à renommer une fiche et à en retirer une.
+
+**Banc** : 21 vérifications (`test-etape5.mjs`) sur une base dans l'état de la production du jour,
+dont la désactivation qui **coupe réellement** la lecture de ses propres lignes (vérifiée par un
+appel direct avec son jeton, pas par l'écran), et le membre qui se reconnecte avec sa nouvelle
+adresse et retrouve ses 28 inscriptions, sa collection et ses 14 enveloppes.
+
 ### Reste à faire
 
 | Étape | État |
@@ -1087,8 +1140,8 @@ puisque les triggers remplissaient les deux colonnes.
 | 0 — base | **jouée le 17/09** par Cyril : constat 6 PRET + 1 OK, contrôle 8/8 ; 11 fiches désactivées vérifiées par l'API |
 | 1 — base | **jouée le 17/09** par Cyril : contrôle 20/20 — 120 numéros, 0 ligne discordante ; les nouvelles colonnes sont servies par l'API |
 | 2 — règles d'accès | **jouée le 18/09** par Cyril : constat OK/PRET, contrôle 8/8 ; `mon_membre_id()` vérifiée par l'API |
-| 3 — le site, écran par écran | groupes 1 à 5 **en ligne** le 18/09 (`b0fb923`, `a6d6452`) ; groupe 6 (`mes-collectes.js`) **développé et vérifié**, en attente de son déploiement |
-| 4 — retirer les adresses recopiées | **écrite et éprouvée au banc** (constat / migration / contrôle / retour arrière) ; à jouer après la mise en ligne du groupe 6. Penser à `mes_notifications_envoyees()` si la migration #51 est jouée d'ici là |
-| 5 — l'écran (changer l'adresse, désactiver, réactiver) | à écrire |
+| 3 — le site, écran par écran | **finie** : groupes 1 à 5 le 18/09 (`b0fb923`, `a6d6452`, correctif `6deb74c`), groupe 6 `mes-collectes.js` le 19/09 (`420e734`) |
+| 4 — retirer les adresses recopiées | **jouée le 20/09** : refusée au premier essai (vue `private` invisible de l'inventaire), corrigée, rejouée — contrôle 12/12, comptes de lignes identiques |
+| 5 — l'écran (changer l'adresse, désactiver, réactiver) | **en ligne le 20/09** (`ed4cb0a`, cache v317) |
 
 *Commits : voir l'index des demandes.*
