@@ -262,7 +262,13 @@ script suffisent à la refaire.
 ## Ce qui n'est jamais automatique
 
 Le tri, l'analyse et la réponse aux remarques se font sans supervision (paragraphe précédent).
-**Développer, mettre du code en production et passer en `a_tester`, jamais.**
+**Développer, mettre du code en production et passer en `a_tester` : jamais sans supervision.**
+
+Précision du 22/09, après une hésitation : cette règle vise la **boucle**, pas l'assistant. Quand
+Cyril a demandé le développement et que le code est en ligne, c'est à l'assistant de passer la
+demande en `a_tester` — c'est le point 3 de « Après le développement », et c'est lui qui sait ce
+qu'il y a à vérifier. Ce qui reste interdit, c'est qu'un passage de la boucle décide seul de
+développer, de déployer ou de déclarer une demande testable.
 
 La demande #53 en est la démonstration : le correctif est parti en production avec un état
 `:hover` non traité, et ce sont les tests de Cyril sur un vrai téléphone qui l'ont rattrapé —
