@@ -3,7 +3,46 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `41658cb` (17/09/2026).
+> Reflète la version technique du commit `1d367c4` (23/09/2026).
+
+## Où on en est (23 septembre)
+
+L'analyse a été validée le 18/09. **Les trois premières étapes sont faites et en ligne** ; la
+quatrième (l'envoi automatique des rappels) attend une décision de Cyril.
+
+**Ce qui marche dès maintenant — la fiche à compléter.** Un membre dont la fiche n'est pas complète
+arrive sur son profil, avec un bandeau qui dit ce qui manque. Il peut toujours lire le règlement et
+la page contact. Dès qu'il a enregistré, il repart là où il allait. Le téléphone n'est jamais
+exigé. Aujourd'hui, **50 fiches sur 108** sont concernées : les 42 sans adresse, plus 8 qui n'ont
+que le pays vide. Parmi elles, 11 membres venus ces deux derniers mois, dont 2 admins : ce sont
+eux qui le verront en premier.
+
+**Ce qui marchera une fois que Cyril aura préparé la base** — une manipulation de quelques minutes :
+
+- un nouvel écran **« Comptes inactifs »** dans le menu d'administration. En haut, les réglages : la
+  durée (**1 an** au départ), le délai du rappel (30 jours) et l'interrupteur, **éteint**. Dessous,
+  quatre onglets : *Bientôt en veille*, *Retenus* (avec la raison en clair), *En veille*,
+  *Historique* ;
+- la mise en veille elle-même, la réintégration en un bouton (ici ou dans Gestion Membres, qui a un
+  nouveau filtre « En veille »), le report avec une raison, et l'écran de connexion qui explique au
+  membre ce qui lui arrive.
+
+**Une différence avec ce qui était prévu : le rappel part de votre messagerie.** L'envoi automatique
+n'existe pas encore. En attendant, l'écran prépare le message (au tutoiement, modifiable) et ouvre
+votre messagerie avec les destinataires en copie cachée. Vous cliquez ensuite « J'ai envoyé le
+rappel » et la date est notée. **Personne ne peut être mis en veille sans que ce rappel ait été noté
+au moins 30 jours avant** : la promesse « personne ne s'endort sans avoir été prévenu » tient.
+
+**Un garde-fou de plus que prévu : le mode vacances.** Un membre qui a signalé son absence n'est pas
+mis en veille tant qu'elle dure.
+
+**Ce que ça donnerait aujourd'hui**, pour vous aider à trancher la question 1 ci-dessous :
+
+- à **1 an**, personne n'est concerné avant **février 2027**. Le site ne note les visites que depuis
+  le 20 mars 2026, donc personne n'a encore un an d'absence connue ;
+- à **6 mois**, 42 comptes seraient à prévenir tout de suite. 24 d'entre eux seraient retenus,
+  presque tous parce qu'ils ont une inscription pas encore payée ou pas encore envoyée. Un mois après
+  le rappel, 17 seraient mis en veille.
 
 ## De quoi il s'agit
 
@@ -96,16 +135,28 @@ Les trois premières étapes servent déjà à quelque chose : elles donnent à 
 
 ## Ce sur quoi on vous demande de vous prononcer
 
-1. **6 mois ou 1 an ?** Sébastien vous renvoie la décision. On propose de commencer à **1 an** : un
-   collectionneur peut très bien passer une saison sans rien acheter. La valeur se changera ensuite
-   sans développement.
-2. **Le rappel par mail :** on met en place un envoi automatique, ou un admin envoie le message à la
-   main chaque mois ? On recommande l'envoi automatique, seul moyen d'atteindre quelqu'un qui ne
-   vient plus. Cyril seul peut trancher : c'est lui qui tient le domaine.
-3. **Les 37 comptes sans date de visite** : d'accord pour les compter comme vus le 20 mars 2026, avec
-   le rappel avant toute mise en veille ?
-4. **Les admins et les collecteurs** sont-ils vraiment concernés ? Sébastien dit oui ; on le suit,
-   avec le garde-fou du dernier admin.
+*Mis à jour le 23/09 : les points 3 et 4 ont été appliqués comme proposé, les points 1 et 2 restent
+ouverts.*
+
+1. **6 mois ou 1 an ?** Toujours ouvert. L'écran démarre à **1 an**, et la valeur se change en deux
+   clics dans ses réglages. Voir plus haut « Ce que ça donnerait aujourd'hui » : à 6 mois, une
+   première vague partirait tout de suite.
+2. **Le rappel par mail automatique :** Cyril ne l'a pas encore tranché. En attendant, le rappel part
+   de la messagerie d'un admin (voir plus haut).
+3. ~~Les 37 comptes sans date de visite~~ — appliqué : ils comptent comme vus le 20 mars 2026, et
+   reçoivent le rappel comme les autres.
+4. ~~Les admins et les collecteurs~~ — appliqué : ils sont concernés, avec le garde-fou du dernier
+   admin. Un collecteur qui a une collecte en cours est retenu.
+
+## Ce qu'il faudra vérifier (une fois la base prête)
+
+- Ouvrir « Comptes inactifs » : réglages à 1 an, 30 jours, éteint ; listes vides.
+- Passer à 6 mois **sans allumer** : les listes se remplissent, les boutons restent grisés. Regarder
+  les *Retenus* : les raisons sont-elles justes pour les membres que vous connaissez ?
+- Remettre la durée voulue. **N'allumer qu'une fois la question 1 tranchée entre vous.**
+- Sur téléphone et en mode sombre : l'écran, la fenêtre du rappel, la fenêtre « repousser ».
+- Un membre à la fiche incomplète : il arrive sur son profil, le bandeau dit ce qui manque, et après
+  enregistrement il revient là où il allait.
 
 Vos remarques sont bienvenues : laissez un commentaire, vous aurez une réponse disant ce qui en a été
 fait. Si tout vous va, cochez « J'ai lu et je valide l'analyse » sur la fiche.

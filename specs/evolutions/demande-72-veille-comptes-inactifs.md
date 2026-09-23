@@ -310,4 +310,6 @@ Non vérifiable au banc : **mode sombre et téléphone réel** (#53) — à rega
 
 ## Réalisation
 
-*(commit en cours ; complété juste après)*
+- Lots 1 à 3 : commit `1d367c4` (23/09), en ligne. Migration `migration-demande-72-*.sql` à jouer par
+  Cyril dans l'éditeur SQL ; tant qu'elle ne l'est pas, seul le lot 2 est actif.
+- Lot 4 : à faire, après Q2/Q3.
