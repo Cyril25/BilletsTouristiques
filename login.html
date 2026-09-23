@@ -142,6 +142,14 @@
                 <p>Ce compte a été désactivé par un administrateur. Vos données sont conservées.</p>
                 <p>Si vous pensez qu'il s'agit d'une erreur, ou si vous vous connectez désormais avec une autre adresse, contactez un administrateur.</p>
             </div>
+            <!-- Demande #72 — compte mis en veille faute de visite -->
+            <div id="status-veille" style="display:none;">
+                <i class="fa-solid fa-bed logo-icon" style="color:var(--color-text-muted);"></i>
+                <h2>Compte en veille</h2>
+                <p>Votre compte a été mis en veille, faute de visite sur le site depuis longtemps. Vos données sont conservées : inscriptions, collection, historique.</p>
+                <p id="status-veille-motif" style="display:none; background:var(--color-badge-warning-bg); border-left:3px solid var(--color-badge-warning-border); padding:12px; text-align:left; margin:16px 0;"></p>
+                <p>Pour retrouver l'accès, contactez un administrateur : il pourra vous réintégrer.</p>
+            </div>
             <button onclick="signOutAndReload()" class="btn-secondary" style="margin-top:20px;">
                 <i class="fa-solid fa-power-off"></i> Se déconnecter
             </button>
@@ -220,10 +228,15 @@ function showSignupForm(email) {
     showView('signup');
 }
 
+// Un seul bloc de statut visible à la fois.
+function afficherBlocStatut(id) {
+    ['status-pending', 'status-refused', 'status-desactive', 'status-veille'].forEach(function(b) {
+        document.getElementById(b).style.display = (b === id) ? '' : 'none';
+    });
+}
+
 function showStatusPending(demandeAt) {
-    document.getElementById('status-pending').style.display = '';
-    document.getElementById('status-refused').style.display = 'none';
-    document.getElementById('status-desactive').style.display = 'none';
+    afficherBlocStatut('status-pending');
     if (demandeAt) {
         try {
             var d = new Date(demandeAt);
@@ -234,9 +247,7 @@ function showStatusPending(demandeAt) {
 }
 
 function showStatusRefused(motif) {
-    document.getElementById('status-pending').style.display = 'none';
-    document.getElementById('status-refused').style.display = '';
-    document.getElementById('status-desactive').style.display = 'none';
+    afficherBlocStatut('status-refused');
     if (motif) {
         var el = document.getElementById('status-refused-motif');
         el.textContent = 'Motif : ' + motif;
@@ -248,10 +259,25 @@ function showStatusRefused(motif) {
 // Demande #62 — appelée par global.js pour tout statut qui n'est ni actif, ni en
 // attente, ni refusé.
 function showStatusDesactive() {
-    document.getElementById('status-pending').style.display = 'none';
-    document.getElementById('status-refused').style.display = 'none';
-    document.getElementById('status-desactive').style.display = '';
+    afficherBlocStatut('status-desactive');
     showView('status');
+}
+
+// Demande #72 — compte mis en veille faute de visite. Le motif est lu à part : sa
+// fiche reste lisible par son titulaire, et un échec laisse le message général.
+function showStatusVeille(email) {
+    afficherBlocStatut('status-veille');
+    showView('status');
+    supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=veille_at,veille_motif')
+        .then(function(rows) {
+            var m = rows && rows[0];
+            if (!m || !m.veille_motif) return;
+            var el = document.getElementById('status-veille-motif');
+            var date = m.veille_at ? ' (en veille depuis le ' + new Date(m.veille_at).toLocaleDateString('fr-FR') + ')' : '';
+            el.textContent = m.veille_motif + date + '.';
+            el.style.display = 'block';
+        })
+        .catch(function() {});
 }
 
 function cancelSignup() {

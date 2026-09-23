@@ -220,7 +220,8 @@ function populateCountryFilter() {
     // Compter les membres par pays (clé normalisée → { label, count })
     var counts = {};
     // Demande #62 — les comptes désactivés ne comptent pas parmi les membres
-    var comptes = usersList.filter(function(user) { return user.statut !== 'desactive'; });
+    // (ni, depuis #72, ceux en veille)
+    var comptes = usersList.filter(function(user) { return categorieStatut(user) === 'actif'; });
     comptes.forEach(function(user) {
         var label = paysAffiche(user);
         var key = _normPays(label);
@@ -243,16 +244,27 @@ function populateCountryFilter() {
 // ============================================================
 // 6. RENDU DES CARTES UTILISATEURS
 // ============================================================
+// Demande #62 / #72 — les comptes désactivés et ceux en veille ont chacun leur
+// filtre, et n'apparaissent que sous celui-là.
+function categorieStatut(user) {
+    if (user.statut === 'desactive') return 'desactive';
+    if (user.statut === 'en_veille') return 'veille';
+    return 'actif';
+}
+function visibleSousLeFiltre(user) {
+    var cat = categorieStatut(user);
+    if (activeRoleFilter === 'desactive' || activeRoleFilter === 'veille') return cat === activeRoleFilter;
+    return cat === 'actif';
+}
+
 function renderUserCards(searchQuery) {
     var grid = document.getElementById('user-cards-grid');
     if (!grid) return;
 
     var query = (searchQuery || '').toLowerCase();
     // Demande #62 — les comptes désactivés (anciens membres, fiche technique de
-    // l'assistant) n'apparaissent que sous leur propre filtre.
-    var filtered = usersList.filter(function(user) {
-        return (activeRoleFilter === 'desactive') === (user.statut === 'desactive');
-    });
+    // l'assistant) n'apparaissent que sous leur propre filtre ; #72 : de même en veille.
+    var filtered = usersList.filter(visibleSousLeFiltre);
     if (activeRoleFilter === 'admin') {
         filtered = filtered.filter(function(user) { return user.role === 'admin' || user.role === 'superadmin'; });
     } else if (activeRoleFilter === 'member') {
@@ -278,9 +290,7 @@ function renderUserCards(searchQuery) {
     // Afficher le compteur
     var countEl = document.getElementById('user-count');
     if (countEl) {
-        var nbVisibles = usersList.filter(function(user) {
-            return (activeRoleFilter === 'desactive') === (user.statut === 'desactive');
-        }).length;
+        var nbVisibles = usersList.filter(visibleSousLeFiltre).length;
         countEl.textContent = filtered.length + ' membre' + (filtered.length > 1 ? 's' : '')
             + (query ? ' sur ' + nbVisibles : '');
     }
@@ -302,12 +312,15 @@ function renderUserCards(searchQuery) {
         var btnText = isAdmin ? 'Rétrograder membre' : 'Promouvoir admin';
         var isBloque = !!user._bloque;
         var isDesactive = user.statut === 'desactive'; // Demande #62
+        var isVeille = user.statut === 'en_veille';    // Demande #72
+        var isHorsService = isDesactive || isVeille;
 
         var flagH = window.flagImg(paysAffiche(user));
-        html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + (isDesactive ? ' user-card-desactive' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
+        html += '<div class="user-card' + (isBloque ? ' user-card-bloque' : '') + (isHorsService ? ' user-card-desactive' : '') + '" data-doc-id="' + escapeAttr(email) + '">' +
             '<div class="user-card-header">' +
                 '<span class="user-card-name">' + (flagH ? flagH + ' ' : '') + escapeHtml(displayName) + '</span>' +
                 (isDesactive ? '<span class="user-badge-role user-badge-desactive" title="Ne peut plus se connecter ; ses données sont conservées"><i class="fa-solid fa-user-slash"></i> Désactivé</span>' : '') +
+                (isVeille ? '<span class="user-badge-role user-badge-desactive" title="Mis en veille faute de visite ; ses données sont conservées"><i class="fa-solid fa-bed"></i> En veille</span>' : '') +
                 (isBloque ? '<span class="user-badge-role user-badge-bloque" title="' + escapeAttr(user._blocageMotif || 'Bloqué pour les inscriptions') + '"><i class="fa-solid fa-ban"></i> Bloqué</span>' : '') +
                 '<span class="' + badgeClass + '">' + badgeLabel + '</span>' +
             '</div>' +
@@ -344,7 +357,7 @@ function renderUserCards(searchQuery) {
                     'title="' + (isBloque ? 'Débloquer les inscriptions' : 'Bloquer les inscriptions') + '">' +
                     '<i class="fa-solid ' + (isBloque ? 'fa-lock-open' : 'fa-ban') + '"></i> ' + (isBloque ? 'Débloquer' : 'Bloquer') +
                 '</button>' +
-                (role === 'superadmin' || isDesactive ? '' :
+                (role === 'superadmin' || isHorsService ? '' :
                 '<button class="' + btnClass + '" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'data-current-role="' + escapeAttr(role) + '" ' +
@@ -360,7 +373,13 @@ function renderUserCards(searchQuery) {
                     '<i class="fa-solid fa-envelope-circle-check"></i> Changer l\'adresse' +
                 '</button>' +
                 // Désactiver : il ne peut plus se connecter, ses données restent.
-                (isDesactive
+                (isVeille
+                    ? '<button class="user-statut-toggle-btn reactiver" ' +
+                          'data-doc-id="' + escapeAttr(email) + '" ' +
+                          'title="Le sortir de veille : il retrouve l\'accès et ses données">' +
+                          '<i class="fa-solid fa-user-check"></i> Réintégrer' +
+                      '</button>'
+                    : isDesactive
                     ? '<button class="user-statut-toggle-btn reactiver" ' +
                           'data-doc-id="' + escapeAttr(email) + '" ' +
                           'title="Lui rendre l\'accès au site">' +
@@ -372,7 +391,7 @@ function renderUserCards(searchQuery) {
                           'title="Lui retirer l\'accès au site, sans rien supprimer">' +
                           '<i class="fa-solid fa-user-slash"></i> Désactiver' +
                       '</button>')) +
-            (isDesactive ? '' :
+            (isHorsService ? '' :
                 '<button class="user-delete-btn" ' +
                     'data-doc-id="' + escapeAttr(email) + '" ' +
                     'title="Supprimer ce membre">' +
@@ -975,6 +994,9 @@ function confirmDesactiver() {
 function changerStatutMembre(email, statut) {
     var membreId = numeroDuMembre(email);
     if (!membreId) { showToast('Fiche sans numéro de membre : rechargez la page', 'error'); return; }
+    // Demande #72 — sortir de veille : la base remet la date de visite à ce jour
+    // (sans quoi il y retomberait à la revue suivante) et le note au journal.
+    var etaitEnVeille = usersList.some(function(u) { return u.id === membreId && u.statut === 'en_veille'; });
 
     supabaseFetch('/rest/v1/membres?id=eq.' + membreId, {
         method: 'PATCH',
@@ -988,7 +1010,8 @@ function changerStatutMembre(email, statut) {
             renderUserCards(document.getElementById('user-search-input')
                 ? document.getElementById('user-search-input').value.trim() : '');
             showToast(statut === 'desactive' ? 'Membre désactivé — ses données sont conservées'
-                                             : 'Membre réactivé : il peut se reconnecter', 'success');
+                    : etaitEnVeille ? 'Membre réintégré : il peut se reconnecter'
+                                    : 'Membre réactivé : il peut se reconnecter', 'success');
         })
         .catch(function(error) {
             console.error('Erreur changement de statut:', error);

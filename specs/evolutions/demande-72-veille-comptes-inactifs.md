@@ -2,7 +2,9 @@
 
 - **Complexité :** L (tri du 2026-09-17, après les réponses de Sébastien).
 - **Demande :** #72, déposée par Sébastien le 2026-09-14, priorité normale.
-- **Statut :** analyse écrite le 2026-09-17. Aucun développement commencé.
+- **Statut :** analyse écrite le 2026-09-17, validée par Cyril le 18/09. **Lots 1 à 3 développés le
+  2026-09-23** (voir « Développement » en fin de document). Le lot 4 attend Q2/Q3 : Cyril ne les a
+  pas encore tranchées (réponse du 23/09 : « pas encore décidé »).
 - Version en clair pour les relecteurs : `demande-72-veille-comptes-inactifs-en-clair.md`.
 
 ## Contexte (demande)
@@ -201,6 +203,111 @@ Les lots 1 à 3 sont utiles seuls : ils donnent à voir qui serait concerné, in
 | **Q4** | Les 37 comptes sans date de visite : on les traite comme « vu le 20/03/2026 » ? | Tous | Oui, avec le rappel, et un premier passage regardé de près |
 | **Q5** | Les admins et collecteurs sont-ils vraiment concernés ? Sébastien dit oui | Les admins | Oui, avec le garde-fou du dernier admin. Pour un collecteur, prévenir aussi les autres admins : une collecte en cours ne doit pas rester orpheline |
 
+## Développement des lots 1 à 3 *(2026-09-23)*
+
+Périmètre choisi par Cyril le 23/09 : lots 1 à 3. Le lot 4 (déclenchement automatique, envoi de
+mail) reste à faire, Q2 et Q3 n'étant pas tranchées.
+
+### Ce qui a changé par rapport à l'analyse, et pourquoi
+
+1. **Le rappel part de la messagerie de l'admin, et il est noté en base.** C'est l'option B du §6,
+   prévue comme filet : sans le lot 4, c'est le seul moyen de tenir la promesse « personne ne
+   s'endort sans avoir été prévenu ». L'écran prépare le message (au tutoiement, modifiable) et ouvre
+   la messagerie en copie cachée ; le bouton « J'ai envoyé le rappel » appelle
+   `noter_rappels_veille(ids)`. La revue n'endort **que** les comptes dont le rappel date d'au moins
+   `veille_rappel_jours`. Le lot 4 remplacera l'envoi à la main, pas la règle.
+2. **Pas de fonction « réintégrer » : un trigger.** `membres_veille_transitions` (BEFORE UPDATE sur
+   `membres`) traite le passage `en_veille` → `actif` **quel que soit l'écran** : date de visite
+   remise à ce jour (sans quoi la revue suivante le rendormirait), rappel et report effacés, qui et
+   quand notés, ligne au journal. Gestion Membres et Comptes inactifs font donc le même PATCH de
+   statut. Le passage à `en_veille` par un admin (PATCH direct) est journalisé de la même façon.
+3. **Les colonnes de veille ne s'écrivent que par les fonctions.** La règle `membres_update_own_profile`
+   laisse un membre modifier sa fiche : il aurait pu se poser un report à 2099. Le trigger refuse
+   toute modification des colonnes de veille quand `current_user` est `anon` ou `authenticated`
+   (c'est-à-dire un écran) ; les fonctions `SECURITY DEFINER` passent. Le trigger est volontairement
+   `SECURITY INVOKER` : c'est ce qui rend `current_user` parlant.
+4. **Une colonne de plus**, `veille_report_au`, pour le bouton « repousser » que l'analyse prévoyait
+   sans lui donner de place. `reporter_veille()` exige une date dans l'année et une raison, qui va au
+   journal.
+5. **Un garde-fou de plus : le mode vacances.** Un membre qui a signalé son absence (#23/#27) n'est pas
+   endormi pendant qu'elle court. Non prévu dans l'analyse ; c'est la même idée que « personne au
+   milieu d'une affaire en cours ».
+6. **Les garde-fous, précisément** (codes rendus par `comptes_veille()`, libellés à l'écran) :
+
+   | Code | Ce qui retient |
+   |---|---|
+   | `vacances` | mode vacances actif (sans date de fin, ou date de fin pas encore passée) |
+   | `inscription` | une inscription (hors « pas intéressé ») non payée **ou** payée mais pas encore envoyée (`non_reparti`, `pret_a_envoyer`) |
+   | `enveloppe` | une enveloppe `en_cours` ou `expediee`, ou un port facturé non réglé |
+   | `dette` | un complément de paiement non réglé |
+   | `collecte` | collecteur dont une collecte a une inscription dans le cas `inscription`, ou une enveloppe en cours (Q5) |
+   | `dernier_admin` | admin ou superadmin sans autre admin actif ; revérifié compte par compte pendant la revue |
+
+   Un compte retenu reste retenu tant que la cause dure. Il n'y a **pas** de bouton « endormir quand
+   même » : si un admin le veut, « Désactiver » existe dans Gestion Membres (#62).
+7. **La fiche incomplète compte le pays vide.** L'analyse annonçait 42 fiches concernées (adresse
+   vide) ; en comptant aussi le pays, champ obligatoire du formulaire, elles sont **50 sur 108** au
+   23/09, dont 11 membres venus ces 60 derniers jours et 2 admins. Restent accessibles sans fiche
+   complète : `profil.html`, `reglement.html`, `contact.html`. En impersonation, pas de détour.
+8. **Interrupteur éteint = écran en lecture seule** : rappels et revue sont refusés par la base, pas
+   seulement grisés à l'écran.
+
+### Ce que ça donne sur les données du 23/09 (banc)
+
+- à **12 mois** (réglage de départ) : personne n'entre dans la liste avant **février 2027** — les
+  dates de visite n'existent que depuis le 20/03/2026 ;
+- à **6 mois** : 42 comptes dans la fenêtre du rappel, dont 24 retenus par un garde-fou, surtout
+  `inscription`. Après le rappel et 30 jours, 17 seraient endormis.
+
+C'est une donnée pour Q1 : 6 mois produit une première vague immédiate.
+
+### Base
+
+`scripts/migration-demande-72-{1-constat,2-migration,3-controle}.sql` (non versionnés, comme toutes
+les migrations) : un seul bloc `DO`, aucune apostrophe, refus s'il est rejoué ou si #62 n'est pas
+passée. Objets créés :
+
+- `membres` : statut `en_veille` dans `membres_statut_check` ; colonnes `veille_at`, `veille_motif`,
+  `veille_rappel_at`, `veille_report_au`, `reactive_par` (FK `membres`, `SET NULL`), `reactive_at` ;
+- `reglages` (clé, valeur jsonb, qui, quand) : lecture admins, **aucune écriture directe** ;
+- `veille_journal` (membre, action `rappel`/`veille`/`reintegration`/`report`, motif, par, date) :
+  lecture admins, insertion admins (pour le trigger déclenché par un écran) ;
+- trigger `membres_veille_transitions` ;
+- fonctions, toutes réservées aux admins actifs : `comptes_veille()`, `noter_rappels_veille(bigint[])`,
+  `reporter_veille(bigint, date, text)`, `passer_en_revue_veille()`,
+  `modifier_reglages_veille(int, int, boolean)` (3 à 36 mois, rappel de 7 à 90 jours).
+
+`comptes_veille()` : dernière visite = `last_active_at`, ou le 20/03/2026 à défaut ; date théorique =
+dernière visite + durée ; un compte entre dans la liste à date théorique − délai du rappel. Un rappel
+ne vaut que s'il est postérieur à la dernière visite (un membre revenu puis reparti sera prévenu de
+nouveau). Mise en veille possible à partir du plus tard de : date théorique, rappel + délai, report.
+
+### Site
+
+- `global.js` : la requête de connexion lit aussi les six champs de la fiche ;
+  `champsProfilManquants()` ; détour vers `profil.html?completer=1&retour=…` ; statut `en_veille` →
+  `showStatusVeille()`. Le site marche **avant** la migration (aucune colonne nouvelle n'est lue par
+  global.js) : l'ordre de mise en ligne est libre ;
+- `login.html` : bloc « Compte en veille », motif lu à part sur la fiche du membre ;
+- `profil.html` / `profil.js` : bandeau « il manque : … », retour à la page d'origine après
+  enregistrement — seulement vers une page `*.html` du site, jamais une URL extérieure ;
+- `users.html` / `users.js` : filtre « En veille », badge, bouton « Réintégrer » ;
+- `admin-veille.html` / `admin-veille.js` (nouvel écran « Comptes inactifs », menu admin) :
+  réglages, onglets Bientôt en veille / Retenus / En veille / Historique, rappel, revue, report,
+  réintégration ;
+- `menu.html`, `style.css`, `sw.js` (v318), `global.js` (menu v207).
+
+### Vérifié sur le banc (prod du 23/09 reconstituée)
+
+`scripts/banc-62/test-72-base.mjs` : **49/49** (droits, réglages, rappels jamais en double, revue,
+garde-fous, dernier admin, report, réintégration par PATCH, visite après rappel).
+`scripts/banc-62/test-72-site.mjs` : **48/48** (détour et retour de la fiche incomplète, URL de
+retour hostiles, écran de connexion en veille, Gestion Membres, Comptes inactifs de bout en bout,
+écran avant migration). Contre-épreuve : avec le `global.js` d'avant, 6 vérifications échouent,
+celles qui portent sur le nouveau comportement.
+
+Non vérifiable au banc : **mode sombre et téléphone réel** (#53) — à regarder en test.
+
 ## Réalisation
 
-*(à compléter après le développement : fichiers touchés, commits)*
+*(commit en cours ; complété juste après)*

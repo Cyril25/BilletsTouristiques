@@ -28,6 +28,13 @@
                 <span>Complétez votre profil avant de vous inscrire à une collecte.</span>
             </div>
 
+            <!-- Demande #72 — fiche incomplète : le site ramène ici tant qu'elle n'est pas remplie -->
+            <div id="profil-completer-msg" class="profil-redirect-msg profil-completer-msg" style="display:none" role="alert">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Votre fiche est incomplète. Il manque : <strong id="profil-completer-manque"></strong>.
+                    Le reste du site sera accessible dès qu'elle sera enregistrée. Le téléphone reste facultatif.</span>
+            </div>
+
             <div class="profil-email-display">
                 <i class="fa-solid fa-envelope"></i>
                 <span id="profil-email"></span>

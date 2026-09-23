@@ -344,7 +344,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 return fetch(
                     // Demande #62 — `id` au passage : le numéro de membre est demandé
                     // par tous les écrans, autant le connaître dès la connexion.
-                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=id,role,statut,demande_at,refuse_motif',
+                    // Demande #72 — les champs de la fiche, pour envoyer compléter un profil incomplet.
+                    SUPABASE_URL + '/rest/v1/membres?email=eq.' + encodeURIComponent(user.email) + '&select=id,role,statut,demande_at,refuse_motif,nom,prenom,rue,code_postal,ville,pays',
                     {
                         headers: {
                             'apikey': SUPABASE_ANON_KEY,
@@ -367,6 +368,9 @@ document.addEventListener("DOMContentLoaded", function() {
                             window.showStatusPending(rows[0].demande_at);
                         } else if (statut === 'refuse' && typeof window.showStatusRefused === 'function') {
                             window.showStatusRefused(rows[0].refuse_motif);
+                        } else if (statut === 'en_veille' && typeof window.showStatusVeille === 'function') {
+                            // Demande #72 — compte mis en veille faute de visite
+                            window.showStatusVeille(user.email);
                         } else if (typeof window.showStatusDesactive === 'function') {
                             // Demande #62 — compte désactivé (ou tout autre statut non actif) :
                             // sans ce cas, la page de connexion restait muette.
@@ -397,8 +401,17 @@ document.addEventListener("DOMContentLoaded", function() {
                         body: JSON.stringify({ last_active_at: new Date().toISOString() })
                     }).catch(function() {});
 
-                    if (isLoginPage) {
-                        window.location.href = "index.html";
+                    // Demande #72 — une fiche incomplète envoie la compléter, sans couper l'accès :
+                    // toute page autre que le profil y ramène tant qu'il manque un champ.
+                    // Pas en impersonation : c'est la fiche de l'admin qui est lue ici.
+                    var destination = isLoginPage ? 'index.html' : null;
+                    if (!window.impersonatedEmail && champsProfilManquants(rows[0]).length > 0
+                        && PAGES_SANS_PROFIL_COMPLET.indexOf(page) === -1) {
+                        var retour = isLoginPage ? '' : page + window.location.search;
+                        destination = 'profil.html?completer=1' + (retour ? '&retour=' + encodeURIComponent(retour) : '');
+                    }
+                    if (destination) {
+                        window.location.href = destination;
                     } else {
                         // Guard admin : vérifier si la page requiert le rôle admin
                         // En impersonation, on utilise le rôle effectif (celui du membre impersonné)
@@ -913,7 +926,7 @@ function loadMenu() {
     var placeholder = document.getElementById("menu-placeholder");
     if (!placeholder) return;
 
-    fetch("menu.html?v=206")
+    fetch("menu.html?v=207")
         .then(function(response) { return response.text(); })
         .then(function(html) {
             // 1. On injecte le HTML
@@ -1447,15 +1460,32 @@ function toggleMenu() {
  * Utilisée par Story 5.4 avant inscription.
  * @param {function} callback - Fonction appelée avec un booléen (true = complet)
  */
+// Demande #72 — les champs obligatoires de la fiche, dans l'ordre du formulaire.
+// Le téléphone n'en fait pas partie.
+var CHAMPS_PROFIL_OBLIGATOIRES = [
+    ['nom', 'nom'], ['prenom', 'prénom'], ['rue', 'rue'],
+    ['code_postal', 'code postal'], ['ville', 'ville'], ['pays', 'pays']
+];
+// Pages accessibles même avec une fiche incomplète : de quoi la compléter, lire le
+// règlement, et demander de l'aide.
+var PAGES_SANS_PROFIL_COMPLET = ['profil.html', 'reglement.html', 'contact.html'];
+
+// Les libellés des champs vides (liste vide = fiche complète).
+function champsProfilManquants(m) {
+    if (!m) return [];
+    return CHAMPS_PROFIL_OBLIGATOIRES
+        .filter(function(c) { return !String(m[c[0]] || '').trim(); })
+        .map(function(c) { return c[1]; });
+}
+window.champsProfilManquants = champsProfilManquants;
+
 function isProfilComplet(callback) {
     var email = window.getActiveEmail();
     if (!email) { callback(false); return; }
     supabaseFetch('/rest/v1/membres?email=eq.' + encodeURIComponent(email) + '&select=nom,prenom,rue,code_postal,ville,pays')
         .then(function(data) {
             if (!data || data.length === 0) { callback(false); return; }
-            var m = data[0];
-            var complet = m.nom && m.prenom && m.rue && m.code_postal && m.ville && m.pays;
-            callback(!!complet);
+            callback(champsProfilManquants(data[0]).length === 0);
         })
         .catch(function() { callback(false); });
 }

@@ -12204,3 +12204,207 @@ button.collecte-badge-status {
     .qb-decision-boutons button { flex: 1; justify-content: center; }
     .qb-barre #qb-relancer { width: 100%; justify-content: center; }
 }
+
+/* ============================================================
+   Demande #72 — Comptes inactifs (admin-veille.html) et fiche à compléter
+   Couleurs par variables du thème uniquement : lisible en clair comme en sombre.
+   ============================================================ */
+.profil-completer-msg { align-items: flex-start; }
+
+.veille-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 16px 32px;
+    box-sizing: border-box;
+}
+.veille-reglages {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+}
+.veille-reglages h2 {
+    font-size: 1.1rem;
+    margin: 0 0 8px;
+    color: var(--color-text);
+}
+.veille-etat {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+.veille-pastille {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--color-text-muted);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.veille-pastille-on {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+.veille-reglages-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+}
+.veille-champ {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    color: var(--color-text);
+    font-size: 0.9rem;
+}
+.veille-champ select,
+.veille-champ input {
+    min-height: 40px;
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+.veille-champ input { width: 5em; }
+/* Case collée à son libellé (cf. règle des checkboxes) */
+.veille-interrupteur {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px;
+}
+.veille-interrupteur input { width: 20px; height: 20px; margin: 0; }
+.veille-note {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 8px 0;
+    line-height: 1.5;
+}
+.veille-onglets { margin-bottom: 12px; flex-wrap: wrap; display: flex; gap: 8px; }
+.veille-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.veille-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.veille-btn:hover:not(:disabled),
+.veille-btn:focus-visible { background: var(--color-surface); }
+.veille-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.veille-btn-danger { border-color: var(--color-danger); color: var(--color-danger); }
+.veille-btn-ok { border-color: var(--color-success); color: var(--color-success); }
+.veille-btn-petit { min-height: 40px; font-size: 0.85rem; padding: 4px 12px; }
+.veille-liste { display: flex; flex-direction: column; gap: 10px; }
+.veille-carte {
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    color: var(--color-text);
+}
+.veille-carte-dort { border-style: dashed; }
+.veille-carte-tete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.veille-carte-ligne {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin: 2px 0;
+    overflow-wrap: anywhere;
+}
+.veille-carte-ligne i { width: 16px; color: var(--color-text-muted); }
+.veille-carte-garde {
+    font-size: 0.85rem;
+    color: var(--color-text-warning);
+    background: var(--color-badge-warning-bg);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    margin-top: 6px;
+}
+.veille-carte-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.veille-etape {
+    margin-left: auto;
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+.veille-etape-a-faire { border-color: var(--color-warning); color: var(--color-text-warning); }
+.veille-etape-mur { border-color: var(--color-danger); color: var(--color-danger); }
+.veille-vide {
+    text-align: center;
+    padding: 32px 8px;
+    color: var(--color-text-muted);
+}
+.veille-erreur { color: var(--color-danger); }
+.veille-journal { list-style: none; padding: 0; margin: 0; }
+.veille-journal li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: 0.875rem;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+.veille-journal-date { color: var(--color-text-muted); white-space: nowrap; }
+.veille-journal-motif,
+.veille-journal-par { color: var(--color-text-secondary); }
+.veille-modale .user-modal-title { color: var(--color-text); }
+.veille-champ-bloc {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+.veille-champ-bloc textarea,
+.veille-champ-bloc input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+.veille-modale-actions { flex-wrap: wrap; }
+@media (max-width: 600px) {
+    .veille-etape { margin-left: 0; }
+    .veille-actions .veille-btn,
+    .veille-modale-actions .user-modal-btn { flex: 1 1 100%; justify-content: center; }
+}

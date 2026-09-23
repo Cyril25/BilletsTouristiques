@@ -395,6 +395,7 @@ function loadProfil() {
         .then(function(data) {
             if (data && data.length > 0) {
                 prefillProfil(data[0]);
+                majBandeauCompleter(data[0]);
             }
         })
         .catch(function(error) {
@@ -446,6 +447,24 @@ function prefillProfil(data) {
     // Demande #9 — préférence terminaisons
     var termEl = document.getElementById('profil-terminaisons');
     if (termEl) termEl.value = data.terminaisons_pref || '';
+}
+
+// Demande #72 — le site a ramené ici un membre dont la fiche est incomplète :
+// dire ce qui manque. Hors impersonation seulement (c'est la règle de global.js).
+function majBandeauCompleter(m) {
+    var bandeau = document.getElementById('profil-completer-msg');
+    if (!bandeau) return;
+    var manque = window.impersonatedEmail ? [] : window.champsProfilManquants(m);
+    bandeau.style.display = manque.length ? 'flex' : 'none';
+    document.getElementById('profil-completer-manque').textContent = manque.join(', ');
+}
+
+// Demande #72 — où revenir une fois la fiche complète. Seulement une page du site :
+// un paramètre d'URL ne doit jamais emmener ailleurs.
+function destinationApresCompletion() {
+    var retour = new URLSearchParams(window.location.search).get('retour') || '';
+    return /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(retour) && retour.indexOf('profil.html') !== 0
+        ? retour : 'index.html';
 }
 
 // Demande #27 — afficher le champ date uniquement quand le mode vacances est coché
@@ -535,9 +554,17 @@ function saveProfil() {
             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
         }
 
+        majBandeauCompleter(body);
+
         // Si redirection depuis inscription, retour au catalogue
         var params = new URLSearchParams(window.location.search);
-        if (params.get('from') === 'inscription') {
+        if (params.get('completer') === '1') {
+            // Demande #72 — la fiche est complète (la validation ci-dessus l'exige) :
+            // le membre repart là où il allait.
+            setTimeout(function() {
+                window.location.href = destinationApresCompletion();
+            }, 1200);
+        } else if (params.get('from') === 'inscription') {
             setTimeout(function() {
                 window.location.href = 'billets.html';
             }, 1500);
