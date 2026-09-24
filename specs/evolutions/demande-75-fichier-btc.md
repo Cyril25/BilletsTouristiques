@@ -92,8 +92,8 @@ d'être perdue : c'est ainsi que « Où acheter » a été trouvée pendant l'es
 |---|---|---|
 | `Reference` | Amorce | tel quel ; #66 normalise la casse et les espaces |
 | `Millesime`, `Version` | Millésime `2025-3` coupé au tiret | une amorce ou un millésime atypique (`IS--`, pas de tiret…) donne une clé illisible → `ambigu` dans #66, jamais une supposition |
-| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; **sinon `null`** | **Q1** : l'absence d'Anniversary vaut-elle « pas de variante » (`N`) ? **Q2** : le doré |
-| `normale` | **`null`** | btc ne dit pas explicitement qu'un billet n'existe pas en normal ; une numérotation Anniversary *incluse* dans la série principale (`004001 à 005000` dans `000001 à 005000`) laisse penser que le normal existe, mais ce n'est pas écrit. `null` ne propose rien ; à revoir avec les chiffres du lot 2 |
+| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; **sinon** `null` | **Q1** : l'absence d'Anniversary vaut-elle « pas de variante » (`N`) ? **Q2** : le doré |
+| `normale` | `null` | btc ne dit pas explicitement qu'un billet n'existe pas en normal ; une numérotation Anniversary *incluse* dans la série principale (`004001 à 005000` dans `000001 à 005000`) laisse penser que le normal existe, mais ce n'est pas écrit. `null` ne propose rien ; à revoir avec les chiffres du lot 2 |
 | `champs` | Titre → `NomBillet`, Pays, Ville | seulement pour un billet absent chez nous (« nouveau billet à créer ») |
 | `origine` | la ligne btc complète | preuve de ce qu'a dit la source |
 
