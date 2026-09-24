@@ -112,6 +112,7 @@ qui n'est plus vrai.
 | [#72 (prod)](demande-72-veille-comptes-inactifs.md) | Mettre en veille les comptes inactifs, faire compléter les fiches ([en clair](demande-72-veille-comptes-inactifs-en-clair.md)) | L | En cours — lots 1 à 3 en ligne, **migration à jouer** ; lot 4 (envoi auto) après Q2/Q3 | ✅ | `1d367c4` |
 | [#73 (prod)](demande-73-retirer-qr-code-images.md) | Retirer le QR code des images de billets ([en clair](demande-73-retirer-qr-code-images-en-clair.md)) | S | À tester | ✅ | `316cdf2` |
 | [#74 (prod)](demande-74-notifications-telephone.md) | De vraies notifications sur le téléphone ([en clair](demande-74-notifications-telephone-en-clair.md)) | L | Analyse à valider | — | — |
+| [#75 (prod)](demande-75-fichier-btc.md) | Construire le fichier de billets-touristiques.com pour la vérification #66 ([en clair](demande-75-fichier-btc-en-clair.md)) | L | Analyse à valider — outil fait et essayé sur 10 billets, extraction complète en attente | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
