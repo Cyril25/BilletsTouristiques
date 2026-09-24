@@ -110,11 +110,11 @@ usage éventuel sur notre site est une autre question (Q5).
 
 Q1, Q2 et Q3 sont tranchées (voir « Questions ouvertes »). Ce que ça change :
 
-- **La colonne « Anniversary » (oui / vide) devient « Variante » (`anniv` / vide).** Elle ne se base
+- **La colonne « Anniversary » (oui / vide) devient « Variante »** (`anniv` / vide). Elle ne se base
   plus que sur une vraie ligne « Série Anniversary » de la fiche. ~~Une remarque qui citait
   « anniversary » suffisait à mettre « oui »~~ : c'était trop large (« voir aussi le billet
   anniversary… »), et c'est ce qui aurait été proposé en `A` à #66.
-- **btc ne produira jamais de `D`** : un billet doré ne se corrige pas depuis cette source. Et
+- **btc ne produira jamais de doré** (`D`) : un billet doré ne se corrige pas depuis cette source. Et
   l'absence d'Anniversary ne permet pas de conclure « pas de variante » : ce pourrait être un doré.
 - La règle « deux versions au plus » est déjà celle de #66 (`VersionNormaleExiste` + `HasVariante`).
 

@@ -66,16 +66,18 @@ est « non renseignée ». Une fois le fichier passé dans l'outil de la 66, ce 
 **Le principe** : fabriquer ce fichier à partir de btc pour le passer dans l'outil de la 66. Est-ce
 bien ce qu'on veut ?
 
-**Et six questions, surtout pour Cyril :**
+**Trois questions ont reçu la réponse de Cyril le 24 septembre :**
 
-1. **Un billet sans Anniversary chez btc, est-ce un billet « sans variante » ?** Proposition :
-   **non, pas tout de suite**. On ne propose rien pour ces billets. btc ne note peut-être pas les
-   dorés, et conclure « sans variante » pourrait fermer par erreur les inscriptions en doré d'un
-   billet.
-2. **Comment btc signale-t-il un doré ?** Nous n'avons rien vu sur 10 billets. Proposition : chercher
-   le mot dans les 5 500 fiches une fois le catalogue lu.
-3. **« Anniversary 2020 » et « Anniversary 10 years »** : proposition, les deux comptent comme
-   *anniversaire* chez nous.
+1. ~~Un billet sans Anniversary chez btc, est-ce un billet « sans variante » ?~~ **Non** : btc ne
+   suit pas les dorés, donc un billet sans Anniversary peut très bien avoir un doré. On ne propose rien
+   pour ces billets.
+2. ~~Comment btc signale-t-il un doré ?~~ **Il ne le signale pas.** Les dorés ne se corrigeront
+   donc pas à partir de btc.
+3. ~~« Anniversary 2020 » et « Anniversary 10 years » ?~~ **Les deux sont des « anniv »** chez nous.
+   Le fichier a maintenant une colonne « Variante » qui vaut *anniv* ou reste vide.
+
+**Il en reste quatre :**
+
 4. **Garder le numéro btc sur nos fiches billets**, pour un lien direct vers btc ? Proposition :
    oui, mais dans une demande à part, car c'est un changement de notre base.
 5. **Utiliser chez nous le tirage, les GPS, la cote ou les photos** (par exemple pour les billets
@@ -83,6 +85,29 @@ bien ce qu'on veut ?
    question des droits.
 6. **Le réimport de la collection de Cyril** (ce qu'il possède sur btc vers sa collection chez nous) ?
    Proposition : demande à part, car c'est un autre fichier et une autre partie du site.
+7. **Les annonces des membres de btc : pour quoi faire ?** Voir la partie suivante.
 
-Les questions 1 à 3 changent ce que l'import proposera : **mieux vaut que Cyril y ait répondu avant
-de valider.**
+## Nouveau (24 septembre) : les annonces des membres de btc
+
+Cyril a demandé trois fichiers en plus : la liste des **pseudos** des membres de btc, **qui propose
+quoi** et **qui cherche quoi**. Chaque billet a sur btc une page qui le dit, avec pour chaque
+annonce le numéro du billet, vente ou échange, le prix, un commentaire, et la date de fin
+d'abonnement du membre.
+
+**L'outil est prêt, mais il n'a pas été lancé.** Ces fichiers ne parlent plus de billets : ils
+parlent de **personnes**, plusieurs milliers de collectionneurs qui ne sont pas membres chez nous.
+Ils ont publié leurs annonces pour les autres membres de btc, pas pour qu'on en fasse une liste
+ailleurs. Ce qu'il est raisonnable d'extraire dépend de **ce qu'on veut en faire** :
+
+- **savoir quels billets circulent**, lesquels sont recherchés et à quel prix → les annonces **sans
+  les pseudos** suffisent ;
+- **trouver un billet qui manque à Cyril**, ou quelqu'un à qui proposer ses doubles → btc le fait déjà,
+  billet par billet ;
+- **faire une liste de collectionneurs à contacter** → à déconseiller : c'est justement l'usage
+  auquel ces personnes n'ont pas consenti.
+
+**On attend que Cyril écrive l'usage prévu** avant de lancer quoi que ce soit.
+
+Les questions 1 à 3 avaient la plus forte influence sur ce que l'import proposera, et elles sont
+réglées. **L'analyse peut être validée pour les billets.** La question 7 ne concerne que les annonces,
+qui restent en attente de toute façon.
