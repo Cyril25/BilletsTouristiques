@@ -173,12 +173,41 @@ Les trois classeurs (membres, qui propose, qui cherche) sont le livrable.
 **Rien de ces fichiers n'entre dans notre base** ni ne sert à un envoi groupé : un contact se fait
 par la messagerie de btc, un par un, pour un échange.
 
+## Les précisions de Cyril avant l'extraction complète *(24/09)*
+
+**Pas d'images pour le moment.** « On verra juste celles qui manquent sur le site, mais plus tard. »
+L'étape `images` n'est plus dans `tout` ; elle reste lançable seule. ~1 Go et 2 h 30 de moins.
+
+**Les Anniversary proposées existent, btc ne les étiquette pas.** Cyril s'étonnait que personne n'en
+propose. Dans les propositions, btc n'affiche que le numéro ; l'étiquette « Anniversary 10 years »
+n'apparaît que dans les recherches. Or une série Anniversary est **numérotée dans une plage de la série
+principale** (UEKV 2025-2 : `004001 à 005000` dans `000001 à 005000`). Sur l'essai, **12 des 24
+propositions** des deux billets Anniversary ont un numéro dans cette plage. D'où une colonne
+« Anniv d'après le numéro » dans les deux classeurs d'annonces : `oui (étiquetée)` quand btc le dit,
+`oui` / `non` d'après la plage lue dans la fiche du billet, vide quand on ne peut pas savoir (numéro
+indifférent ou billet sans Anniversary). C'est une **déduction** : un numéro mal saisi sur btc la
+trompe. Elle reste dans les fichiers de Cyril, elle ne va pas dans l'import #66.
+
+**Ajouter en route les informations qui n'apparaissent que sur certains billets.** Déjà le cas pour les
+fiches : une rubrique inconnue devient une colonne (« Où acheter » est venue ainsi). Pour les annonces,
+une étiquette de version inconnue va dans « Particularité ». Le script liste à la fin **ce qu'il a
+rencontré** (rubriques en plus, étiquettes, modes de vente) : c'est ce relevé qui dira quoi ajouter,
+à relire après l'extraction complète.
+
+**L'adresse mail des membres btc : non.** Cyril demandait si on peut l'obtenir, le formulaire de btc
+étant peu pratique. btc ne l'affiche nulle part dans ce qui a été lu (fiches, pages « Gérer ») : le
+contact passe par sa messagerie, **c'est un choix du site** pour protéger ses membres. Aller la
+chercher ailleurs, ou la déduire, reviendrait à contourner ce choix pour des milliers de personnes qui
+ne l'ont donnée qu'à btc. **L'outil ne la cherche pas**, et ce n'est pas une limite technique à lever.
+Ce qui est dans les fichiers : le lien « Lui écrire sur btc » de chaque membre, qui ouvre directement
+le formulaire. Un membre qui veut échanger par mail donnera son adresse dans sa réponse.
+
 ## Découpage
 
 | Lot | Contenu | Dépend de |
 |---|---|---|
 | **0** *(fait, 24/09)* | L'outil, l'essai sur 10 billets | — |
-| **1** | Extraction complète (liste, carte, fiches, images, Excel) | validation de cette analyse ; Cyril prévenu du lancement |
+| **1** | Extraction complète (liste, carte, fiches, annonces, Excel) — ~~images~~ plus tard (24/09) | validation de cette analyse ; Cyril prévenu du lancement |
 | **2** | Conversion en fichier normalisé, **aperçu** #66 (ne modifie rien) : combien d'identiques, de « à compléter », de contradictions, de nouveaux, d'ambigus | lot 1 ; ~~Q1 à Q3~~ tranchées le 24/09 |
 | **3** | Import réel par #66 ; les admins arbitrent dans « Vérification des billets » | lot 2 relu par Cyril |
 | **4** *(24/09)* | Les annonces des membres btc : phase `annonces`, trois classeurs ; ~~le croisement avec la collection de Cyril~~, retiré : il le fait lui-même | ~~Q7~~ tranchée ; **lancé par Cyril lui-même** (l'outil de sécurité de l'assistant bloque la collecte de données de tiers) |
