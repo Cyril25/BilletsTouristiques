@@ -269,3 +269,17 @@ billets (UEGF 2022-1 : 19 propositions, 10 recherches ; HEAE 2025-3), **pas lanc
 version, à côté des deux Anniversary : **« PARTICULARITÉ »** (un billet cherché pour un défaut ou une
 singularité), rangée dans une colonne « Particularité » ; toute étiquette inconnue y irait aussi. Les
 modes « Vente / Échange / Autre » sont repris tels que btc les affiche.
+
+**Extraction complète, 24/09** — liste à 11 h 11 : **5 461 billets, 0 sans pays** (le passage pays par
+pays et la liste complète donnent le même total) ; GPS : 5 127. **Le site est lent** : ~3,5 s par page
+publique, ~6 s connecté, mesuré sans VPN comme avec (connexion 0,025 s : c'est le serveur qui
+calcule). L'estimation de 3 h ignorait ce temps, que l'essai montrait déjà : ~20 h pour fiches et
+pages « Gérer ».
+
+**Option 1, choisie par Cyril le 24/09 à 19 h** : ne plus télécharger les fiches (2 451 gardées), seulement
+les pages « Gérer », dont le bloc « Fiche technique » a la même structure. Comparaison champ par champ
+sur les 10 billets de l'essai (fiche contre page « Gérer ») : **seules les catégories et l'état « Ma
+collection » btc diffèrent** ; tirage, séries, variante, description, éditeur, remarques, cote, où
+acheter, statut et visuels sont identiques. Les catégories viennent alors du filtre de la liste (66
+catégories, étape `categories`) ; l'état « Ma collection » n'est pas fiable de l'aveu de Cyril. Colonne
+« Lu dans » (fiche / page Gérer). Gain : ~3 000 pages et ~6 h de moins.
