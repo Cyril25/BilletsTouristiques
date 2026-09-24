@@ -8,7 +8,9 @@
 ## Où on en est (24 septembre)
 
 L'analyse a été validée le 18/09. **Les trois premières étapes sont faites et en ligne** ; la
-quatrième (l'envoi automatique des rappels) attend une décision de Cyril.
+quatrième (l'envoi automatique des rappels) attend une décision de Cyril. La demande reste donc
+**en cours** : elle ne sera « à tester » que quand la mise en veille sera automatique, comme
+Sébastien l'a demandé. Ce qui est en ligne peut déjà être regardé, et vos remarques sont bienvenues.
 
 **Ce qui marche dès maintenant — la fiche à compléter.** Un membre dont la fiche n'est pas complète
 arrive sur son profil, avec un bandeau qui dit ce qui manque. Il peut toujours lire le règlement et

@@ -312,7 +312,10 @@ Non vérifiable au banc : **mode sombre et téléphone réel** (#53) — à rega
 
 - Lots 1 à 3 : commit `1d367c4` (23/09), en ligne. Migration jouée par Cyril le 24/09 dans l'éditeur
   SQL (constat 7/7, contrôle 8/8) ; API vérifiée par le Worker (réglages 12 / 30 / éteint).
-- 24/09 : demande passée « à tester », Sébastien notifié, deux annonces (fiche complète → tous ;
-  écran « Comptes inactifs » → admins). La mise en veille n'est pas annoncée aux membres tant que
-  la durée n'est pas tranchée.
-- Lot 4 : à faire, après Q2/Q3. Le journal de la demande demande de ne pas la clore avant.
+- 24/09 : deux annonces (fiche complète → tous ; écran « Comptes inactifs » → admins). La mise en
+  veille n'est pas annoncée aux membres tant que la durée n'est pas tranchée.
+- 24/09 : ~~demande passée « à tester »~~ puis **remise « en cours » le même jour** (remarque de
+  Cyril). Sébastien a demandé une mise en veille *automatique* avec rappel par mail ; sans le lot 4,
+  elle dépend d'un admin qui clique. Les lots 1 à 3 sont en ligne et regardables, mais la demande
+  n'est pas livrée. Sébastien a reçu une notification de correction.
+- Lot 4 : à faire, après Q2/Q3. La demande passera « à tester » quand il sera en ligne.
