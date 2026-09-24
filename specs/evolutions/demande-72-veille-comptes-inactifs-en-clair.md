@@ -148,7 +148,7 @@ ouverts.*
 4. ~~Les admins et les collecteurs~~ — appliqué : ils sont concernés, avec le garde-fou du dernier
    admin. Un collecteur qui a une collecte en cours est retenu.
 
-## Ce qu’il faut vérifier
+## Ce qu'il faut vérifier
 
 - Ouvrir « Comptes inactifs » : réglages à 1 an, 30 jours, éteint ; listes vides.
 - Passer à 6 mois **sans allumer** : les listes se remplissent, les boutons restent grisés. Regarder
