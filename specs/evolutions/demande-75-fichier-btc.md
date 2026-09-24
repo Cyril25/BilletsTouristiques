@@ -37,7 +37,7 @@ construit le fichier ».
 | Le **pays** n'est pas sur la fiche : seulement via le filtre de la liste (76 pays) | La liste se lit pays par pays |
 | La page carte interroge `carteosm_ajax.php`, qui renvoie **les coordonnées GPS de tout le catalogue en une requête** : 4 740 billets sans connexion, **5 127 connecté**, et plus précises (le monument, pas le centre-ville) | L'information « invisible » la plus intéressante ; une seule requête |
 | **Connecté**, la fiche montre en plus : les séries **Anniversary** et leur numérotation, la description complète, l'éditeur, la **cote**, **où acheter** (diffuseur, VPC, prix), l'état dans la collection btc | L'extraction se fait avec le compte de Cyril |
-| btc connaît deux Anniversary (filtre V.I.P. : « 2020 » et « 10 years ») ; **aucune mention du doré** n'a été vue | Voir Q1 et Q2 |
+| btc connaît deux Anniversary (filtre V.I.P. : « 2020 » et « 10 years ») ; **aucune mention du doré** n'a été vue | Voir Q1 et Q2, tranchées le 24/09 : btc ne suit pas les dorés |
 | Images recto et verso en grand format, environ 100 Ko chacune | Environ **1 Go** pour le catalogue |
 
 ## L'outil
@@ -52,6 +52,7 @@ de Cyril sont lus dans `~/.claude/secrets/billets-touristiques-com.json`.
 | `fiches` | La carte GPS (une requête → `carte.json`), puis chaque fiche `billet-<id>`, **gardée telle quelle** dans `fiches/` | ~5 500 requêtes, 1 h 30 |
 | `images` | Recto et verso en grand format → `images/<id>_recto.jpg` | ~11 000 requêtes, 2 h 30, 1 Go |
 | `excel` | Lit les fiches gardées, **hors ligne**, et produit le classeur | quelques secondes |
+| `annonces` *(24/09)* | Chaque page `objetrecap-<id>` (qui propose, qui cherche) dans `recaps/`, puis trois classeurs — **en attente de Q7** | ~5 500 requêtes, 1 h 30 |
 | `essai` | Les mêmes phases sur 10 billets (5 France, 5 Slovénie dont un Anniversary), dans `essai/` | 2 min |
 
 - **0,8 s de pause** entre deux requêtes, reprise avec attente croissante sur erreur.
@@ -69,7 +70,7 @@ Une ligne par billet btc. Les colonnes, dans l'ordre :
 |---|---|
 | Clé | ID btc ; Clé (amorce millésime) ; Année ; Version |
 | Lieu | Pays ; Code pays ; Dép./Zip ; Ville ; Latitude ; Longitude |
-| Billet | Amorce ; Millésime ; Titre ; Sous-titre ; Statut (Disponible / Épuisé) ; Tirage ; Tirage (nombre) ; Anniversary (oui / vide) ; Série Anniversary ; Séries / numérotation ; Représente |
+| Billet | Amorce ; Millésime ; Titre ; Sous-titre ; Statut (Disponible / Épuisé) ; Tirage ; Tirage (nombre) ; Variante (`anniv` / vide) ; Série Anniversary ; Séries / numérotation ; Représente |
 | Autour | Éditeur ; Éditeur (coordonnées) ; Où acheter le billet touristique ; Remarques ; Cote / Prix ; Catégories |
 | Cyril | Ma collection (état btc) ; Visuels (adresses) ; Image recto ; Image verso ; Lien |
 
@@ -92,7 +93,7 @@ d'être perdue : c'est ainsi que « Où acheter » a été trouvée pendant l'es
 |---|---|---|
 | `Reference` | Amorce | tel quel ; #66 normalise la casse et les espaces |
 | `Millesime`, `Version` | Millésime `2025-3` coupé au tiret | une amorce ou un millésime atypique (`IS--`, pas de tiret…) donne une clé illisible → `ambigu` dans #66, jamais une supposition |
-| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; **sinon** `null` | **Q1** : l'absence d'Anniversary vaut-elle « pas de variante » (`N`) ? **Q2** : le doré |
+| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; **sinon** `null` | Q1 et Q2, tranchées le 24/09 : l'absence d'Anniversary ne dit rien (btc ne suit pas les dorés) ; jamais de `D` depuis btc |
 | `normale` | `null` | btc ne dit pas explicitement qu'un billet n'existe pas en normal ; une numérotation Anniversary *incluse* dans la série principale (`004001 à 005000` dans `000001 à 005000`) laisse penser que le normal existe, mais ce n'est pas écrit. `null` ne propose rien ; à revoir avec les chiffres du lot 2 |
 | `champs` | Titre → `NomBillet`, Pays, Ville | seulement pour un billet absent chez nous (« nouveau billet à créer ») |
 | `origine` | la ligne btc complète | preuve de ce qu'a dit la source |
