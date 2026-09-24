@@ -2748,6 +2748,27 @@ body.login-page {
     margin-top: var(--spacing-xs);
 }
 
+/* Demande #78 — une fiche membre porte jusqu'à 6 boutons depuis #62 : en rangée sans retour
+   à la ligne, les derniers sortaient de la carte. Deux colonnes égales, quelle que soit la
+   largeur : une grille « autant qu'il en tient » en faisait 5 sur tablette (un bouton orphelin)
+   et une seule sur la fiche désactivée, que sa bordure épaisse rétrécit. Calée en bas de la
+   carte pour que les boutons de fiches voisines s'alignent. Limité à Gestion des membres :
+   Collecteurs partage la classe. */
+#user-cards-grid .user-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: auto;
+}
+
+/* L'icône reste à gauche du libellé, même quand celui-ci passe sur deux lignes. */
+#user-cards-grid .user-card-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+}
+
 /* --- Delete user button --- */
 .user-delete-btn {
     padding: var(--spacing-xs) var(--spacing-sm);
@@ -2877,6 +2898,34 @@ body.login-page {
 .user-email-change-btn:hover {
     background: var(--color-primary);
     color: var(--color-text-inverse);
+}
+
+/* Demande #78 — en sombre, le violet principal sur la carte tombait à 1,9:1 de contraste
+   (« Changer l'adresse » quasi invisible) et le violet moyen de « Modifier » à 3,1:1
+   (1,7:1 au survol). Le violet vif du thème sombre les remonte à 6,2:1 (5,5:1 au survol). */
+[data-theme="dark"] .user-edit-toggle-btn,
+[data-theme="dark"] .user-edit-toggle-btn:hover,
+[data-theme="dark"] .user-email-change-btn {
+    color: var(--color-violet-bright);
+}
+[data-theme="dark"] .user-email-change-btn {
+    border-color: var(--color-violet-bright);
+}
+[data-theme="dark"] .user-email-change-btn:hover {
+    color: var(--color-text-inverse);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .user-edit-toggle-btn,
+    :root:not([data-theme="light"]) .user-edit-toggle-btn:hover,
+    :root:not([data-theme="light"]) .user-email-change-btn {
+        color: var(--color-violet-bright);
+    }
+    :root:not([data-theme="light"]) .user-email-change-btn {
+        border-color: var(--color-violet-bright);
+    }
+    :root:not([data-theme="light"]) .user-email-change-btn:hover {
+        color: var(--color-text-inverse);
+    }
 }
 
 .user-statut-toggle-btn.desactiver {
