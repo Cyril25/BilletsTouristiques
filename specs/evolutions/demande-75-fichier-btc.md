@@ -101,14 +101,66 @@ d'être perdue : c'est ainsi que « Où acheter » a été trouvée pendant l'es
 et la variante). Tirage, GPS, cote, images, éditeur **sont dans le fichier, pas dans l'import**. Leur
 usage éventuel sur notre site est une autre question (Q5).
 
+## Les réponses de Cyril *(24/09, commentaire sur la fiche)*
+
+> Chez nous, on ne fait pas la différence entre anniversary 2020 et anniversary 10 years, ce sont pour
+> nous des « anniv », et les dorés sur btc, ils ne les prennent pas en compte. Dans tous les cas, un
+> billet ne peut être qu'en deux versions maximum : une version normale, et une variante s'il y en a
+> une (de type anniv, ou dorée).
+
+Q1, Q2 et Q3 sont tranchées (voir « Questions ouvertes »). Ce que ça change :
+
+- **La colonne « Anniversary » (oui / vide) devient « Variante » (`anniv` / vide).** Elle ne se base
+  plus que sur une vraie ligne « Série Anniversary » de la fiche. ~~Une remarque qui citait
+  « anniversary » suffisait à mettre « oui »~~ : c'était trop large (« voir aussi le billet
+  anniversary… »), et c'est ce qui aurait été proposé en `A` à #66.
+- **btc ne produira jamais de `D`** : un billet doré ne se corrige pas depuis cette source. Et
+  l'absence d'Anniversary ne permet pas de conclure « pas de variante » : ce pourrait être un doré.
+- La règle « deux versions au plus » est déjà celle de #66 (`VersionNormaleExiste` + `HasVariante`).
+
+## Les annonces des membres btc *(ajouté le 24/09, second commentaire de Cyril)*
+
+> Il y a des pages « objetrecap-xxxx » sur lesquelles on a des infos qui nous intéressent fortement !
+> J'aimerais récupérer dans un autre fichier Excel l'ensemble des pseudos des membres […], un fichier
+> qui liste « qui propose » quoi, et un autre pour « qui demande » quoi, avec les infos pertinentes :
+> quelle version, quel numéro, ou si indifférent.
+
+**Ce que la page contient** (vérifié sur deux billets) : pour chaque membre qui propose le billet, son
+pseudo, le numéro exact, vente ou échange, depuis quand, le prix et un commentaire libre ; pour chaque
+membre qui le cherche, le nombre d'exemplaires, et pour chacun la version (normale ou Anniversary) et
+le numéro — précis, « indifférent » ou « se termine par 60 ». Et, pour tous, la **date de fin de leur
+adhésion btc**. Une annonce saisie deux fois sur btc reste en double : le fichier reflète le site.
+
+**Ce qui est prêt** : la phase `annonces` d'`aspirer.py` (une requête `objetrecap-<id>` par billet,
+~5 500 requêtes, 1 h 30 de plus), et trois classeurs : `btc-membres.xlsx` (pseudo, fin d'adhésion,
+nombre de billets et d'exemplaires proposés et cherchés, liens vers ses listes et sa messagerie btc),
+`btc-qui-propose.xlsx` et `btc-qui-cherche.xlsx` (une ligne par annonce, avec la clé du billet).
+
+**Ce qui n'est pas fait, et pourquoi** : ces fichiers ne décrivent plus des billets, mais **des
+personnes** — plusieurs milliers de membres de btc qui ne sont pas les nôtres, avec ce qu'ils vendent,
+à quel prix, et jusqu'à quand ils sont abonnés. Un pseudo, rattaché à ces informations, est une donnée
+personnelle. Ces membres ont publié leurs annonces **pour les membres de btc**, sur btc. Les extraire
+en bloc vers un fichier à nous est un autre usage, qu'ils n'ont pas prévu. D'où Q7 : **l'usage
+prévu** doit être écrit avant de lancer la phase. Il décide de ce qu'il est raisonnable d'extraire :
+
+| Usage | Ce qui suffirait |
+|---|---|
+| Savoir **quels billets** circulent, sont recherchés, à quel prix (statistique du marché) | Les annonces **sans pseudo** : des comptes par billet et par version, des prix |
+| Trouver un billet qui manque à Cyril, ou à qui proposer ses doubles | Les annonces des seuls billets qui l'intéressent — ce que btc lui offre déjà, billet par billet |
+| Constituer une **liste de membres btc à contacter** (inviter dans le groupe, démarcher) | À déconseiller : c'est précisément l'usage que les membres n'ont pas accepté, et la messagerie de btc n'est pas faite pour ça |
+
+La lenteur voulue, l'usage personnel et le fait que rien ne sort du poste de Cyril restent valables,
+mais ne répondent pas à la question de l'usage.
+
 ## Découpage
 
 | Lot | Contenu | Dépend de |
 |---|---|---|
 | **0** *(fait, 24/09)* | L'outil, l'essai sur 10 billets | — |
 | **1** | Extraction complète (liste, carte, fiches, images, Excel) | validation de cette analyse ; Cyril prévenu du lancement |
-| **2** | Conversion en fichier normalisé, **aperçu** #66 (ne modifie rien) : combien d'identiques, de « à compléter », de contradictions, de nouveaux, d'ambigus | lot 1, Q1 à Q3 |
+| **2** | Conversion en fichier normalisé, **aperçu** #66 (ne modifie rien) : combien d'identiques, de « à compléter », de contradictions, de nouveaux, d'ambigus | lot 1 ; ~~Q1 à Q3~~ tranchées le 24/09 |
 | **3** | Import réel par #66 ; les admins arbitrent dans « Vérification des billets » | lot 2 relu par Cyril |
+| **4** *(24/09)* | Les annonces des membres btc : phase `annonces`, trois classeurs | **Q7** : l'usage prévu, écrit par Cyril |
 | *Hors 75* | L'ID btc sur nos fiches (Q4), l'usage des images et du reste (Q5), le réimport de la collection (Q6) | décisions de Cyril |
 
 ## Critères d'acceptation
@@ -144,15 +196,20 @@ usage éventuel sur notre site est une autre question (Q5).
 
 | | Question | Pour qui | Recommandation |
 |---|---|---|---|
-| **Q1** | Un billet btc **sans** série Anniversary : peut-on en conclure « pas de variante » (`N`) ? | Cyril | **Non, pas au premier import** : `null`, qui ne propose rien. btc ne note peut-être pas le doré (Q2) ; conclure `N` fermerait les variantes de billets qui en ont une. À revoir avec les chiffres du lot 2 |
-| **Q2** | Comment btc signale-t-il un **doré** ? Rien vu sur 10 billets ni dans ses filtres | Cyril | Chercher « doré » / « gold » dans les ~5 500 fiches gardées après le lot 1, sans retourner sur le site |
-| **Q3** | « Anniversary 2020 » et « Anniversary 10 years » : les deux sont-ils notre `A` ? | Cyril | Oui, tous deux `A`, le libellé exact reste dans `origine` |
+| ~~Q1~~ | ~~Un billet btc sans série Anniversary : peut-on en conclure « pas de variante » ?~~ | Cyril | **Tranchée le 24/09 : non.** btc ne suit pas les dorés (Q2) : l'absence d'Anniversary ne dit rien d'un doré. `variante` reste `null` |
+| ~~Q2~~ | ~~Comment btc signale-t-il un doré ?~~ | Cyril | **Tranchée le 24/09 : il ne le signale pas** — « les dorés sur btc, ils ne les prennent pas en compte ». Aucun `D` ne viendra de btc |
+| ~~Q3~~ | ~~« Anniversary 2020 » et « Anniversary 10 years » : les deux sont-ils notre `A` ?~~ | Cyril | **Tranchée le 24/09 : oui**, « ce sont pour nous des anniv ». Le libellé exact reste dans `origine` et dans la colonne « Série Anniversary » |
 | **Q4** | Garder l'**ID btc** sur nos fiches billets (nouvelle colonne), pour un lien direct et un rapprochement qui survit à un changement de clé ? | Cyril | Oui, mais **en demande à part** : c'est un changement de notre modèle, que #66 ne sait pas faire |
 | **Q5** | Tirage, GPS, cote, où acheter, **images** : les utiliser sur notre site ? | Cyril | Demande à part, avec une vraie question de droits pour les images (propriété de btc ou des éditeurs). En attendant, elles servent à Cyril |
-| **Q6** | Le **réimport de la collection** de Cyril depuis btc | Cyril | Demande à part : autre fichier (la page « Gérer » de btc, pas encore étudiée), autre table (`collection`) |
+| **Q6** | Le **réimport de la collection** de Cyril depuis btc | Cyril | Demande à part : autre fichier (la page « Gérer » de btc, étudiée le 24/09 pour les annonces, voir plus haut), autre table (`collection`) |
+| **Q7** *(24/09)* | Les **annonces des membres btc** (pseudos, qui propose, qui cherche) : **pour quoi faire**, et combien de temps les garder ? | Cyril | Voir « Les annonces des membres btc ». Tant que la réponse n'est pas écrite, le code reste prêt **mais n'est pas lancé** |
 
 ## Réalisation
 
 **Lot 0, 24/09** : `aspirer.py` et l'essai de 10 billets, dans
 `C:\Users\csamson\Documents\Perso\GitHub\btc-export\` (hors dépôt). Rapprochement de l'essai avec notre
 base : 10/10, en lecture seule.
+
+**24/09, après les commentaires de Cyril** : colonne « Variante » (`anniv` / vide) à la place de
+« Anniversary » ; phase `annonces` et ses trois classeurs écrits et vérifiés sur les pages de deux
+billets (UEGF 2022-1 : 19 propositions, 10 recherches ; HEAE 2025-3), **pas lancés** (Q7).
