@@ -234,3 +234,9 @@ base : 10/10, en lecture seule.
 **24/09, après les commentaires de Cyril** : colonne « Variante » (`anniv` / vide) à la place de
 « Anniversary » ; phase `annonces` et ses trois classeurs écrits et vérifiés sur les pages de deux
 billets (UEGF 2022-1 : 19 propositions, 10 recherches ; HEAE 2025-3), **pas lancés** (Q7).
+
+**Essai des annonces, 24/09, lancé à la demande de Cyril** (10 billets) : 123 propositions,
+173 recherches, 78 membres, aucune colonne à trous. L'essai a révélé une troisième étiquette de
+version, à côté des deux Anniversary : **« PARTICULARITÉ »** (un billet cherché pour un défaut ou une
+singularité), rangée dans une colonne « Particularité » ; toute étiquette inconnue y irait aussi. Les
+modes « Vente / Échange / Autre » sont repris tels que btc les affiche.
