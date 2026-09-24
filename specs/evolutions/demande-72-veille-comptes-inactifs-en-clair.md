@@ -5,7 +5,7 @@
 > La version technique existe à côté (bascule « Technique » en haut du document).
 > Reflète la version technique du commit `1d367c4` (23/09/2026).
 
-## Où on en est (23 septembre)
+## Où on en est (24 septembre)
 
 L'analyse a été validée le 18/09. **Les trois premières étapes sont faites et en ligne** ; la
 quatrième (l'envoi automatique des rappels) attend une décision de Cyril.
@@ -17,7 +17,7 @@ exigé. Aujourd'hui, **50 fiches sur 108** sont concernées : les 42 sans adress
 que le pays vide. Parmi elles, 11 membres venus ces deux derniers mois, dont 2 admins : ce sont
 eux qui le verront en premier.
 
-**Ce qui marchera une fois que Cyril aura préparé la base** — une manipulation de quelques minutes :
+**En place aussi depuis le 24 septembre** (Cyril a préparé la base) :
 
 - un nouvel écran **« Comptes inactifs »** dans le menu d'administration. En haut, les réglages : la
   durée (**1 an** au départ), le délai du rappel (30 jours) et l'interrupteur, **éteint**. Dessous,
@@ -148,7 +148,7 @@ ouverts.*
 4. ~~Les admins et les collecteurs~~ — appliqué : ils sont concernés, avec le garde-fou du dernier
    admin. Un collecteur qui a une collecte en cours est retenu.
 
-## Ce qu'il faudra vérifier (une fois la base prête)
+## Ce qu’il faut vérifier
 
 - Ouvrir « Comptes inactifs » : réglages à 1 an, 30 jours, éteint ; listes vides.
 - Passer à 6 mois **sans allumer** : les listes se remplissent, les boutons restent grisés. Regarder

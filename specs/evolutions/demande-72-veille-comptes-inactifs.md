@@ -310,6 +310,9 @@ Non vérifiable au banc : **mode sombre et téléphone réel** (#53) — à rega
 
 ## Réalisation
 
-- Lots 1 à 3 : commit `1d367c4` (23/09), en ligne. Migration `migration-demande-72-*.sql` à jouer par
-  Cyril dans l'éditeur SQL ; tant qu'elle ne l'est pas, seul le lot 2 est actif.
-- Lot 4 : à faire, après Q2/Q3.
+- Lots 1 à 3 : commit `1d367c4` (23/09), en ligne. Migration jouée par Cyril le 24/09 dans l'éditeur
+  SQL (constat 7/7, contrôle 8/8) ; API vérifiée par le Worker (réglages 12 / 30 / éteint).
+- 24/09 : demande passée « à tester », Sébastien notifié, deux annonces (fiche complète → tous ;
+  écran « Comptes inactifs » → admins). La mise en veille n'est pas annoncée aux membres tant que
+  la durée n'est pas tranchée.
+- Lot 4 : à faire, après Q2/Q3. Le journal de la demande demande de ne pas la clore avant.
