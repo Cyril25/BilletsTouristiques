@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `305510b` (24/09/2026).
+> Reflète la version technique du commit `47af68e` (24/09/2026).
 
 ## De quoi il s'agit
 
@@ -42,9 +42,9 @@ est « non renseignée ». Une fois le fichier passé dans l'outil de la 66, ce 
 
 ## Ce qui est prévu ensuite
 
-1. **Lire tout le catalogue btc.** Environ 1 h 30 pour les fiches, 2 h 30 de plus pour les photos
-   (1 Go). Le rythme est volontairement lent pour ne pas gêner le site. Cyril lance l'opération
-   lui-même, une fois cette analyse validée.
+1. **Lire tout le catalogue btc**, environ 3 h, volontairement lentement pour ne pas gêner le site.
+   ~~Les photos aussi~~ : **pas pour le moment**, a décidé Cyril le 24/09. On ne prendra plus tard que
+   celles qui manquent chez nous.
 2. **Faire un essai à blanc** dans l'outil de la 66, sans rien modifier. On saura combien de billets
    sont identiques, à compléter, en contradiction, inconnus chez nous ou illisibles. Ces chiffres
    seront ajoutés ici.
@@ -113,3 +113,16 @@ trois fichiers. Rien n'entre dans notre base, et chaque contact se fait sur btc,
 
 Les questions 1 à 3 avaient la plus forte influence sur ce que l'import proposera, et elles sont
 réglées. **L'analyse peut être validée pour les billets.** La question 7 est réglée elle aussi.
+
+## Deux précisions du 24 septembre
+
+**Des Anniversary sont bien proposées, btc ne le dit simplement pas.** Dans les propositions, btc
+n'affiche que le numéro. Mais les Anniversary sont numérotées dans une plage connue (par exemple de
+4001 à 5000). En regardant le numéro, on retrouve **12 Anniversary sur 24 propositions** des deux
+billets concernés de l'essai. Le fichier le signale dans une colonne à part : c'est une déduction, pas
+une information de btc.
+
+**Les adresses mail des membres de btc : non.** btc ne les montre pas, et c'est voulu : on les contacte
+par sa messagerie. Aller les chercher autrement reviendrait à contourner la protection que ces
+membres ont choisie en s'inscrivant. Le fichier donne, pour chacun, un lien qui ouvre directement le
+formulaire de message.
