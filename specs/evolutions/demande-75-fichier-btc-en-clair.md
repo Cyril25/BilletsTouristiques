@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `99b81c4` (24/09/2026).
+> Reflète la version technique du commit `f67606e` (24/09/2026).
 
 ## De quoi il s'agit
 
