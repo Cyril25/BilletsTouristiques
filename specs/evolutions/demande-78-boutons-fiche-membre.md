@@ -96,7 +96,7 @@ la classe : le bouton « Modifier » de Collecteurs en profite aussi.
 
 ## Réalisation
 
-Développée le 2026-09-24 — commit à venir.
+Développée le 2026-09-24 — commit `72d33be` (spec comprise).
 
 | Fichier | Ce qui change |
 |---|---|
