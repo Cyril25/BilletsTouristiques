@@ -153,6 +153,26 @@ prévu** doit être écrit avant de lancer la phase. Il décide de ce qu'il est 
 La lenteur voulue, l'usage personnel et le fait que rien ne sort du poste de Cyril restent valables,
 mais ne répondent pas à la question de l'usage.
 
+### L'usage, précisé par Cyril *(24/09)*
+
+> C'est pour faire une liste des collectionneurs qui proposent des billets que je n'ai pas, et une
+> liste des collectionneurs qui cherchent des billets que j'ai. Au final c'est le principe du site,
+> c'est juste pas facile à voir.
+
+C'est la deuxième ligne du tableau ci-dessus, **en plus lisible** que billet par billet : l'usage pour
+lequel btc publie ces annonces, par un de ses membres. Le fichier le sert directement : l'étape
+`croiser` d'`aspirer.py` lit la collection de Cyril **sur notre site** (`ma_collection.mjs`, lecture
+seule : sa collection btc est vide) et produit :
+
+- `btc-a-acquerir.xlsx` — les annonces « propose » d'une version que Cyril n'a pas, hors billets
+  marqués « pas intéressé » ;
+- `btc-a-ceder.xlsx` — les annonces « cherche » d'une version qu'il a, avec son numéro, ses doubles, et
+  si son numéro convient (précis, « se termine par », indifférent).
+
+Les trois classeurs généraux (membres, qui propose, qui cherche) restent produits, comme demandé.
+**Rien de ces fichiers n'entre dans notre base** ni ne sert à un envoi groupé : un contact se fait
+par la messagerie de btc, un par un, pour un échange.
+
 ## Découpage
 
 | Lot | Contenu | Dépend de |
@@ -161,7 +181,7 @@ mais ne répondent pas à la question de l'usage.
 | **1** | Extraction complète (liste, carte, fiches, images, Excel) | validation de cette analyse ; Cyril prévenu du lancement |
 | **2** | Conversion en fichier normalisé, **aperçu** #66 (ne modifie rien) : combien d'identiques, de « à compléter », de contradictions, de nouveaux, d'ambigus | lot 1 ; ~~Q1 à Q3~~ tranchées le 24/09 |
 | **3** | Import réel par #66 ; les admins arbitrent dans « Vérification des billets » | lot 2 relu par Cyril |
-| **4** *(24/09)* | Les annonces des membres btc : phase `annonces`, trois classeurs | **Q7** : l'usage prévu, écrit par Cyril |
+| **4** *(24/09)* | Les annonces des membres btc : phase `annonces`, trois classeurs, et le croisement avec la collection de Cyril (`croiser`) | ~~Q7~~ tranchée ; **lancé par Cyril lui-même** (l'outil de sécurité de l'assistant bloque la collecte de données de tiers) |
 | *Hors 75* | L'ID btc sur nos fiches (Q4), l'usage des images et du reste (Q5), le réimport de la collection (Q6) | décisions de Cyril |
 
 ## Critères d'acceptation
@@ -203,7 +223,7 @@ mais ne répondent pas à la question de l'usage.
 | **Q4** | Garder l'**ID btc** sur nos fiches billets (nouvelle colonne), pour un lien direct et un rapprochement qui survit à un changement de clé ? | Cyril | Oui, mais **en demande à part** : c'est un changement de notre modèle, que #66 ne sait pas faire |
 | **Q5** | Tirage, GPS, cote, où acheter, **images** : les utiliser sur notre site ? | Cyril | Demande à part, avec une vraie question de droits pour les images (propriété de btc ou des éditeurs). En attendant, elles servent à Cyril |
 | **Q6** | Le **réimport de la collection** de Cyril depuis btc | Cyril | Demande à part : autre fichier (la page « Gérer » de btc, étudiée le 24/09 pour les annonces, voir plus haut), autre table (`collection`) |
-| **Q7** *(24/09)* | Les **annonces des membres btc** (pseudos, qui propose, qui cherche) : **pour quoi faire**, et combien de temps les garder ? | Cyril | Voir « Les annonces des membres btc ». Tant que la réponse n'est pas écrite, le code reste prêt **mais n'est pas lancé** |
+| ~~Q7~~ *(24/09)* | ~~Les annonces des membres btc : pour quoi faire ?~~ | Cyril | **Tranchée le 24/09** : trouver avec qui échanger — ce pour quoi btc publie ces annonces. D'où le croisement avec la collection de Cyril (voir « L'usage, précisé par Cyril ») |
 
 ## Réalisation
 
