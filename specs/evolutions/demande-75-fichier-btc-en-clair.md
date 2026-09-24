@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `087b733` (24/09/2026).
+> Reflète la version technique du commit `305510b` (24/09/2026).
 
 ## De quoi il s'agit
 
@@ -108,8 +108,8 @@ ailleurs. Ce qu'il est raisonnable d'extraire dépend de **ce qu'on veut en fair
 
 **Réponse de Cyril (24 septembre)** : c'est pour trouver avec qui échanger. D'un côté, qui propose
 des billets qu'il n'a pas ; de l'autre, qui cherche des billets qu'il a. C'est le principe même de btc,
-simplement plus facile à lire. L'outil croise donc les annonces avec **sa collection sur notre site**
-et produit ces deux listes. Rien n'entre dans notre base, et chaque contact se fait sur btc, un par un.
+simplement plus facile à lire. Il fera lui-même le rapprochement avec sa collection à partir des
+trois fichiers. Rien n'entre dans notre base, et chaque contact se fait sur btc, un par un.
 
 Les questions 1 à 3 avaient la plus forte influence sur ce que l'import proposera, et elles sont
 réglées. **L'analyse peut être validée pour les billets.** La question 7 est réglée elle aussi.
