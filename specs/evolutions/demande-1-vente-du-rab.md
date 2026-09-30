@@ -20,6 +20,9 @@
 - **Décisions de Cyril, 14 h 29** : l'ordre des travaux suit l'option **A** (R2) et l'**attribution
   directe** est retenue, comme le demande Jean-Philippe (R6). Plus aucune question ne retient la
   validation ; seule R4 (où s'affiche le rab) reste à régler au moment du dev.
+- **Remarque de Cyril, 30/09** : au début, la fonctionnalité est **réservée aux admins**, le temps
+  de quelques tests, puis ouverte à tous. Le parcours ne change pas ; ce qui s'ajoute est un
+  interrupteur, et ses conséquences — voir « L'ouverture aux admins d'abord ».
 - ~~Statut du 10/09 : « elle dépend maintenant du lot 1 de #22 ».~~ Ne tient plus le 14/09 : voir
   « L'ordre des travaux, revu ».
 - **Origine :** issue du cadrage commun `demande-22-et-1-cadrage-doubles-et-vente.md`, dont les
@@ -463,6 +466,108 @@ réécrits ; 6 à 10 sont repris.
     partie, ne s'annule plus.
 15. *(Ajouté à 13 h 45.)* Les **frais de port** d'une enveloppe comptent les billets du rab qu'elle
     contient, comme ceux des inscriptions.
+16. *(Ajouté le 30/09.)* Tant que `ouverture_vente_rab` vaut `"admins"`, seuls les admins et le
+    superadmin voient le rab, le mettent en vente, le demandent ou se le voient attribuer — **y
+    compris par appel direct à l'API**. Un collecteur ou un membre non admin ne voit aucun geste
+    nouveau, dans aucun écran.
+17. *(Ajouté le 30/09.)* Pendant la phase de test, `vendre_rab` refuse un membre non admin.
+18. *(Ajouté le 30/09.)* Passer la valeur à `"tous"` ouvre la fonctionnalité **sans nouvelle
+    version du site** ; les ventes de la phase de test restent. Clé absente ou valeur inconnue :
+    fermé (`"admins"`).
+19. *(Ajouté le 30/09.)* En impersonation d'un membre non admin, le superadmin voit l'écran **de ce
+    membre** : pas de geste nouveau pendant la phase de test.
+
+## L'ouverture aux admins d'abord *(remarque de Cyril, 30/09)*
+
+> Un point important que j'ai oublié de dire, au début, on veut ouvrir cette fonctionnalité aux
+> admins seulement pour faire quelques tests avant de l'ouvrir à tous.
+
+Rien du parcours ne change. Ce qui change, c'est **qui y a accès**, en deux temps :
+
+1. **Phase de test** — la fonctionnalité est en ligne, mais réservée aux admins et au superadmin
+   (`is_admin_ou_superadmin()` ; pas `is_admin()`, qui exclut le superadmin). **Les deux côtés d'une
+   vente sont des admins** : le collecteur qui met en vente, et le membre qui demande ou à qui l'on
+   attribue.
+2. **Ouverture à tous** — Cyril bascule un réglage. Aucune nouvelle version du site.
+
+### Pourquoi pas le masquage de « Ma collection »
+
+Le site réserve déjà une page aux admins : `ma-collection.html:16` porte `data-require-admin="true"`
+et `menu.html:30` classe le lien en `admin-only`. Ça ne suffit pas ici, pour trois raisons :
+
+- ce masquage vaut pour une **page entière**, alors que #1 ajoute des gestes dans des pages que tout
+  le monde voit — « Mes collectes », « Mes inscriptions », la page du billet ;
+- il vit **dans le code de l'écran** : il ne protège pas l'API ;
+- ouvrir demanderait de retoucher le code à plusieurs endroits, de redéployer et de bumper le
+  cache — et la base garderait ses propres contrôles, à retoucher en même temps.
+
+### L'interrupteur
+
+Un **réglage en base**, dans la table `reglages` créée par #72 (clé, valeur jsonb, qui, quand ;
+lecture admins, aucune écriture directe) :
+
+| Clé | Valeurs | Au départ |
+|---|---|---|
+| `ouverture_vente_rab` | `"admins"` / `"tous"` | `"admins"` |
+
+Trois fonctions `SECURITY DEFINER` (un membre ne lit pas `reglages`, ni la table `membres` depuis
+le 17/09) :
+
+- `ouverture(p_fonction text) RETURNS text` — la valeur de `'ouverture_' || p_fonction`, et
+  `'admins'` si la clé manque ou si la valeur est inconnue : **fermé par défaut**. Rien de
+  confidentiel : appelable par tous, c'est ce que lit l'écran.
+- `ouvert_pour_moi(p_fonction text) RETURNS boolean` — `ouverture(p_fonction) = 'tous' OR
+  is_admin_ou_superadmin()`. C'est ce que lisent les fonctions et les policies.
+- `membre_est_admin(p_email text) RETURNS boolean` — pour vérifier l'**autre** partie, que
+  `is_admin_ou_superadmin()` ne sait pas tester (elle ne regarde que l'appelant).
+
+**Côté base, la règle vit une fois.** Les cinq fonctions (`demander_rab`, `retirer_demande_rab`,
+`repondre_demande_rab`, `vendre_rab`, `annuler_vente_rab`) commencent par
+`ouvert_pour_moi('vente_rab')` et refusent sinon ; les policies de lecture et d'écriture des offres
+l'ajoutent à leur condition. Et **tant que la valeur est `admins`**, `vendre_rab` refuse un membre
+qui n'est pas admin (`membre_est_admin`) : sans ça, un collecteur admin pourrait attribuer une vente
+à un membre qui ne voit pas la fonctionnalité — une somme dans son « vous devez » et une
+notification sur quelque chose qu'il ne peut pas ouvrir. `demander_rab` n'en a pas besoin : son
+appelant est le membre lui-même, déjà filtré.
+
+**Côté écran**, `global.js` lit `ouverture('vente_rab')` une fois au chargement, à côté du rôle.
+Les gestes nouveaux — le bloc « Rab disponible » de `billet.html` ; « Mettre en vente », « Demandes
+reçues », « Attribuer » de « Mes collectes » ; « Mes demandes de rab » de « Mes inscriptions » —
+n'apparaissent que si la valeur est `tous` ou si le **rôle effectif** est admin. La liste des
+membres à qui attribuer ne montre que les admins pendant la phase de test. Le rôle **effectif**, pas
+celui du jeton : en impersonation, le superadmin qui se met à la place d'un membre doit voir ce que
+ce membre voit — c'est la règle que suit déjà le menu (`global.js`, masquage des `.admin-only`).
+La base, elle, juge sur le vrai jeton.
+
+**Ouvrir** : une ligne, jouée par Cyril dans l'éditeur SQL :
+
+```sql
+UPDATE reglages SET valeur = '"tous"', modifie_at = now() WHERE cle = 'ouverture_vente_rab';
+```
+
+Les écrans l'appliquent au chargement suivant ; ni commit, ni cache à bumper. Refermer est la même
+ligne avec `'"admins"'` : les gestes nouveaux disparaissent pour les non-admins, et les ventes déjà
+conclues restent dans ce que chacun doit, comme toute dette.
+
+**Le mécanisme sert aussi à #22** (même remarque de Cyril, même jour), avec ses propres clés. Celle
+des deux demandes développée la première crée les trois fonctions ; l'autre n'ajoute que ses clés.
+
+### Ce que la phase de test ne protège pas
+
+L'interrupteur cache des **gestes**. Il ne peut pas cacher un changement de **code partagé** : pour
+que le billet du rab parte dans l'enveloppe, une douzaine d'endroits de `mes-collectes.js` apprennent
+qu'une enveloppe peut contenir autre chose que des inscriptions (voir « Le billet part dans
+l'enveloppe »), dont le calcul des frais de port. Ces endroits tournent chez **tous les collecteurs**
+dès la mise en ligne. Tant qu'aucune enveloppe ne contient de rab, ils ne changent rien de visible —
+mais une régression s'y verrait chez tout le monde. Les critères 7 et 15, et la non-régression des
+enveloppes sans rab, se vérifient donc **avant** la mise en ligne, pas pendant les tests des admins.
+
+### Le cycle de la demande
+
+- **À tester** quand la version réservée aux admins est en ligne : les admins sont les testeurs.
+- L'annonce de nouveauté suit les deux temps : `cible='admins'` à la mise en ligne, avec ce qu'il
+  faut essayer ; `cible='tous'` à l'ouverture — c'est là que les membres découvrent la vente du rab.
+- **Terminée** à l'ouverture à tous, si Cyril retient R8.
 
 ## Ce que la reprise de #22 change ici (2026-09-10)
 
@@ -574,7 +679,9 @@ fois R2 tranchée. Si A est retenue, la question O5 de #22 reçoit la même rép
 | ~~R1~~ | ~~« JP enregistre la vente depuis Mes collectes : pour Marie » : validation de la demande de Marie, ou aussi une vente conclue sur Facebook sans offre ?~~ **Répondue le 14/09** : pas de mécanisme à part, mais l'attribution directe d'une offre à un membre, sans action de sa part | Jean-Philippe | ~~La lecture retenue, seule : le second chemin ramènerait la vente attribuée que le membre doit accepter.~~ Recommandation tombée : elle supposait que toute attribution devait être acceptée par le membre. Jean-Philippe demande justement le contraire — voir R6 |
 | ~~R2~~ | ~~L'ordre des travaux : A, B ou C (« L'ordre des travaux, revu »)~~ **Tranchée par Cyril le 14/09 à 14 h 29 : A** | Cyril | — |
 | ~~R3~~ | ~~Le membre déjà servi : son enveloppe de la collecte est partie, comment voyage le billet du rab ?~~ **Répondue à 13 h 40** : le cas existe, pour les numéros spéciaux | Jean-Philippe | **Tranchée à 13 h 45** : la ligne de rab va directement dans l'enveloppe en cours, pour tous les cas. Refuser la demande ou envoyer hors application laisserait tomber la moitié « numéros spéciaux » de la demande |
-| **R4** | Qui voit le rab, et où ? | Les relecteurs | Tous les membres, sur la page du billet |
+| **R4** | Qui voit le rab, et où ? *Précisé le 30/09 : pendant la phase de test, les admins seulement ; la question porte sur l'après-ouverture* | Les relecteurs | Tous les membres, sur la page du billet |
+| **R7** *(30/09)* | Les ventes de la phase de test : **vraies ventes**, qui restent, ou ventes d'essai à annuler avant l'ouverture ? | Cyril | Vraies ventes : elles passent par de vraies enveloppes et de vrais règlements. Une vente d'essai s'annule tant qu'elle n'est pas réglée (`annuler_vente_rab`) ; au-delà, elle reste |
+| **R8** *(30/09)* | La demande est-elle **terminée** à la fin des tests, ou à l'ouverture à tous ? | Cyril | À l'ouverture : c'est elle qui livre ce qui a été demandé |
 | ~~R5~~ | ~~Le numéro de série : facultatif ou obligatoire dans la mise en vente ?~~ **Répondue le 14/09 : facultatif** | Jean-Philippe | — |
 | ~~R6~~ *(ajoutée l'après-midi, tranchée par Cyril à 14 h 29 : oui)* | **L'attribution directe** : le collecteur peut-il faire devoir une vente du rab à un membre **sans action de ce membre**, comme Jean-Philippe le demande ? Ça revient sur Q5, décidée avec Cyril le 09/09 — mais Q5 reposait sur un précédent inexact : « Inscrire un membre » le permet déjà pour les inscriptions | Cyril | **Oui**, avec notification au membre et annulation possible par le collecteur tant que la vente n'est pas réglée. S'aligner sur ce qu'un collecteur fait déjà plutôt que d'imposer au rab une règle que le reste de l'application ne suit pas |
 
@@ -582,6 +689,8 @@ fois R2 tranchée. Si A est retenue, la question O5 de #22 reçoit la même rép
 sera construit.~~ ~~Mis à jour l'après-midi : R2 et R6 sont à trancher avant de valider, toutes
 deux par Cyril.~~ **À 14 h 29, Cyril a tranché R2 (A) et R6 (oui) : plus rien ne retient la
 validation.** Seule R4, où s'affiche le rab, reste ouverte, et peut l'être au moment du dev.
+*30/09 : R7 et R8, nées de l'ouverture aux admins d'abord, ne retiennent pas non plus la
+validation — le mécanisme est le même quelle que soit la réponse.*
 
 ## Réalisation
 
@@ -589,5 +698,6 @@ validation.** Seule R4, où s'affiche le rab, reste ouverte, et peut l'être au 
 
 ---
 
-*Spec du 2026-09-09, issue du cadrage commun #22/#1, reprise le 10/09 puis le 14/09. Aucune ligne
+*Spec du 2026-09-09, issue du cadrage commun #22/#1, reprise le 10/09 puis le 14/09, complétée le
+30/09 (ouverture aux admins d'abord). Aucune ligne
 de code écrite : la demande est en analyse jusqu'à sa validation par un admin sur la fiche.*
