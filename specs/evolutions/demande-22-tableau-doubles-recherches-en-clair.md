@@ -4,8 +4,48 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
-> Reflète la version technique du commit `4adb2bb` (14/09/2026 — seul l'ordre des travaux avec la
-> demande #1 a changé depuis le 11/09).
+> Reflète la version technique du commit `d6d199e` (30/09/2026 — ouverture aux admins d'abord, et
+> la question à Jean-Philippe levée par défaut ; avant, `4adb2bb` du 14/09).
+
+## Le 30/09 : d'abord entre admins
+
+Cyril a précisé un point oublié : **au début, ces échanges et ventes entre membres seront réservés
+aux admins**, le temps de quelques tests, avant d'être ouverts à tous. Le parcours décrit plus bas
+ne change pas ; c'est **qui y a accès** qui change, en deux temps.
+
+**Pendant les tests :**
+
+- seuls les admins voient « Mes transactions » et le compteur de transactions conclues. Les autres
+  membres ne voient rien de nouveau ;
+- une vente ou un échange se fait donc **entre deux admins**. Jean-Philippe peut enregistrer un
+  échange avec Cyril, pas encore avec Marie : elle recevrait une notification pour une page qu'elle
+  ne voit pas ;
+- ce sont, sauf avis contraire, de **vraies transactions**, qui restent après l'ouverture.
+
+**L'ouverture à tous :** quand les tests lui conviennent, Cyril la déclenche lui-même, par un
+réglage. Pas besoin d'une nouvelle version du site. Chaque étape s'ouvre à part : les transactions
+(1re étape), puis les annonces (2e étape). Et la vente du rab des collecteurs (demande #1) peut être
+ouverte à tous avant les annonces des membres. La nouveauté est annoncée aux membres à l'ouverture ;
+au début, l'annonce ne va qu'aux admins, avec ce qu'il faut essayer.
+
+**Ce que la phase de test ne protège pas :** pour accueillir ce qu'un membre doit à un autre
+membre, l'application change la façon dont elle range **ce que chacun doit** — et ce changement-là
+vaut pour tout le monde dès le premier jour. Pour qui ne doit qu'à des collecteurs, rien de visible
+ne change : même total dans le menu, mêmes lignes dans « Mes inscriptions ». Ce sera vérifié
+**avant** la mise en ligne, pas pendant les tests des admins.
+
+## La question à Jean-Philippe, levée le 30/09
+
+Jean-Philippe n'a pas encore dit d'où viennent les « autres billets » que Marie glisse dans
+l'enveloppe pour lui (voir « Ce qui reste à trancher »). Cyril a dit qu'il validerait **sans
+attendre sa réponse**. Voici ce que ça veut dire concrètement :
+
+- la 1re étape est construite pour le **cas le plus simple** : l'enveloppe entre deux membres
+  regroupe les billets de leurs ventes et échanges **entre eux** ;
+- le double glissé **dans l'enveloppe d'une collecte** que Marie organise n'est pas prévu ;
+- s'il manque, les tests entre admins le montreront — Jean-Philippe en fait partie. Ce serait alors
+  un **ajout**, plutôt qu'un travail à refaire : la vente du rab (#1) apprend déjà à faire voyager,
+  dans l'enveloppe d'une collecte, un billet qui n'est pas une inscription.
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -128,13 +168,18 @@ double** dans l'application, donc mieux vaut ne pas attendre après lui.
 
 ## Ce qui reste à trancher
 
-1. **Pour Jean-Philippe — la seule question qui bloque.** Les « autres billets » que Marie glisse
+1. **Pour Jean-Philippe** ~~— la seule question qui bloque~~ *(ne bloque plus depuis le 30/09 :
+   voir « La question à Jean-Philippe, levée »)*. Les « autres billets » que Marie glisse
    dans l'enveloppe pour JP, ce sont les billets **d'autres ventes ou échanges** entre eux deux ?
    Ou aussi les billets **d'une collecte** que Marie organise et à laquelle JP est inscrit — le
    double partant alors dans l'enveloppe de la collecte ? La réponse change beaucoup le travail :
    dans le second cas, il faut toucher aux enveloppes des collectes, qui sont le cœur de
    « Mes collectes ».
 2. **Peut-on annuler une transaction déjà acceptée** tout seul, ou faut-il l'accord des deux ?
+3. *(30/09, pour Cyril, sans urgence)* Les transactions faites pendant les tests sont-elles de
+   **vraies transactions**, qui restent ? Proposition : oui.
+4. *(30/09, pour Cyril, sans urgence)* La demande est-elle **terminée** quand la 1re étape est
+   ouverte à tous, ou quand les deux premières le sont ? Proposition : les deux premières.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
@@ -143,8 +188,14 @@ double** dans l'application, donc mieux vaut ne pas attendre après lui.
 - **Les frais de port compris dans la somme convenue** : ça vous va, ou faut-il les distinguer ?
 - Est-ce que **ce que l'application ne fera pas** vous convient ?
 - Est-ce qu'il **manque quelque chose** d'évident pour quelqu'un qui pratique l'échange ?
+- *(30/09)* **Des tests entre admins seulement**, puis une ouverture à tous déclenchée par Cyril,
+  étape par étape : c'est bien ce que vous voulez essayer ?
+- *(30/09)* **Le double glissé dans l'enveloppe d'une collecte**, laissé de côté faute de réponse
+  de Jean-Philippe : si vous le jugez indispensable dès la 1re étape, dites-le avant de valider.
 
-**Mieux vaut attendre la réponse de Jean-Philippe à la question 1 avant de valider** : une seule
+~~**Mieux vaut attendre la réponse de Jean-Philippe à la question 1 avant de valider** : une seule
 validation fait passer la demande en « Prêt à dev ». Si sa réponse change ce qui est prévu, ce
-document sera repris. Vos remarques sont bienvenues dès maintenant : laissez un commentaire, vous
-aurez une réponse disant ce qui en a été fait.
+document sera repris.~~ *30/09 : Cyril validera sans attendre cette réponse (voir « La question à
+Jean-Philippe, levée »).* Une seule validation fait passer la demande en « Prêt à dev ». Vos
+remarques sont bienvenues : laissez un commentaire, vous aurez une réponse disant ce qui en a été
+fait.
