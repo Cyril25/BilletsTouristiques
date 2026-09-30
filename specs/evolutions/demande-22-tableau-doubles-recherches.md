@@ -8,12 +8,16 @@
   puis en **Analyse à valider** une fois les documents réécrits. Trois décisions prises avec Cyril
   le jour même ; **une question posée à Jean-Philippe reste ouverte** (O4, l'enveloppe groupée) :
   si sa réponse change le modèle, la demande repassera en analyse. **Aucun développement commencé.**
+  *30/09 : O4 levée par défaut — Cyril validera sans la réponse (voir l'historique ci-dessous).*
 - **Historique de ce document :**
   - 09/09 — « tableau d'affichage sans argent ». **Faux** (remarque de Cyril du 10/09), voir
     « Pourquoi la première analyse s'est trompée ».
   - 10/09 — réécriture : une transaction a deux côtés, celui qui reçoit confirme.
   - 11/09 — remarque de Jean-Philippe : plusieurs billets par côté, paiement avant envoi, envoi
     groupé confirmé à l'enveloppe. Voir « Ce que la remarque de Jean-Philippe change ».
+  - 30/09 — remarque de Cyril : **au début, réservé aux admins**, le temps de quelques tests, puis
+    ouvert à tous. Et Cyril validera **sans attendre la réponse de Jean-Philippe** à O4 : le lot 1
+    est donc construit pour le premier cas. Voir « L'ouverture aux admins d'abord » et O4.
 
   Les passages invalidés sont **barrés et datés**, pas effacés. Le
   [cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md) garde la trace du raisonnement
@@ -327,8 +331,16 @@ endroit — même motif que `mes_notifications_envoyees()` en #51.
 quantités nulles)~~. Seul resterait non couvert le **double personnel** d'un collecteur, glissé dans
 une enveloppe de sa collecte. *Corrigé le 14/09 : #1 ne passe plus par une inscription — la ligne de
 rab pointe elle-même vers l'enveloppe de collecte. C'est précisément la brique qui manquait au second
-cas ci-dessus : une ligne qui n'est pas une inscription, suivie dans une enveloppe de collecte.* **Le modèle ci-dessus est écrit pour le premier cas** ; si la réponse
-est le second, ce § est à refaire avant validation.
+cas ci-dessus : une ligne qui n'est pas une inscription, suivie dans une enveloppe de collecte.* **Le modèle ci-dessus est écrit pour le premier cas** ; ~~si la réponse
+est le second, ce § est à refaire avant validation.~~
+
+*30/09 — Cyril validera sans attendre la réponse de Jean-Philippe. Le lot 1 est donc construit pour
+le **premier cas** : l'envoi entre membres regroupe les billets de leurs transactions entre eux. Le
+second — un double glissé dans l'enveloppe d'une collecte — n'est pas fait. S'il manque, la phase de
+test entre admins le montrera (Jean-Philippe y est), et ce sera a priori un **ajout** plutôt qu'une
+reprise : une ligne de transaction pointerait vers une enveloppe de collecte au lieu d'un envoi
+entre membres, sur le chemin que #1 ouvre pour ses lignes de rab. La table des envois reste utile
+dans les deux cas.*
 
 ### 4. La règle de clôture
 
@@ -473,6 +485,68 @@ qui n'a jamais été éprouvée par 103 membres. Aucun des deux autres lots n'en
 billets « de la collection de Jean-Philippe » : au lot 1, on les choisit **dans le catalogue** ;
 le jour où « Ma collection » est remplie, elle pourra proposer les siens en premier.
 
+## L'ouverture aux admins d'abord *(remarque de Cyril, 30/09)*
+
+> Un point important que j'ai oublié de dire, au début, on veut ouvrir cette fonctionnalité aux
+> admins seulement pour faire quelques tests avant de l'ouvrir à tous.
+
+Rien du parcours ne change. Ce qui change, c'est **qui y a accès** : d'abord les admins et le
+superadmin, le temps de quelques tests ; puis tous, quand Cyril bascule un réglage.
+
+**Le mécanisme est celui de #1**, décrit dans [demande-1-vente-du-rab.md](demande-1-vente-du-rab.md),
+« L'ouverture aux admins d'abord » : un réglage par fonctionnalité dans `reglages` (#72), `"admins"`
+puis `"tous"` ; `ouverture()` lue par l'écran, `ouvert_pour_moi()` par la base,
+`membre_est_admin()` pour vérifier l'autre partie ; fermé par défaut ; ouverture par une ligne de
+SQL jouée par Cyril, sans nouvelle version du site. L'écran suit le rôle effectif (impersonation),
+la base le vrai jeton. L'ordre entre #1 et le lot 1 n'étant pas imposé (O5), **celle des deux
+demandes développée la première crée les trois fonctions** ; l'autre n'ajoute que ses clés.
+
+### Une clé par lot
+
+| Clé | Ce qu'elle ouvre |
+|---|---|
+| `ouverture_transactions` | Lot 1 : « Mes transactions » — proposer, accepter, payer et confirmer, envoyer et recevoir — et le compteur public |
+| `ouverture_annonces` | Lot 2 : les doubles et les recherches des membres, le rapprochement |
+
+Distinctes de `ouverture_vente_rab` (#1) : le rab des collecteurs peut être ouvert à tous avant les
+annonces des membres, alors même que celles-ci étendent sa mise en vente. Une offre de rab relève de
+la clé de #1, une offre de membre de celle du lot 2.
+
+Le lot 3 (« Ma collection ») est déjà réservé aux admins, par le masquage dans le code
+(`data-require-admin`). L'ouvrir est tout son objet ; il pourra passer par une clé
+`ouverture_ma_collection` à ce moment-là, rien à décider maintenant.
+
+### Ce que la phase de test impose au lot 1
+
+- **Les deux parties sont des admins.** La policy d'INSERT de `transactions` ajoute
+  `ouvert_pour_moi('transactions')` et, pendant la phase de test, `membre_est_admin(membre_b)` ; la
+  liste des membres à qui proposer ne montre que les admins. Sans ça, un admin pourrait proposer une
+  transaction à un membre qui ne voit pas « Mes transactions », et qui recevrait une notification
+  sur quelque chose qu'il ne peut pas ouvrir.
+- `declarer_envoi` et `confirmer_reception_envoi` commencent par `ouvert_pour_moi('transactions')`.
+- Les policies de **lecture** ne sont pas conditionnées : pendant les tests, aucun non-admin n'est
+  partie à une transaction. `nb_transactions_conclues` non plus : elle rend 0 pour un non-admin ;
+  c'est son affichage qui suit l'écran.
+- Les notifications ne vont qu'à des admins, par voie de conséquence.
+
+### Ce que la phase de test ne protège pas
+
+L'interrupteur cache des **gestes**. Il ne peut pas cacher la **généralisation de la table des
+dettes** (§ 1) :
+une table est la même pour tous. Dès la mise en ligne, les sept requêtes existantes, la somme du menu
+et le regroupement par créancier de « Mes inscriptions » tournent sur la table généralisée, **chez
+tous les membres**. Pour qui ne doit qu'à des collecteurs, rien de visible ne change — c'est ce que
+disent les critères 13 et 14. Ils se vérifient donc **avant** la mise en ligne (critère 18) : les
+tests des admins ne remplacent pas cette vérification.
+
+### Le cycle de la demande
+
+- Chaque lot passe **À tester** quand sa version réservée aux admins est en ligne : les admins sont
+  les testeurs.
+- L'annonce de nouveauté suit les deux temps : `cible='admins'` à la mise en ligne, avec ce qu'il
+  faut essayer ; `cible='tous'` à l'ouverture.
+- Quand la demande est terminée : O7.
+
 ## Critères d'acceptation
 
 1. Un membre propose une transaction à un autre ; celui-ci l'accepte ou la refuse.
@@ -499,6 +573,15 @@ le jour où « Ma collection » est remplie, elle pourra proposer les siens en p
     « (sans collecteur) ».
 14. Les lignes de `dettes` créées par #44 (changement de prix) sont **inchangées** et gardent leur
     comportement.
+15. *(Ajouté le 30/09.)* Tant que `ouverture_transactions` vaut `"admins"`, seuls les admins et le
+    superadmin voient « Mes transactions » et le compteur public, et proposent une transaction —
+    **y compris par appel direct à l'API**. Un membre non admin ne voit aucun geste nouveau.
+16. *(Ajouté le 30/09.)* Pendant la phase de test, une transaction ne peut être proposée **qu'à un
+    admin** : la liste des membres ne montre qu'eux, et la base refuse les autres.
+17. *(Ajouté le 30/09.)* Passer la valeur à `"tous"` ouvre le lot **sans nouvelle version du
+    site** ; les transactions de la phase de test restent. Clé absente ou valeur inconnue : fermé.
+18. *(Ajouté le 30/09.)* Les critères 13 et 14 se vérifient **avant** la mise en ligne : la
+    généralisation de `dettes` n'est pas derrière l'interrupteur.
 
 ## Ce que cette spec ne fait pas
 
@@ -524,7 +607,9 @@ le jour où « Ma collection » est remplie, elle pourra proposer les siens en p
 | **O1** | Une **dette qui traîne** : l'appli relance-t-elle, ou reste-t-elle passive ? *Jean-Philippe a gardé « l'application ne relance pas » tel quel — lu comme un accord, à confirmer.* | Au dev du lot 1 |
 | **O2** | Un membre peut-il **annuler une transaction acceptée** unilatéralement, ou faut-il l'accord des deux ? | Au dev du lot 1 |
 | ~~O3~~ | ~~Une transaction peut-elle naître sans annonce ?~~ **Tranchée le 11/09 : oui** — c'est le lot 1 tel qu'il est maintenu. | — |
-| **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | **À trancher avant de valider** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs |
+| **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | ~~**À trancher avant de valider** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs~~ **Levée par défaut le 30/09** : Cyril validera sans la réponse. Le lot 1 fait le premier cas ; le second, s'il manque aux tests entre admins, viendra en ajout (§ 3) |
+| **O6** *(30/09)* | Les transactions de la phase de test : **vraies**, qui restent, ou d'essai, à annuler avant l'ouverture ? | Avant l'ouverture. Recommandation : vraies — même question que R7 de #1 |
+| **O7** *(30/09)* | La demande est-elle **terminée** à l'ouverture du lot 1, ou de tous ses lots ? | Au dev. Recommandation : chaque lot livré passe par « À tester » ; la demande est terminée quand ses lots 1 et 2 sont ouverts à tous |
 | ~~O5~~ | ~~L'ordre « lot 1 de #22 → #1 » tient-il encore, maintenant que « la table des dettes est vide » ne pèse plus ?~~ **Tranchée le 14/09 par Cyril** : #1 n'attend plus le lot 1 ; le lot 2 vient après #1 et étend sa mise en vente (voir « Lot 1 ») | — |
 
 ## Réalisation
@@ -534,5 +619,6 @@ le jour où « Ma collection » est remplie, elle pourra proposer les siens en p
 ---
 
 *Analyse reprise le 2026-09-10 après la remarque de Cyril, puis le 2026-09-11 après celle de
-Jean-Philippe, sur mesures refaites ces jours-là. Aucune ligne de code : la règle des L demande
+Jean-Philippe, sur mesures refaites ces jours-là ; complétée le 30/09 (ouverture aux admins
+d'abord, O4 levée par défaut). Aucune ligne de code : la règle des L demande
 l'accord explicite avant dev.*
