@@ -524,7 +524,7 @@ le 17/09) :
 **Côté base, la règle vit une fois.** Les cinq fonctions (`demander_rab`, `retirer_demande_rab`,
 `repondre_demande_rab`, `vendre_rab`, `annuler_vente_rab`) commencent par
 `ouvert_pour_moi('vente_rab')` et refusent sinon ; les policies de lecture et d'écriture des offres
-l'ajoutent à leur condition. Et **tant que la valeur est `admins`**, `vendre_rab` refuse un membre
+l'ajoutent à leur condition. Et, **pendant la phase de test**, `vendre_rab` refuse un membre
 qui n'est pas admin (`membre_est_admin`) : sans ça, un collecteur admin pourrait attribuer une vente
 à un membre qui ne voit pas la fonctionnalité — une somme dans son « vous devez » et une
 notification sur quelque chose qu'il ne peut pas ouvrir. `demander_rab` n'en a pas besoin : son
