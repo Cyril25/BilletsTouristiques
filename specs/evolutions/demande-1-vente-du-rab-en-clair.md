@@ -3,7 +3,36 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `c0cc8a9` (14/09/2026, après les décisions de Cyril).
+> Reflète la version technique du commit `68f489c` (30/09/2026 — ouverture aux admins d'abord ;
+> avant, `c0cc8a9` du 14/09, après les décisions de Cyril).
+
+## Le 30/09 : d'abord entre admins
+
+Cyril a précisé un point oublié : **au début, la vente du rab sera réservée aux admins**, le temps
+de quelques tests, avant d'être ouverte à tous. Le parcours décrit plus bas ne change pas ; c'est
+**qui y a accès** qui change, en deux temps.
+
+**Pendant les tests :**
+
+- seuls les admins voient le rab, le mettent en vente et le demandent. Les autres membres ne voient
+  rien de nouveau, ni dans « Mes collectes », ni dans « Mes inscriptions », ni sur la page du
+  billet ;
+- une vente se fait donc **entre deux admins**. Jean-Philippe, collecteur et admin, peut vendre son
+  rab à Cyril, pas encore à Marie. Il ne peut pas non plus le lui attribuer directement : elle
+  recevrait une somme à payer pour une fonction qu'elle ne voit pas ;
+- ce sont, sauf avis contraire, de **vraies ventes** : vraie somme, vraie enveloppe, vrai paiement,
+  qui restent après l'ouverture. Une vente d'essai s'annule tant qu'elle n'est pas payée.
+
+**L'ouverture à tous :** quand les tests lui conviennent, Cyril la déclenche lui-même, par un
+réglage. Pas besoin d'une nouvelle version du site : la vente du rab apparaît chez tout le monde à
+la page suivante. C'est à ce moment-là que la nouveauté est annoncée aux membres ; au début,
+l'annonce ne va qu'aux admins, avec ce qu'il faut essayer.
+
+**Ce que la phase de test ne protège pas :** pour que le billet du rab parte dans l'enveloppe,
+« Mes collectes » apprend qu'une enveloppe peut contenir autre chose que des inscriptions. Ce
+changement-là tourne chez **tous les collecteurs dès le premier jour**. Il ne fait rien de visible
+tant qu'il n'y a pas de rab dans leurs enveloppes — mais une erreur s'y verrait chez tout le monde.
+Il sera donc vérifié **avant** la mise en ligne, pas pendant les tests des admins.
 
 ## Ce qui a changé depuis la version du 10/09
 
@@ -159,7 +188,15 @@ la mise en vente sera construite d'abord pour le rab.
 
 **Il ne reste qu'un point, qui peut attendre le développement** : qui voit le rab, et où ?
 Proposition : **tous les membres**, sur la page du billet — le rab va souvent à ceux qui ne se sont
-pas inscrits à temps.
+pas inscrits à temps. *(30/09 : pendant les tests, les admins seulement ; la question porte sur
+l'après-ouverture.)*
+
+**Et deux points nés le 30/09, pour Cyril**, qui ne retiennent pas la validation :
+
+- les ventes faites pendant les tests sont-elles de **vraies ventes**, qui restent ? Proposition :
+  oui ;
+- la demande est-elle **terminée** à la fin des tests, ou quand elle est ouverte à tous ?
+  Proposition : quand elle est ouverte à tous.
 
 ## Ce sur quoi on vous demande de vous prononcer
 
@@ -169,6 +206,8 @@ pas inscrits à temps.
 - **L'attribution directe par le collecteur, sans action du membre** : vous paraît-elle normale,
   sachant qu'un collecteur peut déjà inscrire un membre à sa collecte ?
 - Est-ce que **ce que l'application ne fera pas** vous convient ?
+- *(30/09)* **Des tests entre admins seulement**, avec de vraies ventes, puis une ouverture à tous
+  déclenchée par Cyril : c'est bien ce que vous voulez essayer ?
 
 **L'analyse est complète et peut être validée.** Si tout vous va, cochez « J'ai lu et je valide
 l'analyse » sur la fiche : une seule validation fait passer la demande en « Prêt à dev ». Sinon,
