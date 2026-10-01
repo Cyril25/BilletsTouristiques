@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `8edb1c9` (24/09/2026).
+> Reflète la version technique du commit `e2127b4` (24/09/2026).
 
 ## De quoi il s'agit
 
@@ -68,9 +68,10 @@ bien ce qu'on veut ?
 
 **Trois questions ont reçu la réponse de Cyril le 24 septembre :**
 
-1. ~~Un billet sans Anniversary chez btc, est-ce un billet « sans variante » ?~~ **Non** : btc ne
+1. ~~Un billet sans Anniversary chez btc, est-ce un billet « sans variante » ?~~ ~~**Non** : btc ne
    suit pas les dorés, donc un billet sans Anniversary peut très bien avoir un doré. On ne propose rien
-   pour ces billets.
+   pour ces billets.~~ **Revu le 1er octobre : oui jusqu'en 2024, non pour 2025-2026.** Chez nous, aucun
+   doré n'existe avant 2025 : avant, « pas d'Anniversary » veut bien dire « pas de variante ».
 2. ~~Comment btc signale-t-il un doré ?~~ **Il ne le signale pas.** Les dorés ne se corrigeront
    donc pas à partir de btc.
 3. ~~« Anniversary 2020 » et « Anniversary 10 years » ?~~ **Les deux sont des « anniv »** chez nous.
@@ -126,3 +127,43 @@ une information de btc.
 par sa messagerie. Aller les chercher autrement reviendrait à contourner la protection que ces
 membres ont choisie en s'inscrivant. Le fichier donne, pour chacun, un lien qui ouvre directement le
 formulaire de message.
+
+## Le plan de mise à jour des variantes (1er octobre)
+
+**Le but** : compléter les **5 144 billets** dont on ne sait pas s'ils ont une variante, sans rien casser.
+
+**Ce qu'on fera, billet par billet :**
+
+| Chez nous | Chez btc | Ce qu'on fait | Combien |
+|---|---|---|---|
+| on ne sait pas | Anniversary | **anniversaire** | environ 1 530 |
+| on ne sait pas | rien, billet de **2015 à 2024** | **pas de variante** (pas de doré avant 2025) | environ 3 100 |
+| on ne sait pas | rien, billet de 2025 ou 2026 | on ne touche pas : c'est peut-être un doré | environ 170 |
+| pas de variante | Anniversary | **anniversaire**, après accord d'un admin | 2 |
+| doré | Anniversary | **on laisse doré** | 4 |
+| déjà renseigné | rien | on ne touche jamais | — |
+| inconnu de btc, ou en double | — | on ne touche pas | environ 340 |
+
+Soit **environ 4 630 billets complétés sur 5 144**.
+
+**On ne touche qu'aux billets, et seulement à leur variante.** Ni les collectes, ni les inscriptions, ni
+les paiements ne sont modifiés.
+
+**Les précautions, dans l'ordre :**
+
+1. un **essai à blanc** sur la vraie base, qui ne modifie rien et doit retrouver les chiffres ci-dessus ;
+2. une **répétition générale** sur une copie de la base, avec le **retour arrière** essayé ;
+3. une **sauvegarde complète** de la base juste avant, et une copie des variantes de tous les billets ;
+4. l'import **par petits lots** : une cinquantaine de billets d'abord, que Cyril vérifie sur le site, puis le
+   reste ;
+5. un **contrôle après chaque lot**.
+
+Chaque correction garde la valeur d'avant : on peut revenir en arrière pour un billet ou pour tout un lot.
+
+**Le risque accepté** : pour les billets de 2020 à 2022, btc a pu oublier une Anniversary (il en oublie une
+sur dix en 2025). Une cinquantaine de billets pourraient être marqués « pas de variante » à tort. Ce sont de
+vieux billets presque tous sans inscription : on pourra les corriger dans leur fiche.
+
+**Plus tard : les alertes.** Une ligne dans « Qualité des billets » qui dira « attention, quelque chose
+cloche », avec la raison et le lien vers le billet sur btc : billet peut-être doré, version à corriger,
+billets à fusionner, billet à créer, série spéciale à vérifier… C'est un petit développement à part.
