@@ -93,7 +93,7 @@ d'être perdue : c'est ainsi que « Où acheter » a été trouvée pendant l'es
 |---|---|---|
 | `Reference` | Amorce | tel quel ; #66 normalise la casse et les espaces |
 | `Millesime`, `Version` | Millésime `2025-3` coupé au tiret | une amorce ou un millésime atypique (`IS--`, pas de tiret…) donne une clé illisible → `ambigu` dans #66, jamais une supposition |
-| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; **sinon** `null` | Q1 et Q2, tranchées le 24/09 : l'absence d'Anniversary ne dit rien (btc ne suit pas les dorés) ; jamais de `D` depuis btc |
+| `variante` | `A` si la fiche porte une ligne « Série Anniversary » ; ~~**sinon** `null`~~ sinon `N` pour un billet de 2015 à 2024, `null` pour 2025-2026 (**revu le 01/10**, voir « Le lot 2 ») | Q1 et Q2 : btc ne suit pas les dorés ; jamais de `D` depuis btc |
 | `normale` | `null` | btc ne dit pas explicitement qu'un billet n'existe pas en normal ; une numérotation Anniversary *incluse* dans la série principale (`004001 à 005000` dans `000001 à 005000`) laisse penser que le normal existe, mais ce n'est pas écrit. `null` ne propose rien ; à revoir avec les chiffres du lot 2 |
 | `champs` | Titre → `NomBillet`, Pays, Ville | seulement pour un billet absent chez nous (« nouveau billet à créer ») |
 | `origine` | la ligne btc complète | preuve de ce qu'a dit la source |
@@ -202,6 +202,87 @@ ne l'ont donnée qu'à btc. **L'outil ne la cherche pas**, et ce n'est pas une l
 Ce qui est dans les fichiers : le lien « Lui écrire sur btc » de chaque membre, qui ouvre directement
 le formulaire. Un membre qui veut échanger par mail donnera son adresse dans sa réponse.
 
+## Le lot 2 : mettre à jour les variantes non renseignées *(30/09 – 01/10)*
+
+**Objectif de Cyril** : corriger les **5 144** billets dont la variante est « non renseigné » (tous en
+`NULL` dans la base, aucun en chaîne vide), grâce au fichier btc, **sans rien casser**. Les alertes
+(lignes d'information dans « Qualité des billets ») viennent dans un second temps.
+
+### Ce que disent les données (lecture seule, 30/09)
+
+Notre base : 5 543 billets ; variante `NULL` 5 144, `D` 297, `N` 51, `A` 51 ; version normale fausse
+pour 6 seulement. Rapprochement par la clé de #66 : 5 060 clés uniques des deux côtés, 94 clés en double
+chez nous (les « Revers B »), 7 chez btc.
+
+**Les dorés n'existent chez nous qu'en 2025 (3) et 2026 (294), aucun avant.** Les Anniversary de btc
+portent sur 2020-2022 (« Anniversary 2020 ») et 2025 (« 10 years »).
+
+**btc ne range pas les dorés en Anniversary** (hypothèse de Cyril, testée le 01/10) : de nos 284 dorés
+connus de btc, 280 n'y ont rien, 4 y ont une Anniversary. **Et btc oublie parfois une Anniversary** : 5
+de nos 47 « anniv » connus de btc n'y ont rien (HEAG 2025-1, REAC 2025-1…).
+
+### Les règles, décidées par Cyril le 01/10
+
+| Chez nous | Chez btc | On fait | Nombre (30/09) |
+|---|---|---|---|
+| non renseigné | Anniversary | **A**, appliqué d'office (`a_completer`) | ≈ 1 530 |
+| non renseigné | rien, billet de **2015 à 2024** | **N**, appliqué d'office | ≈ 3 100 |
+| non renseigné | rien, billet de 2025-2026 | rien : peut-être un doré (alerte, second temps) | ≈ 170 |
+| `N` | Anniversary | **A**, par un admin dans le module (`contradiction`) | 2 (PLBR 2025-2 et 2025-3) |
+| `N` | Anniversary, billet protégé | rien : D12 refuse de changer une valeur déclarée (alerte) | 1 (EEEY 2025-3, 11 inscriptions) |
+| `D` | Anniversary | **on laisse le doré** (`D`) (consigne de Cyril) | 4 |
+| `A` / `D` / `N` | rien | rien : une valeur renseignée n'est jamais retirée | — |
+| absent de btc, clé en double, clé illisible | — | rien (alertes, second temps) | ≈ 340 |
+
+Soit **≈ 4 630 des 5 144** non renseignés corrigés. Le reste attend les alertes.
+
+**Le risque assumé de la règle des années** : 2015-2019 et 2023-2024 n'ont eu ni Anniversary ni doré,
+« pas de variante » y est certain (≈ 2 550). Pour 2020-2022 (≈ 550), btc a pu oublier une Anniversary 2020
+comme il en oublie en 2025 (1 sur 10) : une cinquantaine d'erreurs possibles, sur de vieux billets presque
+tous sans inscription, donc corrigeables dans la fiche billet. Cyril l'accepte.
+
+### Le fichier pour #66
+
+**Seulement les lignes qui proposent quelque chose** : les ≈ 3 300 billets où btc ne dit rien en
+2025-2026, les absents et les doublons n'y entrent pas — ils ne feraient que du bruit dans le module, et
+les 325 billets btc inconnus chez nous arriveraient tous en « nouveau billet à créer », alors que la
+plupart sont des versions numérotées autrement (exemples revus avec Cyril le 30/09 : XERU 2018-6-ES,
+XEMM 2018-1, LEBG 2020-1A…) — les créer ferait des doublons.
+
+**Deux sources distinctes**, pour que le journal de #66 dise d'où vient chaque correction :
+`btc` pour les `A` (dit par btc), `btc + règle des années` pour les `N` (déduit). `normale` reste `null`
+partout. `origine` porte la ligne btc et, pour les `N`, la règle appliquée.
+
+### Ce qui est touché, et seulement ça
+
+`importer_billets()` n'écrit que dans `billets`, colonnes `VersionNormaleExiste` et `HasVariante` ; ici
+**uniquement la variante** (`HasVariante`). Déclencheurs réveillés par cette mise à jour : D12 (**lit** les
+inscriptions), `trg_billets_sync_date_effective` (**lit** les collectes, recalcule `date_effective` du
+billet lui-même — à vérifier sur banc qu'aucune date ne bouge), rien d'autre (`trg_billets_categorie_manuelle`
+ne part que sur `Categorie`). **Aucune écriture dans les collectes ni les inscriptions** — question de Cyril, 01/10.
+Le `scope` d'une collecte existante est figé à sa création : il ne suit pas la variante du billet.
+
+### La sécurité, dans l'ordre *(demande de Cyril, 01/10 : « très important d'éviter les problèmes de données »)*
+
+1. **Analyse validée** sur la fiche (convention, demande L).
+2. **Fichier normalisé** produit sur le poste de Cyril, hors dépôt (#67).
+3. **Aperçu #66 en production** (`import-billets.mjs apercu`) : ne modifie rien ; ses chiffres doivent
+   retomber sur ceux ci-dessus, sinon on s'arrête et on comprend.
+4. **Répétition générale sur banc** (Postgres + PostgREST en Docker, données de production du jour) :
+   import complet, puis contrôles — nombre de billets modifiés, aucune `date_effective` changée, aucune
+   collecte ni inscription touchée, écran « Incohérences » avant/après — puis **test du retour arrière**.
+5. **Dump complet** de la base de production (`scripts/backup-supabase.ps1`, Session pooler, **VPN coupé**
+   par Cyril), juste avant le premier lot.
+6. **Copie ciblée** `id, HasVariante, VersionNormaleExiste, date_effective` de tous les billets, prise
+   juste avant chaque lot : c'est elle qui sert au retour arrière précis.
+7. **Import par lots** : ~50 billets d'abord, que Cyril regarde sur le site ; puis les `A` ; puis les `N`.
+8. **Contrôle après chaque lot** : compte des billets modifiés contre l'aperçu, écran « Incohérences »,
+   journal de #66.
+
+**Retour arrière** : pour un import, remettre `HasVariante` à sa valeur d'avant (`valeurs_base` des lignes
+appliquées), **seulement** sur les billets qui n'ont pas été modifiés depuis ; script préparé et essayé
+sur banc **avant** le premier lot. En dernier recours, le dump.
+
 ## Découpage
 
 | Lot | Contenu | Dépend de |
@@ -209,7 +290,8 @@ le formulaire. Un membre qui veut échanger par mail donnera son adresse dans sa
 | **0** *(fait, 24/09)* | L'outil, l'essai sur 10 billets | — |
 | **1** | Extraction complète (liste, carte, fiches, annonces, Excel) — ~~images~~ plus tard (24/09) | validation de cette analyse ; Cyril prévenu du lancement |
 | **2** | Conversion en fichier normalisé, **aperçu** #66 (ne modifie rien) : combien d'identiques, de « à compléter », de contradictions, de nouveaux, d'ambigus | lot 1 ; ~~Q1 à Q3~~ tranchées le 24/09 |
-| **3** | Import réel par #66 ; les admins arbitrent dans « Vérification des billets » | lot 2 relu par Cyril |
+| **3** | Import réel par #66, par lots, avec dump et copie ciblée avant (voir « Le lot 2 ») ; les admins arbitrent les 2 contradictions dans « Vérification des billets » | lot 2 relu par Cyril, répétition sur banc réussie |
+| **5** *(second temps)* | Les **alertes** : une ligne d'information dans « Qualité des billets » (« quelque chose cloche », la raison, le lien vers btc), sans accepter ni refuser. Cas déjà nommés par Cyril le 30/09 : version à corriger (XERU), billets à fusionner (XEMM), billet à créer (VEAB 2026-1), séries spéciales et amorces atypiques à vérifier, 2025-2026 peut-être dorés, EEEY 2025-3, dorés que btc dit Anniversary | lot 3 ; nouveau type de ligne à développer |
 | **4** *(24/09)* | Les annonces des membres btc : phase `annonces`, trois classeurs ; ~~le croisement avec la collection de Cyril~~, retiré : il le fait lui-même | ~~Q7~~ tranchée ; **lancé par Cyril lui-même** (l'outil de sécurité de l'assistant bloque la collecte de données de tiers) |
 | *Hors 75* | L'ID btc sur nos fiches (Q4), l'usage des images et du reste (Q5), le réimport de la collection (Q6) | décisions de Cyril |
 
@@ -246,7 +328,7 @@ le formulaire. Un membre qui veut échanger par mail donnera son adresse dans sa
 
 | | Question | Pour qui | Recommandation |
 |---|---|---|---|
-| ~~Q1~~ | ~~Un billet btc sans série Anniversary : peut-on en conclure « pas de variante » ?~~ | Cyril | **Tranchée le 24/09 : non.** btc ne suit pas les dorés (Q2) : l'absence d'Anniversary ne dit rien d'un doré. `variante` reste `null` |
+| ~~Q1~~ | ~~Un billet btc sans série Anniversary : peut-on en conclure « pas de variante » ?~~ | Cyril | ~~**Tranchée le 24/09 : non.**~~ **Revue le 01/10 : oui pour 2015-2024, non pour 2025-2026.** Le « non » du 24/09 venait de ce que btc ignore les dorés ; mais nos données montrent qu'aucun doré n'existe avant 2025 (voir « Le lot 2 ») |
 | ~~Q2~~ | ~~Comment btc signale-t-il un doré ?~~ | Cyril | **Tranchée le 24/09 : il ne le signale pas** — « les dorés sur btc, ils ne les prennent pas en compte ». Aucun `D` ne viendra de btc |
 | ~~Q3~~ | ~~« Anniversary 2020 » et « Anniversary 10 years » : les deux sont-ils notre `A` ?~~ | Cyril | **Tranchée le 24/09 : oui**, « ce sont pour nous des anniv ». Le libellé exact reste dans `origine` et dans la colonne « Série Anniversary » |
 | **Q4** | Garder l'**ID btc** sur nos fiches billets (nouvelle colonne), pour un lien direct et un rapprochement qui survit à un changement de clé ? | Cyril | Oui, mais **en demande à part** : c'est un changement de notre modèle, que #66 ne sait pas faire |
