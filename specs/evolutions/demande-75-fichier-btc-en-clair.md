@@ -3,7 +3,7 @@
 > **Pour qui ce document est écrit.** Pour vous, admin, qui devez dire si ce qui est prévu
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document).
-> Reflète la version technique du commit `e2127b4` (01/10/2026).
+> Reflète la version technique du commit `220c92a` (04/10/2026).
 
 ## De quoi il s'agit
 
@@ -167,3 +167,19 @@ vieux billets presque tous sans inscription : on pourra les corriger dans leur f
 **Plus tard : les alertes.** Une ligne dans « Qualité des billets » qui dira « attention, quelque chose
 cloche », avec la raison et le lien vers le billet sur btc : billet peut-être doré, version à corriger,
 billets à fusionner, billet à créer, série spéciale à vérifier… C'est un petit développement à part.
+
+## C'est fait (4 octobre)
+
+**4 533 billets ont reçu leur variante**, en production : **1 530 en anniversaire**, **3 003 en « pas de
+variante »**. Il reste **611 billets non renseignés** sur 5 144 : surtout des billets de 2025-2026 qui sont
+peut-être dorés, et des billets que btc ne connaît pas sous la même référence. Ils viendront avec les
+alertes.
+
+**Rien d'autre n'a bougé** : on a comparé, ligne par ligne, une photo complète de la base avant et après.
+Aucune collecte, aucune inscription, aucun autre champ des billets n'a changé.
+
+Comment on s'y est pris : une sauvegarde complète de la base, une répétition générale sur une copie (retour
+arrière compris), puis un premier lot de 50 billets vérifié à l'œil par Cyril, et enfin le reste.
+
+**À faire par un admin** : accepter les deux billets PLBR 2025-2 et 2025-3 dans « Qualité des billets »,
+onglet « Vérification des billets » (« pas de variante » chez nous, anniversaire selon btc).
