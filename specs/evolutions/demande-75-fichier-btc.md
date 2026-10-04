@@ -365,3 +365,34 @@ collection » btc diffèrent** ; tirage, séries, variante, description, éditeu
 acheter, statut et visuels sont identiques. Les catégories viennent alors du filtre de la liste (66
 catégories, étape `categories`) ; l'état « Ma collection » n'est pas fiable de l'aveu de Cyril. Colonne
 « Lu dans » (fiche / page Gérer). Gain : ~3 000 pages et ~6 h de moins.
+
+### Lots 2 et 3 : les variantes mises à jour en production *(04/10)*
+
+**Fait le 04/10, sur le feu vert de Cyril à chaque étape.** Données relues le jour même (5 544 billets).
+
+| Étape | Résultat |
+|---|---|
+| Fichiers normalisés (`btc-export/normaliser_pour_66.py`, hors dépôt) | 4 535 lignes : pilote 25 + 25, puis `anniv` 1 507 (dont les 2 PLBR) et `pas-de-variante` 2 978 ; 393 clés écartées (absentes ou en double), 525 sans proposition |
+| Aperçu #66 en production | 4 533 corrections d'office + 2 contradictions, 0 ambigu, 0 absent, 0 empêchement — exactement le plan |
+| **Dump** (Cyril hors VPN) | `pg_dump` du schéma `public` par Docker, mot de passe dans un fichier d'environnement temporaire supprimé aussitôt (jamais en argument : alertes Elastic du 15/09). Vérifié relisible : 28 tables avec données, 96 fonctions, 18 triggers, 101 policies. Rangé hors dépôt avec les photos ci-dessous |
+| **Répétition générale** sur une copie (dump restauré dans `supabase/postgres:17.6.1.165`, comme la prod) | Collectes, inscriptions et billets hors variante identiques ; 4 533 changements `NULL>A` 1 530 / `NULL>N` 3 003 ; contrôles #69 : seul A1 bouge (5 144 → 611), aucune nouvelle incohérence ; les 2 PLBR acceptés ; **retour arrière** : 4 535 billets remis, billets identiques à la photo avant, toutes colonnes |
+| Lot pilote (imports n° 1 et 2) | 50 billets modifiés, exactement ceux du pilote, seule la variante ; 0 collecte, 0 inscription |
+| Lot anniv (import n° 3) | 1 505 `NULL>A` appliqués, 2 contradictions PLBR en « à valider » |
+| Lot « pas de variante » (import n° 4) | 2 978 `NULL>N` appliqués |
+
+**Bilan global**, photo complète des trois tables avant le pilote contre après le dernier lot : **4 533
+billets modifiés, seulement `HasVariante`, tous depuis `NULL`** (A 1 530, N 3 003) ; **0 collecte, 0
+inscription, 0 billet ajouté ou retiré**. Variantes : `NULL` 5 144 → **611**, `A` 51 → 1 581, `N` 51 → 3 054,
+`D` 298 inchangé.
+
+**Ce que la répétition a appris** : retirer une variante déclarée (retour arrière) sur un billet qui a des
+inscriptions est refusé par D12 ; le script de retour arrière la suspend le temps de son bloc, se contrôle
+lui-même et annule tout si le compte diffère. Prêt, non utilisé.
+
+**Comment les imports ont été lancés** : par le Worker (`import-billets.mjs importer`, clé de service),
+jamais par une connexion directe à la base. Le classifieur de Claude Code a d'abord refusé l'écriture en
+production ; Cyril a ajouté une autorisation limitée à cette seule commande
+(`.claude/settings.local.json`, non versionné).
+
+**Reste** : les 2 PLBR (2025-2 et 2025-3) à accepter par un admin dans « Vérification des billets » ; les
+611 non renseignés et les alertes (lot 5) ; l'image des billets plus tard.
