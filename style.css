@@ -5282,6 +5282,13 @@ body.login-page {
     color: var(--color-text-muted);
 }
 
+/* Demande #79 — date et heure d'inscription, discrète comme l'adresse */
+.td-date-inscription {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
 .tr-commentaire td {
     padding: 4px var(--spacing-md) var(--spacing-sm);
     font-size: 0.8rem;
@@ -7698,6 +7705,12 @@ body.is-superadmin .admin-card-ebay-btn {
 .admin-insc-qty {
     text-align: center;
     font-weight: 500;
+}
+
+/* Demande #79 */
+.admin-insc-date {
+    white-space: nowrap;
+    color: var(--color-text-muted);
 }
 
 .admin-insc-actions {

@@ -552,7 +552,7 @@ function renderInscriptions() {
             }
         }
 
-        var dateInsc = insc.date_inscription ? new Date(insc.date_inscription).toLocaleDateString('fr-FR') : '';
+        var dateInsc = libelleDateInscription(insc.date_inscription);   // #79 : jour et heure
         var montantClass = isBenef ? 'montant-indefini' : (statut === 'confirme' ? 'montant-paye' : 'montant-non-paye');
 
         return '<div class="inscription-card">'

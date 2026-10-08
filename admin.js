@@ -4036,13 +4036,14 @@ function renderInscriptionsModalContent(billet) {
 
     function tableauHtml(list, versions) {
         var html = '<div class="admin-insc-table-wrapper"><table class="admin-insc-table">';
-        html += '<thead><tr><th>Membre</th>';
+        html += '<thead><tr><th>Membre</th><th>Inscrit le</th>';   // #79
         if (versions.normale) html += '<th>Normaux</th>';
         if (versions.variante) html += '<th>Variantes</th>';
         html += '<th>Actions</th></tr></thead><tbody>';
         list.forEach(function(insc) {
             html += '<tr id="admin-insc-row-' + insc.id + '">';
             html += '<td title="' + escapeAttr(adresseMembreDe(insc)) + '">' + escapeHtml(nomMembreDe(insc)) + '</td>';
+            html += '<td class="admin-insc-date">' + escapeHtml(libelleDateInscription(insc.date_inscription)) + '</td>';
             if (versions.normale) {
                 html += '<td class="admin-insc-qty" id="admin-insc-normaux-' + insc.id + '">' + (insc.nb_normaux || 0) + '</td>';
             }

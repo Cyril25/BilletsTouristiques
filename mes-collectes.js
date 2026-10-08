@@ -764,6 +764,7 @@ function renderCollecteDetail(billetId, inscriptions) {
         html += '<thead><tr>';
         html += '<th>Nom / Prénom</th>';
         html += '<th>Adresse</th>';
+        html += '<th>Inscrit le</th>';   // #79
         if (vne) html += '<th>Normaux</th>';
         if (hasVar) html += '<th>Variantes</th>';
         html += '<th>Paiement</th>';
@@ -808,6 +809,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             }
             html += '<td data-label="Nom">' + escapeHtmlMC(nomPrenom) + btnEditMembre + '</td>';
             html += '<td data-label="Adresse" class="td-adresse">' + escapeHtmlMC(adresse) + '</td>';
+            html += '<td data-label="Inscrit le" class="td-date-inscription">' + escapeHtmlMC(libelleDateInscription(ins.date_inscription)) + '</td>';
             if (vne) html += '<td data-label="Normaux">' + (ins.nb_normaux || 0) + '</td>';
             if (hasVar) html += '<td data-label="Variantes">' + (ins.nb_variantes || 0) + '</td>';
             html += '<td data-label="Paiement">' + escapeHtmlMC(ins.mode_paiement || '') + '</td>';
@@ -829,7 +831,7 @@ function renderCollecteDetail(billetId, inscriptions) {
             html += '</tr>';
 
             if (commentaire) {
-                var colCount = 7 + (vne ? 1 : 0) + (hasVar ? 1 : 0) + (payerFdpVue === 'oui' ? 2 : 1);
+                var colCount = 8 + (vne ? 1 : 0) + (hasVar ? 1 : 0) + (payerFdpVue === 'oui' ? 2 : 1);
                 html += '<tr class="tr-commentaire"><td colspan="' + colCount + '"><i class="fa-solid fa-comment"></i> ' + escapeHtmlMC(commentaire) + '</td></tr>';
             }
         }

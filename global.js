@@ -321,6 +321,27 @@ window.versionsOuvertesCollecte = versionsOuvertesCollecte;
 window.versionsOuvertesCollectes = versionsOuvertesCollectes;
 
 // ============================================================
+// 1d bis. DATE D'UNE INSCRIPTION — SOURCE UNIQUE (demande #79)
+// ============================================================
+// « 05/10/2026 à 08:13 », à l'heure locale, partout où l'on montre quand un membre
+// s'est inscrit (Mes collectes, fenêtre admin des inscriptions, Mes inscriptions).
+// Les 805 inscriptions reprises de l'ancien fichier portent toutes la minute de la
+// reprise (31/03/2026, 06:44 UTC) : leur vraie date est inconnue, on dit seulement
+// qu'elles sont antérieures. Leur heure fausserait l'ordre d'arrivée.
+var REPRISE_INSCRIPTIONS_DEBUT = Date.UTC(2026, 2, 31, 6, 44);
+var REPRISE_INSCRIPTIONS_FIN = Date.UTC(2026, 2, 31, 6, 45);
+function libelleDateInscription(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    var t = d.getTime();
+    if (isNaN(t)) return '';
+    if (t >= REPRISE_INSCRIPTIONS_DEBUT && t < REPRISE_INSCRIPTIONS_FIN) return 'avant le 31/03/2026';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+         + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+window.libelleDateInscription = libelleDateInscription;
+
+// ============================================================
 // 2. LE VIGILE (SÉCURITÉ & NAVIGATION)
 // ============================================================
 document.addEventListener("DOMContentLoaded", function() {
