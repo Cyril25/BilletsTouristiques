@@ -18,6 +18,10 @@
   - 30/09 — remarque de Cyril : **au début, réservé aux admins**, le temps de quelques tests, puis
     ouvert à tous. Et Cyril validera **sans attendre la réponse de Jean-Philippe** à O4 : le lot 1
     est donc construit pour le premier cas. Voir « L'ouverture aux admins d'abord » et O4.
+  - 08/10 — **O6 et O7 tranchées** (Cyril, 01/10 : « je te laisse décider le plus pertinent ») :
+    vraies transactions ; demande terminée à l'ouverture à tous des lots 1 et 2. La
+    recommandation O7 du 30/09 (« chaque lot passe À tester ») est **barrée** : elle contredisait
+    la règle du 24/09. Voir « Le cycle de la demande ».
 
   Les passages invalidés sont **barrés et datés**, pas effacés. Le
   [cadrage commun](demande-22-et-1-cadrage-doubles-et-vente.md) garde la trace du raisonnement
@@ -541,11 +545,17 @@ tests des admins ne remplacent pas cette vérification.
 
 ### Le cycle de la demande
 
-- Chaque lot passe **À tester** quand sa version réservée aux admins est en ligne : les admins sont
-  les testeurs.
+- ~~Chaque lot passe **À tester** quand sa version réservée aux admins est en ligne : les admins sont
+  les testeurs.~~ *Barré le 08/10 : contraire à la règle de Cyril du 24/09 (demande #72) — « à
+  tester » veut dire que la demande telle qu'elle a été formulée est livrée, pas un de ses lots.
+  Un lot 1 seul ne livre pas les doubles ni les recherches, qui sont le titre de la demande.*
+- **Lot 1 en ligne pour les admins** : la demande reste **En cours** ; son journal dit ce que les
+  admins peuvent essayer. Les admins sont les testeurs.
+- **Lot 2 en ligne pour les admins** : la demande passe **À tester** — lots 1 et 2, ensemble.
+- **Terminée** : quand Cyril, demandeur, a ouvert les lots 1 et 2 à tous (O7). Le lot 3 n'est pas
+  attendu : il est indépendant, et deviendra une demande à part le jour où on le voudra.
 - L'annonce de nouveauté suit les deux temps : `cible='admins'` à la mise en ligne, avec ce qu'il
   faut essayer ; `cible='tous'` à l'ouverture.
-- Quand la demande est terminée : O7.
 
 ## Critères d'acceptation
 
@@ -608,8 +618,8 @@ tests des admins ne remplacent pas cette vérification.
 | **O2** | Un membre peut-il **annuler une transaction acceptée** unilatéralement, ou faut-il l'accord des deux ? | Au dev du lot 1 |
 | ~~O3~~ | ~~Une transaction peut-elle naître sans annonce ?~~ **Tranchée le 11/09 : oui** — c'est le lot 1 tel qu'il est maintenu. | — |
 | **O4** | **L'enveloppe groupée : les « autres billets » viennent-ils d'autres échanges entre les deux membres, ou aussi d'une collecte que le vendeur mène ?** | ~~**À trancher avant de valider** — posée à Jean-Philippe le 11/09. Le second cas refait le § 3 et touche la machinerie des collecteurs~~ **Levée par défaut le 30/09** : Cyril validera sans la réponse. Le lot 1 fait le premier cas ; le second, s'il manque aux tests entre admins, viendra en ajout (§ 3) |
-| **O6** *(30/09)* | Les transactions de la phase de test : **vraies**, qui restent, ou d'essai, à annuler avant l'ouverture ? | Avant l'ouverture. Recommandation : vraies — même question que R7 de #1 |
-| **O7** *(30/09)* | La demande est-elle **terminée** à l'ouverture du lot 1, ou de tous ses lots ? | Au dev. Recommandation : chaque lot livré passe par « À tester » ; la demande est terminée quand ses lots 1 et 2 sont ouverts à tous |
+| ~~O6~~ *(30/09)* | ~~Les transactions de la phase de test : **vraies**, qui restent, ou d'essai, à annuler avant l'ouverture ?~~ **Tranchée le 08/10** (Cyril m'a laissé décider le 01/10) : **vraies**, elles restent après l'ouverture — comme R7 de #1. Les testeurs sont des admins qui échangent pour de bon ; les effacer avant l'ouverture leur retirerait leur historique et leur compteur. Une transaction d'essai se refuse ou s'annule comme une autre (O2) | — |
+| ~~O7~~ *(30/09)* | ~~La demande est-elle **terminée** à l'ouverture du lot 1, ou de tous ses lots ?~~ **Tranchée le 08/10** : terminée quand les **lots 1 et 2 sont ouverts à tous** — comme R8 de #1, c'est l'ouverture qui livre. Lot 3 non attendu (indépendant). ~~Recommandation : chaque lot livré passe par « À tester »~~ : barré, voir « Le cycle de la demande » | — |
 | ~~O5~~ | ~~L'ordre « lot 1 de #22 → #1 » tient-il encore, maintenant que « la table des dettes est vide » ne pèse plus ?~~ **Tranchée le 14/09 par Cyril** : #1 n'attend plus le lot 1 ; le lot 2 vient après #1 et étend sa mise en vente (voir « Lot 1 ») | — |
 
 ## Réalisation
@@ -620,5 +630,5 @@ tests des admins ne remplacent pas cette vérification.
 
 *Analyse reprise le 2026-09-10 après la remarque de Cyril, puis le 2026-09-11 après celle de
 Jean-Philippe, sur mesures refaites ces jours-là ; complétée le 30/09 (ouverture aux admins
-d'abord, O4 levée par défaut). Aucune ligne de code : la règle des L demande
+d'abord, O4 levée par défaut) ; O6 et O7 tranchées le 08/10. Aucune ligne de code : la règle des L demande
 l'accord explicite avant dev.*
