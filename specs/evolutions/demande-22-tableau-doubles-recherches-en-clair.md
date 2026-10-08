@@ -4,8 +4,9 @@
 > correspond bien à ce qu'on veut. Aucune connaissance technique n'est nécessaire.
 > La version technique existe à côté (bascule « Technique » en haut du document) — vous n'avez pas
 > besoin de la lire pour valider.
-> Reflète la version technique du commit `d6d199e` (30/09/2026 — ouverture aux admins d'abord, et
-> la question à Jean-Philippe levée par défaut ; avant, `4adb2bb` du 14/09).
+> Reflète la version technique du commit `a966b8e` (08/10/2026 — les deux derniers points de Cyril
+> tranchés ; avant, `d6d199e` du 30/09 : ouverture aux admins d'abord, question à Jean-Philippe
+> levée par défaut).
 
 ## Le 30/09 : d'abord entre admins
 
@@ -20,7 +21,10 @@ ne change pas ; c'est **qui y a accès** qui change, en deux temps.
 - une vente ou un échange se fait donc **entre deux admins**. Jean-Philippe peut enregistrer un
   échange avec Cyril, pas encore avec Marie : elle recevrait une notification pour une page qu'elle
   ne voit pas ;
-- ce sont, sauf avis contraire, de **vraies transactions**, qui restent après l'ouverture.
+- ce sont de **vraies transactions**, qui restent après l'ouverture *(décidé le 08/10)*. Si
+  Jean-Philippe achète un billet à Cyril pendant les tests, la vente figure ensuite dans leur
+  historique et leur compteur, comme n'importe quelle autre. Une transaction faite pour essayer se
+  refuse ou s'annule comme les autres.
 
 **L'ouverture à tous :** quand les tests lui conviennent, Cyril la déclenche lui-même, par un
 réglage. Pas besoin d'une nouvelle version du site. Chaque étape s'ouvre à part : les transactions
@@ -176,10 +180,21 @@ double** dans l'application, donc mieux vaut ne pas attendre après lui.
    dans le second cas, il faut toucher aux enveloppes des collectes, qui sont le cœur de
    « Mes collectes ».
 2. **Peut-on annuler une transaction déjà acceptée** tout seul, ou faut-il l'accord des deux ?
-3. *(30/09, pour Cyril, sans urgence)* Les transactions faites pendant les tests sont-elles de
-   **vraies transactions**, qui restent ? Proposition : oui.
-4. *(30/09, pour Cyril, sans urgence)* La demande est-elle **terminée** quand la 1re étape est
-   ouverte à tous, ou quand les deux premières le sont ? Proposition : les deux premières.
+3. ~~Les transactions faites pendant les tests sont-elles de **vraies transactions**, qui
+   restent ?~~ **Tranché le 08/10 : oui**, elles restent (Cyril m'a laissé décider le 01/10).
+   C'est le même choix que pour la vente du rab (#1).
+4. ~~La demande est-elle **terminée** quand la 1re étape est ouverte à tous, ou quand les deux
+   premières le sont ?~~ **Tranché le 08/10 : quand les deux premières sont ouvertes à tous.**
+   La 3e étape (« Ma collection ») n'est pas attendue : elle ne dépend de rien et deviendra une
+   demande à part. Concrètement, pour vous :
+   - 1re étape en ligne pour les admins : la demande reste « En cours ». Vous pouvez déjà essayer,
+     son journal dira quoi ;
+   - 2e étape en ligne pour les admins : la demande passe « À tester » ;
+   - Cyril ouvre les deux étapes à tous : il peut alors la clore.
+
+   *J'avais d'abord proposé, le 30/09, de passer la demande « À tester » à chaque étape. C'était
+   une erreur : Cyril a posé le 24/09 qu'une demande n'est à tester que livrée en entier, et la
+   1re étape seule ne livre ni les doubles ni les recherches.*
 
 ## Ce sur quoi on vous demande de vous prononcer
 
