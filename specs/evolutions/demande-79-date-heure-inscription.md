@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **S**)
 - **Demande :** #79 de la table `demandes` de production — Jean-Philippe, 2026-10-05, priorité
   *normale*. Publics cités : membres, collecteurs, admins.
-- **Statut :** en cours (dev), lancé par Cyril le 2026-10-08.
+- **Statut :** à tester — en ligne le 2026-10-08 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-79-date-heure-inscription-en-clair.md](demande-79-date-heure-inscription-en-clair.md)
 
 ## Contexte (demande)
@@ -72,4 +72,20 @@
 
 ## Réalisation
 
-*(à compléter après dev : fichiers touchés + commit)*
+Commit `49f0666` (2026-10-08), cache `v320` :
+
+- `global.js` — § 1d bis, `libelleDateInscription()` et la fenêtre de la reprise ;
+- `mes-collectes.js` — `renderCollecteDetail` : en-tête, cellule `td-date-inscription`, `colCount`
+  de la ligne de commentaire 7 → 8 ;
+- `admin.js` — `renderInscriptionsModalContent` : en-tête et cellule `admin-insc-date` ;
+- `mes-inscriptions.js` — `renderInscriptionCard` : la date passe par la fonction commune ;
+- `style.css` — `.td-date-inscription`, `.admin-insc-date` ;
+- `sw.js` — `billets-v320`. `menu.html` n'est pas touché.
+
+**Vérifié** : les trois écrans rendus par leur vrai code dans jsdom, sur trois inscrits fabriqués
+(heure d'été, heure d'hiver avec passage de minuit, inscription de la reprise) — 30/30, dont les
+bornes de la fenêtre de la reprise et la largeur de la ligne de commentaire avec et sans frais de
+port. Contre-épreuve sur les écrans d'avant : 8 KO, aux endroits attendus. Captures dans Chrome
+sans affichage avec le vrai `style.css`, clair et sombre, 1100 et 375 px. Contraste du texte
+discret : 5,27:1 au minimum (survol de la fenêtre admin, thème clair).
+**Pas vérifié** : la vraie page connectée, un vrai téléphone.
