@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **M**)
 - **Demande :** #80 de la table `demandes` de production — Cyril, 2026-10-15, priorité *normale*.
   Publics cités : membres, collecteurs, admins.
-- **Statut :** en développement (lancé par Cyril le 2026-10-15).
+- **Statut :** à tester — en ligne le 2026-10-15 (développement lancé par Cyril le jour même).
 - **Version en clair :** [demande-80-suppression-doublon-billet-en-clair.md](demande-80-suppression-doublon-billet-en-clair.md)
 
 ## Contexte (demande)
@@ -129,4 +129,34 @@ ou la version changent.
 
 ## Réalisation
 
-*(à compléter après le développement)*
+Commit `b574b62` (2026-10-15), cache `v321` :
+
+- `admin.js` — § 10b : `cleBillet()`, `cleBilletFormulaire()`, `chercherBilletsMemeCle()`,
+  `verifierCleBilletLibre()`, `signalerDoublonBillet()` ; la soumission du formulaire (`initPanel`)
+  attend `verifierCleBilletLibre` avant `saveBillet` / `updateBillet` ; `openBilletPanel` mémorise
+  `panel.dataset.cleOrigine` en modification, l'oublie en ajout et à la fermeture ;
+  § 13 : `bilanSuppressionBillet()`, `lignePossedeBillet()`, `nomsMembresParId()`,
+  `messageErreurSuppressionBillet()`, `confirmDelete()` réécrite (bilan, puis marques, puis billet ;
+  abandon si la fenêtre a été fermée pendant le bilan) ;
+- `style.css` — `.admin-form-error a` (le lien garde la couleur du message) ;
+- `sw.js` — `billets-v321`. `menu.html` n'est pas touché.
+
+La suppression des marques ne vise que les lignes **sans** possession
+(`owned_normal=eq.false&owned_variante=eq.false&nb_doubles=eq.0&serial_normal=eq.&serial_variante=eq.`) :
+si un membre coche le billet entre le bilan et la suppression, sa ligne reste et la base refuse le
+billet, avec le message de la contrainte `collection_billet_id_fkey`.
+
+**Vérifié** : le vrai `admin.js` dans jsdom sur une imitation de PostgREST en mémoire (filtres
+`eq`/`in`/`like`/`ilike`, et les trois clés étrangères qui bloquent la suppression) — **51/51** :
+XEADL supprimable (marques de 5602 effacées, celles de 5633 intactes), messages singulier/pluriel des
+collectes, refus nommant un ou deux possédants, billet sans rien, course avec un membre qui coche,
+fenêtre fermée pendant le bilan ; création refusée (y compris casse et espaces), lien vers la fiche,
+bouton rétabli, curseur sur l'amorce ; clé libre, même amorce sur un autre millésime, double clic
+(un seul billet), panne de la vérification ; modification d'un doublon historique sans toucher la
+clé, vers une version prise (refus), vers une version libre. **Contre-épreuve** sur l'`admin.js`
+d'avant : 32 KO, dont le message « ce billet porte des collectes » sur XEADL, exactement celui de la
+demande. Les requêtes réelles (recherche par amorce et millésime, filtre de suppression des marques
+en lecture) vérifiées sur la base de production par le Worker. Capture dans Chrome sans affichage
+avec le vrai `style.css`, clair et sombre : le message et le lien se lisent.
+**Pas vérifié** : la vraie page connectée (droits d'un admin réel sur `collection`), un vrai
+téléphone. Banc : `scripts/banc-62/test-80-doublons.mjs` (non versionné).

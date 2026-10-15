@@ -115,7 +115,7 @@ qui n'est plus vrai.
 | [#75 (prod)](demande-75-fichier-btc.md) | Construire le fichier de billets-touristiques.com pour la vérification #66 ([en clair](demande-75-fichier-btc-en-clair.md)) | L | Analyse à valider — outil fait et essayé sur 10 billets, extraction complète en attente | — | — |
 | [#78 (prod)](demande-78-boutons-fiche-membre.md) | Les boutons ne dépassent plus des fiches de Gestion des membres ([en clair](demande-78-boutons-fiche-membre-en-clair.md)) | S | À tester | ✅ | `72d33be` |
 | [#79 (prod)](demande-79-date-heure-inscription.md) | Date et heure d'inscription sur les collectes ([en clair](demande-79-date-heure-inscription-en-clair.md)) | S | À tester | ✅ | `49f0666` |
-| [#80 (prod)](demande-80-suppression-doublon-billet.md) | Supprimer un billet en doublon, et ne plus en créer ([en clair](demande-80-suppression-doublon-billet-en-clair.md)) | M | En cours (dev) | — | — |
+| [#80 (prod)](demande-80-suppression-doublon-billet.md) | Supprimer un billet en doublon, et ne plus en créer ([en clair](demande-80-suppression-doublon-billet-en-clair.md)) | M | À tester | ✅ | `b574b62` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
