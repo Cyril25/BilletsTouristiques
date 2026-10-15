@@ -1218,39 +1218,45 @@ function initPanel() {
             var panel = document.getElementById('admin-panel');
             var billetData = collectFormData();
 
-            // Demande #16 — Story 9.3 retirée d'ici : les dates suivent le statut
-            // de la COLLECTE, pas celui du billet (colonnes DatePre/DateColl/
-            // DateFin renommées *_deprecated en base).
-            if (panel && panel.dataset.editId) {
-                var editId = panel.dataset.editId;
-                // Détecter un changement forcé de type (champs déverrouillés par l'admin)
-                var forcedTypeChange = null;
-                var cbNormaleEl = document.getElementById('field-version-normale');
-                var hasVarianteEl2 = document.getElementById('field-has-variante');
-                if (cbNormaleEl && cbNormaleEl.dataset.frozenValue !== undefined &&
-                    hasVarianteEl2 && hasVarianteEl2.dataset.frozenValue !== undefined) {
-                    var ancienNormale = cbNormaleEl.dataset.frozenValue === '1';
-                    var ancienVariante = hasVarianteEl2.dataset.frozenValue || '';
-                    var nouveauNormale = billetData.VersionNormaleExiste;
-                    var nouveauVariante = billetData.HasVariante || '';
-                    var ancienVarianteActive = ancienVariante && ancienVariante !== 'N';
-                    var nouveauVarianteActive = nouveauVariante && nouveauVariante !== 'N';
-                    if (ancienNormale !== nouveauNormale || ancienVariante !== nouveauVariante) {
-                        var tc = {
-                            supprimeNormale: ancienNormale && !nouveauNormale,
-                            supprimeVariante: ancienVarianteActive && !nouveauVarianteActive,
-                            ajouteNormale: !ancienNormale && nouveauNormale,
-                            ajouteVariante: !ancienVarianteActive && nouveauVarianteActive
-                        };
-                        if (tc.supprimeNormale || tc.supprimeVariante || tc.ajouteNormale || tc.ajouteVariante) {
-                            forcedTypeChange = tc;
+            // Demande #80 — pas de second billet avec la même amorce, le même
+            // millésime et la même version : la base répond avant qu'on enregistre.
+            verifierCleBilletLibre(billetData, panel).then(function(libre) {
+                if (!libre) return;
+
+                // Demande #16 — Story 9.3 retirée d'ici : les dates suivent le statut
+                // de la COLLECTE, pas celui du billet (colonnes DatePre/DateColl/
+                // DateFin renommées *_deprecated en base).
+                if (panel && panel.dataset.editId) {
+                    var editId = panel.dataset.editId;
+                    // Détecter un changement forcé de type (champs déverrouillés par l'admin)
+                    var forcedTypeChange = null;
+                    var cbNormaleEl = document.getElementById('field-version-normale');
+                    var hasVarianteEl2 = document.getElementById('field-has-variante');
+                    if (cbNormaleEl && cbNormaleEl.dataset.frozenValue !== undefined &&
+                        hasVarianteEl2 && hasVarianteEl2.dataset.frozenValue !== undefined) {
+                        var ancienNormale = cbNormaleEl.dataset.frozenValue === '1';
+                        var ancienVariante = hasVarianteEl2.dataset.frozenValue || '';
+                        var nouveauNormale = billetData.VersionNormaleExiste;
+                        var nouveauVariante = billetData.HasVariante || '';
+                        var ancienVarianteActive = ancienVariante && ancienVariante !== 'N';
+                        var nouveauVarianteActive = nouveauVariante && nouveauVariante !== 'N';
+                        if (ancienNormale !== nouveauNormale || ancienVariante !== nouveauVariante) {
+                            var tc = {
+                                supprimeNormale: ancienNormale && !nouveauNormale,
+                                supprimeVariante: ancienVarianteActive && !nouveauVarianteActive,
+                                ajouteNormale: !ancienNormale && nouveauNormale,
+                                ajouteVariante: !ancienVarianteActive && nouveauVarianteActive
+                            };
+                            if (tc.supprimeNormale || tc.supprimeVariante || tc.ajouteNormale || tc.ajouteVariante) {
+                                forcedTypeChange = tc;
+                            }
                         }
                     }
+                    updateBillet(editId, billetData, forcedTypeChange);
+                } else {
+                    saveBillet(billetData);
                 }
-                updateBillet(editId, billetData, forcedTypeChange);
-            } else {
-                saveBillet(billetData);
-            }
+            });
         });
     }
 
@@ -1494,6 +1500,11 @@ function openBilletPanel(billetData, docId) {
         // Pre-remplir tous les champs
         prefillForm(billetData);
 
+        // Demande #80 — clé d'origine, lue sur le formulaire tel qu'il vient d'être
+        // rempli : une modification qui n'y touche pas n'est pas contrôlée, les
+        // doublons historiques restent modifiables.
+        panel.dataset.cleOrigine = cleBilletFormulaire();
+
         // Story 12.3 — Section collectes supplémentaires (mode edition uniquement)
         var sectionCollectes = document.getElementById('admin-collectes-supplementaires');
         if (sectionCollectes) {
@@ -1615,6 +1626,7 @@ function openBilletPanel(billetData, docId) {
     } else {
         // --- Mode ajout (Story 2.2) ---
         delete panel.dataset.editId;
+        delete panel.dataset.cleOrigine;
         if (title) title.textContent = 'Ajouter un billet';
 
         // Story 12.3 — Masquer la section collectes en mode création (le billet
@@ -1912,6 +1924,7 @@ function closeBilletPanel() {
 
     // Nettoyer le mode edition
     delete panel.dataset.editId;
+    delete panel.dataset.cleOrigine;
 
     // Retirer le focus trap
     destroyFocusTrap();
@@ -2147,6 +2160,99 @@ function collectFormData() {
     ].join(' ').toLowerCase();
 
     return billetData;
+}
+
+// ============================================================
+// 10b. DEMANDE #80 — UN SEUL BILLET PAR AMORCE, MILLÉSIME ET VERSION
+// ============================================================
+// Depuis la refonte des collectes (#16), un nouveau tirage d'un billet est une
+// nouvelle collecte sur sa fiche, plus une nouvelle fiche. Les doublons d'avant
+// restent (95 groupes en octobre 2026) : seules la création et la modification
+// de la clé sont contrôlées.
+
+// Clé d'un billet. Même règle que cle_billet_texte() en base, qui sert au module
+// d'import (#66) : amorce et version en majuscules, espaces des bords ignorés.
+// Deux règles différentes laisseraient passer d'un côté ce que l'autre refuse.
+function cleBillet(b) {
+    return String((b && b.Reference) || '').trim().toUpperCase() + '|' +
+        String((b && b.Millesime) || '').trim() + '|' +
+        String((b && b.Version) || '').trim().toUpperCase();
+}
+
+function cleBilletFormulaire() {
+    var val = function(id) {
+        var el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+    return cleBillet({ Reference: val('field-reference'), Millesime: val('field-millesime'), Version: val('field-version') });
+}
+
+// Les billets, autres que exceptId, qui portent déjà la clé de billetData. La
+// base filtre large (amorce et millésime contenus, sans casse) ; la comparaison
+// exacte des clés se fait ici.
+function chercherBilletsMemeCle(billetData, exceptId) {
+    var cle = cleBillet(billetData);
+    var url = '/rest/v1/billets?select=id,NomBillet,Reference,Millesime,Version' +
+        '&Reference=ilike.' + encodeURIComponent('*' + String(billetData.Reference || '').trim() + '*');
+    var millesime = String(billetData.Millesime || '').trim();
+    if (millesime) url += '&Millesime=like.' + encodeURIComponent('*' + millesime + '*');
+    return supabaseFetch(url).then(function(rows) {
+        return (rows || []).filter(function(b) {
+            return String(b.id) !== String(exceptId || '') && cleBillet(b) === cle;
+        });
+    });
+}
+
+// Promesse résolue à true si l'enregistrement peut continuer.
+function verifierCleBilletLibre(billetData, panel) {
+    var editId = (panel && panel.dataset.editId) || '';
+    if (editId && panel.dataset.cleOrigine === cleBillet(billetData)) {
+        return Promise.resolve(true);
+    }
+    // Bouton désactivé le temps de la vérification : un double clic lancerait
+    // deux vérifications puis deux créations, soit le doublon qu'on veut empêcher.
+    var saveBtn = document.getElementById('panel-save-btn');
+    var libelleBouton = saveBtn ? saveBtn.textContent : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Vérification...';
+    }
+    return chercherBilletsMemeCle(billetData, editId)
+        .then(function(existants) {
+            if (existants.length === 0) return true;
+            signalerDoublonBillet(existants[0]);
+            return false;
+        }, function(error) {
+            console.error('Erreur vérification doublon billet:', error);
+            showToast('Impossible de vérifier que ce billet n\'existe pas déjà : ' + error.message, 'error');
+            return false;
+        })
+        .then(function(libre) {
+            if (!libre && saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = libelleBouton;
+            }
+            return libre;
+        });
+}
+
+// Message sous l'amorce : quel billet porte déjà cette clé, et un lien vers sa
+// fiche, ouvert dans un nouvel onglet pour ne pas perdre la saisie en cours.
+function signalerDoublonBillet(existant) {
+    setFieldError('field-reference', 'error-reference',
+        'Ce billet existe déjà (même amorce, millésime et version) : ' + libelleBilletComplet(existant) +
+        '. Pour un nouveau tirage, ajoutez-lui une collecte. ');
+    var errorEl = document.getElementById('error-reference');
+    if (errorEl) {
+        var lien = document.createElement('a');
+        lien.href = 'admin-billet.html?id=' + encodeURIComponent(existant.id);
+        lien.target = '_blank';
+        lien.rel = 'noopener';
+        lien.textContent = 'Ouvrir sa fiche';
+        errorEl.appendChild(lien);
+    }
+    var ref = document.getElementById('field-reference');
+    if (ref) ref.focus();
 }
 
 // ============================================================
@@ -2843,6 +2949,86 @@ function onDeleteOverlayClick(e) {
     }
 }
 
+// Demande #80 — ce qui empêche, ou non, de supprimer un billet. Trois tables le
+// citent sans suppression en cascade : collectes (RESTRICT depuis #16, DV2-1),
+// inscriptions et collection (« Ma collection » des membres). Avant, l'écran
+// ramenait tout refus de la base aux collectes : un billet que deux membres
+// avaient seulement marqué « pas intéressé » se disait « porteur de collectes ».
+function bilanSuppressionBillet(billetId) {
+    var id = encodeURIComponent(billetId);
+    return Promise.all([
+        supabaseFetch('/rest/v1/collectes?billet_id=eq.' + id + '&select=id'),
+        supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + id + '&select=id'),
+        supabaseFetch('/rest/v1/collection?billet_id=eq.' + id +
+            '&select=membre_id,owned_normal,owned_variante,nb_doubles,serial_normal,serial_variante')
+    ]).then(function(res) {
+        var nbCollectes = (res[0] || []).length;
+        var nbInscriptions = (res[1] || []).length;
+        var lignes = res[2] || [];
+        if (nbCollectes > 0) {
+            return { refus: 'Suppression impossible : ce billet porte ' +
+                (nbCollectes > 1 ? nbCollectes + ' collectes. Supprimez-les' : '1 collecte. Supprimez-la') +
+                ' d\'abord depuis sa fiche.' };
+        }
+        if (nbInscriptions > 0) {
+            return { refus: 'Suppression impossible : ' +
+                (nbInscriptions > 1 ? nbInscriptions + ' inscriptions sont encore rattachées' : '1 inscription est encore rattachée') +
+                ' à ce billet.' };
+        }
+        // Une possession (cochée, doubles, numéro) serait effacée sans être
+        // reportée nulle part : on refuse, en nommant les membres.
+        var possedants = lignes.filter(lignePossedeBillet);
+        if (possedants.length > 0) {
+            return nomsMembresParId(possedants.map(function(l) { return l.membre_id; }))
+                .then(function(noms) {
+                    var plusieurs = noms.length > 1;
+                    return { refus: 'Suppression impossible : ' +
+                        (plusieurs ? noms.length + ' membres ont ce billet dans leur collection (' + noms.join(', ') + ')'
+                                   : noms[0] + ' a ce billet dans sa collection') +
+                        '. Le supprimer effacerait ' + (plusieurs ? 'leur' : 'sa') + ' saisie : demandez-' +
+                        (plusieurs ? 'leur' : 'lui') + ' de la reporter sur la bonne fiche, puis recommencez.' };
+                });
+        }
+        return { marques: lignes.length };
+    });
+}
+
+// Ligne de collection qui dit autre chose que « pas intéressé ».
+function lignePossedeBillet(l) {
+    return !!(l.owned_normal || l.owned_variante || (l.nb_doubles || 0) > 0 ||
+        l.serial_normal || l.serial_variante);
+}
+
+function nomsMembresParId(ids) {
+    var repli = function(id) { return 'membre n' + String.fromCharCode(176) + ' ' + id; };
+    return supabaseFetch('/rest/v1/membres?id=in.(' + ids.map(encodeURIComponent).join(',') + ')&select=id,nom,prenom,pseudo')
+        .then(function(rows) {
+            var parId = {};
+            (rows || []).forEach(function(m) { parId[m.id] = m; });
+            return ids.map(function(id) {
+                var m = parId[id];
+                return (m && (((m.nom || '') + ' ' + (m.prenom || '')).trim() || m.pseudo)) || repli(id);
+            });
+        })
+        .catch(function() { return ids.map(repli); });
+}
+
+// Si la base refuse malgré le bilan (un autre admin a agi entre-temps), la
+// contrainte se reconnaît à son nom.
+function messageErreurSuppressionBillet(error) {
+    var msg = String((error && error.message) || '');
+    if (msg.indexOf('collectes_billet_id_fkey') !== -1) {
+        return 'Suppression impossible : ce billet porte des collectes. Supprimez-les d\'abord depuis sa fiche.';
+    }
+    if (msg.indexOf('collection_billet_id_fkey') !== -1) {
+        return 'Suppression impossible : des membres ont ce billet dans leur collection.';
+    }
+    if (msg.indexOf('inscriptions_billet_id_fkey') !== -1) {
+        return 'Suppression impossible : des inscriptions sont encore rattachées à ce billet.';
+    }
+    return 'Erreur lors de la suppression : ' + msg;
+}
+
 function confirmDelete() {
     if (!deleteTargetDocId) return;
 
@@ -2850,39 +3036,56 @@ function confirmDelete() {
     var confirmBtn = document.getElementById('delete-confirm-btn');
     if (confirmBtn) {
         confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Suppression...';
+        confirmBtn.textContent = 'Vérification...';
+    }
+    function retablirBouton() {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirmer la suppression';
+        }
     }
 
-    supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
-        method: 'DELETE'
-    })
-        .then(function() {
-            showToast('Billet supprime avec succes', 'success');
-            closeDeleteModal();
-            // Retirer du tableau en memoire
-            adminBillets = adminBillets.filter(function(b) {
-                return String(b._id) !== String(docId);
-            });
-            // Story 2.1b — Recalculer compteurs et filtres
-            renderStatusCounters();
-            adminApplyFilters();
+    // Demande #80 — lire ce qui est rattaché au billet avant de rien supprimer.
+    bilanSuppressionBillet(docId)
+        .then(function(bilan) {
+            if (deleteTargetDocId !== docId) return;   // fenêtre fermée entre-temps
+            if (bilan.refus) {
+                showToast(bilan.refus, 'error');
+                retablirBouton();
+                return;
+            }
+            if (confirmBtn) confirmBtn.textContent = 'Suppression...';
+            // Les marques « pas intéressé » partent avec le billet : la base refuse
+            // de supprimer un billet encore cité dans une collection. Le filtre ne
+            // retient que les lignes sans possession, au cas où un membre aurait
+            // coché le billet depuis le bilan : la base refuserait alors le billet.
+            var marques = bilan.marques > 0
+                ? supabaseFetch('/rest/v1/collection?billet_id=eq.' + encodeURIComponent(docId) +
+                    '&owned_normal=eq.false&owned_variante=eq.false&nb_doubles=eq.0' +
+                    '&serial_normal=eq.&serial_variante=eq.', { method: 'DELETE' })
+                : Promise.resolve();
+            return marques
+                .then(function() {
+                    return supabaseFetch('/rest/v1/billets?id=eq.' + encodeURIComponent(docId), {
+                        method: 'DELETE'
+                    });
+                })
+                .then(function() {
+                    showToast('Billet supprime avec succes', 'success');
+                    closeDeleteModal();
+                    // Retirer du tableau en memoire
+                    adminBillets = adminBillets.filter(function(b) {
+                        return String(b._id) !== String(docId);
+                    });
+                    // Story 2.1b — Recalculer compteurs et filtres
+                    renderStatusCounters();
+                    adminApplyFilters();
+                });
         })
         .catch(function(error) {
             console.error('Erreur suppression billet:', error);
-            // Demande #16 / DV2-1 — la FK collectes.billet_id est passée en
-            // RESTRICT : supprimer un billet n'emporte plus silencieusement ses
-            // collectes, il faut les retirer d'abord. Message explicite plutôt
-            // que l'erreur brute de PostgREST.
-            var msg = String(error && error.message || '');
-            if (msg.indexOf('collectes') !== -1 || msg.indexOf('foreign key') !== -1 || msg.indexOf('23503') !== -1) {
-                showToast('Suppression impossible : ce billet porte des collectes. Supprimez-les d\'abord depuis sa fiche.', 'error');
-            } else {
-                showToast('Erreur lors de la suppression : ' + error.message, 'error');
-            }
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Confirmer la suppression';
-            }
+            showToast(messageErreurSuppressionBillet(error), 'error');
+            retablirBouton();
         });
 }
 

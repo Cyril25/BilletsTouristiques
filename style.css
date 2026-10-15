@@ -3382,6 +3382,13 @@ body.login-page {
     display: block;
 }
 
+/* Demande #80 — lien vers la fiche qui porte déjà la clé du billet */
+.admin-form-error a {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
 /* Texte d'aide sous les champs */
 .field-hint {
     display: block;
