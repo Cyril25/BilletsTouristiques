@@ -15,6 +15,13 @@ function escapeAttrMC(text) {
 
 var monCollecteur = null;
 var mesBillets = [];
+// Incident du 16/10/2026 (43 enveloppes de Jean-Philippe annulées avec 421 billets dedans) —
+// loadEnveloppes() annule les enveloppes qu'il croit vides : il ne doit JAMAIS tourner avant
+// que mes billets soient chargés, sinon tout lui paraît vide. Avec ~1 700 billets, le
+// chargement dure 2 à 3 secondes : un clic sur « Préparation des envois » pendant ce temps
+// annulait toutes les enveloppes du collecteur.
+var mesBilletsCharges = false;
+var enveloppesEnAttente = false;   // l'onglet a été ouvert avant la fin du chargement
 var currentBilletId = null;
 var currentBillet = null;
 var currentInscriptions = [];
@@ -222,6 +229,7 @@ function loadMesCollectes() {
             if (billetIds.length === 0) {
                 mesBillets = [];
                 mesInscriptionsParBillet = {};
+                marquerMesBilletsCharges();
                 renderCollectesList();
                 return;
             }
@@ -233,6 +241,7 @@ function loadMesCollectes() {
         .then(function(results) {
             if (!results) return;
             mesBillets = results[0] || [];
+            marquerMesBilletsCharges();
             var inscriptions = results[1] || [];
             mesInscriptionsParBillet = {};
             for (var i = 0; i < inscriptions.length; i++) {
@@ -277,7 +286,21 @@ function loadMesCollectes() {
         .catch(function(error) {
             console.error('Erreur chargement collectes:', error);
             showToast('Erreur lors du chargement des collectes', 'error');
+            if (enveloppesEnAttente) {
+                var attente = document.getElementById('envois-view');
+                if (attente) attente.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-circle-exclamation"></i><p>Vos collectes n\'ont pas pu être chargées : rechargez la page.</p></div>';
+            }
         });
+}
+
+// Incident du 16/10/2026 — mes billets sont là : l'onglet des enveloppes, s'il a été ouvert
+// pendant le chargement, peut maintenant se charger pour de bon.
+function marquerMesBilletsCharges() {
+    mesBilletsCharges = true;
+    if (enveloppesEnAttente) {
+        enveloppesEnAttente = false;
+        loadEnveloppes();
+    }
 }
 
 // #14 — Onboarding collecteur
@@ -1513,6 +1536,14 @@ function loadEnveloppes() {
         renderEnveloppesVide();
         return;
     }
+    // Incident du 16/10/2026 — ceinture : ni lecture ni écriture tant que mes billets ne
+    // sont pas chargés. marquerMesBilletsCharges() relance l'onglet à la fin du chargement.
+    if (!mesBilletsCharges) {
+        enveloppesEnAttente = true;
+        var attente = document.getElementById('envois-view');
+        if (attente) attente.innerHTML = '<div class="envois-empty"><i class="fa-solid fa-spinner fa-spin"></i><p>Chargement de vos collectes…</p></div>';
+        return;
+    }
     var alias = monCollecteur.alias;
     // Charger les enveloppes en_cours du collecteur
     supabaseFetch('/rest/v1/enveloppes?collecteur_alias=eq.' + encodeURIComponent(alias) + '&statut=eq.en_cours&select=*&order=membre_id.asc')
@@ -1601,7 +1632,41 @@ function loadEnveloppes() {
         });
 }
 
-function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
+// Incident du 16/10/2026 — bretelles : « vide » ne veut dire que « vide dans ce que la page a
+// chargé ». Avant d'annuler, on redemande à la base : une enveloppe qui contient encore un
+// billet prêt à envoyer n'est jamais annulée, ni une enveloppe dont le port est déclaré ou
+// payé. Si la vérification échoue, rien n'est annulé. L'écriture ne vise qu'une enveloppe
+// encore en cours. Rend la liste des numéros d'enveloppes annulées ; ne rejette jamais.
+function annulerEnveloppesVides(candidates) {
+    var ids = candidates.filter(function(env) {
+        return !env.statut_paiement_port || env.statut_paiement_port === 'non_paye';
+    }).map(function(env) { return env.id; });
+    if (ids.length === 0) return Promise.resolve([]);
+    return supabaseFetch('/rest/v1/inscriptions?enveloppe_id=in.(' + ids.join(',') + ')&statut_livraison=eq.pret_a_envoyer&select=enveloppe_id')
+        .then(function(pleines) {
+            var dansLaBase = {};
+            (pleines || []).forEach(function(i) { dansLaBase[i.enveloppe_id] = true; });
+            var aAnnuler = ids.filter(function(id) { return !dansLaBase[id]; });
+            if (aAnnuler.length < ids.length) {
+                console.warn('Enveloppes vides à l\'écran mais pleines en base, gardées :', ids.filter(function(id) { return dansLaBase[id]; }));
+                showToast('Des enveloppes n\'ont pas pu être affichées : rechargez la page', 'error');
+            }
+            return Promise.all(aAnnuler.map(function(id) {
+                return supabaseFetch('/rest/v1/enveloppes?id=eq.' + id + '&statut=eq.en_cours', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ statut: 'annulee' })
+                });
+            })).then(function() { return aAnnuler; });
+        })
+        .catch(function(error) {
+            console.error('Vérification avant annulation des enveloppes vides — rien n\'est annulé :', error);
+            return [];
+        });
+}
+
+// menageFait : les enveloppes vides ont déjà été traitées (annulées, ou gardées parce que la
+// base les dit pleines) — on affiche sans recommencer.
+function renderEnveloppesListe(enveloppes, inscriptions, billetsMap, menageFait) {
     var container = document.getElementById('envois-view');
     if (!container) return;
 
@@ -1613,23 +1678,18 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap) {
     });
 
     // Annuler les enveloppes vides (aucune inscription active)
-    var enveloppesVides = enveloppes.filter(function(env) {
+    var enveloppesVides = menageFait ? [] : enveloppes.filter(function(env) {
         var membreInscs = inscByMembre[env.membre_id] || [];
         var dansEnv = membreInscs.filter(function(i) { return i.statut_livraison === 'pret_a_envoyer' && i.enveloppe_id === env.id; });
         var aRepartir = membreInscs.filter(function(i) { return i.statut_livraison === 'non_reparti' || i.statut_livraison === null; });
         return dansEnv.length === 0 && aRepartir.length === 0;
     });
     if (enveloppesVides.length > 0) {
-        Promise.all(enveloppesVides.map(function(env) {
-            return supabaseFetch('/rest/v1/enveloppes?id=eq.' + env.id, {
-                method: 'PATCH',
-                body: JSON.stringify({ statut: 'annulee' })
-            });
-        })).then(function() {
+        annulerEnveloppesVides(enveloppesVides).then(function(annulees) {
             enveloppes = enveloppes.filter(function(env) {
-                return enveloppesVides.indexOf(env) === -1;
+                return annulees.indexOf(env.id) === -1;
             });
-            renderEnveloppesListe(enveloppes, inscriptions, billetsMap);
+            renderEnveloppesListe(enveloppes, inscriptions, billetsMap, true);
         });
         return;
     }
