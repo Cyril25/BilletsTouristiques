@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, collecteur, qui suivez vos envois dans « Mes
 > collectes ». Aucune connaissance technique n'est nécessaire.
-> Reflète la version technique du commit `4eeeff9` (21/10/2026).
+> Reflète la version technique du commit `7778afb` (21/10/2026).
 
 ## Ce qui a été demandé
 
@@ -36,6 +36,11 @@ ancien. Une section vide n'apparaît pas.
 ## Ce sur quoi on vous demande de vous prononcer
 
 - **Un envoi « distribué » est rangé dans « En cours »** : La Poste l'a livré, mais le membre n'a
-  pas confirmé. Si pour vous il est terminé, dites-le : c'est un réglage d'une ligne.
+  pas confirmé. Sébastien l'a confirmé : pour lui, un envoi n'est terminé que quand il a validé
+  lui-même la réception, une fois que le membre lui a dit que tout va bien.
+- **Reste un point, que cette demande ne change pas** : aujourd'hui, un membre peut aussi
+  confirmer lui-même la réception dans « Mes envois », et l'envoi passe alors dans « Terminés »
+  sans que le collecteur ait rien validé. Faut-il que seule la validation du collecteur termine un
+  envoi ? Ce serait une petite évolution à part.
 - La section « Terminés » va grandir avec le temps. Faut-il pouvoir la **replier** ? Ce n'était pas
   demandé.
