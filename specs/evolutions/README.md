@@ -116,6 +116,7 @@ qui n'est plus vrai.
 | [#78 (prod)](demande-78-boutons-fiche-membre.md) | Les boutons ne dépassent plus des fiches de Gestion des membres ([en clair](demande-78-boutons-fiche-membre-en-clair.md)) | S | À tester | ✅ | `72d33be` |
 | [#79 (prod)](demande-79-date-heure-inscription.md) | Date et heure d'inscription sur les collectes ([en clair](demande-79-date-heure-inscription-en-clair.md)) | S | À tester | ✅ | `49f0666` |
 | [#80 (prod)](demande-80-suppression-doublon-billet.md) | Supprimer un billet en doublon, et ne plus en créer ([en clair](demande-80-suppression-doublon-billet-en-clair.md)) | M | À tester | ✅ | `b574b62` |
+| [#81 (prod)](demande-81-envoi-hors-collecte.md) | Créer un envoi hors collecte ([en clair](demande-81-envoi-hors-collecte-en-clair.md)) | L | Analyse à valider | — | — |
 | [#82 (prod)](demande-82-historique-envois-en-cours-termines.md) | Historique des envois : « En cours » et « Terminés » ([en clair](demande-82-historique-envois-en-cours-termines-en-clair.md)) | S | À tester | ✅ | `2c225b4` |
 | [#83 (prod)](demande-83-normaux-variantes-enveloppes-separees.md) | Mettre les normaux et les variantes d'une inscription dans des enveloppes différentes ([en clair](demande-83-normaux-variantes-enveloppes-separees-en-clair.md)) | L | Analyse à valider | — | — |
 | [#84 (prod)](demande-84-recapitulatif-enveloppes.md) | Récapitulatif des enveloppes en préparation ([en clair](demande-84-recapitulatif-enveloppes-en-clair.md)) | M | À tester | ✅ | `1ca79c8` |
