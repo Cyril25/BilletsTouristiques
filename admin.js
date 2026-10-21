@@ -1366,6 +1366,11 @@ function initPanel() {
                 cloturerCollecte(btnCloturer.dataset.collecteId, btnCloturer.dataset.billetId);
                 return;
             }
+            var btnPartager = e.target.closest('.btn-partager-collecte');
+            if (btnPartager) {
+                openShareModal(btnPartager.dataset.billetId, btnPartager.dataset.collecteId);   // #87
+                return;
+            }
             var btnSupprimer = e.target.closest('.btn-supprimer-collecte');
             if (btnSupprimer) {
                 supprimerPreCollecte(btnSupprimer.dataset.collecteId, btnSupprimer.dataset.billetId, btnSupprimer.dataset.collecteNom);
@@ -3808,60 +3813,116 @@ function resetCollecteurFreeze() {
 // FEAT-1 : MODALE PARTAGE (bouton Facebook/copie)
 // ============================================================
 
-function openShareModal(billetId) {
-    var billet = adminBillets.find(function(b) { return b._id === billetId; });
+// Demande #87 — le texte présente UNE collecte : son statut, son collecteur (et son adresse
+// PayPal), la version qu'elle couvre et son prix. Avant, le collecteur venait de la
+// « Collecte initiale » (même terminée) et le prix de la première collecte ouverte : sur un
+// billet à plusieurs collectes, on annonçait le collecteur de l'une avec le prix de l'autre
+// (Lapalisse, 21/10). Chaque collecte en cours a son bouton « Partager » (liste des collectes
+// de la fiche) ; celui du billet partage la collecte en cours, ou fait choisir s'il y en a
+// plusieurs.
+function openShareModal(billetId, collecteId) {
+    var billet = adminBillets.find(function(b) { return String(b._id) === String(billetId); });
     if (!billet) return;
+    var collectes = collectesDuBillet(billet.id);
+    var collecte = null;
+    if (collecteId) {
+        collecte = collectes.find(function(c) { return String(c.id) === String(collecteId); }) || null;
+    } else {
+        var enCours = collectes.filter(function(c) { return c.categorie !== 'Terminé'; });
+        if (enCours.length > 1) {
+            afficherChoixCollectePartage(billet, enCours);
+            return;
+        }
+        collecte = enCours[0] || collectes[0] || null;
+    }
+    afficherPartage(billet, collecte);
+}
 
+// Plusieurs collectes en cours : on fait choisir laquelle partager.
+function afficherChoixCollectePartage(billet, enCours) {
+    var shareOverlay = document.getElementById('share-modal-overlay');
+    var content = document.getElementById('share-modal-content');
+    var btn = document.getElementById('share-copy-btn');
+    if (!shareOverlay || !content || !btn) return;
+    var choix = document.getElementById('share-modal-choix');
+    if (!choix) {
+        choix = document.createElement('div');
+        choix.id = 'share-modal-choix';
+        choix.className = 'share-modal-choix';
+        content.insertBefore(choix, content.firstChild);
+    }
+    choix.innerHTML = '<p>Ce billet a ' + enCours.length + ' collectes en cours. Laquelle partager ?</p>'
+        + enCours.map(function(c) {
+            var details = [c.categorie || '', c.collecteur || ''].filter(Boolean).join(' — ');
+            return '<button type="button" class="admin-modal-btn admin-modal-btn-secondary share-modal-choix-btn"'
+                + ' onclick="openShareModal(' + escapeAttr(JSON.stringify(String(billet._id))) + ', ' + escapeAttr(JSON.stringify(String(c.id))) + ')">'
+                + '<strong>' + escapeHtml(c.nom || 'Collecte') + '</strong>' + (details ? ' — ' + escapeHtml(details) : '')
+                + '</button>';
+        }).join('');
+    choix.style.display = '';
+    ['share-modal-text-top', 'share-modal-text-bottom', 'share-modal-image'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    btn.style.display = 'none';
+    shareOverlay.style.display = '';
+}
+
+function afficherPartage(billet, collecte) {
     var textTopEl = document.getElementById('share-modal-text-top');
     var textBottomEl = document.getElementById('share-modal-text-bottom');
     var imgEl = document.getElementById('share-modal-image');
     var shareOverlay = document.getElementById('share-modal-overlay');
     var btn = document.getElementById('share-copy-btn');
     if (!textTopEl || !textBottomEl || !shareOverlay || !btn) return;
+    var choix = document.getElementById('share-modal-choix');
+    if (choix) choix.style.display = 'none';
+    textTopEl.style.display = '';
+    textBottomEl.style.display = '';
+    btn.style.display = '';
 
+    var billetId = billet._id;
     var pays = billet.Pays || '';
     var ref = (billet.Reference || '') + ' ' + (billet.Millesime || 'XXXX') + '-' + (billet.Version || 'X');
     var nom = billet.NomBillet || '';
-    var statut = billet.Categorie || '';
+    // Le statut annoncé est celui de la collecte partagée (sans collecte : celui du billet)
+    var statut = (collecte && collecte.categorie) || billet.Categorie || '';
 
-    // Partie haute : titre + statut + prix
+    // Partie haute : titre + statut + version + prix
     var topLines = [];
     topLines.push('🎫 ' + pays + ' - ' + ref + ' - ' + nom);
 
     var statutLine = '📌 Statut : ' + statut;
-    // Demande #16 — le collecteur affiché vient de la collecte principale du billet
-    var colPrincTip = collectePrincipaleBilletAdmin(billet.id);
-    var collecteurTip = colPrincTip && colPrincTip.collecteur;
-    if (statut === 'Collecte' && collecteurTip) {
-        statutLine += ' | Collecteur : ' + collecteurTip;
-        var collecteurObj = collecteursList.find(function(c) { return c.alias === collecteurTip; });
+    if (statut === 'Collecte' && collecte && collecte.collecteur) {
+        statutLine += ' | Collecteur : ' + collecte.collecteur;
+        var collecteurObj = collecteursList.find(function(c) { return c.alias === collecte.collecteur; });
         if (collecteurObj && collecteurObj.paypal_email) {
             statutLine += ' (' + collecteurObj.paypal_email + ')';
         }
     }
     topLines.push(statutLine);
 
-    var vne = billet.VersionNormaleExiste !== false;
+    // Versions ouvertes par CETTE collecte (#46 : son périmètre) parmi celles du billet
+    var scope = (collecte && collecte.scope) || 'les_deux';
     var varianteVal = billet.HasVariante || '';
     var varianteActive = varianteVal && varianteVal !== 'N';
-    // Demande #16 — le prix vient des collectes du billet. Sur un billet à
-    // plusieurs collectes on affiche celui de la première ouverte (le partage
-    // Facebook annonce la collecte en cours).
-    var collectesBillet = collectesDuBillet(billet.id);
-    var collecteAffichee = null;
-    for (var ci = 0; ci < collectesBillet.length; ci++) {
-        if (collectesBillet[ci].categorie !== 'Terminé') { collecteAffichee = collectesBillet[ci]; break; }
+    var vneBillet = billet.VersionNormaleExiste !== false;
+    var vne = vneBillet && scope !== 'variante';
+    var varOuverte = varianteActive && scope !== 'normal';
+    // Un billet à deux versions dont la collecte n'en couvre qu'une : on dit laquelle
+    if (vneBillet && varianteActive && (scope === 'normal' || scope === 'variante')) {
+        topLines.push('🔹 Version : ' + (scope === 'normal' ? 'normale' : (varianteLabel(varianteVal) || 'variante')));
     }
-    if (!collecteAffichee && collectesBillet.length > 0) collecteAffichee = collectesBillet[0];
-    var prixNormal = (collecteAffichee && collecteAffichee.prix) ? parseFloat(collecteAffichee.prix) : 0;
-    var prixVar = (collecteAffichee && collecteAffichee.prix_variante !== null && collecteAffichee.prix_variante !== undefined && collecteAffichee.prix_variante !== '')
-        ? parseFloat(collecteAffichee.prix_variante) : prixNormal;
 
-    if (!vne && varianteActive && prixVar) {
+    var prixNormal = (collecte && collecte.prix) ? parseFloat(collecte.prix) : 0;
+    var prixVar = (collecte && collecte.prix_variante !== null && collecte.prix_variante !== undefined && collecte.prix_variante !== '')
+        ? parseFloat(collecte.prix_variante) : prixNormal;
+
+    if (!vne && varOuverte && prixVar) {
         topLines.push('💰 Prix : ' + prixVar.toFixed(2) + '€ ' + varianteVal);
-    } else if (vne && varianteActive && prixNormal) {
+    } else if (vne && varOuverte && prixNormal) {
         topLines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€ normal / ' + prixVar.toFixed(2) + '€ ' + varianteVal);
-    } else if (prixNormal) {
+    } else if (vne && prixNormal) {
         topLines.push('💰 Prix : ' + prixNormal.toFixed(2) + '€');
     }
 
@@ -4838,6 +4899,8 @@ function renderCollectesList(collectes, billetId) {
             // Demande #38 — modifier une collecte existante (prix, dates, collecteur, statut…)
             '<button type="button" class="btn-modifier-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Modifier</button>' +
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
+            // Demande #87 — partager CETTE collecte (texte du post Facebook)
+            (isOpen ? '<button type="button" class="btn-partager-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" title="Partager cette collecte"><i class="fa-solid fa-share-nodes"></i> Partager</button>' : '') +
             // B6 / AM4 — abandon d'une pré-collecte : on la supprime, le billet
             // retombe en « Pas de collecte » via la dérivation.
             (estPreCollecte ? '<button type="button" class="btn-supprimer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" data-collecte-nom="' + escapeAttr(c.nom || '') + '">Supprimer la pré-collecte</button>' : '') +

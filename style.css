@@ -7520,6 +7520,20 @@ body.login-page {
     max-height: 400px;
     overflow-y: auto;
 }
+/* Demande #87 — choisir la collecte à partager quand plusieurs sont en cours */
+.share-modal-choix {
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+.share-modal-choix p {
+    margin: 0 0 var(--spacing-xs) 0;
+}
+.share-modal-choix-btn {
+    text-align: left;
+    width: 100%;
+}
 .share-modal-text {
     padding: var(--spacing-md);
     font-family: inherit;
@@ -9868,7 +9882,8 @@ button.collecte-badge-status {
 }
 
 /* Demande #38 — bouton « Modifier » d'une collecte dans la liste */
-.btn-modifier-collecte {
+.btn-modifier-collecte,
+.btn-partager-collecte {   /* #87 : même allure que « Modifier » */
     padding: 4px 10px;
     border: 1px solid var(--color-primary);
     background: var(--color-bg-white, #fff);
@@ -9878,7 +9893,8 @@ button.collecte-badge-status {
     cursor: pointer;
 }
 
-.btn-modifier-collecte:hover {
+.btn-modifier-collecte:hover,
+.btn-partager-collecte:hover {
     background: var(--color-primary);
     color: var(--color-text-inverse, #fff);
 }
