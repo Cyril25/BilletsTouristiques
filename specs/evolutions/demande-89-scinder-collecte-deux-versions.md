@@ -57,7 +57,9 @@ inscriptions à moitié déplacées), réservée aux admins (`is_admin_ou_supera
 `variante`) :
 
 1. crée la **nouvelle collecte** avec le périmètre détaché et les champs du formulaire (nom,
-   collecteur, prix, dates, statut, plafond) ;
+   collecteur, prix, dates, statut) ; **le plafond (`nb_max`) de l'originale est recopié** sur la
+   nouvelle, et l'originale garde le sien (décision de Cyril, 21/10 — Q4 : « dans un premier temps
+   ça ira bien ») ;
 2. pour chaque inscription de la collecte d'origine qui a des quantités dans la version détachée :
    crée l'inscription correspondante dans la nouvelle collecte (même membre, mêmes quantités pour
    cette version, `date_inscription` et `changed_by` conservés), puis remet ces quantités à 0 dans
@@ -71,7 +73,8 @@ pré-collecte), la nouvelle prend celle qu'on ouvre. Les pré-inscriptions garde
 historique là où rien ne bouge.
 
 **Garde-fous** : refus si une inscription de la collecte d'origine a un paiement déclaré ou
-confirmé, un complément de prix, un rangement en enveloppe, `fdp_regles` ou `envoye` (Q2) ; refus
+confirmé, un complément de prix, un rangement en enveloppe, `fdp_regles` ou `envoye` (Q2 —
+confirmé par Cyril le 21/10 : « uniquement quand collecte sans aucun paiement ») ; refus
 si la collecte n'est pas `les_deux` ; refus si elle est terminée.
 
 ### 2. Où on le propose
@@ -85,12 +88,22 @@ si la collecte n'est pas `les_deux` ; refus si elle est terminée.
   - **« Créer une collecte à part »** — le comportement actuel, avec l'avertissement que les
     pré-inscrits de « Collecte 2026 » ne seront **pas** inscrits à la nouvelle ;
   - « Annuler ».
-- **Sur une collecte `les_deux`** de la liste des collectes de la fiche (`renderCollectesList()`),
-  un bouton « Scinder » (Q6), qui ouvre le même formulaire pré-rempli.
+- **Sur une collecte de la liste des collectes de la fiche** (`renderCollectesList()`), un bouton
+  « Scinder », qui ouvre le même formulaire pré-rempli — **affiché seulement sur une collecte qu'on
+  peut réellement scinder** : `les_deux`, non terminée, et sans aucune inscription à paiement
+  déclaré ou confirmé, enveloppe, `envoye` ou `fdp_regles` (précisé par Cyril le 21/10 — Q6 : « il
+  ne faut pas que ça perturbe la compréhension globale du système »). Pour le savoir à
+  l'affichage, `chargerCompteursInscriptionsBillet()` lit déjà les inscriptions du billet : y
+  ajouter ces colonnes et compter, par collecte, les inscriptions qui bloquent. La fonction en base
+  refait le contrôle (compléments de prix compris) : le bouton n'est qu'un raccourci.
+  ~~un bouton « Scinder » (Q6) sur toute collecte `les_deux`~~ — remplacé le 21/10 : un bouton
+  qu'on ne pourrait pas utiliser brouillerait la lecture de la liste.
 
 ### 3. Après la scission
 
 - Le statut du billet reste dérivé de ses collectes (rien à faire).
+- **Les membres ne sont pas prévenus** (décision de Cyril, 21/10 — Q3 : « c'est juste une collecte
+  qui est scindée »).
 - Le catalogue et la fiche montrent deux collectes ; #88 garantit que les deux restent visibles
   tant qu'elles sont en cours ; #87 donne à chacune son bouton « Partager ».
 - « Mes inscriptions » : le membre voit deux inscriptions au billet, une par collecte, comme
@@ -140,14 +153,14 @@ paiement sont ceux de la production.
 
 - ~~**Q1 — Lapalisse** : rattacher les 11 pré-inscrits à la collecte de Damien (a), ou les laisser
   s'inscrire eux-mêmes (b) ?~~ Tranchée par Cyril le 21/10 : (a), faite le jour même (§ 4).
-- **Q2 — Quand peut-on scinder ?** Proposé : seulement si aucune inscription n'a de paiement, de
-  complément, d'enveloppe ou d'envoi — en pratique, une pré-collecte. Faut-il aussi pouvoir scinder
-  une collecte déjà ouverte, avec ses paiements ?
-- **Q3 — Prévenir les membres** dont l'inscription est répartie (notification « ton inscription à
-  Lapalisse est maintenant en deux collectes ») ?
-- **Q4 — Le plafond** (#24) d'une collecte scindée : recopié sur les deux, ou à ressaisir ?
-- **Q5 — Qui** : les admins seulement (proposé : c'est eux qui créent les collectes) ?
-- **Q6 — Le bouton « Scinder »** sur une collecte, en plus de la proposition à la création ?
+*Réponses de Cyril en commentaire, le 21/10 (Q2, Q3, Q4, Q6).*
+
+- ~~**Q2 — Quand peut-on scinder ?**~~ Seulement une collecte sans aucun paiement (§ 1, garde-fous).
+- ~~**Q3 — Prévenir les membres ?**~~ Non (§ 3).
+- ~~**Q4 — Le plafond**~~ : recopié sur les deux collectes, dans un premier temps (§ 1).
+- **Q5 — Qui** : les admins seulement — proposé, pas de réponse ; retenu par défaut (ce sont eux qui
+  créent les collectes).
+- ~~**Q6 — Le bouton « Scinder »**~~ : oui, mais seulement sur une collecte qu'on peut scinder (§ 2).
 
 ## Liens
 
