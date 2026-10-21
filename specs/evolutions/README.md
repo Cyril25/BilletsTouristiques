@@ -116,9 +116,9 @@ qui n'est plus vrai.
 | [#78 (prod)](demande-78-boutons-fiche-membre.md) | Les boutons ne dépassent plus des fiches de Gestion des membres ([en clair](demande-78-boutons-fiche-membre-en-clair.md)) | S | À tester | ✅ | `72d33be` |
 | [#79 (prod)](demande-79-date-heure-inscription.md) | Date et heure d'inscription sur les collectes ([en clair](demande-79-date-heure-inscription-en-clair.md)) | S | À tester | ✅ | `49f0666` |
 | [#80 (prod)](demande-80-suppression-doublon-billet.md) | Supprimer un billet en doublon, et ne plus en créer ([en clair](demande-80-suppression-doublon-billet-en-clair.md)) | M | À tester | ✅ | `b574b62` |
-| [#82 (prod)](demande-82-historique-envois-en-cours-termines.md) | Historique des envois : « En cours » et « Terminés » ([en clair](demande-82-historique-envois-en-cours-termines-en-clair.md)) | S | En cours (dev) | — | — |
-| [#84 (prod)](demande-84-recapitulatif-enveloppes.md) | Récapitulatif des enveloppes en préparation ([en clair](demande-84-recapitulatif-enveloppes-en-clair.md)) | M | En cours (dev) | — | — |
-| [#86 (prod)](demande-86-relance-frais-de-port.md) | Relancer les frais de port impayés ([en clair](demande-86-relance-frais-de-port-en-clair.md)) | S | En cours (dev) | — | — |
+| [#82 (prod)](demande-82-historique-envois-en-cours-termines.md) | Historique des envois : « En cours » et « Terminés » ([en clair](demande-82-historique-envois-en-cours-termines-en-clair.md)) | S | À tester | ✅ | `2c225b4` |
+| [#84 (prod)](demande-84-recapitulatif-enveloppes.md) | Récapitulatif des enveloppes en préparation ([en clair](demande-84-recapitulatif-enveloppes-en-clair.md)) | M | À tester | ✅ | `1ca79c8` |
+| [#86 (prod)](demande-86-relance-frais-de-port.md) | Relancer les frais de port impayés ([en clair](demande-86-relance-frais-de-port-en-clair.md)) | S | À tester | ✅ | `147f9cc` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée

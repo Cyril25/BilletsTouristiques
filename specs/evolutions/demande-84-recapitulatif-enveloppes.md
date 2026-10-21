@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **M**)
 - **Demande :** #84 de la table `demandes` de production — Jean-Philippe, 2026-10-19, priorité
   *normale*. Public cité : collecteurs.
-- **Statut :** développée le 2026-10-21 (dev lancé par Cyril le jour même).
+- **Statut :** à tester — en ligne le 2026-10-21 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-84-recapitulatif-enveloppes-en-clair.md](demande-84-recapitulatif-enveloppes-en-clair.md)
 
 ## Contexte (demande)
@@ -74,4 +74,13 @@ Non-régression : bancs #86 (27/27), #82 (17/17) et incident du 16/10 (26/26).
 
 ## Réalisation
 
-*(à compléter)*
+Commit `1ca79c8` (2026-10-21), cache `v325` :
+
+- `mes-collectes.js` — `renderEnveloppesListe()` : bouton en tête et `enveloppesPourRecap` ;
+  nouvelles `quantitesRecap()`, `ouvrirRecapEnveloppes()`, `imprimerRecapEnveloppes()` ;
+  `copierRecapPaiement(idTexte)`.
+
+Vérifié : banc 17/17 et non-régressions (ci-dessus) ; site en ligne contrôlé (le code est servi).
+Base : à tester + journal + docs, notification à Jean-Philippe (membre 45), nouveauté
+`collecteurs`. **Pas vérifié** : vraie page connectée (avec des dizaines d'enveloppes), impression réelle,
+téléphone, mode sombre.

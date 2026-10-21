@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **S**)
 - **Demande :** #82 de la table `demandes` de production — Sébastien, 2026-10-15, priorité
   *normale*. Publics cités : membres, collecteurs, admins.
-- **Statut :** développée le 2026-10-21 (dev lancé par Cyril le jour même).
+- **Statut :** à tester — en ligne le 2026-10-21 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-82-historique-envois-en-cours-termines-en-clair.md](demande-82-historique-envois-en-cours-termines-en-clair.md)
 
 ## Contexte (demande)
@@ -29,6 +29,13 @@
 2. **Un envoi « distribué » est en cours** : La Poste l'a livré mais le membre n'a pas confirmé la
    réception — c'est la même frontière que la vue membre et que les cases de #19. Choix soumis à
    Sébastien en commentaire sur la fiche le 21/10, avant le développement.
+   **Réponse de Sébastien (21/10, postée pendant le développement, lue après la mise en ligne)** :
+   « il faut que ce soit moi qui valide définitivement le courrier reçu, suite au membre qui me
+   dira que tout est ok ». Le « distribué » reste donc bien en cours. Mais un membre peut aussi
+   passer lui-même son envoi en « reçu » (« Confirmer la réception » dans Mes envois,
+   `confirmerReception()` de `mes-inscriptions.js`), ce qui le range dans « Terminés » sans
+   validation du collecteur. Réserver la fin au collecteur demande une étape de plus (réception
+   déclarée par le membre, puis validée par le collecteur) : **hors #82, à trancher avec Sébastien**.
 3. **Une section vide ne s'affiche pas** (y compris quand la recherche la vide). Le message
    « Aucun résultat pour … » est inchangé.
 4. **Inchangés** : la recherche (filtre les deux sections), le compteur et le « Total payé » du
@@ -58,4 +65,11 @@ cours : **17/17** ; contre-épreuve sur l'ancien code : 10 KO.
 
 ## Réalisation
 
-*(à compléter)*
+Commit `2c225b4` (2026-10-21), cache `v324` :
+
+- `mes-collectes.js` — `buildHistoriqueCards()` : les cartes vont dans deux sections selon le
+  statut, titres `h4.envois-section-title`, section vide masquée.
+
+Vérifié : banc 17/17 (ci-dessus) ; site en ligne contrôlé (le code est servi). Base : à tester +
+journal + docs, notification à Sébastien (membre 93), nouveauté `collecteurs`.
+**Pas vérifié** : vraie page connectée, téléphone, mode sombre.

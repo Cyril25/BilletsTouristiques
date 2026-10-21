@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **S**)
 - **Demande :** #86 de la table `demandes` de production — Sébastien, 2026-10-21, priorité
   *haute*. Publics cités : membres, collecteurs, admins.
-- **Statut :** développée le 2026-10-21 (dev lancé par Cyril le jour même).
+- **Statut :** à tester — en ligne le 2026-10-21 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-86-relance-frais-de-port-en-clair.md](demande-86-relance-frais-de-port-en-clair.md)
 
 ## Contexte (demande)
@@ -75,4 +75,11 @@ dont le toast « Aucun impayé à relancer » de la demande.
 
 ## Réalisation
 
-*(à compléter)*
+Commit `147f9cc` (2026-10-21), cache `v323` :
+
+- `mes-collectes.js` — § 10 : `impayesParMembre()` et `detailHorsBillets()` (nouvelles) ;
+  `ouvrirRelanceGlobale()` et `ouvrirRecapPaiementGlobal()` réécrites dessus.
+
+Vérifié : banc 27/27 (ci-dessus) ; site en ligne contrôlé (le code est servi). Base : à tester +
+journal + docs, notification à Sébastien (membre 93), nouveauté `collecteurs`.
+**Pas vérifié** : vraie page connectée, téléphone.
