@@ -3,7 +3,8 @@
 - **Épic :** Corrections et évolutions (complexité **L**)
 - **Demande :** #89 de la table `demandes` de production — Cyril, 2026-10-21, priorité *normale*.
   Publics cités : membres, collecteurs, admins. Liée à #87, #88 et #83.
-- **Statut :** analyse à valider (rédigée le 2026-10-21 par le rituel des demandes).
+- **Statut :** développée le 2026-10-21 (« go 89 » de Cyril) — **migration à jouer** (voir
+  Réalisation).
 - **Version en clair :** [demande-89-scinder-collecte-deux-versions-en-clair.md](demande-89-scinder-collecte-deux-versions-en-clair.md)
 
 ## Contexte (demande)
@@ -50,14 +51,14 @@ pré-réservés ne mènent nulle part.**
 
 ### 1. L'opération « scinder »
 
-Une fonction en base, **`scinder_collecte(p_collecte uuid, p_version_nouvelle text, p_nouvelle
-jsonb)`**, exécutée en **une seule transaction** (sinon une coupure au milieu laisserait des
+Une fonction en base, `scinder_collecte(p_collecte uuid, p_version text, p_nouvelle jsonb)`,
+exécutée en **une seule transaction** (sinon une coupure au milieu laisserait des
 inscriptions à moitié déplacées), réservée aux admins (`is_admin_ou_superadmin()`, jamais
 `TO authenticated`). Pour une collecte `les_deux` et une version à détacher (`normal` ou
 `variante`) :
 
 1. crée la **nouvelle collecte** avec le périmètre détaché et les champs du formulaire (nom,
-   collecteur, prix, dates, statut) ; **le plafond (`nb_max`) de l'originale est recopié** sur la
+   collecteur, prix, dates, statut) ; le plafond (`nb_max`) de l'originale **est recopié** sur la
    nouvelle, et l'originale garde le sien (décision de Cyril, 21/10 — Q4 : « dans un premier temps
    ça ira bien ») ;
 2. pour chaque inscription de la collecte d'origine qui a des quantités dans la version détachée :
@@ -96,7 +97,7 @@ si la collecte n'est pas `les_deux` ; refus si elle est terminée.
   l'affichage, `chargerCompteursInscriptionsBillet()` lit déjà les inscriptions du billet : y
   ajouter ces colonnes et compter, par collecte, les inscriptions qui bloquent. La fonction en base
   refait le contrôle (compléments de prix compris) : le bouton n'est qu'un raccourci.
-  ~~un bouton « Scinder » (Q6) sur toute collecte `les_deux`~~ — remplacé le 21/10 : un bouton
+  ~~un bouton « Scinder » (Q6) sur toute collecte « les deux versions »~~ — remplacé le 21/10 : un bouton
   qu'on ne pourrait pas utiliser brouillerait la lecture de la liste.
 
 ### 3. Après la scission
@@ -158,9 +159,255 @@ paiement sont ceux de la production.
 - ~~**Q2 — Quand peut-on scinder ?**~~ Seulement une collecte sans aucun paiement (§ 1, garde-fous).
 - ~~**Q3 — Prévenir les membres ?**~~ Non (§ 3).
 - ~~**Q4 — Le plafond**~~ : recopié sur les deux collectes, dans un premier temps (§ 1).
-- **Q5 — Qui** : les admins seulement — proposé, pas de réponse ; retenu par défaut (ce sont eux qui
-  créent les collectes).
+- ~~**Q5 — Qui**~~ : les admins seulement (confirmé par Cyril le 21/10).
 - ~~**Q6 — Le bouton « Scinder »**~~ : oui, mais seulement sur une collecte qu'on peut scinder (§ 2).
+
+## Réalisation
+
+Développée le 2026-10-21 sur le « go 89 » de Cyril. Site : commit `3e166e0`, cache `v328`.
+**La migration est à jouer par Cyril** : tant qu'elle ne l'est pas, « Scinder » répond « la
+migration de la demande #89 doit être jouée » et rien d'autre ne change.
+
+### Trouvé en route : l'audit réécrivait l'auteur des pré-inscriptions
+
+`set_inscription_audit()` (déclencheur de toutes les inscriptions) **réécrit l'auteur** (`changed_by`) **à chaque
+modification** — e-mail du jeton, ou « système » sans jeton. Or `changed_by = 'pré-inscription'`
+est ce qui distingue une pré-inscription automatique : le D12, `supprimerPreCollecte()`, le
+recalcul et la réconciliation des versions s'en servent. Conséquences :
+- **la réparation de Lapalisse du matin** (par le Worker) a passé à « système » les 10 inscriptions
+  restées dans « Collecte 2026 ». Les 11 lignes recopiées chez Damien ont gardé « pré-inscription »
+  (une création conserve l'auteur fourni) : les 9 membres correspondants étaient donc des
+  pré-inscrits, le 10ᵉ (membre 100) une inscription manuelle ;
+- **la scission aurait fait pareil** sur chaque inscription de l'originale.
+
+Parade : l'audit reçoit un réglage local à la transaction, `billets.audit_garder_auteur`, que
+`scinder_collecte()` pose le temps de sa mise à jour (et que le script de Lapalisse utilise). Hors de
+ce réglage, l'audit se comporte exactement comme avant (vérifié). Q5 : **admins seulement**,
+confirmé par Cyril (commentaire du 21/10).
+
+### Base (scripts non versionnés, `scripts/`)
+
+| Script | Rôle |
+|---|---|
+| `migration-demande-89-1-constat.sql` | lecture seule : l'audit en prod a l'empreinte attendue (md5 du corps sans blancs, relevé sur le catalogue du 17/09), la fonction n'existe pas, colonnes présentes, 9 lignes de Lapalisse à corriger |
+| `migration-demande-89-2-migration.sql` | l'audit avec le réglage, `scinder_collecte()`, droits, rechargement du schéma de l'API — reproduite en annexe |
+| `migration-demande-89-3-controle.sql` | lecture seule : 5 points OK |
+| `migration-demande-89-4-lapalisse-auteur.sql` | ponctuel, après l'étape 2 : rend « pré-inscription » aux 9 dorés de Lapalisse |
+| `migration-demande-89-9-retour-arriere.sql` | l'audit d'avant, à l'identique (même empreinte), et la fonction supprimée |
+
+### Site
+
+- `admin.js` — `saveCollecte()` pose la question avant de créer (et `posterCollecte()` reprend la
+  création telle qu'elle était) ; nouvelles `billetADeuxVersions()`, `collecteLesDeuxEnCours()`,
+  `collecteScindable()`, `ouvrirScissionCollecte()`, `majInfoScission()`, `proposerScission()`,
+  `choisirScission()`, `scinderCollecte()` ; `chargerCompteursInscriptionsBillet()` compte les
+  inscriptions engagées ; bouton `btn-scinder-collecte` dans `renderCollectesList()` et délégation
+  d'`initPanel()` ; `sortirEditionCollecte()` sort du mode scission.
+- `style.css` — `.btn-scinder-collecte`, `.collecte-scission-info`, `.scission-choix-overlay`
+  (au-dessus de la modale de collecte, z-index 3000).
+- Pas de pré-inscriptions automatiques après une scission : elle emporte celles qui existent.
+
+### Vérification
+
+- `scripts/banc-62/test-89-scission.sh` : **vrai Postgres 17** (Docker), schéma minimal mais
+  fonctions et déclencheurs de la production recopiés du catalogue (audit, D4 dans les deux sens,
+  `is_admin_ou_superadmin`), et les **vrais scripts** 1, 2, 3, 4, 9. Constat → migration (rejouable)
+  → contrôle 5/5 ; scission des normaux (cas de Lapalisse) et des variantes ; 8 refus sans effet
+  (membre, clé publique seule, paiement déclaré, complément de prix, enveloppe, collecte d'une
+  version, terminée, version inconnue) ; superadmin, éditeur SQL et Worker autorisés ; audit
+  ordinaire inchangé ; étape 4 ; retour arrière jusqu'à l'empreinte d'origine. **36/36.**
+- `scripts/banc-62/test-89-site.mjs` : vrai `admin.js` sur `admin-billet.html` dans jsdom, base
+  imitée. Bouton (4 cas), modale de scission et appel, question à la création (3 choix), cas sans
+  question, migration absente. **25/25.** Non-régression : #87 15/15, #80 51/51.
+- **Pas vérifié** : la vraie base (le catalogue date du 17/09 ; c'est le constat, par l'empreinte,
+  qui dira si l'audit a bougé depuis), la vraie page connectée, le téléphone.
+
+### Annexe — la migration (étape 2)
+
+```sql
+-- =============================================================================
+-- Demande #89 — Scinder une collecte « les deux versions » — étape 2 : MIGRATION
+-- =============================================================================
+-- À jouer dans l'éditeur SQL de Supabase, APRÈS le constat (…-89-1-constat.sql) : toutes ses
+-- lignes doivent dire PRET ou OK. Rejouable sans danger (CREATE OR REPLACE). Rien n'est supprimé.
+--
+-- 1. L'audit des inscriptions (set_inscription_audit) sait, le temps d'une transaction, NE PAS
+--    réécrire l'auteur d'une inscription modifiée. Sans ça, scinder une collecte transformait les
+--    pré-inscriptions automatiques en inscriptions « manuelles » (vu sur Lapalisse le 21/10).
+-- 2. scinder_collecte(collecte, version, nouvelle) : tout en une transaction, admins seulement.
+-- =============================================================================
+
+BEGIN;
+
+-- 1. Audit : identique à la version en production, plus le réglage « garder l'auteur ».
+CREATE OR REPLACE FUNCTION public.set_inscription_audit()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    -- Toujours mettre à jour last_changed
+    NEW.last_changed := NOW();
+
+    IF TG_OP = 'INSERT' THEN
+        -- Sur création : garder changed_by si fourni explicitement (≠ valeur par défaut 'système')
+        -- sinon utiliser l'email JWT de l'utilisateur connecté, sinon 'système'
+        IF NEW.changed_by IS NULL OR NEW.changed_by = 'système' THEN
+            NEW.changed_by := COALESCE(auth.jwt() ->> 'email', 'système');
+        END IF;
+    ELSIF current_setting('billets.audit_garder_auteur', true) = 'oui' THEN
+        -- Demande #89 : une opération de maintenance (scission d'une collecte) déplace des
+        -- quantités sans changer l'auteur de l'inscription. Réglage local à la transaction,
+        -- posé par scinder_collecte() : changed_by garde la valeur de la ligne (ou celle que
+        -- l'instruction fixe elle-même).
+        NULL;
+    ELSE
+        -- Sur modification : toujours utiliser l'email JWT ou 'système'
+        NEW.changed_by := COALESCE(auth.jwt() ->> 'email', 'système');
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+
+-- 2. La scission.
+CREATE OR REPLACE FUNCTION public.scinder_collecte(p_collecte uuid, p_version text, p_nouvelle jsonb DEFAULT '{}'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $fn$
+DECLARE
+    v_orig        collectes%ROWTYPE;
+    v_reste       text;
+    v_bloquantes  int;
+    v_nouvelle    uuid;
+    v_ids         int[];
+    v_creees      int;
+    v_modifiees   int;
+    v_supprimees  int;
+BEGIN
+    -- Admins seulement. Hors du site (éditeur SQL : pas de JWT ; Worker de maintenance :
+    -- service_role) : autorisé, comme les autres garde-fous du projet (#64).
+    IF auth.jwt() IS NOT NULL
+       AND COALESCE(auth.jwt() ->> 'role', '') <> 'service_role'
+       AND NOT public.is_admin_ou_superadmin() THEN
+        RAISE EXCEPTION 'Scinder une collecte est réservé aux admins.' USING ERRCODE = '42501';
+    END IF;
+
+    IF p_version IS NULL OR p_version NOT IN ('normal', 'variante') THEN
+        RAISE EXCEPTION 'Version à détacher inconnue : % (normal ou variante).', p_version;
+    END IF;
+    v_reste := CASE p_version WHEN 'normal' THEN 'variante' ELSE 'normal' END;
+
+    SELECT * INTO v_orig FROM collectes WHERE id = p_collecte FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Collecte introuvable.';
+    END IF;
+    IF v_orig.scope IS DISTINCT FROM 'les_deux' THEN
+        RAISE EXCEPTION 'Seule une collecte « les deux versions » se scinde (« % » couvre : %).', v_orig.nom, v_orig.scope;
+    END IF;
+    IF v_orig.categorie = 'Terminé' THEN
+        RAISE EXCEPTION 'La collecte « % » est terminée : elle ne se scinde pas.', v_orig.nom;
+    END IF;
+
+    -- Personne n'a encore payé, déclaré un paiement, reçu un billet ni de complément de prix
+    -- (décision de Cyril du 21/10).
+    SELECT COUNT(*) INTO v_bloquantes
+      FROM inscriptions i
+     WHERE i.collecte_id = p_collecte
+       AND (i.statut_paiement <> 'non_paye'
+            OR i.envoye = true
+            OR i.fdp_regles = true
+            OR i.enveloppe_id IS NOT NULL
+            OR i.statut_livraison <> 'non_reparti'
+            OR EXISTS (SELECT 1 FROM dettes d WHERE d.inscription_id = i.id));
+    IF v_bloquantes > 0 THEN
+        RAISE EXCEPTION 'Impossible de scinder « % » : % inscription(s) ont déjà un paiement, un envoi ou un complément de prix.',
+            v_orig.nom, v_bloquantes;
+    END IF;
+
+    -- 1. La nouvelle collecte : la version détachée et les champs du formulaire. Le plafond de
+    --    l'originale est recopié quand le formulaire n'en donne pas (décision du 21/10).
+    INSERT INTO collectes (billet_id, nom, scope, categorie, collecteur, prix, prix_variante,
+                           payer_fdp, fdp_com, date_pre, date_coll, date_fin, nb_max)
+    VALUES (v_orig.billet_id,
+            COALESCE(NULLIF(btrim(p_nouvelle ->> 'nom'), ''),
+                     v_orig.nom || CASE p_version WHEN 'normal' THEN ' — normaux' ELSE ' — variantes' END),
+            p_version,
+            COALESCE(NULLIF(p_nouvelle ->> 'categorie', ''), 'Pré collecte'),
+            NULLIF(p_nouvelle ->> 'collecteur', ''),
+            NULLIF(p_nouvelle ->> 'prix', '')::numeric,
+            NULLIF(p_nouvelle ->> 'prix_variante', '')::numeric,
+            COALESCE(p_nouvelle ->> 'payer_fdp', ''),
+            COALESCE(p_nouvelle ->> 'fdp_com', ''),
+            COALESCE(NULLIF(p_nouvelle ->> 'date_pre', '')::date, current_date),
+            NULLIF(p_nouvelle ->> 'date_coll', '')::date,
+            NULLIF(p_nouvelle ->> 'date_fin', '')::date,
+            COALESCE(NULLIF(p_nouvelle ->> 'nb_max', '')::int, v_orig.nb_max))
+    RETURNING id INTO v_nouvelle;
+
+    -- 2. Chaque inscrit retrouve, dans la nouvelle collecte, ses quantités de la version
+    --    détachée : même auteur, même date d'inscription. Les « pas intéressé » ne suivent pas.
+    INSERT INTO inscriptions (billet_id, collecte_id, membre_id, nb_normaux, nb_variantes,
+                              mode_paiement, mode_envoi, commentaire, adresse_snapshot,
+                              changed_by, date_inscription)
+    SELECT i.billet_id, v_nouvelle, i.membre_id,
+           CASE p_version WHEN 'normal' THEN i.nb_normaux ELSE 0 END,
+           CASE p_version WHEN 'variante' THEN i.nb_variantes ELSE 0 END,
+           i.mode_paiement, i.mode_envoi, i.commentaire, i.adresse_snapshot,
+           i.changed_by, i.date_inscription
+      FROM inscriptions i
+     WHERE i.collecte_id = p_collecte
+       AND i.pas_interesse = false
+       AND CASE p_version WHEN 'normal' THEN i.nb_normaux ELSE i.nb_variantes END > 0;
+    GET DIAGNOSTICS v_creees = ROW_COUNT;
+
+    -- 3. L'originale perd ces quantités ; l'auteur des inscriptions ne change pas.
+    SELECT array_agg(i.id) INTO v_ids
+      FROM inscriptions i
+     WHERE i.collecte_id = p_collecte
+       AND CASE p_version WHEN 'normal' THEN i.nb_normaux ELSE i.nb_variantes END > 0;
+
+    PERFORM set_config('billets.audit_garder_auteur', 'oui', true);
+    UPDATE inscriptions i
+       SET nb_normaux   = CASE p_version WHEN 'normal' THEN 0 ELSE i.nb_normaux END,
+           nb_variantes = CASE p_version WHEN 'variante' THEN 0 ELSE i.nb_variantes END
+     WHERE i.id = ANY (COALESCE(v_ids, '{}'));
+    GET DIAGNOSTICS v_modifiees = ROW_COUNT;
+    PERFORM set_config('billets.audit_garder_auteur', '', true);
+
+    -- Une inscription qui n'a plus rien (le membre n'avait pris que la version détachée)
+    -- disparaît de l'originale.
+    DELETE FROM inscriptions i
+     WHERE i.id = ANY (COALESCE(v_ids, '{}'))
+       AND i.pas_interesse = false
+       AND COALESCE(i.nb_normaux, 0) = 0
+       AND COALESCE(i.nb_variantes, 0) = 0;
+    GET DIAGNOSTICS v_supprimees = ROW_COUNT;
+
+    -- 4. L'originale ne couvre plus que la version restante (l'invariant D4 l'accepte : il ne
+    --    lui reste plus aucune quantité de l'autre version).
+    UPDATE collectes SET scope = v_reste WHERE id = p_collecte;
+
+    RETURN jsonb_build_object(
+        'collecte_scindee', p_collecte,
+        'nouvelle_collecte', v_nouvelle,
+        'version_detachee', p_version,
+        'inscriptions_creees', v_creees,
+        'inscriptions_modifiees', v_modifiees,
+        'inscriptions_supprimees', v_supprimees);
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.scinder_collecte(uuid, text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.scinder_collecte(uuid, text, jsonb) TO anon, authenticated, service_role;
+
+COMMIT;
+
+-- Le site appelle la fonction par l'API : qu'elle la voie tout de suite.
+NOTIFY pgrst, 'reload schema';
+```
 
 ## Liens
 

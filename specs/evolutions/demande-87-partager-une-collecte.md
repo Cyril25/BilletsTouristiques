@@ -43,7 +43,7 @@ collecte des normaux (Damien, 3,20 €) et une pré-collecte des dorés.
    elle est partagée directement ; **plusieurs** → la fenêtre propose de choisir
    (`afficherChoixCollectePartage()`), le texte et « Copier » attendent le choix ; aucune en cours
    → la première collecte du billet, comme avant.
-4. **La fenêtre de partage est ajoutée à `admin-billet.html`** : elle n'existait que sur
+4. **La fenêtre de partage est ajoutée** à `admin-billet.html` : elle n'existait que sur
    `admin.html`, et la liste des collectes vit sur la page du billet. Fermeture au clic hors de la
    fenêtre et par Échap : déjà gérées par `admin.js` dès que l'élément existe.
 

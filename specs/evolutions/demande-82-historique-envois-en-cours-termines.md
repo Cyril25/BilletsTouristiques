@@ -23,7 +23,7 @@
 
 ## Décisions
 
-1. **Deux sections dans `#historique-cards`** : « En cours (n) » = `expediee` + `distribuee`, puis
+1. **Deux sections** dans `#historique-cards` : « En cours (n) » = `expediee` + `distribuee`, puis
    « Terminés (n) » = `recue`. Chacune garde l'ordre de chargement. Titres en
    `.envois-section-title`, la classe des sections de « Préparation des envois ».
 2. **Un envoi « distribué » est en cours** : La Poste l'a livré mais le membre n'a pas confirmé la

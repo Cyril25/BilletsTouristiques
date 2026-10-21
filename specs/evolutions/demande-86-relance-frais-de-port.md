@@ -20,8 +20,8 @@
   `confirme`) et `dettes` (#44 : compléments de prix si `montant > 0`, avoirs si `< 0`).
 - L'écran (`renderVerificationPaiement`) et le total « En attente de paiement » comptent les trois
   — avoirs exclus du total, décision R1 de #44.
-- Mais `ouvrirRelanceGlobale()` et `ouvrirRecapPaiementGlobal()` ne lisent **que
-  `inscriptions`** : un membre qui ne doit que des frais d'envoi n'y figure pas, son total y est
+- Mais `ouvrirRelanceGlobale()` et `ouvrirRecapPaiementGlobal()` ne lisent **que les billets**
+  (`inscriptions`) : un membre qui ne doit que des frais d'envoi n'y figure pas, son total y est
   faux s'il doit aussi des billets, et sans billet impayé on tombe sur le toast « Aucun impayé à
   relancer » / « Aucun impayé ».
 - **Lu en production le 21/10** : Sébastien collecte sous l'alias « Laura NCY » (membre 93). Deux
