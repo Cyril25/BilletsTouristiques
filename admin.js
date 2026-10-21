@@ -1366,6 +1366,11 @@ function initPanel() {
                 cloturerCollecte(btnCloturer.dataset.collecteId, btnCloturer.dataset.billetId);
                 return;
             }
+            var btnScinder = e.target.closest('.btn-scinder-collecte');
+            if (btnScinder) {
+                ouvrirScissionCollecte(btnScinder.dataset.collecteId, btnScinder.dataset.billetId);   // #89
+                return;
+            }
             var btnPartager = e.target.closest('.btn-partager-collecte');
             if (btnPartager) {
                 openShareModal(btnPartager.dataset.billetId, btnPartager.dataset.collecteId);   // #87
@@ -4830,10 +4835,12 @@ function loadCollectesForBillet(billetId) {
 // Demande #48 — compteurs d'inscriptions par collecte pour un seul billet (page
 // dediee). Une requete courte, puis re-rendu de la liste des collectes.
 function chargerCompteursInscriptionsBillet(billetId) {
-    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes')
+    // Demande #89 — + ce qui engage une inscription (paiement, enveloppe, envoi) : une collecte
+    // n'est scindable que s'il n'y en a aucune.
+    return supabaseFetch('/rest/v1/inscriptions?billet_id=eq.' + billetId + '&pas_interesse=eq.false&select=collecte_id,nb_normaux,nb_variantes,statut_paiement,envoye,fdp_regles,enveloppe_id,statut_livraison')
         .then(function(rows) {
             (adminCollectesByBillet[billetId] || []).forEach(function(c) {
-                adminCollecteInscriptionCounts[c.id] = { count: 0, normaux: 0, variantes: 0 };
+                adminCollecteInscriptionCounts[c.id] = { count: 0, normaux: 0, variantes: 0, bloquantes: 0 };
             });
             (rows || []).forEach(function(r) {
                 if (!r.collecte_id) return;
@@ -4841,6 +4848,10 @@ function chargerCompteursInscriptionsBillet(billetId) {
                 cur.count += 1;
                 cur.normaux += (r.nb_normaux || 0);
                 cur.variantes += (r.nb_variantes || 0);
+                if ((r.statut_paiement && r.statut_paiement !== 'non_paye') || r.envoye || r.fdp_regles
+                    || r.enveloppe_id || (r.statut_livraison && r.statut_livraison !== 'non_reparti')) {
+                    cur.bloquantes = (cur.bloquantes || 0) + 1;   // #89
+                }
                 adminCollecteInscriptionCounts[r.collecte_id] = cur;
             });
             renderCollectesList(adminCollectesByBillet[billetId] || [], billetId);
@@ -4901,6 +4912,8 @@ function renderCollectesList(collectes, billetId) {
             (isOpen ? '<button type="button" class="btn-cloturer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '">Clôturer</button>' : '') +
             // Demande #87 — partager CETTE collecte (texte du post Facebook)
             (isOpen ? '<button type="button" class="btn-partager-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" title="Partager cette collecte"><i class="fa-solid fa-share-nodes"></i> Partager</button>' : '') +
+            // Demande #89 — seulement sur une collecte qu'on peut réellement scinder
+            (collecteScindable(c, billetId) ? '<button type="button" class="btn-scinder-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" title="Séparer les normaux et les variantes en deux collectes"><i class="fa-solid fa-code-branch"></i> Scinder</button>' : '') +
             // B6 / AM4 — abandon d'une pré-collecte : on la supprime, le billet
             // retombe en « Pas de collecte » via la dérivation.
             (estPreCollecte ? '<button type="button" class="btn-supprimer-collecte" data-collecte-id="' + c.id + '" data-billet-id="' + (billetId || '') + '" data-collecte-nom="' + escapeAttr(c.nom || '') + '">Supprimer la pré-collecte</button>' : '') +
@@ -5028,6 +5041,24 @@ function saveCollecte(billetId) {
         date_fin: getValue('field-collecte-date-fin') || null,
         nb_max: nbMax
     };
+    // Demande #89 — la modale a été ouverte par « Scinder » : la base fait tout.
+    if (scissionCollecte) {
+        scinderCollecte(billetId, scissionCollecte, body);
+        return;
+    }
+    // Demande #89 — une collecte d'une seule version alors qu'une collecte « les deux
+    // versions » est en cours sur le billet : on propose de la scinder plutôt que d'en créer
+    // une seconde, dont les pré-inscrits de la première seraient exclus (règle N1).
+    var lesDeux = (body.scope === 'normal' || body.scope === 'variante') && billetADeuxVersions(billetId)
+        ? collecteLesDeuxEnCours(billetId) : null;
+    if (lesDeux) {
+        proposerScission(billetId, lesDeux, body);
+        return;
+    }
+    posterCollecte(billetId, body);
+}
+
+function posterCollecte(billetId, body) {
     supabaseFetch('/rest/v1/collectes', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
@@ -5071,6 +5102,173 @@ function saveCollecte(billetId) {
     .catch(function(error) {
         console.error('Erreur ajout collecte:', error);
         showToast('Erreur lors de l\'ajout', 'error');
+    });
+}
+
+// ============================================================
+// Demande #89 — SCINDER UNE COLLECTE « LES DEUX VERSIONS »
+// ============================================================
+// Une collecte en cours qui couvre les deux versions se coupe en deux : la nouvelle reçoit la
+// version qu'on détache (chaque inscrit y retrouve ses quantités, son auteur et sa date), l'originale
+// garde l'autre. Tout se fait en base, en une transaction : scinder_collecte() (migration #89),
+// qui refait elle-même les contrôles. Possible seulement tant que personne n'a payé, déclaré,
+// reçu un billet ni de complément de prix (décision de Cyril, 21/10). Pas de pré-inscriptions
+// automatiques après coup : la scission emporte celles qui existent.
+var scissionCollecte = null;      // { id, nom } quand la modale d'ajout sert à scinder
+var propositionScission = null;   // { billetId, collecte, body } pendant la question posée
+
+function billetADeuxVersions(billetId) {
+    var b = adminBillets.find(function(x) { return String(x.id) === String(billetId); });
+    return !!b && b.VersionNormaleExiste !== false && hasVarianteActive(b.HasVariante);
+}
+
+// Libellé des variantes du billet (« dorés », « anniv »), sinon « variantes »
+function libelleVariantesBillet(billetId) {
+    var b = adminBillets.find(function(x) { return String(x.id) === String(billetId); });
+    return (b && varianteLabelShort(b.HasVariante)) || 'variantes';
+}
+function libelleVersionDetachee(billetId, scope) {
+    return scope === 'variante' ? libelleVariantesBillet(billetId) : 'normaux';
+}
+
+// La collecte « les deux versions » en cours du billet, celle qu'on proposerait de scinder
+function collecteLesDeuxEnCours(billetId) {
+    var liste = adminCollectesByBillet[billetId] || currentBilletCollectes || [];
+    for (var i = 0; i < liste.length; i++) {
+        if (liste[i].scope === 'les_deux' && liste[i].categorie !== 'Terminé') return liste[i];
+    }
+    return null;
+}
+
+// Le bouton « Scinder » n'apparaît que là où il servira (décision de Cyril, 21/10) : compteurs de
+// la page chargés, et aucune inscription déjà engagée (paiement, enveloppe, envoi).
+function collecteScindable(c, billetId) {
+    if (!c || c.scope !== 'les_deux' || c.categorie === 'Terminé') return false;
+    if (!billetADeuxVersions(billetId)) return false;
+    var cnt = adminCollecteInscriptionCounts[c.id];
+    return !!cnt && cnt.bloquantes === 0;
+}
+
+function ouvrirScissionCollecte(collecteId, billetId) {
+    var c = (adminCollectesByBillet[billetId] || []).find(function(x) { return String(x.id) === String(collecteId); });
+    if (!c) return;
+    ouvrirAjoutCollecte();
+    scissionCollecte = { id: c.id, nom: c.nom || 'la collecte' };
+    var title = document.getElementById('collecte-form-title');
+    if (title) title.textContent = 'Scinder « ' + scissionCollecte.nom + ' »';
+    var scopeEl = document.getElementById('field-collecte-scope');
+    if (scopeEl) {
+        // On détache une version : « Les deux » n'a pas de sens ici
+        Array.prototype.forEach.call(scopeEl.options, function(o) { o.disabled = (o.value === 'les_deux' || o.value === ''); });
+        scopeEl.value = 'normal';
+        scopeEl.onchange = function() { majInfoScission(billetId); };
+        toggleCollectePrixFields();
+    }
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.innerHTML = '<i class="fa-solid fa-code-branch"></i> Scinder';
+    majInfoScission(billetId);
+}
+
+// Le bandeau de la modale : ce qui va se passer, chiffres à l'appui
+function majInfoScission(billetId) {
+    var info = document.getElementById('collecte-scission-info');
+    if (!info) {
+        var ancre = document.getElementById('collecte-modal-billet');
+        if (!ancre || !ancre.parentNode) return;
+        info = document.createElement('div');
+        info.id = 'collecte-scission-info';
+        info.className = 'collecte-scission-info';
+        ancre.parentNode.insertBefore(info, ancre.nextSibling);
+    }
+    if (!scissionCollecte) { info.style.display = 'none'; return; }
+    var scopeEl = document.getElementById('field-collecte-scope');
+    var scope = scopeEl && scopeEl.value === 'variante' ? 'variante' : 'normal';
+    var part = libelleVersionDetachee(billetId, scope);
+    var reste = libelleVersionDetachee(billetId, scope === 'variante' ? 'normal' : 'variante');
+    var cnt = adminCollecteInscriptionCounts[scissionCollecte.id];
+    var nb = cnt ? (scope === 'variante' ? cnt.variantes : cnt.normaux) : null;
+    info.textContent = 'Les inscrits de « ' + scissionCollecte.nom + ' » retrouveront leurs ' + part
+        + ' dans cette nouvelle collecte' + (nb !== null ? ' (' + nb + ' en tout)' : '') + '. Leurs '
+        + reste + ' restent dans « ' + scissionCollecte.nom + ' », qui ne couvrira plus que les ' + reste + '.';
+    info.style.display = '';
+}
+
+// Création d'une collecte d'une seule version à côté d'une « les deux versions » en cours
+function proposerScission(billetId, c, body) {
+    propositionScission = { billetId: billetId, collecte: c, body: body };
+    var cnt = adminCollecteInscriptionCounts[c.id];
+    var part = libelleVersionDetachee(billetId, body.scope);
+    var reste = libelleVersionDetachee(billetId, body.scope === 'variante' ? 'normal' : 'variante');
+    var nom = c.nom || 'la collecte existante';
+    // Compteurs inconnus : on propose quand même, la base refera le contrôle
+    var possible = !cnt || !(cnt.bloquantes > 0);
+    var html = '<div class="admin-modal" role="dialog" aria-modal="true">'
+        + '<div class="admin-modal-header-row"><h2 class="admin-modal-title">« ' + escapeHtml(nom) + ' » couvre déjà les deux versions</h2></div>'
+        + (cnt ? '<p>' + cnt.count + ' inscrit(s) — ' + cnt.normaux + ' normaux, ' + cnt.variantes + ' ' + escapeHtml(libelleVariantesBillet(billetId)) + '.</p>' : '')
+        + (possible
+            ? '<p><strong>Scinder « ' + escapeHtml(nom) + ' »</strong> : ses inscrits retrouvent leurs ' + escapeHtml(part)
+              + ' dans la nouvelle collecte ; leurs ' + escapeHtml(reste) + ' restent dans « ' + escapeHtml(nom) + ' ».</p>'
+            : '<p>Elle ne peut pas être scindée : ' + cnt.bloquantes + ' inscription(s) ont déjà un paiement, une enveloppe ou un envoi.</p>')
+        + '<p><strong>Créer une collecte à part</strong> : les inscrits de « ' + escapeHtml(nom) + ' » ne seront pas inscrits à la nouvelle.</p>'
+        + '<div class="admin-modal-actions">'
+        + (possible ? '<button type="button" class="admin-modal-btn admin-modal-btn-primary" onclick="choisirScission(\'scinder\')"><i class="fa-solid fa-code-branch"></i> Scinder « ' + escapeHtml(nom) + ' »</button>' : '')
+        + '<button type="button" class="admin-modal-btn admin-modal-btn-secondary" onclick="choisirScission(\'apart\')">Créer une collecte à part</button>'
+        + '<button type="button" class="admin-modal-btn admin-modal-btn-secondary" onclick="choisirScission(\'annuler\')">Annuler</button>'
+        + '</div></div>';
+    var ov = document.getElementById('scission-choix-overlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'scission-choix-overlay';
+        ov.className = 'admin-modal-overlay scission-choix-overlay';
+        document.body.appendChild(ov);
+    }
+    ov.innerHTML = html;
+    ov.style.display = '';
+}
+
+function choisirScission(choix) {
+    var ov = document.getElementById('scission-choix-overlay');
+    if (ov) ov.style.display = 'none';
+    var p = propositionScission;
+    propositionScission = null;
+    if (!p) return;
+    if (choix === 'scinder') {
+        scinderCollecte(p.billetId, { id: p.collecte.id, nom: p.collecte.nom || 'la collecte' }, p.body);
+    } else if (choix === 'apart') {
+        posterCollecte(p.billetId, p.body);
+    }
+    // « Annuler » : la modale d'ajout reste ouverte, rien n'est enregistré
+}
+
+function scinderCollecte(billetId, c, body) {
+    var version = body.scope === 'variante' ? 'variante' : 'normal';
+    var nouvelle = {};
+    ['nom', 'categorie', 'collecteur', 'prix', 'prix_variante', 'payer_fdp', 'fdp_com',
+     'date_pre', 'date_coll', 'date_fin', 'nb_max'].forEach(function(k) { nouvelle[k] = body[k]; });
+    var btnAdd = document.getElementById('btn-add-collecte');
+    if (btnAdd) btnAdd.disabled = true;
+    supabaseFetch('/rest/v1/rpc/scinder_collecte', {
+        method: 'POST',
+        body: JSON.stringify({ p_collecte: c.id, p_version: version, p_nouvelle: nouvelle })
+    })
+    .then(function(res) {
+        var n = (res && res.inscriptions_creees) || 0;
+        showToast('« ' + c.nom + ' » scindée : ' + n + ' inscrit(s) retrouvent leurs '
+            + libelleVersionDetachee(billetId, version) + ' dans « ' + (body.nom || 'la nouvelle collecte') + ' »', 'success');
+        fermerCollecteModal();
+        loadCollectesForBillet(billetId);
+        loadAdminCollectes();
+    })
+    .catch(function(error) {
+        console.error('Erreur scission collecte:', error);
+        var msg = (error && error.message) || '';
+        if (/Could not find the function|schema cache/i.test(msg)) {
+            msg = 'La scission n\'est pas encore activée : la migration de la demande #89 doit être jouée.';
+        }
+        showToast(msg || 'Erreur lors de la scission', 'error');
+    })
+    .then(function() {
+        if (btnAdd) btnAdd.disabled = false;
     });
 }
 
@@ -5155,6 +5353,14 @@ function sortirEditionCollecte() {
     editingCollecteId = null;
     var scopeEl = document.getElementById('field-collecte-scope');
     if (scopeEl) scopeEl.disabled = false;
+    // Demande #89 — sortie du mode « Scinder »
+    scissionCollecte = null;
+    if (scopeEl) {
+        Array.prototype.forEach.call(scopeEl.options, function(o) { o.disabled = false; });
+        scopeEl.onchange = null;
+    }
+    var infoScission = document.getElementById('collecte-scission-info');
+    if (infoScission) infoScission.style.display = 'none';
     var scopeHint = document.getElementById('collecte-scope-edit-hint');
     if (scopeHint) scopeHint.style.display = 'none';
     var title = document.getElementById('collecte-form-title');

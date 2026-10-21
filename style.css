@@ -7520,6 +7520,25 @@ body.login-page {
     max-height: 400px;
     overflow-y: auto;
 }
+/* Demande #89 — scinder une collecte : le bandeau de la modale, et la question posée à la
+   création (au-dessus de la modale de collecte, z-index 3000) */
+.collecte-scission-info {
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 0.85rem;
+    color: var(--color-text);
+}
+.scission-choix-overlay {
+    z-index: 3100;
+}
+.scission-choix-overlay p {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 0.9rem;
+}
+
 /* Demande #87 — choisir la collecte à partager quand plusieurs sont en cours */
 .share-modal-choix {
     padding: var(--spacing-md);
@@ -9883,7 +9902,8 @@ button.collecte-badge-status {
 
 /* Demande #38 — bouton « Modifier » d'une collecte dans la liste */
 .btn-modifier-collecte,
-.btn-partager-collecte {   /* #87 : même allure que « Modifier » */
+.btn-partager-collecte,
+.btn-scinder-collecte {   /* #87, #89 : même allure que « Modifier » */
     padding: 4px 10px;
     border: 1px solid var(--color-primary);
     background: var(--color-bg-white, #fff);
@@ -9894,7 +9914,8 @@ button.collecte-badge-status {
 }
 
 .btn-modifier-collecte:hover,
-.btn-partager-collecte:hover {
+.btn-partager-collecte:hover,
+.btn-scinder-collecte:hover {
     background: var(--color-primary);
     color: var(--color-text-inverse, #fff);
 }
