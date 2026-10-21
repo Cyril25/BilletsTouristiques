@@ -2078,6 +2078,11 @@ function renderHistoriqueGlobal(envPassees, membresMap) {
 function buildHistoriqueCards(envPassees, membresMap, query) {
     var html = '';
     var count = 0;
+    // Demande #82 — deux sections : « En cours » (réception pas encore confirmée : expédiés
+    // et distribués) et « Terminés » (reçus). Chacune garde l'ordre de chargement (date
+    // d'expédition, du plus récent au plus ancien).
+    var cartesEnCours = '', cartesTermines = '';
+    var nbEnCours = 0, nbTermines = 0;
     var q = query.toLowerCase();
     for (var h = 0; h < envPassees.length; h++) {
         var envH = envPassees[h];
@@ -2115,7 +2120,7 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
             checkboxH = '<input type="checkbox" class="historique-select-checkbox" ' + (isChecked ? 'checked' : '')
                 + ' onclick="event.stopPropagation()" onchange="toggleHistoriqueSelect(' + envH.id + ', this.checked)">';
         }
-        html += '<div class="envoi-groupe historique-envoi-card" onclick="_retourDepuisHistorique=true;openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
+        var carteH = '<div class="envoi-groupe historique-envoi-card" onclick="_retourDepuisHistorique=true;openEnveloppePassee(' + envH.id + ')" style="cursor:pointer">'
             + '<div class="envoi-groupe-header">'
             + checkboxH
             + '<strong>' + escapeHtmlMC(nomH) + '</strong>'
@@ -2126,6 +2131,20 @@ function buildHistoriqueCards(envPassees, membresMap, query) {
             + statutHtml
             + '</div>'
             + '</div>';
+        if (envH.statut === 'recue') {
+            cartesTermines += carteH;
+            nbTermines++;
+        } else {
+            cartesEnCours += carteH;
+            nbEnCours++;
+        }
+    }
+    // Une section vide (ou vidée par la recherche) ne s'affiche pas
+    if (nbEnCours > 0) {
+        html += '<h4 class="envois-section-title"><i class="fa-solid fa-truck-fast"></i> En cours (' + nbEnCours + ')</h4>' + cartesEnCours;
+    }
+    if (nbTermines > 0) {
+        html += '<h4 class="envois-section-title"><i class="fa-solid fa-circle-check"></i> Terminés (' + nbTermines + ')</h4>' + cartesTermines;
     }
     if (count === 0 && q) {
         html = '<div class="envois-empty"><p>Aucun résultat pour « ' + escapeHtmlMC(query) + ' »</p></div>';
