@@ -3821,6 +3821,67 @@ function fermerRelance() {
     if (modal) modal.style.display = 'none';
 }
 
+// Demande #86 — ce que chaque membre me doit, tel que « Vérification paiement » l'affiche :
+// ses billets, les frais d'envoi que j'ai avancés et les compléments de prix (#44). Avant,
+// la relance et le récapitulatif ne lisaient que les billets : un membre qui ne devait plus
+// que des frais d'envoi n'y figurait pas, et sans billet impayé on lisait « Aucun impayé ».
+// Les avoirs n'y entrent pas : c'est moi qui dois (même règle que le total du groupe à l'écran).
+function impayesParMembre() {
+    var data = verifPaiementData || {};
+    var membresMap = data.membresMap || {};
+    var groupes = {};
+    function groupeDe(membreId) {
+        if (!groupes[membreId]) {
+            groupes[membreId] = { membreId: membreId, adresse: null, inscriptions: [], port: [], dettes: [],
+                                  totalBillets: 0, totalPort: 0, totalDettes: 0, total: 0 };
+        }
+        return groupes[membreId];
+    }
+    (data.inscriptions || []).forEach(function(insc) {
+        var g = groupeDe(insc.membre_id);
+        if (!g.adresse) g.adresse = insc.adresse_snapshot || null;
+        var _t = tarifInsc(insc);
+        g.totalBillets += (_t.prix * (insc.nb_normaux || 0)) + (_t.prixVar * (insc.nb_variantes || 0));
+        g.inscriptions.push(insc);
+    });
+    (data.enveloppesPort || []).forEach(function(env) {
+        var g = groupeDe(env.membre_id);
+        g.totalPort += parseFloat(env.prix_envoi_reel || 0);
+        g.port.push(env);
+    });
+    (data.dettes || []).forEach(function(det) {
+        var m = parseFloat(det.montant || 0);
+        if (m <= 0) return;
+        var g = groupeDe(det.membre_id);
+        g.totalDettes += m;
+        g.dettes.push(det);
+    });
+    var liste = Object.keys(groupes).map(function(cle) {
+        var g = groupes[cle];
+        // Membre sans billet impayé : son adresse vient de sa fiche
+        if (!g.adresse) g.adresse = membresMap[Number(cle)] || {};
+        g.total = g.totalBillets + g.totalPort + g.totalDettes;
+        return g;
+    });
+    liste.sort(function(a, b) {
+        var ga = a.adresse || {}, gb = b.adresse || {};
+        var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
+        if (na < nb) return -1; if (na > nb) return 1;
+        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
+        if (pa < pb) return -1; if (pa > pb) return 1;
+        return 0;
+    });
+    return liste;
+}
+
+// « dont 10.94 € de frais d'envoi » — vide si le membre ne doit que des billets
+function detailHorsBillets(groupe) {
+    var parts = [];
+    if (groupe.totalPort > 0) parts.push(groupe.totalPort.toFixed(2) + ' € de frais d\'envoi');
+    if (groupe.totalDettes > 0) parts.push(groupe.totalDettes.toFixed(2) + ' € de complément de prix');
+    return parts.length > 0 ? ' (dont ' + parts.join(', ') + ')' : '';
+}
+
 // ---- Relance globale (tous les impayés d'un coup) ----
 
 function ouvrirRelanceGlobale() {
@@ -3828,54 +3889,29 @@ function ouvrirRelanceGlobale() {
         showToast('Aucune donnée de paiement chargée', 'error');
         return;
     }
-    var inscriptions = verifPaiementData.inscriptions;
     var billetsMap = verifPaiementData.billetsMap;
-    if (!inscriptions || inscriptions.length === 0) {
+    var groupes = impayesParMembre();   // #86
+    if (groupes.length === 0) {
         showToast('Aucun impayé à relancer');
         return;
     }
 
     var hasPaypal = !!(monCollecteur.paypal_me || monCollecteur.paypal_email);
 
-    // Grouper par membre
-    var groupes = {};
-    inscriptions.forEach(function(insc) {
-        var key = insc.membre_id;   // demande #62
-        if (!groupes[key]) {
-            groupes[key] = {
-                membreId: key,
-                adresse: insc.adresse_snapshot || {},
-                inscriptions: []
-            };
-        }
-        groupes[key].inscriptions.push(insc);
-    });
-
-    var emails = Object.keys(groupes);
-    emails.sort(function(a, b) {
-        var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
-        var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
-        if (na < nb) return -1; if (na > nb) return 1;
-        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
-        if (pa < pb) return -1; if (pa > pb) return 1;
-        return 0;
-    });
-
     var messagesHtml = '';
-    for (var idx = 0; idx < emails.length; idx++) {
-        var groupe = groupes[emails[idx]];
+    for (var idx = 0; idx < groupes.length; idx++) {
+        var groupe = groupes[idx];
         var adr = groupe.adresse;
         var adresseMembre = adresseDuNumero(groupe.membreId);
         var prenom = adr.prenom || adresseMembre;
 
-        var totalMembre = 0;
+        var totalMembre = groupe.total;
         var detailsLignes = '';
         for (var j = 0; j < groupe.inscriptions.length; j++) {
             var insc = groupe.inscriptions[j];
             var billet = billetsMap[insc.billet_id] || {};
             var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
             var montant = (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
-            totalMembre += montant;
 
             var relVne = versionsInscription(insc, billet).normale;   // #46
             detailsLignes += '\n• ' + refBilletLabel(billet);
@@ -3883,11 +3919,21 @@ function ouvrirRelanceGlobale() {
             if (insc.nb_variantes > 0) detailsLignes += ' — ' + insc.nb_variantes + ' variante(s)';
             detailsLignes += ' — ' + montant.toFixed(2) + ' €';
         }
+        // #86 — frais d'envoi avancés, puis compléments de prix
+        for (var p = 0; p < groupe.port.length; p++) {
+            var env = groupe.port[p];
+            var dateEnv = env.date_expedition ? ' du ' + new Date(env.date_expedition).toLocaleDateString('fr-FR') : '';
+            detailsLignes += '\n• Frais d\'envoi' + dateEnv + ' — ' + parseFloat(env.prix_envoi_reel || 0).toFixed(2) + ' €';
+        }
+        for (var d = 0; d < groupe.dettes.length; d++) {
+            var det = groupe.dettes[d];
+            detailsLignes += '\n• ' + (det.libelle || 'Complément de prix') + ' — ' + parseFloat(det.montant || 0).toFixed(2) + ' €';
+        }
 
         var objet = 'Relance paiement — Tes collectes en attente';
 
         var corps = 'Bonjour ' + prenom + ',\n\n'
-            + 'Je me permets de te relancer concernant tes inscriptions en attente de paiement.\n\n'
+            + 'Je me permets de te relancer concernant tes paiements en attente.\n\n'
             + 'Récapitulatif :' + detailsLignes + '\n\n'
             + 'Total dû : ' + totalMembre.toFixed(2) + ' €\n';
 
@@ -3934,7 +3980,7 @@ function ouvrirRelanceGlobale() {
         + '<h2><i class="fa-solid fa-envelope"></i> Relance globale — Tous les impayés</h2>'
         + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
         + '</div>'
-        + '<p class="relance-count">' + emails.length + ' membre(s) à relancer</p>'
+        + '<p class="relance-count">' + groupes.length + ' membre(s) à relancer</p>'
         + messagesHtml
         + '</div>';
     modal.style.display = '';
@@ -3947,64 +3993,45 @@ function ouvrirRecapPaiementGlobal() {
         showToast('Aucune donnée de paiement chargée', 'error');
         return;
     }
-    var inscriptions = verifPaiementData.inscriptions;
     var billetsMap = verifPaiementData.billetsMap;
-    if (!inscriptions || inscriptions.length === 0) {
+    var groupes = impayesParMembre();   // #86
+    if (groupes.length === 0) {
         showToast('Aucun impayé');
         return;
     }
-
-    // Grouper par membre
-    var groupes = {};
-    inscriptions.forEach(function(insc) {
-        var key = insc.membre_id;   // demande #62
-        if (!groupes[key]) {
-            groupes[key] = { membreId: key, adresse: insc.adresse_snapshot || {}, inscriptions: [] };
-        }
-        groupes[key].inscriptions.push(insc);
-    });
-
-    var emails = Object.keys(groupes);
-    emails.sort(function(a, b) {
-        var ga = groupes[a].adresse || {}, gb = groupes[b].adresse || {};
-        var na = (ga.nom || '').toLowerCase(), nb = (gb.nom || '').toLowerCase();
-        if (na < nb) return -1; if (na > nb) return 1;
-        var pa = (ga.prenom || '').toLowerCase(), pb = (gb.prenom || '').toLowerCase();
-        if (pa < pb) return -1; if (pa > pb) return 1;
-        return 0;
-    });
 
     var totalGlobal = 0;
     var billetsSet = {};
     var lignesMembresHtml = '';
     var lignesMembresTexte = '';
-    for (var idx = 0; idx < emails.length; idx++) {
-        var groupe = groupes[emails[idx]];
+    for (var idx = 0; idx < groupes.length; idx++) {
+        var groupe = groupes[idx];
         var adr = groupe.adresse;
         var nomComplet = ((adr.nom || '').toUpperCase() + ' ' + (adr.prenom || '')).trim() || adresseDuNumero(groupe.membreId);
 
-        var totalMembre = 0;
         for (var j = 0; j < groupe.inscriptions.length; j++) {
-            var insc = groupe.inscriptions[j];
-            var billet = billetsMap[insc.billet_id] || {};
-            var _t = tarifInsc(insc); var prix = _t.prix, prixVar = _t.prixVar;
-            totalMembre += (prix * (insc.nb_normaux || 0)) + (prixVar * (insc.nb_variantes || 0));
-            billetsSet[refBilletLabel(billet)] = true;
+            billetsSet[refBilletLabel(billetsMap[groupe.inscriptions[j].billet_id] || {})] = true;
         }
-        totalGlobal += totalMembre;
+        totalGlobal += groupe.total;
 
-        lignesMembresHtml += '<li><strong>' + nomComplet + '</strong> &rarr; ' + totalMembre.toFixed(2) + ' €</li>';
-        lignesMembresTexte += nomComplet + ' -> ' + totalMembre.toFixed(2) + ' €\n';
+        var horsBillets = detailHorsBillets(groupe);   // #86
+        lignesMembresHtml += '<li><strong>' + nomComplet + '</strong> &rarr; ' + groupe.total.toFixed(2) + ' €' + horsBillets + '</li>';
+        lignesMembresTexte += nomComplet + ' -> ' + groupe.total.toFixed(2) + ' €' + horsBillets + '\n';
     }
 
+    // #86 — un récapitulatif sans billet impayé (que des frais d'envoi) n'affiche pas de liste vide
     var nomsBillets = Object.keys(billetsSet).sort();
-    var billetsHtml = '<ul class="recap-billets-list">';
-    for (var b = 0; b < nomsBillets.length; b++) {
-        billetsHtml += '<li>' + nomsBillets[b] + '</li>';
+    var billetsHtml = '';
+    var billetsTexte = '';
+    if (nomsBillets.length > 0) {
+        billetsHtml = '<h3 style="margin-top:8px;">Billets à payer</h3><ul class="recap-billets-list">';
+        for (var b = 0; b < nomsBillets.length; b++) {
+            billetsHtml += '<li>' + nomsBillets[b] + '</li>';
+        }
+        billetsHtml += '</ul>';
+        billetsTexte = 'Billets à payer :\n' + nomsBillets.map(function(n) { return '- ' + n; }).join('\n') + '\n\n';
     }
-    billetsHtml += '</ul>';
-    var billetsTexte = nomsBillets.map(function(n) { return '- ' + n; }).join('\n');
-    var texteComplet = 'Billets à payer :\n' + billetsTexte + '\n\nMembres :\n' + lignesMembresTexte;
+    var texteComplet = billetsTexte + 'Membres :\n' + lignesMembresTexte;
 
     var modal = document.getElementById('relance-modal');
     if (!modal) {
@@ -4018,8 +4045,7 @@ function ouvrirRecapPaiementGlobal() {
         + '<h2><i class="fa-solid fa-list"></i> Récapitulatif de paiement global</h2>'
         + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
         + '</div>'
-        + '<p class="relance-count">' + emails.length + ' membre(s) — Total : <strong>' + totalGlobal.toFixed(2) + ' €</strong></p>'
-        + '<h3 style="margin-top:8px;">Billets à payer</h3>'
+        + '<p class="relance-count">' + groupes.length + ' membre(s) — Total : <strong>' + totalGlobal.toFixed(2) + ' €</strong></p>'
         + billetsHtml
         + '<h3 style="margin-top:16px;">Montant par membre</h3>'
         + '<ul class="recap-membres-list">' + lignesMembresHtml + '</ul>'
