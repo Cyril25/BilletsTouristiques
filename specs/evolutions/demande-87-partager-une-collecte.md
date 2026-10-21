@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **S**)
 - **Demande :** #87 de la table `demandes` de production — Jean-Philippe, 2026-10-21, priorité
   *normale*. Publics cités : membres, collecteurs, admins. Liée à #88 et #89.
-- **Statut :** développée le 2026-10-21 (dev lancé par Cyril le jour même).
+- **Statut :** à tester — en ligne le 2026-10-21 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-87-partager-une-collecte-en-clair.md](demande-87-partager-une-collecte-en-clair.md)
 
 ## Contexte (demande)
@@ -72,4 +72,14 @@ d'`initPanel()`). **15/15** ; contre-épreuve sur l'ancien `admin.js` : échec d
 
 ## Réalisation
 
-*(à compléter)*
+Commit `8c02a48` (2026-10-21), cache `v327` :
+
+- `admin.js` — `openShareModal(billetId, collecteId)` réécrite ; nouvelles
+  `afficherChoixCollectePartage()` et `afficherPartage()` ; `renderCollectesList()` : bouton
+  `btn-partager-collecte` ; délégation d'`initPanel()` ;
+- `admin-billet.html` — la fenêtre de partage (copie de celle d'`admin.html`) ;
+- `style.css` — `.btn-partager-collecte` (allure de « Modifier »), `.share-modal-choix`.
+
+Vérifié : banc 15/15 (ci-dessus) ; site en ligne contrôlé (le code est servi). Base : à tester +
+journal + docs, notification à Jean-Philippe (membre 45), nouveauté `admins`.
+**Pas vérifié** : vraie page connectée, téléphone, mode sombre.

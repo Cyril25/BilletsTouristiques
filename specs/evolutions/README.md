@@ -121,8 +121,8 @@ qui n'est plus vrai.
 | [#83 (prod)](demande-83-normaux-variantes-enveloppes-separees.md) | Mettre les normaux et les variantes d'une inscription dans des enveloppes différentes ([en clair](demande-83-normaux-variantes-enveloppes-separees-en-clair.md)) | L | Analyse à valider | — | — |
 | [#84 (prod)](demande-84-recapitulatif-enveloppes.md) | Récapitulatif des enveloppes en préparation ([en clair](demande-84-recapitulatif-enveloppes-en-clair.md)) | M | À tester | ✅ | `1ca79c8` |
 | [#86 (prod)](demande-86-relance-frais-de-port.md) | Relancer les frais de port impayés ([en clair](demande-86-relance-frais-de-port-en-clair.md)) | S | À tester | ✅ | `147f9cc` |
-| [#87 (prod)](demande-87-partager-une-collecte.md) | « Partager » présente une collecte, et chaque collecte a son bouton ([en clair](demande-87-partager-une-collecte-en-clair.md)) | S | En cours (dev) | — | — |
-| [#88 (prod)](demande-88-collectes-en-cours-depliees.md) | Plusieurs collectes en cours : ne plus en cacher une dans l'accordéon ([en clair](demande-88-collectes-en-cours-depliees-en-clair.md)) | S | En cours (dev) | — | — |
+| [#87 (prod)](demande-87-partager-une-collecte.md) | « Partager » présente une collecte, et chaque collecte a son bouton ([en clair](demande-87-partager-une-collecte-en-clair.md)) | S | À tester | ✅ | `8c02a48` |
+| [#88 (prod)](demande-88-collectes-en-cours-depliees.md) | Plusieurs collectes en cours : ne plus en cacher une dans l'accordéon ([en clair](demande-88-collectes-en-cours-depliees-en-clair.md)) | S | À tester | ✅ | `735544d` |
 | [#89 (prod)](demande-89-scinder-collecte-deux-versions.md) | Scinder une collecte « les deux versions » au lieu d'en créer une seconde ([en clair](demande-89-scinder-collecte-deux-versions-en-clair.md)) | L | Analyse à valider | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et

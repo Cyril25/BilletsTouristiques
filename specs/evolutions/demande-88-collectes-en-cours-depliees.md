@@ -3,7 +3,7 @@
 - **Épic :** Corrections et évolutions (complexité **S**)
 - **Demande :** #88 de la table `demandes` de production — Cyril, 2026-10-21, priorité *haute*.
   Publics cités : membres, collecteurs, admins. Liée à #87 et #89.
-- **Statut :** développée le 2026-10-21 (dev lancé par Cyril le jour même).
+- **Statut :** à tester — en ligne le 2026-10-21 (dev lancé par Cyril le jour même).
 - **Version en clair :** [demande-88-collectes-en-cours-depliees-en-clair.md](demande-88-collectes-en-cours-depliees-en-clair.md)
 
 ## Contexte (demande)
@@ -61,4 +61,12 @@ Banc jsdom `scripts/banc-62/test-88-accordeon-collectes.mjs` (non versionné) : 
 
 ## Réalisation
 
-*(à compléter)*
+Commit `735544d` (2026-10-21), cache `v326` :
+
+- `app-new.js` — `collecteEnCours()` (nouvelle) ; `buildCollectesSupplementairesHtml()` : en cours
+  d'abord, `<details open>` ;
+- `billet.js` — `renderCollectesFiche()` : même règle.
+
+Vérifié : banc 10/10 (ci-dessus) ; site en ligne contrôlé (le code est servi). Base : à tester +
+journal + docs, notification à Cyril (membre 22), nouveauté `tous`.
+**Pas vérifié** : vraie page connectée, téléphone, mode sombre.
