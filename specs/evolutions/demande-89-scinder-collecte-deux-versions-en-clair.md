@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, admin, qui créez les collectes. Aucune
 > connaissance technique n'est nécessaire.
-> Reflète la version technique du commit `c64774e` (21/10/2026).
+> Reflète la version technique du commit `d1f885a` (21/10/2026).
 
 ## Ce qui a été demandé
 
@@ -48,8 +48,14 @@ Si on choisit de scinder, avec la même fiche que d'habitude (collecteur, prix, 
 - chaque membre voit désormais deux inscriptions au billet dans « Mes inscriptions », une par
   collecte.
 
-Un bouton **« Scinder »** pourrait aussi exister sur une collecte « les deux versions », sans passer
-par la création (question 6).
+Un bouton **« Scinder »** apparaîtra aussi dans la liste des collectes d'un billet, mais **seulement
+sur une collecte qu'on peut vraiment scinder** : une collecte « les deux versions », en cours, où
+personne n'a encore payé. Ailleurs, il n'y a pas de bouton, pour ne pas brouiller la lecture
+(précision de Cyril, 21/10).
+
+Quand on scinde, **le plafond** de la collecte (nombre maximum de billets), s'il y en a un, est
+recopié sur les deux collectes. Les membres **ne reçoivent pas de message** : c'est juste une
+collecte qui est scindée.
 
 **Garde-fou** : on ne scinde qu'une collecte où personne n'a encore payé, déclaré un paiement, ni
 reçu un billet. En pratique, une pré-collecte.
@@ -78,13 +84,12 @@ membres n'ont pas reçu de message.
 ## Ce sur quoi on vous demande de vous prononcer
 
 1. ~~**Lapalisse** : (a) ou (b) ?~~ Tranché : (a), fait le 21/10.
-2. **Quand peut-on scinder ?** Seulement une collecte sans aucun paiement (proposé), ou aussi une
-   collecte déjà ouverte, avec ses paiements ? (Beaucoup plus délicat.)
-3. **Prévenir les membres** dont l'inscription est répartie en deux ?
-4. **Le plafond** d'une collecte (nombre maximum de billets), s'il y en a un : recopié sur les
-   deux collectes, ou à ressaisir ?
+2. ~~**Quand peut-on scinder ?**~~ Tranché par Cyril : seulement une collecte sans aucun paiement.
+3. ~~**Prévenir les membres ?**~~ Tranché : non.
+4. ~~**Le plafond ?**~~ Tranché : recopié sur les deux collectes, dans un premier temps.
 5. **Qui** peut scinder : les admins seulement (proposé, ce sont eux qui créent les collectes) ?
-6. **Un bouton « Scinder »** sur une collecte, en plus de la question posée à la création ?
+   Pas de réponse pour l'instant : c'est ce qui sera fait, sauf avis contraire.
+6. ~~**Un bouton « Scinder » ?**~~ Tranché : oui, seulement sur les collectes qu'on peut scinder.
 
 ## Les demandes liées
 
