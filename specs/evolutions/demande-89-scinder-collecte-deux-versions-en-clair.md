@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, admin, qui créez les collectes. Aucune
 > connaissance technique n'est nécessaire.
-> Reflète la version technique du commit `d1f885a` (21/10/2026).
+> Reflète la version technique du commit `83adc68` (21/10/2026).
 
 ## Ce qui a été demandé
 
@@ -81,15 +81,27 @@ collecte de Damien avec leurs 16 normaux. Le membre qui y était déjà garde so
 « Collecte 2026 » est désormais une pré-collecte des dorés seulement : 10 membres, 11 dorés. Les
 membres n'ont pas reçu de message.
 
+Un détail est apparu en développant la scission : en faisant cette réparation, le site a noté les
+9 pré-inscriptions automatiques restées dans « Collecte 2026 » comme des inscriptions faites à la
+main. Ça ne se voit pas à l'écran, mais il refuserait par exemple de supprimer cette pré-collecte.
+Un petit script, joué par Cyril avec la mise en service, les remet en ordre. La scission, elle, ne
+fera pas cette erreur.
+
 ## Ce sur quoi on vous demande de vous prononcer
 
 1. ~~**Lapalisse** : (a) ou (b) ?~~ Tranché : (a), fait le 21/10.
 2. ~~**Quand peut-on scinder ?**~~ Tranché par Cyril : seulement une collecte sans aucun paiement.
 3. ~~**Prévenir les membres ?**~~ Tranché : non.
 4. ~~**Le plafond ?**~~ Tranché : recopié sur les deux collectes, dans un premier temps.
-5. **Qui** peut scinder : les admins seulement (proposé, ce sont eux qui créent les collectes) ?
-   Pas de réponse pour l'instant : c'est ce qui sera fait, sauf avis contraire.
+5. ~~**Qui peut scinder ?**~~ Tranché par Cyril : les admins seulement.
 6. ~~**Un bouton « Scinder » ?**~~ Tranché : oui, seulement sur les collectes qu'on peut scinder.
+
+## Où on en est (21/10)
+
+C'est développé et en ligne : le bouton « Scinder » et la question posée à la création d'une
+collecte sont sur la page de chaque billet, dans Gestion Billets. **Il reste à Cyril à mettre en
+service la partie base de données.** D'ici là, cliquer sur « Scinder » affiche « la migration de la
+demande #89 doit être jouée », et rien d'autre ne change.
 
 ## Les demandes liées
 

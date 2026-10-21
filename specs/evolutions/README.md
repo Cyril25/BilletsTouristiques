@@ -123,7 +123,7 @@ qui n'est plus vrai.
 | [#86 (prod)](demande-86-relance-frais-de-port.md) | Relancer les frais de port impayés ([en clair](demande-86-relance-frais-de-port-en-clair.md)) | S | À tester | ✅ | `147f9cc` |
 | [#87 (prod)](demande-87-partager-une-collecte.md) | « Partager » présente une collecte, et chaque collecte a son bouton ([en clair](demande-87-partager-une-collecte-en-clair.md)) | S | À tester | ✅ | `8c02a48` |
 | [#88 (prod)](demande-88-collectes-en-cours-depliees.md) | Plusieurs collectes en cours : ne plus en cacher une dans l'accordéon ([en clair](demande-88-collectes-en-cours-depliees-en-clair.md)) | S | À tester | ✅ | `735544d` |
-| [#89 (prod)](demande-89-scinder-collecte-deux-versions.md) | Scinder une collecte « les deux versions » au lieu d'en créer une seconde ([en clair](demande-89-scinder-collecte-deux-versions-en-clair.md)) | L | Analyse à valider | — | — |
+| [#89 (prod)](demande-89-scinder-collecte-deux-versions.md) | Scinder une collecte « les deux versions » au lieu d'en créer une seconde ([en clair](demande-89-scinder-collecte-deux-versions-en-clair.md)) | L | En cours (dev) — site en ligne, migration à jouer | — | `3e166e0` |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
