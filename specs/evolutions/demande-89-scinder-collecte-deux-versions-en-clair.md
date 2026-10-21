@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, admin, qui créez les collectes. Aucune
 > connaissance technique n'est nécessaire.
-> Reflète la version technique du commit `8858510` (21/10/2026).
+> Reflète la version technique du commit `c64774e` (21/10/2026).
 
 ## Ce qui a été demandé
 
@@ -70,9 +70,14 @@ collecte de Damien existe déjà. Deux possibilités :
 
 Dans les deux cas, « Collecte 2026 » ne garde ensuite que les dorés.
 
+**C'est fait, le 21/10, selon (a)** (décision de Cyril). Les 11 membres sont inscrits à la
+collecte de Damien avec leurs 16 normaux. Le membre qui y était déjà garde son inscription.
+« Collecte 2026 » est désormais une pré-collecte des dorés seulement : 10 membres, 11 dorés. Les
+membres n'ont pas reçu de message.
+
 ## Ce sur quoi on vous demande de vous prononcer
 
-1. **Lapalisse** : (a) ou (b) ?
+1. ~~**Lapalisse** : (a) ou (b) ?~~ Tranché : (a), fait le 21/10.
 2. **Quand peut-on scinder ?** Seulement une collecte sans aucun paiement (proposé), ou aussi une
    collecte déjà ouverte, avec ses paiements ? (Beaucoup plus délicat.)
 3. **Prévenir les membres** dont l'inscription est répartie en deux ?
