@@ -110,6 +110,16 @@ paiements. Deux voies (Q1) :
   « variantes » ; les 11 membres s'inscrivent eux-mêmes chez Damien s'ils le veulent (une
   notification peut les prévenir).
 
+**Fait le 2026-10-21 — voie (a), décision de Cyril** (« tu peux inscrire les 11 pré-inscrits qui
+ne le sont pas, et la pré-collecte existante doit être uniquement une pré-collecte pour les
+dorés »). Script ponctuel par le Worker, essai à blanc puis exécution : 11 inscriptions créées
+chez Damien (16 normaux, `changed_by` et `date_inscription` d'origine conservés, non payées) ; le
+membre 100, déjà inscrit chez Damien, garde son inscription ; dans « Collecte 2026 », normaux
+remis à 0 pour 10 inscrits, 2 inscriptions supprimées (que des normaux), périmètre passé à
+`variante`. Contrôle relu en base : « Collecte 2026 » `variante` / Pré collecte, 10 inscrits,
+0 normal, 11 dorés ; « Collecte Normale » 18 inscrits, 29 normaux. Personne n'était bloqué ni sur
+la liste noire de Damien ; pas de plafond. Les membres n'ont pas été notifiés.
+
 ### 5. Base de données (migration à jouer par Cyril)
 
 - `CREATE FUNCTION scinder_collecte(…)` (`SECURITY DEFINER`, `search_path` fixé, contrôle admin en
@@ -128,8 +138,8 @@ paiement sont ceux de la production.
 
 ## Questions ouvertes (reprises dans la version en clair)
 
-- **Q1 — Lapalisse** : rattacher les 11 pré-inscrits à la collecte de Damien (a), ou les laisser
-  s'inscrire eux-mêmes (b) ?
+- ~~**Q1 — Lapalisse** : rattacher les 11 pré-inscrits à la collecte de Damien (a), ou les laisser
+  s'inscrire eux-mêmes (b) ?~~ Tranchée par Cyril le 21/10 : (a), faite le jour même (§ 4).
 - **Q2 — Quand peut-on scinder ?** Proposé : seulement si aucune inscription n'a de paiement, de
   complément, d'enveloppe ou d'envoi — en pratique, une pré-collecte. Faut-il aussi pouvoir scinder
   une collecte déjà ouverte, avec ses paiements ?
