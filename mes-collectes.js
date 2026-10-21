@@ -1759,7 +1759,15 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap, menageFait)
     // comprises), même nombre que nbEnveloppesAPreparer() à l'arrivée sur la page.
     majBadgeOnglet('envois', groupeARepartir.length + groupeEnAttentePaiement.length + groupeEnAttenteEnvoi.length);
 
-    var html = '';
+    // #84 — les enveloppes affichées, pour le récapitulatif
+    enveloppesPourRecap = {
+        enveloppes: groupeARepartir.concat(groupeEnAttentePaiement, groupeEnAttenteEnvoi).map(function(it) { return it.env; }),
+        inscriptions: inscriptions,
+        billetsMap: billetsMap
+    };
+    var html = '<div class="historique-toolbar">'
+        + '<button onclick="ouvrirRecapEnveloppes()" class="btn-relance"><i class="fa-solid fa-list"></i> Récapitulatif des enveloppes</button>'
+        + '</div>';
 
     function renderEnveloppeCard(item) {
         var nom = ((item.adr.nom || '') + ' ' + (item.adr.prenom || '')).trim() || adresseDuNumero(item.env.membre_id);
@@ -1805,6 +1813,136 @@ function renderEnveloppesListe(enveloppes, inscriptions, billetsMap, menageFait)
     }
 
     container.innerHTML = html;
+}
+
+// Demande #84 — récapitulatif de toutes les enveloppes en préparation : pour chaque membre, les
+// billets qui sont DANS son enveloppe et ce qu'ils valent (la valeur du détail d'une enveloppe,
+// #40 : prix de leur collecte, hors frais de port). Les billets « à répartir » n'y figurent pas :
+// ils ne sont pas encore dans l'enveloppe. Lit ce que renderEnveloppesListe() a affiché.
+var enveloppesPourRecap = null;
+
+// « 2 normaux + 1 variante », dans le périmètre de la collecte de l'inscription (#46)
+function quantitesRecap(insc, billet) {
+    var v = versionsInscription(insc, billet);
+    var nbN = v.normale ? (insc.nb_normaux || 0) : 0;
+    var nbV = v.variante ? (insc.nb_variantes || 0) : 0;
+    var parts = [];
+    if (nbN > 0) parts.push(nbN + (nbN > 1 ? ' normaux' : ' normal'));
+    if (nbV > 0) parts.push(nbV + ' variante' + (nbV > 1 ? 's' : ''));
+    return parts.join(' + ');
+}
+
+function ouvrirRecapEnveloppes() {
+    var data = enveloppesPourRecap;
+    if (!data) {
+        showToast('Enveloppes pas encore chargées', 'error');
+        return;
+    }
+    var billetsMap = data.billetsMap || {};
+    var recap = [];
+    var nbSansBillet = 0;
+    data.enveloppes.forEach(function(env) {
+        var dedans = data.inscriptions.filter(function(i) { return i.statut_livraison === 'pret_a_envoyer' && i.enveloppe_id === env.id; });
+        var nb = countBillets(dedans, billetsMap);
+        if (nb === 0) { nbSansBillet++; return; }
+        var adr = {};
+        for (var a = 0; a < dedans.length; a++) {
+            if (dedans[a].adresse_snapshot && (dedans[a].adresse_snapshot.nom || dedans[a].adresse_snapshot.prenom)) {
+                adr = dedans[a].adresse_snapshot;
+                break;
+            }
+        }
+        var lignes = dedans.map(function(insc) {
+            var billet = billetsMap[insc.billet_id] || {};
+            return { libelle: refBilletLabel(billet), quantites: quantitesRecap(insc, billet), valeur: valeurBillets([insc], billetsMap) };
+        }).filter(function(l) { return l.quantites; });
+        lignes.sort(function(x, y) { return x.libelle < y.libelle ? -1 : (x.libelle > y.libelle ? 1 : 0); });
+        recap.push({
+            nom: ((adr.nom || '').toUpperCase() + ' ' + (adr.prenom || '')).trim() || adresseDuNumero(env.membre_id),
+            nomTri: (adr.nom || '').toLowerCase(), prenomTri: (adr.prenom || '').toLowerCase(),
+            nb: nb, valeur: valeurBillets(dedans, billetsMap), lignes: lignes
+        });
+    });
+    if (recap.length === 0) {
+        showToast('Aucun billet dans les enveloppes pour l\'instant');
+        return;
+    }
+    // Même ordre que la liste : nom puis prénom
+    recap.sort(function(a, b) {
+        if (a.nomTri !== b.nomTri) return a.nomTri < b.nomTri ? -1 : 1;
+        if (a.prenomTri !== b.prenomTri) return a.prenomTri < b.prenomTri ? -1 : 1;
+        return 0;
+    });
+
+    var totalBillets = 0, totalValeur = 0;
+    recap.forEach(function(r) { totalBillets += r.nb; totalValeur += r.valeur; });
+    function sousTitre(nb, valeur) {
+        var lv = labelValeurBillets(valeur);
+        return nb + ' billet' + (nb > 1 ? 's' : '') + (lv ? ' — valeur ' + lv : '');
+    }
+    var entete = recap.length + ' enveloppe' + (recap.length > 1 ? 's' : '') + ' — ' + sousTitre(totalBillets, totalValeur);
+    var noteVides = nbSansBillet > 0
+        ? nbSansBillet + ' autre' + (nbSansBillet > 1 ? 's' : '') + ' enveloppe' + (nbSansBillet > 1 ? 's' : '') + ' sans billet dedans pour l\'instant (billets encore à répartir).'
+        : '';
+
+    var html = '<p class="relance-count"><strong>' + escapeHtmlMC(entete) + '</strong></p>';
+    var texte = 'Récapitulatif des enveloppes — ' + entete + '\n';
+    recap.forEach(function(r) {
+        html += '<h3 style="margin-top:16px;">' + escapeHtmlMC(r.nom) + ' — ' + escapeHtmlMC(sousTitre(r.nb, r.valeur)) + '</h3>'
+            + '<ul class="recap-billets-list">';
+        texte += '\n' + r.nom + ' — ' + sousTitre(r.nb, r.valeur) + '\n';
+        r.lignes.forEach(function(l) {
+            var lv = labelValeurBillets(l.valeur);
+            var ligne = l.libelle + ' — ' + l.quantites + (lv ? ' — ' + lv : '');
+            html += '<li>' + escapeHtmlMC(ligne) + '</li>';
+            texte += '- ' + ligne + '\n';
+        });
+        html += '</ul>';
+    });
+    if (noteVides) {
+        html += '<p style="margin-top:16px;"><em>' + escapeHtmlMC(noteVides) + '</em></p>';
+        texte += '\n' + noteVides + '\n';
+    }
+
+    var modal = document.getElementById('relance-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'relance-modal';
+        modal.className = 'relance-modal-overlay';
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML = '<div class="relance-modal-content">'
+        + '<div class="relance-modal-header">'
+        + '<h2><i class="fa-solid fa-envelopes-bulk"></i> Récapitulatif des enveloppes</h2>'
+        + '<button onclick="fermerRelance()" class="relance-close"><i class="fa-solid fa-times"></i></button>'
+        + '</div>'
+        + '<div id="recap-enveloppes-contenu">' + html + '</div>'
+        + '<div class="relance-actions" style="margin-top:12px;">'
+        + '<button onclick="copierRecapPaiement(\'recap-enveloppes-texte\')" class="btn-copier"><i class="fa-solid fa-copy"></i> Copier</button>'
+        + '<button onclick="imprimerRecapEnveloppes()" class="btn-copier"><i class="fa-solid fa-print"></i> Imprimer</button>'
+        + '</div>'
+        + '<textarea id="recap-enveloppes-texte" style="position:absolute;left:-9999px;" readonly>' + escapeHtmlMC(texte) + '</textarea>'
+        + '</div>';
+    modal.style.display = '';
+}
+
+// Imprime le récapitulatif seul, dans une fenêtre à part (la page, elle, a ses menus et onglets)
+function imprimerRecapEnveloppes() {
+    var contenu = document.getElementById('recap-enveloppes-contenu');
+    if (!contenu) return;
+    var fen = window.open('', '_blank');
+    if (!fen) {
+        showToast('Le navigateur a bloqué la fenêtre d\'impression', 'error');
+        return;
+    }
+    fen.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Récapitulatif des enveloppes</title>'
+        + '<style>body{font-family:sans-serif;font-size:12px;margin:16px;color:#000;background:#fff}'
+        + 'h2{font-size:16px;margin:0 0 4px}h3{font-size:13px;margin:12px 0 4px;break-after:avoid}'
+        + 'ul{margin:0;padding-left:18px}p{margin:4px 0}</style>'
+        + '</head><body><h2>Récapitulatif des enveloppes</h2>' + contenu.innerHTML + '</body></html>');
+    fen.document.close();
+    fen.focus();
+    fen.print();
 }
 
 function openEnveloppePassee(enveloppeId) {
@@ -4076,8 +4214,8 @@ function ouvrirRecapPaiementGlobal() {
     modal.style.display = '';
 }
 
-function copierRecapPaiement() {
-    var ta = document.getElementById('recap-paiement-texte');
+function copierRecapPaiement(idTexte) {   // #84 : sert aussi au récapitulatif des enveloppes
+    var ta = document.getElementById(idTexte || 'recap-paiement-texte');
     if (!ta) return;
     ta.style.position = 'static';
     ta.select();
