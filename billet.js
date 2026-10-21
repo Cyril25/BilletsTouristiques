@@ -122,7 +122,10 @@
             return ca < cb ? 1 : -1;
         });
         var principale = ordered[0];
-        var autres = ordered.slice(1);
+        // Demande #88 — même règle que le catalogue : une collecte encore en cours passe en tête
+        // de l'accordéon, dépliée ; les terminées suivent, repliées.
+        var enCours = function(c) { return c.categorie !== 'Terminé'; };
+        var autres = ordered.slice(1).filter(enCours).concat(ordered.slice(1).filter(function(c) { return !enCours(c); }));
         var statut = principale.categorie || '';
 
         var html = '<div class="collecte-zone-tete">'
@@ -136,7 +139,7 @@
                 + '<div class="collectes-accordeon-titre">Autres collectes de ce billet</div>'
                 + autres.map(function(c) {
                     var st = c.categorie || '';
-                    return '<details class="collecte-accordeon">'
+                    return '<details class="collecte-accordeon"' + (enCours(c) ? ' open' : '') + '>'
                         + '<summary class="collecte-accordeon-tete">'
                         +   '<span class="collecte-accordeon-statut" style="background-color:' + couleurStatut(st) + '; color:' + texteSurStatut(st) + ';">' + escapeHtml(st) + '</span>'
                         +   '<span class="collecte-accordeon-nom">' + escapeHtml(c.nom || '') + '</span>'

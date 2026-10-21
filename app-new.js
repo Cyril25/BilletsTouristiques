@@ -1823,9 +1823,18 @@ function fetchCollecteTotalBillets(collecteId) {
         });
 }
 
+// Demande #88 — une collecte « en cours » : pré-collecte ou collecte, pas terminée.
+function collecteEnCours(c) {
+    return !!c && c.categorie !== 'Terminé';
+}
+
 function buildCollectesSupplementairesHtml(item) {
     var collectes = collectesByBillet[item.id] || [];
     if (collectes.length === 0) return '';
+    // Demande #88 — une collecte encore en cours ne se cache pas dans un accordéon fermé :
+    // elle passe en tête, dépliée. Les terminées suivent, repliées, chacun des deux groupes
+    // gardant l'ordre « plus récente d'abord ».
+    collectes = collectes.filter(collecteEnCours).concat(collectes.filter(function(c) { return !collecteEnCours(c); }));
     // Demande #44 — les collectes plus anciennes en ACCORDÉON (repliées par défaut,
     // dépliables au clic via <details> natif). Chaque tête montre le statut de la
     // collecte + un marqueur « inscrit » (anti-double-inscription).
@@ -1833,7 +1842,7 @@ function buildCollectesSupplementairesHtml(item) {
         var inscrit = !!getInscription(item.id, c.id);
         var statutColor = getCategorieColor(c.categorie);
         var capaciteHtml = capaciteCollecteHtml(c);   // #24
-        return '<details class="collecte-accordeon"' + (inscrit ? ' data-inscrit="1"' : '') + ' data-collecte-id="' + escapeAttr(c.id) + '">'
+        return '<details class="collecte-accordeon"' + (collecteEnCours(c) ? ' open' : '') + (inscrit ? ' data-inscrit="1"' : '') + ' data-collecte-id="' + escapeAttr(c.id) + '">'
             + '<summary class="collecte-accordeon-tete">'
             // Demande #47 — le CSS mettait du blanc en dur : illisible sur le jaune
             // « Pré collecte ». Même règle de couleur de texte que les autres pastilles.
