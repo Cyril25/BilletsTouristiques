@@ -340,15 +340,19 @@ function renderDemandeRow(d) {
     // Demande #49 — sur une demande À TESTER, l'option correspondante annonce qui doit
     // tester. On ne crée aucun statut supplémentaire : la liste garde ses sept entrées,
     // c'est le libellé de l'une d'elles qui se précise, et seulement sur cette ligne.
-    var testeur = (d.etat === 'a_tester') ? nomTesteurParNumero(d.demandeur_id, d.demandeur) : '';
+    // Demande #90 — même chose sur « À cadrer » : c'est aussi au demandeur de jouer (préciser sa
+    // demande), et sans son nom personne ne se sentait concerné.
+    var auDemandeur = (d.etat === 'a_tester' || d.etat === 'a_cadrer');
+    var testeur = auDemandeur ? nomTesteurParNumero(d.demandeur_id, d.demandeur) : '';
     var etatOptions = ETATS.map(function(e) {
-        var label = (e.value === 'a_tester' && testeur) ? (e.label + ' par ' + testeur) : e.label;
+        var label = (e.value === d.etat && testeur) ? (e.label + ' par ' + testeur) : e.label;
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
     }).join('');
 
     // Et si c'est à MOI de tester, la ligne se signale d'elle-même : c'est la question
     // qu'on se pose en ouvrant l'écran, elle ne doit pas demander un survol.
     var aMoiDeTester = (d.etat === 'a_tester') && !!monNumeroDemandes && d.demandeur_id === monNumeroDemandes;
+    var aMoiDeCadrer = (d.etat === 'a_cadrer') && !!monNumeroDemandes && d.demandeur_id === monNumeroDemandes;   // #90
 
     var commentaireIcon = d.commentaire
         ? ' <i class="fa-solid fa-comment-dots demande-desc-comment" title="' + escapeAttr(d.commentaire) + '"></i>'
@@ -404,6 +408,7 @@ function renderDemandeRow(d) {
 
     return '<tr class="demande-row' + (estClose ? ' demande-row--close' : '')
         + (aMoiDeTester ? ' demande-row--a-tester-moi' : '')
+        + (aMoiDeCadrer ? ' demande-row--a-cadrer-moi' : '')
         + (aMoiDeRelire ? ' demande-row--a-relire-moi' : '') + '" onclick="ouvrirFicheDemande(' + d.id + ')">'
         + '<td class="demande-id-cell" title="Demande n°' + d.id + '">#' + d.id + '</td>'
         + '<td class="demande-etat-cell">'

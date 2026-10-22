@@ -144,6 +144,9 @@
     /* Suivi des demandes */
     --color-a-tester:            #C2185B;
     --color-a-tester-bg:         #FDF0F5;
+    /* Demande #90 — « à moi de préciser » (À cadrer), teinte de l'état À cadrer */
+    --color-a-cadrer:            #EF6C00;
+    --color-a-cadrer-bg:         #FFF3E6;
     /* Demande #59 — analyse en attente de relecture */
     --color-a-relire:            #F9A825;
     --color-a-relire-bg:         #FFF8E7;
@@ -311,6 +314,8 @@
         --color-nocollecte-bg:         #3D1E1E;
         --color-a-tester:              #EC8CB2;
         --color-a-tester-bg:           #38202B;
+        --color-a-cadrer:              #FFA94D;
+        --color-a-cadrer-bg:           #3A2A16;
         --color-a-relire:              #F5C563;
         --color-a-relire-bg:           #33290F;
         --color-prio-normale:          #93A0E8;
@@ -431,6 +436,8 @@
     --color-nocollecte-bg:         #3D1E1E;
     --color-a-tester:              #EC8CB2;
     --color-a-tester-bg:           #38202B;
+    --color-a-cadrer:              #FFA94D;
+    --color-a-cadrer-bg:           #3A2A16;
     --color-a-relire:              #F5C563;
     --color-a-relire-bg:           #33290F;
     --color-prio-normale:          #93A0E8;
@@ -11440,6 +11447,13 @@ button.collecte-badge-status {
 }
 .demande-row--a-tester-moi > td:first-child {
     box-shadow: inset 4px 0 0 var(--color-a-tester);
+}
+/* Demande #90 — même repère pour la demande qu'il m'appartient de préciser (À cadrer) */
+.demande-row--a-cadrer-moi > td {
+    background: var(--color-a-cadrer-bg);
+}
+.demande-row--a-cadrer-moi > td:first-child {
+    box-shadow: inset 4px 0 0 var(--color-a-cadrer);
 }
 
 /* Demande #49 (suite) — « À tester par Jean-Philippe » est bien plus long que « À tester » :

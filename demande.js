@@ -221,9 +221,14 @@ function renderFiche() {
     document.getElementById('fd-titre').textContent = 'Demande #' + d.id;
 
     var selEtat = document.getElementById('fd-etat');
+    // Demande #90 — « À cadrer » et « À tester » attendent le demandeur : l'état le nomme, comme
+    // dans la liste (« À cadrer par Jean-Philippe »). C'est ici qu'il arrive par sa notification.
+    var parQui = ((d.etat === 'a_cadrer' || d.etat === 'a_tester') && d.demandeur_id)
+        ? nomAfficheParNumero(d.demandeur_id) : '';
     selEtat.innerHTML = ETATS.map(function(e) {
+        var label = (e.value === d.etat && parQui) ? (e.label + ' par ' + parQui) : e.label;
         return '<option value="' + e.value + '"' + (e.value === d.etat ? ' selected' : '') + '>'
-             + escapeHtml(e.label) + '</option>';
+             + escapeHtml(label) + '</option>';
     }).join('');
     var def = getEtatDef(d.etat);
     selEtat.style.borderColor = def.color;
