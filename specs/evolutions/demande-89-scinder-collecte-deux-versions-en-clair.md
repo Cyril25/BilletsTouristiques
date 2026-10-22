@@ -2,7 +2,7 @@
 
 > **Pour qui ce document est écrit.** Pour vous, admin, qui créez les collectes. Aucune
 > connaissance technique n'est nécessaire.
-> Reflète la version technique du commit `83adc68` (21/10/2026).
+> Reflète la version technique du commit `89c3e83` (22/10/2026).
 
 ## Ce qui a été demandé
 
@@ -96,12 +96,12 @@ fera pas cette erreur.
 5. ~~**Qui peut scinder ?**~~ Tranché par Cyril : les admins seulement.
 6. ~~**Un bouton « Scinder » ?**~~ Tranché : oui, seulement sur les collectes qu'on peut scinder.
 
-## Où on en est (21/10)
+## Où on en est (22/10)
 
-C'est développé et en ligne : le bouton « Scinder » et la question posée à la création d'une
-collecte sont sur la page de chaque billet, dans Gestion Billets. **Il reste à Cyril à mettre en
-service la partie base de données.** D'ici là, cliquer sur « Scinder » affiche « la migration de la
-demande #89 doit être jouée », et rien d'autre ne change.
+**C'est en service.** Le bouton « Scinder » et la question posée à la création d'une collecte sont
+sur la page de chaque billet, dans Gestion Billets, et Cyril a mis en service la partie base de
+données le 22/10. Lapalisse est en ordre : « Collecte Normale » pour les normaux de Damien,
+« Collecte Dorés » pour les dorés, en pré-collecte. La demande est à tester.
 
 ## Les demandes liées
 
