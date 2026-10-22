@@ -4,7 +4,7 @@
 - **Demande :** #90 de la table `demandes` de production — Cyril, 2026-10-22, priorité *normale*.
   Formulée dans la conversation avec l'assistant (à propos de #85), saisie par l'assistant à sa
   demande. Publics : membres, collecteurs, admins.
-- **Statut :** développée le 2026-10-22.
+- **Statut :** à tester — en ligne le 2026-10-22.
 - **Version en clair :** [demande-90-a-cadrer-par-demandeur-en-clair.md](demande-90-a-cadrer-par-demandeur-en-clair.md)
 
 ## Contexte (demande)
@@ -47,4 +47,14 @@ l'ancien code : 5 KO.
 
 ## Réalisation
 
-*(à compléter)*
+Commit `e55b646` (2026-10-22), cache `v329` :
+
+- `admin-demandes.js` — `renderDemandeRow()` : « … par » pour `a_cadrer` comme pour `a_tester`,
+  `aMoiDeCadrer` → `demande-row--a-cadrer-moi` ;
+- `demande.js` — `renderFiche()` : l'option de l'état courant nomme le demandeur ;
+- `style.css` — `--color-a-cadrer` / `--color-a-cadrer-bg` (clair et les deux blocs sombres),
+  `.demande-row--a-cadrer-moi`.
+
+Vérifié : banc 13/13 (ci-dessus) ; site en ligne contrôlé. Base : demande créée par l'assistant à la
+demande de Cyril, à tester + journal + docs, notification à Cyril, nouveauté `admins`.
+**Pas vérifié** : vraie page connectée, mode sombre à l'écran, téléphone.
