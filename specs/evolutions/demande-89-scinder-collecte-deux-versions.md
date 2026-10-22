@@ -3,8 +3,8 @@
 - **Épic :** Corrections et évolutions (complexité **L**)
 - **Demande :** #89 de la table `demandes` de production — Cyril, 2026-10-21, priorité *normale*.
   Publics cités : membres, collecteurs, admins. Liée à #87, #88 et #83.
-- **Statut :** développée le 2026-10-21 (« go 89 » de Cyril) — **migration à jouer** (voir
-  Réalisation).
+- **Statut :** à tester — site en ligne le 2026-10-21, base mise en service par Cyril le 2026-10-22
+  (analyse validée le même jour).
 - **Version en clair :** [demande-89-scinder-collecte-deux-versions-en-clair.md](demande-89-scinder-collecte-deux-versions-en-clair.md)
 
 ## Contexte (demande)
@@ -165,8 +165,12 @@ paiement sont ceux de la production.
 ## Réalisation
 
 Développée le 2026-10-21 sur le « go 89 » de Cyril. Site : commit `3e166e0`, cache `v328`.
-**La migration est à jouer par Cyril** : tant qu'elle ne l'est pas, « Scinder » répond « la
-migration de la demande #89 doit être jouée » et rien d'autre ne change.
+~~**La migration est à jouer par Cyril**~~ — **jouée par Cyril le 22/10** (constat, migration,
+contrôle, puis étape 4). Vérifié par l'API : `scinder_collecte()` répond (« Collecte introuvable »
+sur une collecte inexistante, rien d'écrit) ; Lapalisse : « Collecte Normale » `normal` et « Collecte
+Dorés » (renommée entre-temps) `variante`, 9 pré-inscriptions rendues à « pré-inscription », le
+membre 100 inchangé, 4 membres inscrits d'eux-mêmes depuis. Base : à tester + journal,
+notification à Cyril (membre 22), nouveauté `admins`.
 
 ### Trouvé en route : l'audit réécrivait l'auteur des pré-inscriptions
 
