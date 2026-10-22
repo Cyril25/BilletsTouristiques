@@ -124,6 +124,7 @@ qui n'est plus vrai.
 | [#87 (prod)](demande-87-partager-une-collecte.md) | « Partager » présente une collecte, et chaque collecte a son bouton ([en clair](demande-87-partager-une-collecte-en-clair.md)) | S | À tester | ✅ | `8c02a48` |
 | [#88 (prod)](demande-88-collectes-en-cours-depliees.md) | Plusieurs collectes en cours : ne plus en cacher une dans l'accordéon ([en clair](demande-88-collectes-en-cours-depliees-en-clair.md)) | S | À tester | ✅ | `735544d` |
 | [#89 (prod)](demande-89-scinder-collecte-deux-versions.md) | Scinder une collecte « les deux versions » au lieu d'en créer une seconde ([en clair](demande-89-scinder-collecte-deux-versions-en-clair.md)) | L | À tester — base mise en service le 22/10 | ✅ | `3e166e0` |
+| [#90 (prod)](demande-90-a-cadrer-par-demandeur.md) | « À cadrer par … » comme « À tester par … » ([en clair](demande-90-a-cadrer-par-demandeur-en-clair.md)) | S | En cours (dev) | — | — |
 
 > ⚠ **Deux séries de numéros cohabitent dans ce dossier.** Les specs `demande-36` et
 > `demande-38` à `demande-49` viennent de la table `demandes` de la **copie de test** utilisée
